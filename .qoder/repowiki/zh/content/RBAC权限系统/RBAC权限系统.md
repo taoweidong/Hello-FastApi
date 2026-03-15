@@ -18,6 +18,12 @@
 - [src/core/middlewares.py](file://src/core/middlewares.py)
 </cite>
 
+## 更新摘要
+**变更内容**
+- 更新数据传输对象类型注解，改进PermissionResponseDTO中resource和action字段的可选性
+- 增强仓库层防御性编程，防止属性访问错误
+- 更新API响应模型的字段约束说明
+
 ## 目录
 1. [简介](#简介)
 2. [项目结构](#项目结构)
@@ -71,19 +77,19 @@ Impl --> DBConn
 UserEntity --> Entities
 ```
 
-图表来源
+**图表来源**
 - [src/api/v1/rbac_routes.py:1-168](file://src/api/v1/rbac_routes.py#L1-L168)
 - [src/api/dependencies.py:1-83](file://src/api/dependencies.py#L1-L83)
-- [src/application/services/rbac_service.py:1-159](file://src/application/services/rbac_service.py#L1-L159)
+- [src/application/services/rbac_service.py:1-158](file://src/application/services/rbac_service.py#L1-L158)
 - [src/application/dto/rbac_dto.py:1-70](file://src/application/dto/rbac_dto.py#L1-L70)
 - [src/domain/rbac/entities.py:1-79](file://src/domain/rbac/entities.py#L1-L79)
 - [src/domain/rbac/repository.py:1-62](file://src/domain/rbac/repository.py#L1-L62)
-- [src/infrastructure/repositories/rbac_repository.py:1-133](file://src/infrastructure/repositories/rbac_repository.py#L1-L133)
+- [src/infrastructure/repositories/rbac_repository.py:1-123](file://src/infrastructure/repositories/rbac_repository.py#L1-L123)
 - [src/infrastructure/database/connection.py:1-51](file://src/infrastructure/database/connection.py#L1-L51)
-- [src/infrastructure/database/models.py:1-10](file://src/infrastructure/database/models.py#L1-L10)
+- [src/infrastructure/database/models.py:1-171](file://src/infrastructure/database/models.py#L1-L171)
 - [src/domain/user/entities.py:1-38](file://src/domain/user/entities.py#L1-L38)
 
-章节来源
+**章节来源**
 - [src/main.py:1-83](file://src/main.py#L1-L83)
 - [src/api/v1/__init__.py:1-15](file://src/api/v1/__init__.py#L1-L15)
 
@@ -97,11 +103,11 @@ UserEntity --> Entities
 - API路由（rbac_routes.py）：暴露RBAC管理接口，结合依赖注入require_permission进行权限控制。
 - 依赖注入（dependencies.py）：提供JWT解析、当前用户获取、权限校验与超级用户校验的依赖工厂。
 
-章节来源
+**章节来源**
 - [src/domain/rbac/entities.py:20-79](file://src/domain/rbac/entities.py#L20-L79)
 - [src/domain/rbac/repository.py:8-62](file://src/domain/rbac/repository.py#L8-L62)
-- [src/infrastructure/repositories/rbac_repository.py:11-133](file://src/infrastructure/repositories/rbac_repository.py#L11-L133)
-- [src/application/services/rbac_service.py:21-159](file://src/application/services/rbac_service.py#L21-L159)
+- [src/infrastructure/repositories/rbac_repository.py:11-123](file://src/infrastructure/repositories/rbac_repository.py#L11-L123)
+- [src/application/services/rbac_service.py:21-158](file://src/application/services/rbac_service.py#L21-L158)
 - [src/api/v1/rbac_routes.py:1-168](file://src/api/v1/rbac_routes.py#L1-L168)
 - [src/api/dependencies.py:53-83](file://src/api/dependencies.py#L53-L83)
 
@@ -132,11 +138,11 @@ Svc-->>Router : "DTO响应"
 Router-->>Client : "HTTP响应"
 ```
 
-图表来源
+**图表来源**
 - [src/api/v1/rbac_routes.py:25-168](file://src/api/v1/rbac_routes.py#L25-L168)
 - [src/api/dependencies.py:53-83](file://src/api/dependencies.py#L53-L83)
-- [src/application/services/rbac_service.py:21-159](file://src/application/services/rbac_service.py#L21-L159)
-- [src/infrastructure/repositories/rbac_repository.py:11-133](file://src/infrastructure/repositories/rbac_repository.py#L11-L133)
+- [src/application/services/rbac_service.py:21-158](file://src/application/services/rbac_service.py#L21-L158)
+- [src/infrastructure/repositories/rbac_repository.py:11-123](file://src/infrastructure/repositories/rbac_repository.py#L11-L123)
 
 ## 详细组件分析
 
@@ -145,7 +151,7 @@ Router-->>Client : "HTTP响应"
   - 角色与权限：通过关联表role_permissions实现多对多，支持权限继承与组合。
   - 用户与角色：通过UserRole实现多对多，支持为用户分配多个角色。
 - 字段设计
-  - 权限：codename唯一且带索引，便于快速匹配；resource与action构成资源-动作语义。
+  - 权限：codename唯一且带索引，便于快速匹配；resource与action构成资源-动作语义，支持可选字段设计。
   - 角色：name唯一且带索引；包含创建/更新时间戳。
   - 用户角色：记录分配时间，便于审计与追踪。
 - 查询优化
@@ -190,13 +196,52 @@ ROLES ||--o{ ROLE_PERMISSIONS : "拥有"
 PERMISSIONS ||--o{ ROLE_PERMISSIONS : "授权"
 ```
 
-图表来源
+**图表来源**
 - [src/domain/rbac/entities.py:12-79](file://src/domain/rbac/entities.py#L12-L79)
 - [src/domain/user/entities.py:16-38](file://src/domain/user/entities.py#L16-L38)
 
-章节来源
+**章节来源**
 - [src/domain/rbac/entities.py:11-79](file://src/domain/rbac/entities.py#L11-L79)
 - [src/domain/user/entities.py:16-38](file://src/domain/user/entities.py#L16-L38)
+
+### 数据传输对象（DTO）设计与类型注解改进
+- **权限响应DTO改进**
+  - PermissionResponseDTO中的resource和action字段现已改为可选字段，从必需的`Field(...)`改为`Field(None)`，提高了API的灵活性。
+  - 这种设计允许权限实体在某些场景下不包含具体的资源-动作信息，但仍能正常返回响应。
+- **字段约束说明**
+  - id、name、codename、created_at为必需字段
+  - description为可选字段，默认None
+  - resource和action为可选字段，默认None，支持空值场景
+- **模型配置**
+  - 所有DTO都配置了`model_config = {"from_attributes": True}`，支持从ORM模型直接转换
+
+```mermaid
+classDiagram
+class PermissionResponseDTO {
++id : str
++name : str
++codename : str
++description : str | None = None
++resource : str | None = None
++action : str | None = None
++created_at : datetime
++model_config : dict
+}
+class PermissionCreateDTO {
++name : str
++codename : str
++description : str | None = None
++resource : str
++action : str
+}
+```
+
+**图表来源**
+- [src/application/dto/rbac_dto.py:44-55](file://src/application/dto/rbac_dto.py#L44-L55)
+- [src/application/dto/rbac_dto.py:34-42](file://src/application/dto/rbac_dto.py#L34-L42)
+
+**章节来源**
+- [src/application/dto/rbac_dto.py:1-70](file://src/application/dto/rbac_dto.py#L1-L70)
 
 ### 仓储模式与查询实现
 - 角色仓储
@@ -204,9 +249,12 @@ PERMISSIONS ||--o{ ROLE_PERMISSIONS : "授权"
   - 提供用户角色分配与移除、查询用户角色列表。
 - 权限仓储
   - 支持按ID/codename查询、分页读取、创建/删除。
-  - 提供“按角色查询权限”与“按用户查询权限”的批量查询。
+  - 提供"按角色查询权限"与"按用户查询权限"的批量查询。
 - 批量操作
   - 通过JOIN与DISTINCT实现用户权限去重，避免重复权限返回。
+- **防御性编程改进**
+  - 在删除操作中使用`getattr(result, "rowcount", 0)`防止属性访问错误
+  - 当DML语句返回的CursorResult缺少rowcount属性时，提供默认值0
 
 ```mermaid
 classDiagram
@@ -256,13 +304,13 @@ RoleRepository ..|> RoleRepositoryInterface
 PermissionRepository ..|> PermissionRepositoryInterface
 ```
 
-图表来源
+**图表来源**
 - [src/domain/rbac/repository.py:8-62](file://src/domain/rbac/repository.py#L8-L62)
-- [src/infrastructure/repositories/rbac_repository.py:11-133](file://src/infrastructure/repositories/rbac_repository.py#L11-L133)
+- [src/infrastructure/repositories/rbac_repository.py:11-123](file://src/infrastructure/repositories/rbac_repository.py#L11-L123)
 
-章节来源
+**章节来源**
 - [src/domain/rbac/repository.py:8-62](file://src/domain/rbac/repository.py#L8-L62)
-- [src/infrastructure/repositories/rbac_repository.py:11-133](file://src/infrastructure/repositories/rbac_repository.py#L11-L133)
+- [src/infrastructure/repositories/rbac_repository.py:11-123](file://src/infrastructure/repositories/rbac_repository.py#L11-L123)
 
 ### RBAC服务实现
 - 角色管理
@@ -277,6 +325,9 @@ PermissionRepository ..|> PermissionRepositoryInterface
   - 获取用户角色与权限均通过仓储实现，返回DTO。
 - 权限检查
   - 动态检查用户是否具备指定codename的权限，采用内存匹配。
+- **响应模型转换**
+  - `_perm_to_response`方法现在从Permission实体提取resource和action字段
+  - 即使这些字段为None，也能正确转换为PermissionResponseDTO
 
 ```mermaid
 flowchart TD
@@ -289,11 +340,11 @@ Found --> |是| Allow["返回有权限"]
 Found --> |否| Deny
 ```
 
-图表来源
-- [src/application/services/rbac_service.py:125-134](file://src/application/services/rbac_service.py#L125-L134)
+**图表来源**
+- [src/application/services/rbac_service.py:129-132](file://src/application/services/rbac_service.py#L129-L132)
 
-章节来源
-- [src/application/services/rbac_service.py:21-159](file://src/application/services/rbac_service.py#L21-L159)
+**章节来源**
+- [src/application/services/rbac_service.py:21-158](file://src/application/services/rbac_service.py#L21-L158)
 
 ### API接口文档与使用示例
 - 角色管理
@@ -317,7 +368,7 @@ Found --> |否| Deny
 - 分配角色给用户：[POST /v1/rbac/assign-role:124-134](file://src/api/v1/rbac_routes.py#L124-L134)
 - 检查用户权限：[GET /v1/rbac/users/{user_id}/permissions:159-168](file://src/api/v1/rbac_routes.py#L159-L168)
 
-章节来源
+**章节来源**
 - [src/api/v1/rbac_routes.py:1-168](file://src/api/v1/rbac_routes.py#L1-L168)
 
 ### 权限检查的动态机制
@@ -350,13 +401,13 @@ Checker-->>Client : "403 Forbidden"
 end
 ```
 
-图表来源
+**图表来源**
 - [src/api/dependencies.py:53-83](file://src/api/dependencies.py#L53-L83)
-- [src/infrastructure/repositories/rbac_repository.py:123-133](file://src/infrastructure/repositories/rbac_repository.py#L123-L133)
+- [src/infrastructure/repositories/rbac_repository.py:114-123](file://src/infrastructure/repositories/rbac_repository.py#L114-L123)
 
-章节来源
+**章节来源**
 - [src/api/dependencies.py:53-83](file://src/api/dependencies.py#L53-L83)
-- [src/infrastructure/repositories/rbac_repository.py:123-133](file://src/infrastructure/repositories/rbac_repository.py#L123-L133)
+- [src/infrastructure/repositories/rbac_repository.py:114-123](file://src/infrastructure/repositories/rbac_repository.py#L114-L123)
 
 ## 依赖关系分析
 - 组件耦合
@@ -383,15 +434,15 @@ Deps --> Impl
 Deps --> UserEnt["user/entities.py"]
 ```
 
-图表来源
+**图表来源**
 - [src/api/v1/rbac_routes.py:1-168](file://src/api/v1/rbac_routes.py#L1-L168)
-- [src/application/services/rbac_service.py:1-159](file://src/application/services/rbac_service.py#L1-L159)
-- [src/infrastructure/repositories/rbac_repository.py:1-133](file://src/infrastructure/repositories/rbac_repository.py#L1-L133)
+- [src/application/services/rbac_service.py:1-158](file://src/application/services/rbac_service.py#L1-L158)
+- [src/infrastructure/repositories/rbac_repository.py:1-123](file://src/infrastructure/repositories/rbac_repository.py#L1-L123)
 - [src/api/dependencies.py:1-83](file://src/api/dependencies.py#L1-L83)
 - [src/domain/user/entities.py:1-38](file://src/domain/user/entities.py#L1-L38)
 - [src/infrastructure/database/connection.py:1-51](file://src/infrastructure/database/connection.py#L1-L51)
 
-章节来源
+**章节来源**
 - [src/application/dto/rbac_dto.py:1-70](file://src/application/dto/rbac_dto.py#L1-L70)
 - [src/domain/rbac/entities.py:1-79](file://src/domain/rbac/entities.py#L1-L79)
 
@@ -407,8 +458,8 @@ Deps --> UserEnt["user/entities.py"]
   - 可引入Redis缓存用户权限列表，缩短权限检查延迟。
 - 批量操作
   - 仓储实现支持分页查询，避免一次性加载过多数据。
-
-[本节为通用性能指导，不直接分析具体文件]
+- **防御性编程**
+  - 使用getattr提供默认值，防止属性访问错误，提高代码健壮性。
 
 ## 故障排除指南
 - 常见异常
@@ -421,8 +472,11 @@ Deps --> UserEnt["user/entities.py"]
   - 检查用户是否为超级用户或具备目标权限。
   - 核对角色/权限是否存在且状态正常。
   - 查看日志中间件输出的请求处理时间与状态码。
+- **类型注解相关问题**
+  - 如果遇到PermissionResponseDTO字段类型错误，确认resource和action字段现在支持None值。
+  - 确保前端或客户端能够处理可选字段的空值情况。
 
-章节来源
+**章节来源**
 - [src/core/exceptions.py:13-53](file://src/core/exceptions.py#L13-L53)
 - [src/api/dependencies.py:16-51](file://src/api/dependencies.py#L16-L51)
 - [src/application/services/rbac_service.py:30-118](file://src/application/services/rbac_service.py#L30-L118)
@@ -430,7 +484,7 @@ Deps --> UserEnt["user/entities.py"]
 ## 结论
 本RBAC系统通过清晰的分层架构与DDD实践，实现了角色、权限与用户的多对多关系建模与动态权限检查。仓储模式确保了业务服务与数据访问的解耦，API层通过依赖注入实现了细粒度的权限控制。系统具备良好的扩展性与可维护性，适合在复杂业务场景中落地实施。
 
-[本节为总结性内容，不直接分析具体文件]
+**更新** 最新版本增强了数据传输对象的类型安全性，改进了权限响应DTO的字段约束，同时加强了仓储层的防御性编程，提高了系统的健壮性和灵活性。
 
 ## 附录
 
@@ -439,16 +493,21 @@ Deps --> UserEnt["user/entities.py"]
 - 描述：name与description分别用于显示与说明。
 - 层级结构：通过resource与action构建资源-动作语义，支持细粒度控制。
 - 唯一性：codename与name均设置唯一约束，避免歧义。
+- **可选字段**：resource和action现在支持None值，增加了灵活性。
 
-章节来源
+**章节来源**
 - [src/domain/rbac/entities.py:20-38](file://src/domain/rbac/entities.py#L20-L38)
+- [src/infrastructure/database/models.py:104-105](file://src/infrastructure/database/models.py#L104-L105)
 
 ### 安全考虑
 - 令牌安全：JWT密钥需妥善保管，生产环境禁用默认密钥。
 - 中间件防护：可启用IP黑白名单中间件限制访问来源。
 - 权限最小化：仅授予完成任务所需的最小权限集合。
 - 审计日志：记录权限变更与敏感操作，便于追溯。
+- **类型安全**：改进的类型注解确保了更好的静态类型检查。
+- **防御性编程**：增强的错误处理机制提高了系统稳定性。
 
-章节来源
+**章节来源**
 - [config/settings/base.py:13-30](file://config/settings/base.py#L13-L30)
 - [src/core/middlewares.py:34-64](file://src/core/middlewares.py#L34-L64)
+- [src/infrastructure/repositories/rbac_repository.py:64-65](file://src/infrastructure/repositories/rbac_repository.py#L64-L65)
