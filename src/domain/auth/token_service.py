@@ -33,9 +33,7 @@ class TokenService:
     def decode_token(token: str) -> dict[str, Any] | None:
         """解码并验证 JWT 令牌。"""
         try:
-            payload: dict[str, Any] = jwt.decode(
-                token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
-            )
+            payload: dict[str, Any] = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
             return payload
         except JWTError:
             return None

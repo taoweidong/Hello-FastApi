@@ -6,11 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.config.settings import settings
 
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    pool_pre_ping=True,
-)
+engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG, pool_pre_ping=True)
 
 
 async def get_db() -> AsyncSession:  # type: ignore[misc]

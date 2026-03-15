@@ -27,20 +27,11 @@ class TestAuthEndpoints:
     async def test_login_success(self, client: AsyncClient, db_session: AsyncSession):
         # 先创建用户
         service = UserService(db_session)
-        await service.create_user(
-            UserCreateDTO(
-                username="testuser",
-                email="test@example.com",
-                password="TestPass123",
-            )
-        )
+        await service.create_user(UserCreateDTO(username="testuser", email="test@example.com", password="TestPass123"))
         await db_session.commit()
 
         # 登录
-        response = await client.post(
-            "/api/v1/auth/login",
-            json={"username": "testuser", "password": "TestPass123"},
-        )
+        response = await client.post("/api/v1/auth/login", json={"username": "testuser", "password": "TestPass123"})
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
@@ -50,38 +41,24 @@ class TestAuthEndpoints:
     async def test_login_wrong_password(self, client: AsyncClient, db_session: AsyncSession):
         service = UserService(db_session)
         await service.create_user(
-            UserCreateDTO(
-                username="testuser2",
-                email="test2@example.com",
-                password="TestPass123",
-            )
+            UserCreateDTO(username="testuser2", email="test2@example.com", password="TestPass123")
         )
         await db_session.commit()
 
-        response = await client.post(
-            "/api/v1/auth/login",
-            json={"username": "testuser2", "password": "WrongPass"},
-        )
+        response = await client.post("/api/v1/auth/login", json={"username": "testuser2", "password": "WrongPass"})
         assert response.status_code == 401
 
     async def test_get_current_user(self, client: AsyncClient, db_session: AsyncSession):
         # 创建用户并获取令牌
         service = UserService(db_session)
         user = await service.create_user(
-            UserCreateDTO(
-                username="testuser3",
-                email="test3@example.com",
-                password="TestPass123",
-            )
+            UserCreateDTO(username="testuser3", email="test3@example.com", password="TestPass123")
         )
         await db_session.commit()
 
         token = TokenService.create_access_token({"sub": user.id, "username": user.username})
 
-        response = await client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {token}"},
-        )
+        response = await client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         data = response.json()
         assert data["username"] == "testuser3"
@@ -99,20 +76,14 @@ class TestUserEndpoints:
         service = UserService(db_session)
         user = await service.create_user(
             UserCreateDTO(
-                username="profileuser",
-                email="profile@example.com",
-                password="TestPass123",
-                full_name="Profile User",
+                username="profileuser", email="profile@example.com", password="TestPass123", full_name="Profile User"
             )
         )
         await db_session.commit()
 
         token = TokenService.create_access_token({"sub": user.id, "username": user.username})
 
-        response = await client.get(
-            "/api/v1/users/me",
-            headers={"Authorization": f"Bearer {token}"},
-        )
+        response = await client.get("/api/v1/users/me", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         data = response.json()
         assert data["username"] == "profileuser"
@@ -122,20 +93,14 @@ class TestUserEndpoints:
     async def test_update_my_profile(self, client: AsyncClient, db_session: AsyncSession):
         service = UserService(db_session)
         user = await service.create_user(
-            UserCreateDTO(
-                username="updateuser",
-                email="update@example.com",
-                password="TestPass123",
-            )
+            UserCreateDTO(username="updateuser", email="update@example.com", password="TestPass123")
         )
         await db_session.commit()
 
         token = TokenService.create_access_token({"sub": user.id, "username": user.username})
 
         response = await client.put(
-            "/api/v1/users/me",
-            headers={"Authorization": f"Bearer {token}"},
-            json={"full_name": "Updated Name"},
+            "/api/v1/users/me", headers={"Authorization": f"Bearer {token}"}, json={"full_name": "Updated Name"}
         )
         assert response.status_code == 200
         data = response.json()

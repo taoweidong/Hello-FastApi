@@ -59,18 +59,12 @@ def create_app() -> FastAPI:
     # 全局异常处理
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"detail": exc.detail},
-        )
+        return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
 
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.error(f"Unhandled exception: {exc}")
-        return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"},
-        )
+        return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     # 健康检查
     @app.get("/health")

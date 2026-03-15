@@ -26,8 +26,6 @@ async def refresh_token(dto: RefreshTokenDTO, db: AsyncSession = Depends(get_db)
 
 
 @router.get("/me")
-async def get_current_user(
-    current_user: dict = Depends(get_current_active_user),
-) -> dict:
+async def get_current_user(current_user: dict = Depends(get_current_active_user)) -> dict:
     """获取当前认证用户信息。"""
     return current_user

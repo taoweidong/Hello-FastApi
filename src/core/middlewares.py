@@ -53,20 +53,12 @@ class IPFilterMiddleware(BaseHTTPMiddleware):
         # 如果配置了白名单，只允许白名单中的 IP 访问
         if self.whitelist and client_ip not in self.whitelist:
             logger.warning(f"IP {client_ip} not in whitelist, access denied")
-            return Response(
-                content='{"detail": "Access denied"}',
-                status_code=403,
-                media_type="application/json",
-            )
+            return Response(content='{"detail": "Access denied"}', status_code=403, media_type="application/json")
 
         # 检查黑名单
         if client_ip in self.blacklist:
             logger.warning(f"IP {client_ip} is blacklisted, access denied")
-            return Response(
-                content='{"detail": "Access denied"}',
-                status_code=403,
-                media_type="application/json",
-            )
+            return Response(content='{"detail": "Access denied"}', status_code=403, media_type="application/json")
 
         response: Response = await call_next(request)
         return response

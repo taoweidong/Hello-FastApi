@@ -11,10 +11,7 @@ from src.application.dto.rbac_dto import (
 )
 from src.core.exceptions import ConflictError, NotFoundError
 from src.infrastructure.database.models import Permission, Role
-from src.infrastructure.repositories.rbac_repository import (
-    PermissionRepository,
-    RoleRepository,
-)
+from src.infrastructure.repositories.rbac_repository import PermissionRepository, RoleRepository
 
 
 class RBACService:
@@ -78,11 +75,7 @@ class RBACService:
             raise ConflictError(f"Permission '{dto.codename}' already exists")
 
         permission = Permission(
-            name=dto.name,
-            codename=dto.codename,
-            description=dto.description,
-            resource=dto.resource,
-            action=dto.action,
+            name=dto.name, codename=dto.codename, description=dto.description, resource=dto.resource, action=dto.action
         )
         permission = await self.perm_repo.create(permission)
         return self._perm_to_response(permission)
@@ -137,11 +130,7 @@ class RBACService:
     def _role_to_response(role: Role) -> RoleResponseDTO:
         perms = [p.codename for p in role.permissions] if role.permissions else []
         return RoleResponseDTO(
-            id=role.id,
-            name=role.name,
-            description=role.description,
-            permissions=perms,
-            created_at=role.created_at,
+            id=role.id, name=role.name, description=role.description, permissions=perms, created_at=role.created_at
         )
 
     @staticmethod

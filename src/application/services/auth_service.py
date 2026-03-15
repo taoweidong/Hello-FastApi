@@ -33,10 +33,7 @@ class AuthService:
         access_token = self.token_service.create_access_token(token_data)
         refresh_token = self.token_service.create_refresh_token(token_data)
 
-        return TokenResponseDTO(
-            access_token=access_token,
-            refresh_token=refresh_token,
-        )
+        return TokenResponseDTO(access_token=access_token, refresh_token=refresh_token)
 
     async def refresh_token(self, refresh_token: str) -> TokenResponseDTO:
         """使用刷新令牌刷新访问令牌。"""
@@ -59,7 +56,4 @@ class AuthService:
         new_access_token = self.token_service.create_access_token(token_data)
         new_refresh_token = self.token_service.create_refresh_token(token_data)
 
-        return TokenResponseDTO(
-            access_token=new_access_token,
-            refresh_token=new_refresh_token,
-        )
+        return TokenResponseDTO(access_token=new_access_token, refresh_token=new_refresh_token)

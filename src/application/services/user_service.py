@@ -2,17 +2,8 @@
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.user_dto import (
-    ChangePasswordDTO,
-    UserCreateDTO,
-    UserResponseDTO,
-    UserUpdateDTO,
-)
-from src.core.exceptions import (
-    ConflictError,
-    NotFoundError,
-    UnauthorizedError,
-)
+from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserResponseDTO, UserUpdateDTO
+from src.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from src.domain.auth.password_service import PasswordService
 from src.infrastructure.database.models import User
 from src.infrastructure.repositories.user_repository import UserRepository

@@ -13,9 +13,7 @@ from src.infrastructure.repositories.user_repository import UserRepository
 security_scheme = HTTPBearer()
 
 
-async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Security(security_scheme),
-) -> str:
+async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Security(security_scheme)) -> str:
     """从 JWT 令牌中提取并验证当前用户 ID。"""
     token = credentials.credentials
     payload = TokenService.decode_token(token)
@@ -32,8 +30,7 @@ async def get_current_user_id(
 
 
 async def get_current_active_user(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
 ) -> dict:
     """从数据库获取当前活跃用户。"""
     repo = UserRepository(db)
@@ -42,20 +39,14 @@ async def get_current_active_user(
         raise UnauthorizedError("User not found")
     if not user.is_active:
         raise UnauthorizedError("User account is disabled")
-    return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "is_superuser": user.is_superuser,
-    }
+    return {"id": user.id, "username": user.username, "email": user.email, "is_superuser": user.is_superuser}
 
 
 def require_permission(codename: str):
     """依赖工厂：要求特定权限。"""
 
     async def permission_checker(
-        current_user: dict = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db),
+        current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)
     ) -> dict:
         if current_user["is_superuser"]:
             return current_user
@@ -72,9 +63,7 @@ def require_permission(codename: str):
 def require_superuser():
     """依赖项：要求超级用户角色。"""
 
-    async def superuser_checker(
-        current_user: dict = Depends(get_current_active_user),
-    ) -> dict:
+    async def superuser_checker(current_user: dict = Depends(get_current_active_user)) -> dict:
         if not current_user["is_superuser"]:
             raise ForbiddenError("Superuser access required")
         return current_user

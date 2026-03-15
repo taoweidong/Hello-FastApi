@@ -41,12 +41,7 @@ DOCS_DIR.mkdir(exist_ok=True)
 class Settings(BaseSettings):
     """应用配置类，从环境变量和 .env 文件加载配置。"""
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-        case_sensitive=True,
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore", case_sensitive=True)
 
     # ============ 应用配置 ============
     APP_NAME: str = "Hello-FastApi"
@@ -116,10 +111,7 @@ class DevelopmentSettings(Settings):
     """开发环境配置。"""
 
     model_config = SettingsConfigDict(
-        env_file=[".env", ".env.development"],
-        env_file_encoding="utf-8",
-        extra="ignore",
-        case_sensitive=True,
+        env_file=[".env", ".env.development"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
     )
 
     DEBUG: bool = True
@@ -130,10 +122,7 @@ class ProductionSettings(Settings):
     """生产环境配置。"""
 
     model_config = SettingsConfigDict(
-        env_file=[".env", ".env.production"],
-        env_file_encoding="utf-8",
-        extra="ignore",
-        case_sensitive=True,
+        env_file=[".env", ".env.production"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
     )
 
     DEBUG: bool = False
@@ -144,10 +133,7 @@ class TestingSettings(Settings):
     """测试环境配置。"""
 
     model_config = SettingsConfigDict(
-        env_file=[".env", ".env.testing"],
-        env_file_encoding="utf-8",
-        extra="ignore",
-        case_sensitive=True,
+        env_file=[".env", ".env.testing"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
     )
 
     DEBUG: bool = True

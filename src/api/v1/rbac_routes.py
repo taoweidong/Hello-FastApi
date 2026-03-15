@@ -24,9 +24,7 @@ router = APIRouter(prefix="/rbac", tags=["RBAC"])
 
 @router.post("/roles", response_model=RoleResponseDTO, status_code=201)
 async def create_role(
-    dto: RoleCreateDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role.manage")),
+    dto: RoleCreateDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role.manage"))
 ) -> RoleResponseDTO:
     """创建新角色（需要 role.manage 权限）。"""
     service = RBACService(db)
@@ -47,9 +45,7 @@ async def list_roles(
 
 @router.get("/roles/{role_id}", response_model=RoleResponseDTO)
 async def get_role(
-    role_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role.view")),
+    role_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role.view"))
 ) -> RoleResponseDTO:
     """根据 ID 获取角色（需要 role.view 权限）。"""
     service = RBACService(db)
@@ -70,9 +66,7 @@ async def update_role(
 
 @router.delete("/roles/{role_id}", response_model=MessageResponse)
 async def delete_role(
-    role_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role.manage")),
+    role_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role.manage"))
 ) -> MessageResponse:
     """删除角色（需要 role.manage 权限）。"""
     service = RBACService(db)
@@ -108,9 +102,7 @@ async def list_permissions(
 
 @router.delete("/permissions/{permission_id}", response_model=MessageResponse)
 async def delete_permission(
-    permission_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("permission.manage")),
+    permission_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("permission.manage"))
 ) -> MessageResponse:
     """删除权限（需要 permission.manage 权限）。"""
     service = RBACService(db)
@@ -123,9 +115,7 @@ async def delete_permission(
 
 @router.post("/assign-role", response_model=MessageResponse)
 async def assign_role_to_user(
-    dto: AssignRoleDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role.manage")),
+    dto: AssignRoleDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role.manage"))
 ) -> MessageResponse:
     """为用户分配角色（需要 role.manage 权限）。"""
     service = RBACService(db)
@@ -135,9 +125,7 @@ async def assign_role_to_user(
 
 @router.post("/remove-role", response_model=MessageResponse)
 async def remove_role_from_user(
-    dto: AssignRoleDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role.manage")),
+    dto: AssignRoleDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role.manage"))
 ) -> MessageResponse:
     """移除用户的角色（需要 role.manage 权限）。"""
     service = RBACService(db)
@@ -147,9 +135,7 @@ async def remove_role_from_user(
 
 @router.get("/users/{user_id}/roles", response_model=list[RoleResponseDTO])
 async def get_user_roles(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role.view")),
+    user_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role.view"))
 ) -> list[RoleResponseDTO]:
     """获取用户的所有角色（需要 role.view 权限）。"""
     service = RBACService(db)
@@ -158,9 +144,7 @@ async def get_user_roles(
 
 @router.get("/users/{user_id}/permissions", response_model=list[PermissionResponseDTO])
 async def get_user_permissions(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("permission.view")),
+    user_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("permission.view"))
 ) -> list[PermissionResponseDTO]:
     """获取用户的所有权限（需要 permission.view 权限）。"""
     service = RBACService(db)
