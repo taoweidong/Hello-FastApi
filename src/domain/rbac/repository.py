@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from src.domain.rbac.entities import Permission, Role
+from src.infrastructure.database.models import Permission, Role
 
 
 class RoleRepositoryInterface(ABC):

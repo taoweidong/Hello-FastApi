@@ -9,16 +9,15 @@ from src.application.dto.rbac_dto import (
     RoleResponseDTO,
     RoleUpdateDTO,
 )
-from src.application.interfaces.base_service import BaseService
 from src.core.exceptions import ConflictError, NotFoundError
-from src.domain.rbac.entities import Permission, Role
+from src.infrastructure.database.models import Permission, Role
 from src.infrastructure.repositories.rbac_repository import (
     PermissionRepository,
     RoleRepository,
 )
 
 
-class RBACService(BaseService):
+class RBACService:
     """RBAC 操作的应用服务。"""
 
     def __init__(self, session: AsyncSession):

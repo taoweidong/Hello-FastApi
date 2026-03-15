@@ -4,8 +4,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from src.domain.rbac.entities import Permission, Role, UserRole, role_permissions
 from src.domain.rbac.repository import PermissionRepositoryInterface, RoleRepositoryInterface
+from src.infrastructure.database.models import Permission, Role, UserRole, role_permissions
 
 
 class RoleRepository(RoleRepositoryInterface):

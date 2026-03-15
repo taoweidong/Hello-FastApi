@@ -1,8 +1,9 @@
 """数据库连接和会话管理。"""
 
-from config.settings import settings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
+
+from src.config.settings import settings
 
 engine = create_async_engine(
     settings.DATABASE_URL,

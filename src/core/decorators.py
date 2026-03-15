@@ -11,13 +11,13 @@ def log_execution(func: Callable) -> Callable:
 
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
-        logger.debug(f"Executing {func.__name__}")
+        logger.debug(f"开始执行: {func.__name__}")
         try:
             result = await func(*args, **kwargs)
-            logger.debug(f"Completed {func.__name__}")
+            logger.debug(f"执行完成: {func.__name__}")
             return result
         except Exception as e:
-            logger.error(f"Error in {func.__name__}: {e}")
+            logger.error(f"执行错误 {func.__name__}: {e}")
             raise
 
     return wrapper

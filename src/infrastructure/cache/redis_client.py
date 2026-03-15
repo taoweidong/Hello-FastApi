@@ -1,7 +1,8 @@
 """Redis 缓存连接管理。"""
 
 import redis.asyncio as redis
-from config.settings import settings
+
+from src.config.settings import settings
 
 _redis_client: redis.Redis | None = None
 

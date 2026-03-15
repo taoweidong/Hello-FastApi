@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 
-from src.domain.user.entities import User
+from src.infrastructure.database.models import User
 
 
 class UserRepositoryInterface(ABC):

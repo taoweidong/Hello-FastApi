@@ -6,7 +6,7 @@ from collections.abc import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.core.logger import logger
+from src.core.logger import log_request, logger
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -16,18 +16,26 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
         client_ip = request.client.host if request.client else "unknown"
 
-        logger.info(f"Request: {request.method} {request.url.path} from {client_ip}")
+        # 记录请求开始
+        logger.debug(f"请求开始: {request.method} {request.url.path} 来自 {client_ip}")
 
         response = await call_next(request)
 
+        # 计算处理时间
         process_time = time.time() - start_time
-        logger.info(
-            f"Response: {request.method} {request.url.path} - "
-            f"Status: {response.status_code} - "
-            f"Time: {process_time:.4f}s"
+        duration_ms = process_time * 1000
+
+        # 记录请求完成
+        log_request(
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            client_ip=client_ip,
         )
 
-        response.headers["X-Process-Time"] = str(process_time)
+        # 添加处理时间到响应头
+        response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
         return response
 
 

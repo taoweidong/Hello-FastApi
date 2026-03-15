@@ -8,18 +8,17 @@ from src.application.dto.user_dto import (
     UserResponseDTO,
     UserUpdateDTO,
 )
-from src.application.interfaces.base_service import BaseService
 from src.core.exceptions import (
     ConflictError,
     NotFoundError,
     UnauthorizedError,
 )
 from src.domain.auth.password_service import PasswordService
-from src.domain.user.entities import User
+from src.infrastructure.database.models import User
 from src.infrastructure.repositories.user_repository import UserRepository
 
 
-class UserService(BaseService):
+class UserService:
     """用户领域操作的应用服务。"""
 
     def __init__(self, session: AsyncSession):

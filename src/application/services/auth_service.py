@@ -3,14 +3,13 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.application.dto.auth_dto import LoginDTO, TokenResponseDTO
-from src.application.interfaces.base_service import BaseService
 from src.core.exceptions import UnauthorizedError
 from src.domain.auth.password_service import PasswordService
 from src.domain.auth.token_service import TokenService
 from src.infrastructure.repositories.user_repository import UserRepository
 
 
-class AuthService(BaseService):
+class AuthService:
     """认证操作的应用服务。"""
 
     def __init__(self, session: AsyncSession):

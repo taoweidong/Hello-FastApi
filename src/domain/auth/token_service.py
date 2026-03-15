@@ -2,8 +2,9 @@
 
 from datetime import datetime, timedelta, timezone
 
-from config.settings import settings
 from jose import JWTError, jwt
+
+from src.config.settings import settings
 
 
 class TokenService:
