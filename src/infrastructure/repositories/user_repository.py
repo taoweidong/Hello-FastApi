@@ -1,38 +1,34 @@
-"""使用 SQLAlchemy 实现的用户仓库。"""
+"""使用 SQLModel 实现的用户仓库。"""
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy import func as sa_func
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.user.repository import UserRepositoryInterface
 from src.infrastructure.database.models import User
 
 
 class UserRepository(UserRepositoryInterface):
-    """UserRepositoryInterface 的 SQLAlchemy 实现。"""
+    """UserRepositoryInterface 的 SQLModel 实现。"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
     async def get_by_id(self, user_id: str) -> User | None:
-        stmt = select(User).options(selectinload(User.roles)).where(User.id == user_id)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.exec(select(User).where(User.id == user_id))
+        return result.one_or_none()
 
     async def get_by_username(self, username: str) -> User | None:
-        stmt = select(User).options(selectinload(User.roles)).where(User.username == username)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.exec(select(User).where(User.username == username))
+        return result.one_or_none()
 
     async def get_by_email(self, email: str) -> User | None:
-        stmt = select(User).options(selectinload(User.roles)).where(User.email == email)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.exec(select(User).where(User.email == email))
+        return result.one_or_none()
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> list[User]:
-        stmt = select(User).options(selectinload(User.roles)).offset(skip).limit(limit)
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        result = await self.session.exec(select(User).offset(skip).limit(limit))
+        return list(result.all())
 
     async def create(self, user: User) -> User:
         self.session.add(user)
@@ -55,6 +51,6 @@ class UserRepository(UserRepositoryInterface):
         return True
 
     async def count(self) -> int:
-        stmt = select(func.count()).select_from(User)
-        result = await self.session.execute(stmt)
+        # 聚合查询使用 session.execute 而非 session.exec
+        result = await self.session.execute(select(sa_func.count()).select_from(User))
         return result.scalar_one()

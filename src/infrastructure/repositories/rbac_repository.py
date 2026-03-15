@@ -1,33 +1,30 @@
-"""使用 SQLAlchemy 实现的 RBAC 仓库。"""
+"""使用 SQLModel 实现的 RBAC 仓库。"""
 
-from sqlalchemy import delete, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy import delete
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.rbac.repository import PermissionRepositoryInterface, RoleRepositoryInterface
-from src.infrastructure.database.models import Permission, Role, UserRole, role_permissions
+from src.infrastructure.database.models import Permission, Role, RolePermissionLink, UserRole
 
 
 class RoleRepository(RoleRepositoryInterface):
-    """RoleRepositoryInterface 的 SQLAlchemy 实现。"""
+    """RoleRepositoryInterface 的 SQLModel 实现。"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
     async def get_by_id(self, role_id: str) -> Role | None:
-        stmt = select(Role).options(selectinload(Role.permissions)).where(Role.id == role_id)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.exec(select(Role).where(Role.id == role_id))
+        return result.one_or_none()
 
     async def get_by_name(self, name: str) -> Role | None:
-        stmt = select(Role).options(selectinload(Role.permissions)).where(Role.name == name)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.exec(select(Role).where(Role.name == name))
+        return result.one_or_none()
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> list[Role]:
-        stmt = select(Role).options(selectinload(Role.permissions)).offset(skip).limit(limit)
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        result = await self.session.exec(select(Role).offset(skip).limit(limit))
+        return list(result.all())
 
     async def create(self, role: Role) -> Role:
         self.session.add(role)
@@ -50,9 +47,10 @@ class RoleRepository(RoleRepositoryInterface):
 
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
         # 检查是否已分配
-        stmt = select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
-        result = await self.session.execute(stmt)
-        if result.scalar_one_or_none() is not None:
+        result = await self.session.exec(
+            select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
+        )
+        if result.one_or_none() is not None:
             return False
 
         user_role = UserRole(user_id=user_id, role_id=role_id)
@@ -67,36 +65,29 @@ class RoleRepository(RoleRepositoryInterface):
         return bool(getattr(result, "rowcount", 0) > 0)
 
     async def get_user_roles(self, user_id: str) -> list[Role]:
-        stmt = (
-            select(Role)
-            .join(UserRole, UserRole.role_id == Role.id)
-            .options(selectinload(Role.permissions))
-            .where(UserRole.user_id == user_id)
+        result = await self.session.exec(
+            select(Role).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id)
         )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.all())
 
 
 class PermissionRepository(PermissionRepositoryInterface):
-    """PermissionRepositoryInterface 的 SQLAlchemy 实现。"""
+    """PermissionRepositoryInterface 的 SQLModel 实现。"""
 
     def __init__(self, session: AsyncSession):
         self.session = session
 
     async def get_by_id(self, permission_id: str) -> Permission | None:
-        stmt = select(Permission).where(Permission.id == permission_id)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.exec(select(Permission).where(Permission.id == permission_id))
+        return result.one_or_none()
 
     async def get_by_codename(self, codename: str) -> Permission | None:
-        stmt = select(Permission).where(Permission.codename == codename)
-        result = await self.session.execute(stmt)
-        return result.scalar_one_or_none()
+        result = await self.session.exec(select(Permission).where(Permission.codename == codename))
+        return result.one_or_none()
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> list[Permission]:
-        stmt = select(Permission).offset(skip).limit(limit)
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        result = await self.session.exec(select(Permission).offset(skip).limit(limit))
+        return list(result.all())
 
     async def create(self, permission: Permission) -> Permission:
         self.session.add(permission)
@@ -113,21 +104,19 @@ class PermissionRepository(PermissionRepositoryInterface):
         return True
 
     async def get_permissions_by_role(self, role_id: str) -> list[Permission]:
-        stmt = (
+        result = await self.session.exec(
             select(Permission)
-            .join(role_permissions, role_permissions.c.permission_id == Permission.id)
-            .where(role_permissions.c.role_id == role_id)
+            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
+            .where(RolePermissionLink.role_id == role_id)
         )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.all())
 
     async def get_user_permissions(self, user_id: str) -> list[Permission]:
-        stmt = (
+        result = await self.session.exec(
             select(Permission)
-            .join(role_permissions, role_permissions.c.permission_id == Permission.id)
-            .join(UserRole, UserRole.role_id == role_permissions.c.role_id)
+            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
+            .join(UserRole, UserRole.role_id == RolePermissionLink.role_id)
             .where(UserRole.user_id == user_id)
             .distinct()
         )
-        result = await self.session.execute(stmt)
-        return list(result.scalars().all())
+        return list(result.all())

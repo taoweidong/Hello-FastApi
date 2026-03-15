@@ -1,7 +1,7 @@
 """V1 API - 认证路由。"""
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.dependencies import get_current_active_user
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, TokenResponseDTO

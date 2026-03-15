@@ -1,6 +1,6 @@
 """应用层 - 认证服务。"""
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.auth_dto import LoginDTO, TokenResponseDTO
 from src.core.exceptions import UnauthorizedError

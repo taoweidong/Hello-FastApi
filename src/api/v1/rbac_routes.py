@@ -1,7 +1,7 @@
 """V1 API - RBAC 管理路由。"""
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import MessageResponse
 from src.api.dependencies import require_permission

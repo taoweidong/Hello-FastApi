@@ -2,24 +2,24 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from sqlmodel import Field, SQLModel
 
 
-class RoleCreateDTO(BaseModel):
+class RoleCreateDTO(SQLModel):
     """创建角色 DTO。"""
 
     name: str = Field(..., min_length=2, max_length=50)
     description: str | None = Field(None, max_length=255)
 
 
-class RoleUpdateDTO(BaseModel):
+class RoleUpdateDTO(SQLModel):
     """更新角色 DTO。"""
 
     name: str | None = Field(None, min_length=2, max_length=50)
     description: str | None = Field(None, max_length=255)
 
 
-class RoleResponseDTO(BaseModel):
+class RoleResponseDTO(SQLModel):
     """角色响应 DTO。"""
 
     id: str
@@ -31,7 +31,7 @@ class RoleResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class PermissionCreateDTO(BaseModel):
+class PermissionCreateDTO(SQLModel):
     """创建权限 DTO。"""
 
     name: str = Field(..., min_length=2, max_length=100)
@@ -41,7 +41,7 @@ class PermissionCreateDTO(BaseModel):
     action: str = Field(..., max_length=50)
 
 
-class PermissionResponseDTO(BaseModel):
+class PermissionResponseDTO(SQLModel):
     """权限响应 DTO。"""
 
     id: str
@@ -55,14 +55,14 @@ class PermissionResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class AssignRoleDTO(BaseModel):
+class AssignRoleDTO(SQLModel):
     """为用户分配角色 DTO。"""
 
     user_id: str
     role_id: str
 
 
-class AssignPermissionDTO(BaseModel):
+class AssignPermissionDTO(SQLModel):
     """为角色分配权限 DTO。"""
 
     role_id: str

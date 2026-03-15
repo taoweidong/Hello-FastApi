@@ -1,6 +1,6 @@
 """应用层 - 用户服务。"""
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.user_dto import (
     ChangePasswordDTO,
@@ -121,11 +121,8 @@ class UserService:
     def _to_response(user: User) -> UserResponseDTO:
         """将用户实体转换为响应 DTO。"""
         roles: list[str] = []
-        # 检查 roles 关系是否已加载，以避免在异步上下文中延迟加载
-        from sqlalchemy import inspect as sa_inspect
-
-        user_state = sa_inspect(user)
-        if "roles" not in user_state.unloaded:
+        # SQLModel 表模型同时也是 Pydantic 模型，可直接访问关系属性
+        if user.roles:
             roles = [ur.role.name for ur in user.roles if ur.role]
         return UserResponseDTO(
             id=user.id,

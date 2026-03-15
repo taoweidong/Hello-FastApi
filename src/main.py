@@ -12,7 +12,6 @@ from src.config.settings import settings
 from src.core.constants import API_PREFIX
 from src.core.exceptions import AppException
 from src.core.logger import log_shutdown, log_startup, logger
-from src.core.middlewares import RequestLoggingMiddleware
 from src.infrastructure.database import close_db, init_db
 
 
@@ -43,7 +42,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS middleware
+    # CORS 中间件
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
@@ -52,10 +51,12 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Request logging middleware
+    # 请求日志中间件
+    from src.core.middlewares import RequestLoggingMiddleware
+
     app.add_middleware(RequestLoggingMiddleware)
 
-    # Global exception handler
+    # 全局异常处理
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
         return JSONResponse(

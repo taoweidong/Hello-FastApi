@@ -1,6 +1,6 @@
 """应用层 - RBAC 服务。"""
 
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.rbac_dto import (
     PermissionCreateDTO,

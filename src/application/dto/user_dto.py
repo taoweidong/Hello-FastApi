@@ -2,10 +2,11 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import EmailStr
+from sqlmodel import Field, SQLModel
 
 
-class UserCreateDTO(BaseModel):
+class UserCreateDTO(SQLModel):
     """创建新用户 DTO。"""
 
     username: str = Field(..., min_length=3, max_length=50)
@@ -14,7 +15,7 @@ class UserCreateDTO(BaseModel):
     full_name: str | None = Field(None, max_length=100)
 
 
-class UserUpdateDTO(BaseModel):
+class UserUpdateDTO(SQLModel):
     """更新用户 DTO。"""
 
     email: EmailStr | None = None
@@ -22,7 +23,7 @@ class UserUpdateDTO(BaseModel):
     is_active: bool | None = None
 
 
-class UserResponseDTO(BaseModel):
+class UserResponseDTO(SQLModel):
     """用户响应 DTO。"""
 
     id: str
@@ -38,14 +39,14 @@ class UserResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class UserListResponseDTO(BaseModel):
+class UserListResponseDTO(SQLModel):
     """分页用户列表响应 DTO。"""
 
     total: int
     items: list[UserResponseDTO]
 
 
-class ChangePasswordDTO(BaseModel):
+class ChangePasswordDTO(SQLModel):
     """修改密码 DTO。"""
 
     old_password: str
