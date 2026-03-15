@@ -2,15 +2,23 @@
 
 <cite>
 **本文档中引用的文件**
-- [entities.py](file://src/domain/rbac/entities.py)
 - [models.py](file://src/infrastructure/database/models.py)
 - [rbac_dto.py](file://src/application/dto/rbac_dto.py)
 - [rbac_service.py](file://src/application/services/rbac_service.py)
 - [rbac_repository.py](file://src/infrastructure/repositories/rbac_repository.py)
 - [rbac_routes.py](file://src/api/v1/rbac_routes.py)
 - [repository.py](file://src/domain/rbac/repository.py)
-- [entities.py](file://src/domain/user/entities.py)
+- [connection.py](file://src/infrastructure/database/connection.py)
+- [__init__.py](file://src/domain/rbac/__init__.py)
 </cite>
+
+## 更新摘要
+**变更内容**
+- 更新了实体模型的实现位置：从领域层的Django模型迁移到基础设施层的SQLAlchemy模型
+- 移除了对src/domain/rbac/entities.py的引用，该文件已被删除
+- 更新了架构图以反映新的分层结构
+- 更新了数据库表关系映射以匹配新的SQLAlchemy实现
+- 更新了依赖关系分析以反映新的技术栈
 
 ## 目录
 1. [简介](#简介)
@@ -27,11 +35,13 @@
 
 本文件详细阐述了基于角色的访问控制（RBAC）实体模型的设计与实现。该系统采用分层架构设计，包含领域层、基础设施层、应用层和API层，实现了完整的角色管理、权限管理和用户授权功能。
 
+**重要更新**：RBAC实体模型已从领域层的Django模型重构为基础设施层的SQLAlchemy模型实现。新的实现采用异步数据库连接和现代ORM特性，提供了更好的性能和可扩展性。
+
 RBAC模型的核心由三个主要实体组成：Role（角色）、Permission（权限）和UserRole（用户-角色关联），这些实体通过多对多关系实现灵活的权限控制机制。
 
 ## 项目结构
 
-RBAC实体模型分布在项目的多个层次中，形成了清晰的分层架构：
+RBAC实体模型现在位于基础设施层，形成了清晰的分层架构：
 
 ```mermaid
 graph TB
@@ -43,30 +53,29 @@ Service[rbac_service.py]
 DTO[rbac_dto.py]
 end
 subgraph "领域层"
-DomainEntities[domain/rbac/entities.py]
 DomainRepo[domain/rbac/repository.py]
 end
 subgraph "基础设施层"
 InfraModels[infrastructure/database/models.py]
 RepoImpl[infrastructure/repositories/rbac_repository.py]
+DBConnection[infrastructure/database/connection.py]
 end
 Routes --> Service
 Service --> DTO
 Service --> DomainRepo
 Service --> RepoImpl
-DomainRepo --> DomainEntities
+DomainRepo --> RepoImpl
 RepoImpl --> InfraModels
+InfraModels --> DBConnection
 ```
 
 **图表来源**
 - [rbac_routes.py:1-168](file://src/api/v1/rbac_routes.py#L1-L168)
 - [rbac_service.py:1-158](file://src/application/services/rbac_service.py#L1-L158)
-- [entities.py:1-79](file://src/domain/rbac/entities.py#L1-L79)
-
-**章节来源**
-- [rbac_routes.py:1-168](file://src/api/v1/rbac_routes.py#L1-L168)
-- [rbac_service.py:1-158](file://src/application/services/rbac_service.py#L1-L158)
-- [entities.py:1-79](file://src/domain/rbac/entities.py#L1-L79)
+- [repository.py:1-62](file://src/domain/rbac/repository.py#L1-L62)
+- [rbac_repository.py:1-133](file://src/infrastructure/repositories/rbac_repository.py#L1-L133)
+- [models.py:1-142](file://src/infrastructure/database/models.py#L1-L142)
+- [connection.py:1-52](file://src/infrastructure/database/connection.py#L1-L52)
 
 ## 核心组件
 
@@ -75,17 +84,17 @@ RBAC系统的核心由三个实体构成，每个实体都有明确的职责和�
 ### 角色实体（Role）
 
 角色是RBAC模型的聚合根，代表系统中的用户身份或职责。角色实体包含以下关键属性：
-- **唯一标识符**：UUID格式的主键
-- **名称**：角色的唯一标识名称
+- **唯一标识符**：36字符长度的UUID格式主键
+- **名称**：角色的唯一标识名称，支持索引优化
 - **描述**：角色的详细说明
-- **时间戳**：创建和更新时间跟踪
+- **时间戳**：创建时间自动跟踪
 
 ### 权限实体（Permission）
 
 权限实体表示系统中可执行的具体操作。权限设计包含：
-- **标识符**：UUID格式的唯一标识
+- **标识符**：36字符长度的UUID格式唯一标识
 - **名称**：权限的显示名称
-- **编码名**：权限的唯一编码标识
+- **编码名**：权限的唯一编码标识，支持索引优化
 - **资源类型**：权限作用的资源类别
 - **操作类型**：具体的权限动作
 - **描述信息**：权限的详细说明
@@ -93,13 +102,13 @@ RBAC系统的核心由三个实体构成，每个实体都有明确的职责和�
 ### 用户-角色关联实体（UserRole）
 
 UserRole实体实现了用户与角色之间的多对多关系，包含：
-- **用户标识**：关联到用户的外键
-- **角色标识**：关联到角色的外键
+- **用户标识**：关联到用户的外键，支持级联删除
+- **角色标识**：关联到角色的外键，支持级联删除
 - **分配时间**：角色分配的时间戳
 
 **章节来源**
-- [entities.py:20-79](file://src/domain/rbac/entities.py#L20-L79)
-- [models.py:59-122](file://src/infrastructure/database/models.py#L59-L122)
+- [models.py:58-122](file://src/infrastructure/database/models.py#L58-L122)
+- [rbac_dto.py:8-70](file://src/application/dto/rbac_dto.py#L8-L70)
 
 ## 架构概览
 
@@ -116,9 +125,6 @@ RBACService[RBAC服务]
 DTOs[数据传输对象]
 end
 subgraph "领域层"
-RoleEntity[角色实体]
-PermissionEntity[权限实体]
-UserRoleEntity[用户角色关联]
 RoleRepoInterface[角色仓库接口]
 PermRepoInterface[权限仓库接口]
 end
@@ -127,16 +133,11 @@ SQLModels[SQLAlchemy模型]
 RoleRepoImpl[角色仓库实现]
 PermRepoImpl[权限仓库实现]
 Database[(数据库)]
-end
-APIRoutes --> RBACService
-RBACService --> DTOs
-RBACService --> RoleRepoInterface
-RBACService --> PermRepoInterface
-RoleRepoInterface --> RoleRepoImpl
-PermRepoInterface --> PermRepoImpl
+DBConnection[数据库连接]
+SQLModels --> DBConnection
 RoleRepoImpl --> SQLModels
 PermRepoImpl --> SQLModels
-SQLModels --> Database
+DBConnection --> Database
 ```
 
 **图表来源**
@@ -144,6 +145,7 @@ SQLModels --> Database
 - [rbac_service.py:20-158](file://src/application/services/rbac_service.py#L20-L158)
 - [repository.py:8-62](file://src/domain/rbac/repository.py#L8-L62)
 - [rbac_repository.py:11-133](file://src/infrastructure/repositories/rbac_repository.py#L11-L133)
+- [connection.py:27-52](file://src/infrastructure/database/connection.py#L27-L52)
 
 ## 详细组件分析
 
@@ -158,7 +160,6 @@ class Role {
 +name : str
 +description : str
 +created_at : datetime
-+updated_at : datetime
 +permissions : List[Permission]
 +users : List[UserRole]
 +__repr__() str
@@ -189,15 +190,15 @@ UserRole "1" -- "1" User : 多对一
 ```
 
 **图表来源**
-- [entities.py:20-79](file://src/domain/rbac/entities.py#L20-L79)
-- [models.py:59-122](file://src/infrastructure/database/models.py#L59-L122)
+- [models.py:58-104](file://src/infrastructure/database/models.py#L58-L104)
+- [models.py:106-122](file://src/infrastructure/database/models.py#L106-L122)
 
 #### 角色属性设计
 
 角色实体的关键设计特点：
-- **UUID主键**：确保全局唯一性，支持分布式部署
-- **唯一名称索引**：保证角色名称的唯一性
-- **时间戳字段**：自动跟踪创建和更新时间
+- **UUID主键**：36字符长度的UUID确保全局唯一性，支持分布式部署
+- **唯一名称索引**：保证角色名称的唯一性和查询性能
+- **时间戳字段**：自动跟踪创建时间
 - **权限关系**：通过关联表实现多对多关系
 - **用户关系**：维护用户与角色的关联
 
@@ -209,7 +210,7 @@ UserRole "1" -- "1" User : 多对一
 - **条件角色**：基于上下文动态授予角色
 
 **章节来源**
-- [entities.py:40-61](file://src/domain/rbac/entities.py#L40-L61)
+- [models.py:63-78](file://src/infrastructure/database/models.py#L63-L78)
 
 ### 权限实体设计
 
@@ -241,13 +242,12 @@ Permission "1" -- "*" Role : 多对多
 ```
 
 **图表来源**
-- [entities.py:20-38](file://src/domain/rbac/entities.py#L20-L38)
-- [models.py:82-104](file://src/infrastructure/database/models.py#L82-L104)
+- [models.py:81-104](file://src/infrastructure/database/models.py#L81-L104)
 
 #### 权限标识符设计
 
 权限的标识系统采用多层次设计：
-- **编码名（codename）**：机器可读的唯一标识符
+- **编码名（codename）**：机器可读的唯一标识符，支持索引优化
 - **名称（name）**：人类可读的显示名称
 - **资源类型（resource）**：权限作用的资源类别
 - **操作类型（action）**：具体的权限动作
@@ -260,7 +260,7 @@ Permission "1" -- "*" Role : 多对多
 - **组合规则**：通过编码名约定实现权限组合
 
 **章节来源**
-- [entities.py:25-31](file://src/domain/rbac/entities.py#L25-L31)
+- [models.py:86-92](file://src/infrastructure/database/models.py#L86-L92)
 - [rbac_dto.py:34-56](file://src/application/dto/rbac_dto.py#L34-L56)
 
 ### 用户-角色关联实体设计
@@ -302,16 +302,14 @@ UserRole "1" -- "1" Role : 多对一
 ```
 
 **图表来源**
-- [entities.py:63-79](file://src/domain/rbac/entities.py#L63-L79)
-- [models.py:107-122](file://src/infrastructure/database/models.py#L107-L122)
+- [models.py:106-122](file://src/infrastructure/database/models.py#L106-L122)
 
 #### 多对多关系实现
 
 用户-角色关系通过关联表实现：
 - **关联表**：user_roles表存储用户和角色的映射
-- **外键约束**：双向外键确保数据完整性
-- **级联操作**：删除用户时自动删除关联记录
-- **索引优化**：为user_id和role_id建立索引
+- **外键约束**：双向外键确保数据完整性，支持级联删除
+- **索引优化**：为user_id和role_id建立索引提升查询性能
 
 #### 级联操作机制
 
@@ -321,7 +319,7 @@ UserRole "1" -- "1" Role : 多对一
 - **事务一致性**：所有操作都在事务中执行
 
 **章节来源**
-- [entities.py:68-75](file://src/domain/rbac/entities.py#L68-L75)
+- [models.py:111-118](file://src/infrastructure/database/models.py#L111-L118)
 
 ### 权限继承机制
 
@@ -384,7 +382,6 @@ string id PK
 string name UK
 string description
 timestamp created_at
-timestamp updated_at
 }
 permissions {
 string id PK
@@ -412,16 +409,16 @@ permissions ||--o{ role_permissions : has
 ```
 
 **图表来源**
-- [models.py:30-122](file://src/infrastructure/database/models.py#L30-L122)
+- [models.py:28-142](file://src/infrastructure/database/models.py#L28-L142)
 
 #### 外键约束设计
 
 数据库层面的外键约束确保数据完整性：
-- **用户外键**：user_roles.user_id → users.id
-- **角色外键**：user_roles.role_id → roles.id
-- **角色外键**：role_permissions.role_id → roles.id
-- **权限外键**：role_permissions.permission_id → permissions.id
-- **级联删除**：删除用户时自动删除关联记录
+- **用户外键**：user_roles.user_id → users.id（级联删除）
+- **角色外键**：user_roles.role_id → roles.id（级联删除）
+- **角色外键**：role_permissions.role_id → roles.id（级联删除）
+- **权限外键**：role_permissions.permission_id → permissions.id（级联删除）
+- **唯一约束**：用户名、邮箱、权限编码名的唯一性
 
 #### 索引优化策略
 
@@ -431,8 +428,8 @@ permissions ||--o{ role_permissions : has
 - **复合索引**：用户-角色关联表的联合索引
 
 **章节来源**
-- [models.py:19-24](file://src/infrastructure/database/models.py#L19-L24)
-- [models.py:113-114](file://src/infrastructure/database/models.py#L113-L114)
+- [models.py:18-23](file://src/infrastructure/database/models.py#L18-L23)
+- [models.py:112-118](file://src/infrastructure/database/models.py#L112-L118)
 
 ## 依赖关系分析
 
@@ -444,6 +441,7 @@ subgraph "外部依赖"
 SQLAlchemy[SQLAlchemy ORM]
 FastAPI[FastAPI框架]
 Pydantic[Pydantic验证]
+AsyncIO[异步I/O]
 end
 subgraph "应用层"
 RBACService[RBACService]
@@ -456,6 +454,7 @@ end
 subgraph "基础设施层"
 SQLModels[SQLAlchemy Models]
 Repositories[Repositories]
+DBConnection[Database Connection]
 end
 SQLAlchemy --> SQLModels
 FastAPI --> RBACService
@@ -465,12 +464,14 @@ RBACService --> Repositories
 Repositories --> SQLModels
 DomainEntities --> Interfaces
 SQLModels --> Repositories
+DBConnection --> Repositories
 ```
 
 **图表来源**
 - [rbac_service.py:3-17](file://src/application/services/rbac_service.py#L3-L17)
 - [repository.py:5-62](file://src/domain/rbac/repository.py#L5-L62)
-- [rbac_repository.py:8-8](file://src/infrastructure/repositories/rbac_repository.py#L8-L8)
+- [rbac_repository.py:7-8](file://src/infrastructure/repositories/rbac_repository.py#L7-L8)
+- [connection.py:3-52](file://src/infrastructure/database/connection.py#L3-L52)
 
 ### 组件耦合度分析
 
@@ -490,7 +491,7 @@ SQLModels --> Repositories
 
 **章节来源**
 - [repository.py:12-36](file://src/domain/rbac/repository.py#L12-L36)
-- [entities.py:12-17](file://src/domain/rbac/entities.py#L12-L17)
+- [__init__.py:3-12](file://src/domain/rbac/__init__.py#L3-L12)
 
 ## 性能考虑
 
@@ -499,16 +500,16 @@ RBAC系统在设计时充分考虑了性能优化：
 ### 查询优化策略
 
 - **批量加载**：使用selectinload减少N+1查询问题
-- **懒加载控制**：合理使用lazy参数控制关系加载
+- **惰性加载**：默认使用惰性加载减少内存占用
 - **索引优化**：为常用查询字段建立索引
 - **查询缓存**：对于静态数据实现缓存机制
 
 ### 内存使用优化
 
-- **惰性加载**：默认使用惰性加载减少内存占用
-- **批量操作**：支持批量插入和更新操作
+- **异步操作**：支持异步数据库连接减少阻塞
 - **连接池管理**：合理配置数据库连接池
 - **事务管理**：最小化事务持续时间
+- **批量操作**：支持批量插入和更新操作
 
 ### 扩展性考虑
 
@@ -584,11 +585,13 @@ RBAC实体模型通过清晰的分层架构和精心设计的实体关系，实�
 
 ### 技术特色
 
-- **UUID主键设计**：支持分布式部署
+- **UUID主键设计**：36字符长度的UUID支持分布式部署
 - **多对多关系**：实现灵活的权限管理
 - **级联操作**：确保数据完整性
-- **性能优化**：通过多种策略优化查询性能
+- **异步数据库连接**：提供更好的性能和可扩展性
 
 ### 应用价值
 
 该RBAC模型适用于各种规模的应用系统，从小型企业应用到大型企业级系统都能提供可靠的权限管理解决方案。通过合理的扩展和定制，可以满足不同业务场景的权限控制需求。
+
+**重要更新**：新的SQLAlchemy实现提供了更好的性能、异步支持和现代化的ORM特性，为未来的功能扩展奠定了坚实的基础。

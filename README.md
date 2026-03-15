@@ -79,16 +79,15 @@ Hello-FastApi/
 │   │   │   ├── connection.py
 │   │   │   └── models.py       # ORM 模型
 │   │   └── repositories/       # 仓储实现
-│   ├── tests/                  # 测试代码
-│   │   ├── integration/
-│   │   └── unit/
 │   └── main.py                 # 应用入口
+├── tests/                      # 测试代码
+│   ├── integration/            # 集成测试
+│   └── unit/                   # 单元测试
 ├── .env.example                # 环境变量模板
 ├── .env.development            # 开发环境配置
 ├── .env.production             # 生产环境配置
 ├── .env.testing                # 测试环境配置
 ├── .gitignore
-├── manage.py                   # 管理脚本
 ├── pyproject.toml              # 项目配置
 └── README.md
 ```
@@ -132,7 +131,7 @@ uv pip install -e ".[dev]"
 ### 启动服务
 
 ```bash
-python manage.py runserver
+python -m scripts.cli runserver
 ```
 
 服务启动后访问：
@@ -160,13 +159,13 @@ python manage.py runserver
 **Linux/Mac:**
 ```bash
 export APP_ENV=production
-python manage.py runserver
+python -m scripts.cli runserver
 ```
 
 **Windows:**
 ```cmd
 set APP_ENV=production
-python manage.py runserver
+python -m scripts.cli runserver
 ```
 
 ### 创建本地配置
@@ -182,10 +181,10 @@ vim .env
 ## 管理命令
 
 ```bash
-python manage.py runserver       # 启动开发服务器
-python manage.py createsuperuser # 创建超级用户
-python manage.py initdb          # 初始化数据库
-python manage.py seedrbac        # 填充 RBAC 初始数据
+python -m scripts.cli runserver       # 启动开发服务器
+python -m scripts.cli createsuperuser # 创建超级用户
+python -m scripts.cli initdb          # 初始化数据库
+python -m scripts.cli seedrbac        # 填充 RBAC 初始数据
 ```
 
 ## 开发规范
