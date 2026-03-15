@@ -48,8 +48,8 @@ class PermissionResponseDTO(BaseModel):
     name: str
     codename: str
     description: str | None = None
-    resource: str
-    action: str
+    resource: str | None = None
+    action: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

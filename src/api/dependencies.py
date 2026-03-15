@@ -28,7 +28,7 @@ async def get_current_user_id(
     user_id = payload.get("sub")
     if user_id is None:
         raise UnauthorizedError("Invalid token payload")
-    return user_id
+    return str(user_id)
 
 
 async def get_current_active_user(

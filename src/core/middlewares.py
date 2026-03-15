@@ -19,7 +19,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # 记录请求开始
         logger.debug(f"请求开始: {request.method} {request.url.path} 来自 {client_ip}")
 
-        response = await call_next(request)
+        response: Response = await call_next(request)
 
         # 计算处理时间
         process_time = time.time() - start_time
@@ -68,4 +68,5 @@ class IPFilterMiddleware(BaseHTTPMiddleware):
                 media_type="application/json",
             )
 
-        return await call_next(request)
+        response: Response = await call_next(request)
+        return response

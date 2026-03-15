@@ -63,7 +63,8 @@ class RoleRepository(RoleRepositoryInterface):
     async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
         stmt = delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
         result = await self.session.execute(stmt)
-        return result.rowcount > 0
+        # DML 语句返回的 CursorResult 具有 rowcount 属性
+        return bool(getattr(result, "rowcount", 0) > 0)
 
     async def get_user_roles(self, user_id: str) -> list[Role]:
         stmt = (
