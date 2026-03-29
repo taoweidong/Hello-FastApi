@@ -27,7 +27,7 @@ export default async ({ mode }: ConfigEnv): Promise<UserConfigExport> => {
       proxy: {
         "/api": {
           // 代理到后端 FastAPI 服务
-          target: "http://localhost:8000",
+          target: "http://localhost:8001",
           changeOrigin: true
         }
       },

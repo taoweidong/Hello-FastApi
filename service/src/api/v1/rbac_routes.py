@@ -8,7 +8,7 @@
 from fastapi import APIRouter, Depends, Query
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.api.common import page_response, success_response
+from src.api.common import list_response, page_response, success_response
 from src.api.dependencies import require_permission
 from src.application.dto.rbac_dto import (
     AssignPermissionsDTO,
@@ -30,38 +30,51 @@ from src.infrastructure.database import get_db
 role_router = APIRouter()
 
 
-@role_router.get("/list")
+@role_router.post("")
 async def get_role_list(
-    pageNum: int = Query(1, ge=1, description="页码"),
-    pageSize: int = Query(10, ge=1, le=100, description="每页条数"),
-    roleName: str = Query(None, description="角色名称"),
-    status: int = Query(None, description="状态(0-禁用, 1-启用)"),
+    query: RoleListQueryDTO,
     db: AsyncSession = Depends(get_db),
     _: dict = Depends(require_permission("role:view")),
 ):
     """获取角色列表接口（分页）。
 
     需要 role:view 权限。
+    前端调用: POST /api/system/role
+    响应格式: { list, total, pageSize, currentPage }
 
     Args:
-        pageNum: 页码
-        pageSize: 每页条数
-        roleName: 角色名称（模糊查询）
-        status: 状态筛选
+        query: 角色列表查询参数（请求体）
         db: 数据库会话
 
     Returns:
-        分页响应格式的角色列表
+        Pure Admin 标准分页响应格式的角色列表
     """
-    # 构建查询DTO
-    query = RoleListQueryDTO(pageNum=pageNum, pageSize=pageSize, roleName=roleName, status=status)
-
     service = RBACService(db)
     roles, total = await service.get_roles(query)
-    return page_response(rows=roles, total=total, page_num=query.pageNum, page_size=query.pageSize)
+    
+    # 转换为前端期望的字段格式
+    role_list = []
+    for role in roles:
+        role_dict = {
+            "id": role.id,
+            "name": role.name,
+            "code": role.code,
+            "status": role.status,
+            "remark": role.description,  # 映射 description 到 remark
+            "createTime": int(role.createTime.timestamp() * 1000) if role.createTime else None,
+            "updateTime": int(role.updateTime.timestamp() * 1000) if role.updateTime else None,
+        }
+        role_list.append(role_dict)
+    
+    return list_response(
+        list_data=role_list,
+        total=total,
+        page_size=query.pageSize,
+        current_page=query.pageNum,
+    )
 
 
-@role_router.post("/")
+@role_router.post("/create")
 async def create_role(
     dto: RoleCreateDTO,
     db: AsyncSession = Depends(get_db),
@@ -70,6 +83,7 @@ async def create_role(
     """创建角色接口。
 
     需要 role:manage 权限。
+    前端调用: POST /api/system/role/create
 
     Args:
         dto: 角色创建数据

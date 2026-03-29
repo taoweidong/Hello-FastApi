@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.api.common import success_response, page_response
+from src.api.common import success_response, list_response
 from src.api.dependencies import get_current_user_id, require_permission
 from src.application.dto.user_dto import (
     BatchDeleteDTO,
@@ -24,7 +24,7 @@ from src.infrastructure.database import get_db
 router = APIRouter()
 
 
-@router.post("/list")
+@router.post("")
 async def get_user_list(
     query: UserListQueryDTO,
     db: AsyncSession = Depends(get_db),
@@ -33,25 +33,36 @@ async def get_user_list(
     """获取用户列表接口（支持筛选和分页）。
 
     需要 user:view 权限。
+    前端调用: POST /api/system/user
+    响应格式: { list, total, pageSize, currentPage }
 
     Args:
         query: 用户列表查询参数
         db: 数据库会话
 
     Returns:
-        分页响应格式的用户列表
+        Pure Admin 标准分页响应格式的用户列表
     """
     service = UserService(db)
     users, total = await service.get_users(query)
-    return page_response(
-        rows=users,
+    
+    # 转换为前端期望的字段格式
+    user_list = []
+    for user in users:
+        user_dict = user.model_dump()
+        # 添加 dept 字段（前端期望的部门格式）
+        user_dict["dept"] = {"id": user_dict.get("dept_id") or 0, "name": ""}
+        user_list.append(user_dict)
+    
+    return list_response(
+        list_data=user_list,
         total=total,
-        page_num=query.pageNum,
         page_size=query.pageSize,
+        current_page=query.pageNum,
     )
 
 
-@router.post("", status_code=201)
+@router.post("/create", status_code=201)
 async def create_user(
     dto: UserCreateDTO,
     db: AsyncSession = Depends(get_db),
@@ -60,6 +71,7 @@ async def create_user(
     """创建用户接口。
 
     需要 user:add 权限。
+    前端调用: POST /api/system/user/create
 
     Args:
         dto: 用户创建数据

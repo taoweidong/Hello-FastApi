@@ -1,60 +1,49 @@
 # Hello-FastApi
 
-> 基于 Vue3 + FastAPI 的全栈中后台管理系统，前端基于 [Pure Admin](https://pure-admin.cn) 框架，后端将 [pure-admin-backend](https://github.com/pure-admin/pure-admin-backend)（Node.js）完整迁移至 Python FastAPI 框架，保持 API 接口、数据表结构、业务逻辑完全一致。
+> 基于 Vue3 + FastAPI 的全栈中后台管理系统，前端基于 [Pure Admin](https://pure-admin.cn)，后端将 [pure-admin-backend](https://github.com/pure-admin/pure-admin-backend) 完整迁移至 Python FastAPI 框架，保持 API 接口、数据表结构、业务逻辑完全一致。
 
-## 项目简介
+## 项目特色
 
-这是一个前后端分离的中后台管理系统，旨在提供一个完整的 RBAC 权限管理解决方案。
-
-- **后端**：使用 FastAPI 框架，采用 DDD（领域驱动设计）架构，实现 RBAC 细粒度权限管理
-- **前端**：基于 Vue3 + Vite + Element-Plus + TypeScript + Pinia + TailwindCSS 构建
-- **API 一致性**：与 pure-admin-backend 保持完全一致的响应格式、路由前缀、字段命名、权限编码和数据模型
-- **参考文档**：前端参考 [Pure Admin](https://pure-admin.cn/pages/introduction/)，后端参考 [pure-admin-backend](https://github.com/pure-admin/pure-admin-backend)
-
-## 功能特性
-
-- JWT 令牌认证 + Token 自动刷新
-- RBAC 细粒度角色权限管理
-- 用户管理（CRUD、批量操作、状态切换、密码重置）
-- 角色管理（CRUD、权限分配）
-- 权限管理
-- 菜单管理（树形结构、动态路由）
-- 国际化支持（中英文）
-- Docker 一键部署
-- 完善的代码规范工具链（ESLint、Prettier、Stylelint、Ruff、MyPy）
+- **JWT 双令牌认证** - Access Token + Refresh Token，支持无感刷新
+- **RBAC 细粒度权限** - 基于角色的访问控制，支持按钮级权限
+- **完整业务模块** - 用户管理、角色管理、权限管理、菜单管理
+- **动态路由加载** - 后端返回菜单配置，前端动态生成路由
+- **API 完全兼容** - 响应格式、路由前缀、权限编码与 pure-admin-backend 一致
+- **Docker 一键部署** - FastAPI + PostgreSQL + Redis 完整技术栈
+- **代码规范工具链** - ESLint、Prettier、Ruff、MyPy 完整配置
 
 ## 技术栈
 
-### 后端（service/）
+### 后端 ([service/](service/))
 
-| 技术 | 说明 |
-|-----|------|
-| FastAPI >=0.115 | 异步 Web 框架 |
-| SQLModel >=0.0.22 | ORM（基于 SQLAlchemy 2.0） |
-| Pydantic Settings | 配置管理 |
-| python-jose | JWT 认证 |
-| bcrypt | 密码加密 |
-| loguru | 日志管理 |
-| Redis | 分布式缓存 |
-| SQLite（开发）/ PostgreSQL（生产） | 数据库 |
-| Uvicorn | ASGI 服务器 |
-| Python >=3.10 | 运行环境 |
+| 技术 | 版本 | 说明 |
+|-----|------|------|
+| Python | >= 3.10 | 运行环境 |
+| FastAPI | >= 0.115 | 异步 Web 框架 |
+| SQLModel | >= 0.0.22 | ORM（SQLAlchemy 2.0 + Pydantic） |
+| PostgreSQL | 16 | 生产数据库 |
+| SQLite | - | 开发数据库 |
+| Redis | 7 | 分布式缓存 |
+| python-jose | >= 3.3.0 | JWT 认证 |
+| bcrypt | >= 4.0.0 | 密码加密 |
+| loguru | >= 0.7.0 | 日志管理 |
+| Uvicorn | >= 0.30.0 | ASGI 服务器 |
 
-### 前端（web/）
+### 前端 ([web/](web/))
 
-| 技术 | 说明 |
-|-----|------|
-| Vue 3.5+ | 渐进式前端框架 |
-| Vite 8+ | 构建工具 |
-| TypeScript 5.9+ | 类型安全 |
-| Element Plus | UI 组件库 |
-| Pinia | 状态管理 |
-| TailwindCSS 4 | CSS 框架 |
-| Axios | HTTP 客户端 |
-| vue-i18n | 国际化 |
-| ECharts 6 | 数据可视化 |
-| Node >=20.19 / >=22.13 | 运行环境 |
-| pnpm >=9 | 包管理器 |
+| 技术 | 版本 | 说明 |
+|-----|------|------|
+| Node.js | >= 20.19 或 >= 22.13 | 运行环境 |
+| pnpm | >= 9 | 包管理器 |
+| Vue | 3.5+ | 渐进式前端框架 |
+| Vite | 8+ | 构建工具 |
+| TypeScript | 5.9+ | 类型安全 |
+| Element Plus | 2.13+ | UI 组件库 |
+| Pinia | 3.0+ | 状态管理 |
+| TailwindCSS | 4+ | CSS 框架 |
+| Axios | 1.13+ | HTTP 客户端 |
+| vue-i18n | 11+ | 国际化 |
+| ECharts | 6+ | 数据可视化 |
 
 ## 项目结构
 
@@ -72,18 +61,18 @@ Hello-FastApi/
 │   ├── tests/                 # 测试代码
 │   ├── docker/                # Docker 配置
 │   ├── scripts/               # CLI 管理脚本
-│   └── pyproject.toml
-└── web/                        # 前端（Vue3 Pure Admin）
+│   └── README.md              # 后端详细文档
+│
+└── web/                        # 前端项目（Vue3）
     ├── src/
     │   ├── api/               # API 调用
     │   ├── views/             # 页面组件
     │   ├── router/            # 路由配置
     │   ├── store/             # 状态管理
     │   ├── components/        # 公共组件
-    │   ├── utils/             # 工具函数
-    │   └── layout/            # 布局组件
+    │   └── utils/             # 工具函数
     ├── mock/                  # Mock 数据
-    └── package.json
+    └── README.md              # 前端详细文档
 ```
 
 ## 快速开始
@@ -94,8 +83,11 @@ Hello-FastApi/
 - Node.js >= 20.19 或 >= 22.13
 - pnpm >= 9
 - Redis（可选，开发环境可不开启）
+- Docker & Docker Compose（可选，用于容器化部署）
 
 ### 后端启动
+
+详细说明请参考 [service/README.md](service/README.md)
 
 ```bash
 cd service
@@ -108,19 +100,15 @@ scripts\setup_dev.bat
 
 # 方式二：手动配置
 uv venv --python 3.10
-# Windows
+# Windows 激活
 .venv\Scripts\activate
-# Linux/Mac
+# Linux/Mac 激活
 source .venv/bin/activate
 uv pip install -e ".[dev]"
 
-# 初始化数据库
+# 初始化数据库和管理员
 python -m scripts.cli initdb
-
-# 创建超级管理员
 python -m scripts.cli createsuperuser
-
-# 初始化 RBAC 数据（角色和权限）
 python -m scripts.cli seedrbac
 
 # 启动开发服务器
@@ -129,6 +117,8 @@ python -m scripts.cli runserver
 ```
 
 ### 前端启动
+
+详细说明请参考 [web/README.md](web/README.md)
 
 ```bash
 cd web
@@ -141,12 +131,94 @@ pnpm dev
 # 访问地址：http://localhost:8848
 ```
 
-### 前后端联调
+## 前后端联调
+
+| 配置项 | 后端 | 前端 |
+|-------|------|------|
+| 端口 | 8000 | 8848 |
+| API 前缀 | /api/system | /api/system |
+| 代理 | - | Vite proxy → localhost:8000 |
+| CORS | 允许 localhost:8848 | - |
+
+**联调步骤：**
 
 1. 先启动后端服务（端口 8000）
 2. 再启动前端服务（端口 8848）
-3. 后端 CORS 已配置允许前端开发地址访问
-4. 前端通过 axios 直接请求后端 API（http://localhost:8000/api/system/...）
+3. 后端 CORS 已配置允许前端地址访问
+4. 前端通过 Vite 代理请求后端 API
+
+**请求流程：**
+```
+浏览器 → http://localhost:8848/api/system/xxx
+       → Vite Proxy
+       → http://localhost:8000/api/system/xxx
+       → FastAPI 后端
+```
+
+## Docker 部署
+
+### 一键启动
+
+```bash
+cd service/docker
+
+# 启动所有服务（FastAPI + PostgreSQL + Redis）
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 初始化数据库
+docker-compose exec app python -m scripts.cli initdb
+docker-compose exec app python -m scripts.cli createsuperuser
+docker-compose exec app python -m scripts.cli seedrbac
+```
+
+### 服务端口
+
+| 服务 | 端口 | 说明 |
+|-----|------|------|
+| FastAPI | 8000 | API 服务 |
+| PostgreSQL | 5432 | 数据库 |
+| Redis | 6379 | 缓存 |
+
+### 生产环境配置
+
+修改 `service/.env.production`：
+
+```bash
+# 必须修改的配置
+SECRET_KEY=your-secret-key-at-least-32-characters
+JWT_SECRET_KEY=your-jwt-secret-key-at-least-32-characters
+DATABASE_URL=postgresql+asyncpg://user:password@host:5432/dbname
+CORS_ORIGINS=https://your-domain.com
+```
+
+## 环境变量
+
+### 后端核心配置
+
+| 变量名 | 默认值 | 说明 |
+|-------|-------|------|
+| APP_ENV | development | 运行环境（development/production/testing） |
+| DATABASE_URL | sqlite+aiosqlite:///./sql/dev.db | 数据库连接字符串 |
+| REDIS_URL | redis://localhost:6379/0 | Redis 连接字符串 |
+| JWT_SECRET_KEY | - | JWT 密钥（生产环境必须修改） |
+| SECRET_KEY | - | 应用密钥（生产环境必须修改） |
+| JWT_ALGORITHM | HS256 | JWT 加密算法 |
+| ACCESS_TOKEN_EXPIRE_MINUTES | 30 | 访问令牌有效期（分钟） |
+| REFRESH_TOKEN_EXPIRE_DAYS | 7 | 刷新令牌有效期（天） |
+| CORS_ORIGINS | http://localhost:8848,... | CORS 允许源（逗号分隔） |
+| LOG_LEVEL | INFO | 日志级别 |
+
+### 前端核心配置
+
+| 变量名 | 默认值 | 说明 |
+|-------|-------|------|
+| VITE_PORT | 8848 | 开发服务器端口 |
+| VITE_PUBLIC_PATH | / | 公共路径 |
+| VITE_ROUTER_HISTORY | hash | 路由模式 |
+| VITE_MOCK | false | 是否启用 Mock 数据 |
 
 ## API 接口概览
 
@@ -158,84 +230,194 @@ pnpm dev
 | 权限 | /api/system/permission | 权限列表、创建、删除 |
 | 菜单 | /api/system/menu | 菜单树、用户菜单、菜单 CRUD |
 
-统一响应格式：
+**统一响应格式：**
 
 ```json
 {
-  "code": 200,
-  "message": "success",
+  "code": 0,
+  "message": "操作成功",
   "data": {}
 }
 ```
 
-## 数据库设计
+**分页响应格式：**
 
-核心数据表：
-
-- **users** - 用户表
-- **roles** - 角色表
-- **permissions** - 权限表
-- **user_roles** - 用户-角色关联表
-- **role_permissions** - 角色-权限关联表
-- **menus** - 菜单表
-- **ip_rules** - IP 规则表
-
-默认角色：admin（系统管理员）、user（普通用户）、moderator（审核员）
-
-## Docker 部署
-
-```bash
-cd service/docker
-
-# 启动所有服务（FastAPI + PostgreSQL + Redis）
-docker-compose up -d
-
-# 初始化数据库和数据
-docker-compose exec app python -m scripts.cli initdb
-docker-compose exec app python -m scripts.cli createsuperuser
-docker-compose exec app python -m scripts.cli seedrbac
+```json
+{
+  "code": 0,
+  "message": "操作成功",
+  "data": {
+    "list": [],
+    "total": 100,
+    "pageSize": 10,
+    "currentPage": 1
+  }
+}
 ```
 
-服务端口：
+## 常见问题
 
-- API 服务：8000
-- PostgreSQL：5432
-- Redis：6379
+### 1. CORS 跨域错误
 
-## 环境变量
+**现象：** 浏览器控制台显示跨域错误
 
-后端核心配置（.env 文件）：
+**解决方案：**
+- 检查 `service/.env.development` 中 `CORS_ORIGINS` 是否包含前端地址
+- 确认后端已重启使配置生效
+- 开发环境应包含 `http://localhost:8848`
 
-| 变量名 | 默认值 | 说明 |
-|-------|-------|------|
-| APP_ENV | development | 运行环境 |
-| DATABASE_URL | sqlite+aiosqlite:///./sql/dev.db | 数据库连接 |
-| REDIS_URL | redis://localhost:6379/0 | Redis 连接 |
-| JWT_SECRET_KEY | - | JWT 密钥（需设置） |
-| SECRET_KEY | - | 应用密钥（需设置） |
-| CORS_ORIGINS | http://localhost:3000,... | CORS 允许源 |
+### 2. Token 过期处理
 
-详细配置参考 `service/.env.example`
+**现象：** 请求返回 401 未授权
 
-## 开发指南
+**解决方案：**
+- 系统支持 Token 自动刷新，检查刷新逻辑是否正常
+- 清除浏览器 Cookie 和 localStorage 重新登录
+- 检查 `ACCESS_TOKEN_EXPIRE_MINUTES` 配置
+
+### 3. 数据库连接失败
+
+**现象：** 启动时提示数据库连接错误
+
+**解决方案：**
+- SQLite：检查 `sql/` 目录是否存在
+- PostgreSQL：检查服务是否启动，连接字符串是否正确
+- 执行 `python -m scripts.cli initdb` 初始化数据库
+
+### 4. 前端代理不生效
+
+**现象：** 前端请求 404
+
+**解决方案：**
+- 确认后端服务已启动在 8000 端口
+- 检查 `web/vite.config.ts` 代理配置
+- 重启前端开发服务器
+
+### 5. 生产环境密钥安全
+
+**现象：** 启动警告密钥不安全
+
+**解决方案：**
+```bash
+# 生成安全的密钥
+python -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### 6. Docker 服务启动顺序
+
+**现象：** 容器启动失败或服务无法连接
+
+**解决方案：**
+- docker-compose 已配置健康检查和依赖关系
+- 按顺序执行：`docker-compose up -d` → 初始化数据库
+- 检查容器日志：`docker-compose logs app`
+
+### 7. 权限不足错误
+
+**现象：** 操作返回 403 Forbidden
+
+**解决方案：**
+- 确认用户已分配角色
+- 确认角色已分配权限
+- 超级管理员（is_superuser=true）绕过权限检查
+
+### 8. 前端依赖安装失败
+
+**现象：** pnpm install 报错
+
+**解决方案：**
+```bash
+# 清理缓存重新安装
+pnpm store prune
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
+## 开发规范
 
 ### 后端代码规范
 
 ```bash
 cd service
-ruff check src/          # 代码检查
-ruff format src/         # 代码格式化
-mypy src/                # 类型检查
-pytest                   # 运行测试
+
+# 代码检查
+ruff check src/
+
+# 代码格式化
+ruff format src/
+
+# 类型检查
+mypy src/
+
+# 运行测试
+pytest
+
+# 完整检查
+ruff check src/ && ruff format src/ && mypy src/ && pytest
 ```
 
 ### 前端代码规范
 
 ```bash
 cd web
-pnpm lint                # ESLint + Prettier + Stylelint
-pnpm typecheck           # TypeScript 类型检查
-pnpm build               # 生产构建
+
+# ESLint + Prettier + Stylelint
+pnpm lint
+
+# TypeScript 类型检查
+pnpm typecheck
+
+# 生产构建
+pnpm build
+```
+
+### Git 提交规范
+
+参考 [Angular 规范](https://github.com/conventional-changelog/conventional-changelog/tree/master/packages/conventional-changelog-angular)：
+
+- `feat` 新功能
+- `fix` 修复问题
+- `docs` 文档更新
+- `style` 代码格式
+- `refactor` 重构
+- `test` 测试相关
+- `chore` 构建/工具
+
+## 项目维护
+
+### 数据库迁移
+
+开发环境使用 SQLModel 自动创建表结构，生产环境建议使用 Alembic：
+
+```bash
+# 安装 Alembic
+pip install alembic
+
+# 初始化迁移
+alembic init migrations
+
+# 生成迁移脚本
+alembic revision --autogenerate -m "description"
+
+# 执行迁移
+alembic upgrade head
+```
+
+### 日志管理
+
+日志文件位于 `service/logs/` 目录：
+- `app.log` - 应用日志
+- `access.log` - 访问日志
+- `error.log` - 错误日志
+
+### 备份策略
+
+```bash
+# SQLite 备份
+cp service/sql/dev.db service/sql/dev.db.backup
+
+# PostgreSQL 备份
+docker-compose exec db pg_dump -U postgres hello_fastapi > backup.sql
 ```
 
 ## 许可证
@@ -247,3 +429,4 @@ pnpm build               # 生产构建
 - [Pure Admin](https://pure-admin.cn) - 前端框架
 - [pure-admin-backend](https://github.com/pure-admin/pure-admin-backend) - 后端逻辑参考
 - [FastAPI](https://fastapi.tiangolo.com) - Python Web 框架
+- [Element Plus](https://element-plus.org) - UI 组件库

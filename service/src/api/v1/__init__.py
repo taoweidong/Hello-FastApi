@@ -8,6 +8,7 @@ from fastapi import APIRouter
 from src.api.v1.auth_routes import router as auth_router
 from src.api.v1.menu_routes import menu_router
 from src.api.v1.rbac_routes import permission_router, role_router
+from src.api.v1.system_routes import system_extra_router
 from src.api.v1.user_routes import router as user_router
 
 # 创建系统级路由聚合器
@@ -36,5 +37,9 @@ system_router.include_router(permission_router, prefix="/permission", tags=["权
 # 前缀: /menu
 # 提供菜单增删改查、菜单树获取等功能
 system_router.include_router(menu_router, prefix="/menu", tags=["菜单管理"])
+
+# 系统管理扩展路由（部门、日志等）
+# 直接挂在 system 路由下（无额外前缀）
+system_router.include_router(system_extra_router, tags=["系统管理"])
 
 __all__ = ["system_router"]

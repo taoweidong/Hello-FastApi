@@ -11,7 +11,11 @@ from src.api.common import success_response
 from src.api.dependencies import get_current_active_user
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
+from src.core.exceptions import UnauthorizedError
 from src.infrastructure.database import get_db
+from src.infrastructure.repositories.user_repository import UserRepository
+from src.infrastructure.repositories.rbac_repository import RoleRepository
+from src.infrastructure.repositories.menu_repository import MenuRepository
 
 router = APIRouter()
 
@@ -67,7 +71,7 @@ async def logout(current_user: dict = Depends(get_current_active_user)):
     return success_response(message="登出成功")
 
 
-@router.post("/refresh")
+@router.post("/refresh-token")
 async def refresh_token(dto: RefreshTokenDTO, db: AsyncSession = Depends(get_db)):
     """刷新访问令牌接口。
 
@@ -83,3 +87,304 @@ async def refresh_token(dto: RefreshTokenDTO, db: AsyncSession = Depends(get_db)
     service = AuthService(db)
     result = await service.refresh_token(dto.refreshToken)
     return success_response(data=result, message="刷新成功")
+
+
+@router.get("/mine")
+async def get_mine(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取当前登录用户的个人信息。
+
+    Args:
+        current_user: 当前登录用户信息
+        db: 数据库会话
+
+    Returns:
+        dict: 统一格式的用户信息响应，包含 avatar, username, nickname, email, phone, description
+    """
+    user_repo = UserRepository(db)
+    user = await user_repo.get_by_id(current_user["id"])
+    if user is None:
+        raise UnauthorizedError("用户不存在")
+    return success_response(
+        data={
+            "avatar": user.avatar or "",
+            "username": user.username,
+            "nickname": user.nickname or user.username,
+            "email": user.email or "",
+            "phone": user.phone or "",
+            "description": "",
+        }
+    )
+
+
+@router.get("/mine-logs")
+async def get_mine_logs(current_user: dict = Depends(get_current_active_user)):
+    """获取当前用户的安全日志（stub 数据）。
+
+    Args:
+        current_user: 当前登录用户信息
+
+    Returns:
+        dict: 统一格式的安全日志响应，包含分页的日志列表
+    """
+    return success_response(
+        data={"list": [], "total": 0, "pageSize": 10, "currentPage": 1}
+    )
+
+
+@router.get("/get-async-routes")
+async def get_async_routes(current_user: dict = Depends(get_current_active_user)):
+    """获取当前用户可访问的动态路由配置。
+
+    根据用户角色返回对应的菜单路由配置，前端用于动态加载菜单。
+
+    Args:
+        current_user: 当前登录用户信息
+
+    Returns:
+        dict: 统一格式的路由配置响应，包含路由数组
+    """
+    # 系统管理路由
+    system_management_router = {
+        "path": "/system",
+        "meta": {"icon": "ri:settings-3-line", "title": "menus.pureSysManagement", "rank": 10},
+        "children": [
+            {
+                "path": "/system/user/index",
+                "name": "SystemUser",
+                "meta": {"icon": "ri:admin-line", "title": "menus.pureUser", "roles": ["admin"]},
+            },
+            {
+                "path": "/system/role/index",
+                "name": "SystemRole",
+                "meta": {"icon": "ri:admin-fill", "title": "menus.pureRole", "roles": ["admin"]},
+            },
+            {
+                "path": "/system/menu/index",
+                "name": "SystemMenu",
+                "meta": {"icon": "ep:menu", "title": "menus.pureSystemMenu", "roles": ["admin"]},
+            },
+            {
+                "path": "/system/dept/index",
+                "name": "SystemDept",
+                "meta": {"icon": "ri:git-branch-line", "title": "menus.pureDept", "roles": ["admin"]},
+            },
+        ],
+    }
+
+    # 系统监控路由
+    system_monitor_router = {
+        "path": "/monitor",
+        "meta": {"icon": "ep:monitor", "title": "menus.pureSysMonitor", "rank": 11},
+        "children": [
+            {
+                "path": "/monitor/online-user",
+                "component": "monitor/online/index",
+                "name": "OnlineUser",
+                "meta": {"icon": "ri:user-voice-line", "title": "menus.pureOnlineUser", "roles": ["admin"]},
+            },
+            {
+                "path": "/monitor/login-logs",
+                "component": "monitor/logs/login/index",
+                "name": "LoginLog",
+                "meta": {"icon": "ri:window-line", "title": "menus.pureLoginLog", "roles": ["admin"]},
+            },
+            {
+                "path": "/monitor/operation-logs",
+                "component": "monitor/logs/operation/index",
+                "name": "OperationLog",
+                "meta": {"icon": "ri:history-fill", "title": "menus.pureOperationLog", "roles": ["admin"]},
+            },
+            {
+                "path": "/monitor/system-logs",
+                "component": "monitor/logs/system/index",
+                "name": "SystemLog",
+                "meta": {"icon": "ri:file-search-line", "title": "menus.pureSystemLog", "roles": ["admin"]},
+            },
+        ],
+    }
+
+    # 权限管理路由
+    permission_router = {
+        "path": "/permission",
+        "meta": {"title": "menus.purePermission", "icon": "ep:lollipop", "rank": 9},
+        "children": [
+            {
+                "path": "/permission/page/index",
+                "name": "PermissionPage",
+                "meta": {"title": "menus.purePermissionPage", "roles": ["admin", "common"]},
+            },
+            {
+                "path": "/permission/button",
+                "meta": {"title": "menus.purePermissionButton", "roles": ["admin", "common"]},
+                "children": [
+                    {
+                        "path": "/permission/button/router",
+                        "component": "permission/button/index",
+                        "name": "PermissionButtonRouter",
+                        "meta": {
+                            "title": "menus.purePermissionButtonRouter",
+                            "auths": ["permission:btn:add", "permission:btn:edit", "permission:btn:delete"],
+                        },
+                    },
+                    {
+                        "path": "/permission/button/login",
+                        "component": "permission/button/perms",
+                        "name": "PermissionButtonLogin",
+                        "meta": {"title": "menus.purePermissionButtonLogin"},
+                    },
+                ],
+            },
+        ],
+    }
+
+    # 外部页面路由
+    frame_router = {
+        "path": "/iframe",
+        "meta": {"icon": "ri:links-fill", "title": "menus.pureExternalPage", "rank": 7},
+        "children": [
+            {
+                "path": "/iframe/embedded",
+                "meta": {"title": "menus.pureEmbeddedDoc"},
+                "children": [
+                    {"path": "/iframe/colorhunt", "name": "FrameColorHunt", "meta": {"title": "menus.pureColorHuntDoc", "frameSrc": "https://colorhunt.co/", "keepAlive": True, "roles": ["admin", "common"]}},
+                    {"path": "/iframe/uigradients", "name": "FrameUiGradients", "meta": {"title": "menus.pureUiGradients", "frameSrc": "https://uigradients.com/", "keepAlive": True, "roles": ["admin", "common"]}},
+                    {"path": "/iframe/ep", "name": "FrameEp", "meta": {"title": "menus.pureEpDoc", "frameSrc": "https://element-plus.org/zh-CN/", "keepAlive": True, "roles": ["admin", "common"]}},
+                    {"path": "/iframe/tailwindcss", "name": "FrameTailwindcss", "meta": {"title": "menus.pureTailwindcssDoc", "frameSrc": "https://tailwindcss.com/docs/installation", "keepAlive": True, "roles": ["admin", "common"]}},
+                    {"path": "/iframe/vue3", "name": "FrameVue", "meta": {"title": "menus.pureVueDoc", "frameSrc": "https://cn.vuejs.org/", "keepAlive": True, "roles": ["admin", "common"]}},
+                    {"path": "/iframe/vite", "name": "FrameVite", "meta": {"title": "menus.pureViteDoc", "frameSrc": "https://cn.vitejs.dev/", "keepAlive": True, "roles": ["admin", "common"]}},
+                    {"path": "/iframe/pinia", "name": "FramePinia", "meta": {"title": "menus.purePiniaDoc", "frameSrc": "https://pinia.vuejs.org/zh/index.html", "keepAlive": True, "roles": ["admin", "common"]}},
+                    {"path": "/iframe/vue-router", "name": "FrameRouter", "meta": {"title": "menus.pureRouterDoc", "frameSrc": "https://router.vuejs.org/zh/", "keepAlive": True, "roles": ["admin", "common"]}},
+                ],
+            },
+            {
+                "path": "/iframe/external",
+                "meta": {"title": "menus.pureExternalDoc"},
+                "children": [
+                    {"path": "/external", "name": "https://pure-admin.cn/", "meta": {"title": "menus.pureExternalLink", "roles": ["admin", "common"]}},
+                    {"path": "/pureUtilsLink", "name": "https://pure-admin-utils.netlify.app/", "meta": {"title": "menus.pureUtilsLink", "roles": ["admin", "common"]}},
+                ],
+            },
+        ],
+    }
+
+    # 标签页路由
+    tabs_router = {
+        "path": "/tabs",
+        "meta": {"icon": "ri:bookmark-2-line", "title": "menus.pureTabs", "rank": 15},
+        "children": [
+            {"path": "/tabs/index", "name": "Tabs", "meta": {"title": "menus.pureTabs", "roles": ["admin", "common"]}},
+            {"path": "/tabs/query-detail", "name": "TabQueryDetail", "meta": {"showLink": False, "activePath": "/tabs/index", "roles": ["admin", "common"]}},
+            {"path": "/tabs/params-detail/:id", "component": "params-detail", "name": "TabParamsDetail", "meta": {"showLink": False, "activePath": "/tabs/index", "roles": ["admin", "common"]}},
+        ],
+    }
+
+    return success_response(
+        data=[
+            system_management_router,
+            system_monitor_router,
+            permission_router,
+            frame_router,
+            tabs_router,
+        ]
+    )
+
+
+# =============================================================================
+# 系统管理辅助接口
+# =============================================================================
+
+
+@router.get("/list-all-role")
+async def list_all_roles(
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """获取所有角色简单列表。
+    
+    前端调用: GET /api/system/list-all-role
+    用于用户管理中的角色分配下拉选择。
+    """
+    role_repo = RoleRepository(db)
+    # 获取所有角色（不分页）
+    roles = await role_repo.get_all(page_num=1, page_size=1000)
+    return success_response(data=[{"id": r.id, "name": r.name} for r in roles])
+
+
+@router.post("/list-role-ids")
+async def list_role_ids(
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: dict = Depends(get_current_active_user),
+):
+    """根据用户ID获取对应角色ID列表。
+    
+    前端调用: POST /api/system/list-role-ids
+    请求体: { "userId": 1 }
+    """
+    user_id = data.get("userId")
+    if not user_id:
+        return {"code": 10001, "message": "请求参数缺失或格式不正确", "data": []}
+    
+    role_repo = RoleRepository(db)
+    roles = await role_repo.get_user_roles(str(user_id))
+    return success_response(data=[r.id for r in roles])
+
+
+@router.post("/role-menu")
+async def get_role_menu(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取角色菜单权限树。
+    
+    前端调用: POST /api/system/role-menu
+    返回菜单权限树形结构，用于角色权限分配。
+    """
+    menu_repo = MenuRepository()
+    all_menus = await menu_repo.get_all(db)
+    
+    # 转换为前端期望的格式
+    menu_list = []
+    for menu in all_menus:
+        menu_dict = {
+            "parentId": int(menu.parent_id) if menu.parent_id else 0,
+            "id": int(menu.id) if menu.id.isdigit() else menu.id,
+            "menuType": 0,  # 0-菜单, 1-iframe, 2-外链, 3-按钮
+            "title": menu.title or menu.name,
+        }
+        menu_list.append(menu_dict)
+    
+    return success_response(data=menu_list)
+
+
+@router.post("/role-menu-ids")
+async def get_role_menu_ids(
+    data: dict,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """根据角色ID获取菜单ID列表。
+    
+    前端调用: POST /api/system/role-menu-ids
+    请求体: { "id": 1 }
+    返回角色已分配的菜单ID列表。
+    """
+    role_id = data.get("id")
+    if not role_id:
+        return success_response(data=[])
+    
+    # TODO: 实现从数据库获取角色-菜单关联
+    # 目前返回空数组作为 stub
+    menu_repo = MenuRepository()
+    all_menus = await menu_repo.get_all(db)
+    
+    # 如果是超级管理员角色（id=1），返回所有菜单
+    if str(role_id) == "1":
+        menu_ids = [int(m.id) if m.id.isdigit() else m.id for m in all_menus]
+        return success_response(data=menu_ids)
+    
+    # 其他角色返回空数组（需要实现角色-菜单关联表后完善）
+    return success_response(data=[])

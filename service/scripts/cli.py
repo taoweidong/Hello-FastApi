@@ -2,11 +2,12 @@
 
 使用方式:
     python -m scripts.cli runserver
-    python -m scripts.cli createsuperuser
+    python -m scripts.cli createsuperuser --username admin --password admin123 --email admin@example.com
     python -m scripts.cli initdb
     python -m scripts.cli seedrbac
 """
 
+import argparse
 import asyncio
 import sys
 from pathlib import Path
@@ -29,18 +30,15 @@ def run_server() -> None:
     )
 
 
-async def create_superuser() -> None:
-    """交互式创建超级管理员。"""
+async def create_superuser(
+    username: str, email: str, password: str, nickname: str | None = None
+) -> None:
+    """创建超级管理员。"""
     from src.application.dto.user_dto import UserCreateDTO
     from src.application.services.user_service import UserService
     from src.infrastructure.database import async_session_factory, init_db
 
     await init_db()
-
-    username = input("用户名: ")
-    email = input("邮箱: ")
-    password = input("密码: ")
-    nickname = input("昵称 (可选): ") or None
 
     dto = UserCreateDTO(
         username=username,
@@ -102,32 +100,39 @@ async def seed_rbac() -> None:
 
 def main() -> None:
     """管理命令主入口。"""
-    if len(sys.argv) < 2:
-        print("使用方式: python -m scripts.cli <命令>")
-        print("")
-        print("可用命令:")
-        print("  runserver       - 启动开发服务器")
-        print("  createsuperuser - 创建超级管理员")
-        print("  initdb          - 初始化数据库表")
-        print("  seedrbac        - 初始化RBAC数据")
+    parser = argparse.ArgumentParser(description="FastAPI 管理命令行工具")
+    subparsers = parser.add_subparsers(dest="command", help="可用命令")
+
+    # runserver 命令
+    subparsers.add_parser("runserver", help="启动开发服务器")
+
+    # createsuperuser 命令
+    superuser_parser = subparsers.add_parser("createsuperuser", help="创建超级管理员")
+    superuser_parser.add_argument("--username", "-u", required=True, help="用户名")
+    superuser_parser.add_argument("--email", "-e", required=True, help="邮箱")
+    superuser_parser.add_argument("--password", "-p", required=True, help="密码")
+    superuser_parser.add_argument("--nickname", "-n", default=None, help="昵称")
+
+    # initdb 命令
+    subparsers.add_parser("initdb", help="初始化数据库表")
+
+    # seedrbac 命令
+    subparsers.add_parser("seedrbac", help="初始化RBAC数据")
+
+    args = parser.parse_args()
+
+    if args.command is None:
+        parser.print_help()
         return
 
-    command = sys.argv[1]
-
-    commands = {
-        "runserver": run_server,
-        "createsuperuser": lambda: asyncio.run(create_superuser()),
-        "initdb": lambda: asyncio.run(init_database()),
-        "seedrbac": lambda: asyncio.run(seed_rbac()),
-    }
-
-    handler = commands.get(command)
-    if handler is None:
-        print(f"未知命令: {command}")
-        print(f"可用命令: {', '.join(commands.keys())}")
-        sys.exit(1)
-
-    handler()
+    if args.command == "runserver":
+        run_server()
+    elif args.command == "createsuperuser":
+        asyncio.run(create_superuser(args.username, args.email, args.password, args.nickname))
+    elif args.command == "initdb":
+        asyncio.run(init_database())
+    elif args.command == "seedrbac":
+        asyncio.run(seed_rbac())
 
 
 if __name__ == "__main__":

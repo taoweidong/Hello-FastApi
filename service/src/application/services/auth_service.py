@@ -1,5 +1,7 @@
 """应用层 - 认证服务。"""
 
+from datetime import datetime, timedelta
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
@@ -53,24 +55,28 @@ class AuthService:
         refresh_token = self.token_service.create_refresh_token(token_data)
 
         # 4. 查询用户角色和权限
-        user_roles = await self.role_repo.get_user_roles(user.id)
-        user_permissions = await self.perm_repo.get_user_permissions(user.id)
+        # 超级管理员直接返回 admin 角色和所有权限
+        if user.is_superuser:
+            user_roles = await self.role_repo.get_all(page_size=100)
+            user_permissions = await self.perm_repo.get_all(page_size=100)
+        else:
+            user_roles = await self.role_repo.get_user_roles(user.id)
+            user_permissions = await self.perm_repo.get_user_permissions(user.id)
 
-        # 5. 构建完整登录响应
+        # 5. 计算过期时间为日期字符串格式
+        expires_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
+
+        # 6. 构建扁平结构的登录响应（与 Pure Admin 前端 Mock 一致）
         return {
-            "accessToken": access_token,
-            "expires": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "refreshToken": refresh_token,
-            "userInfo": {
-                "id": user.id,
-                "username": user.username,
-                "nickname": user.nickname,
-                "avatar": user.avatar,
-                "email": user.email,
-                "phone": user.phone,
-            },
+            "avatar": user.avatar or "",
+            "username": user.username,
+            "nickname": user.nickname or user.username,
             "roles": [role.name for role in user_roles],
-            "permissions": [perm.code for perm in user_permissions]
+            "permissions": [perm.code for perm in user_permissions],
+            "accessToken": access_token,
+            "refreshToken": refresh_token,
+            "expires": expires_str
         }
 
     async def register(self, dto: RegisterDTO) -> dict:
@@ -146,8 +152,12 @@ class AuthService:
         new_access_token = self.token_service.create_access_token(token_data)
         new_refresh_token = self.token_service.create_refresh_token(token_data)
 
+        # 计算过期时间为日期字符串格式
+        expires_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
+
         return {
             "accessToken": new_access_token,
-            "expires": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            "refreshToken": new_refresh_token
+            "refreshToken": new_refresh_token,
+            "expires": expires_str
         }
