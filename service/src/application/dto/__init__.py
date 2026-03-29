@@ -34,6 +34,22 @@ from src.application.dto.menu_dto import (
     MenuUpdateDTO,
     MenuResponseDTO,
 )
+from src.application.dto.department_dto import (
+    DepartmentCreateDTO,
+    DepartmentUpdateDTO,
+    DepartmentResponseDTO,
+    DepartmentListQueryDTO,
+)
+from src.application.dto.log_dto import (
+    LoginLogListQueryDTO,
+    LoginLogResponseDTO,
+    OperationLogListQueryDTO,
+    OperationLogResponseDTO,
+    SystemLogListQueryDTO,
+    SystemLogResponseDTO,
+    SystemLogDetailDTO,
+    BatchDeleteLogDTO,
+)
 
 __all__ = [
     # auth_dto
@@ -66,4 +82,18 @@ __all__ = [
     "MenuCreateDTO",
     "MenuUpdateDTO",
     "MenuResponseDTO",
+    # department_dto
+    "DepartmentCreateDTO",
+    "DepartmentUpdateDTO",
+    "DepartmentResponseDTO",
+    "DepartmentListQueryDTO",
+    # log_dto
+    "LoginLogListQueryDTO",
+    "LoginLogResponseDTO",
+    "OperationLogListQueryDTO",
+    "OperationLogResponseDTO",
+    "SystemLogListQueryDTO",
+    "SystemLogResponseDTO",
+    "SystemLogDetailDTO",
+    "BatchDeleteLogDTO",
 ]

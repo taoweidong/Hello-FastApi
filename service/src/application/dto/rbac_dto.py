@@ -1,6 +1,6 @@
 """应用层 - RBAC 领域的数据传输对象。"""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional
 
@@ -13,6 +13,14 @@ class RoleCreateDTO(BaseModel):
     status: int = 1
     permissionIds: list[str] = []
 
+    @field_validator('remark', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v: str | None) -> str | None:
+        """将空字符串转换为None"""
+        if v == '':
+            return None
+        return v
+
 
 class RoleUpdateDTO(BaseModel):
     """更新角色请求"""
@@ -21,6 +29,22 @@ class RoleUpdateDTO(BaseModel):
     remark: str | None = Field(default=None, max_length=500)
     status: int | None = None
     permissionIds: list[str] | None = None
+
+    @field_validator('name', 'code', 'remark', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v: str | None) -> str | None:
+        """将空字符串转换为None"""
+        if v == '':
+            return None
+        return v
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def empty_str_or_zero_to_none(cls, v: int | str | None) -> int | None:
+        """将空字符串或0转换为None"""
+        if v == '' or v == 0 or v is None:
+            return None
+        return int(v) if isinstance(v, str) else v
 
 
 class RoleResponseDTO(BaseModel):
@@ -42,7 +66,16 @@ class RoleListQueryDTO(BaseModel):
     pageNum: int = Field(default=1, ge=1)
     pageSize: int = Field(default=10, ge=1, le=100)
     name: str | None = None  # 前端使用 name 而不是 roleName
+    code: str | None = None
     status: int | None = None
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        """将空字符串转换为None"""
+        if v == '' or v is None:
+            return None
+        return int(v) if isinstance(v, str) else v
 
 
 class PermissionCreateDTO(BaseModel):

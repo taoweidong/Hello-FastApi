@@ -85,3 +85,152 @@ export const getRoleMenu = (data?: object) => {
 export const getRoleMenuIds = (data?: object) => {
   return http.request<Result>("post", "/role-menu-ids", { data });
 };
+
+// =============================================================================
+// 用户管理 - 增删改操作
+// =============================================================================
+
+/** 创建用户 */
+export const createUser = (data?: object) => {
+  return http.request<Result>("post", "/user/create", { data });
+};
+
+/** 更新用户 */
+export const updateUser = (id: string, data?: object) => {
+  return http.request<Result>("put", `/user/${id}`, { data });
+};
+
+/** 删除用户 */
+export const deleteUser = (id: string) => {
+  return http.request<Result>("delete", `/user/${id}`);
+};
+
+/** 批量删除用户 */
+export const batchDeleteUser = (data?: object) => {
+  return http.request<Result>("post", "/user/batch-delete", { data });
+};
+
+/** 重置密码 */
+export const resetPassword = (id: string, data?: object) => {
+  return http.request<Result>("put", `/user/${id}/reset-password`, { data });
+};
+
+/** 修改用户状态 */
+export const updateUserStatus = (id: string, data?: object) => {
+  return http.request<Result>("put", `/user/${id}/status`, { data });
+};
+
+/** 分配角色 */
+export const assignUserRole = (data?: object) => {
+  return http.request<Result>("post", "/user/assign-role", { data });
+};
+
+// =============================================================================
+// 角色管理 - 增删改操作
+// =============================================================================
+
+/** 创建角色 */
+export const createRole = (data?: object) => {
+  return http.request<Result>("post", "/role/create", { data });
+};
+
+/** 更新角色 */
+export const updateRole = (id: string, data?: object) => {
+  return http.request<Result>("put", `/role/${id}`, { data });
+};
+
+/** 删除角色 */
+export const deleteRole = (id: string) => {
+  return http.request<Result>("delete", `/role/${id}`);
+};
+
+/** 修改角色状态 */
+export const updateRoleStatus = (id: string, data?: object) => {
+  return http.request<Result>("put", `/role/${id}/status`, { data });
+};
+
+/** 保存角色菜单权限 */
+export const saveRoleMenu = (roleId: string, menuIds: string[]) => {
+  return http.request<Result>("post", `/role/${roleId}/menu`, { data: { menuIds } });
+};
+
+// =============================================================================
+// 部门管理 - 增删改操作
+// =============================================================================
+
+/** 创建部门 */
+export const createDept = (data?: object) => {
+  return http.request<Result>("post", "/dept/create", { data });
+};
+
+/** 更新部门 */
+export const updateDept = (id: string, data?: object) => {
+  return http.request<Result>("put", `/dept/${id}`, { data });
+};
+
+/** 删除部门 */
+export const deleteDept = (id: string) => {
+  return http.request<Result>("delete", `/dept/${id}`);
+};
+
+// =============================================================================
+// 菜单管理 - 增删改操作
+// =============================================================================
+
+/** 创建菜单 */
+export const createMenu = (data?: object) => {
+  return http.request<Result>("post", "/menu/create", { data });
+};
+
+/** 更新菜单 */
+export const updateMenu = (id: string, data?: object) => {
+  return http.request<Result>("put", `/menu/${id}`, { data });
+};
+
+/** 删除菜单 */
+export const deleteMenu = (id: string) => {
+  return http.request<Result>("delete", `/menu/${id}`);
+};
+
+// =============================================================================
+// 日志管理 - 删除/清空操作
+// =============================================================================
+
+/** 批量删除登录日志 */
+export const batchDeleteLoginLogs = (data?: object) => {
+  return http.request<Result>("post", "/login-logs/batch-delete", { data });
+};
+
+/** 清空登录日志 */
+export const clearLoginLogs = () => {
+  return http.request<Result>("delete", "/login-logs/clear");
+};
+
+/** 批量删除操作日志 */
+export const batchDeleteOperationLogs = (data?: object) => {
+  return http.request<Result>("post", "/operation-logs/batch-delete", { data });
+};
+
+/** 清空操作日志 */
+export const clearOperationLogs = () => {
+  return http.request<Result>("delete", "/operation-logs/clear");
+};
+
+/** 批量删除系统日志 */
+export const batchDeleteSystemLogs = (data?: object) => {
+  return http.request<Result>("post", "/system-logs/batch-delete", { data });
+};
+
+/** 清空系统日志 */
+export const clearSystemLogs = () => {
+  return http.request<Result>("delete", "/system-logs/clear");
+};
+
+// =============================================================================
+// 在线用户 - 强制下线
+// =============================================================================
+
+/** 强制下线 */
+export const forceOffline = (data?: object) => {
+  return http.request<Result>("post", "/online-logs/force-offline", { data });
+};

@@ -2,7 +2,8 @@ import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
-import { getDeptList } from "@/api/system";
+import { getDeptList, createDept, updateDept, deleteDept } from "@/api/system";
+import { ElMessageBox } from "element-plus";
 import { usePublicHooks } from "../../hooks";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h } from "vue";
@@ -130,23 +131,38 @@ export function useDept() {
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
-        function chores() {
-          message(`您${title}了部门名称为${curData.name}的这条数据`, {
-            type: "success"
-          });
-          done(); // 关闭弹框
-          onSearch(); // 刷新表格数据
-        }
-        FormRef.validate(valid => {
+        
+        FormRef.validate(async valid => {
           if (valid) {
-            console.log("curData", curData);
-            // 表单规则校验通过
-            if (title === "新增") {
-              // 实际开发先调用新增接口，再进行下面操作
-              chores();
-            } else {
-              // 实际开发先调用修改接口，再进行下面操作
-              chores();
+            try {
+              const payload = {
+                name: curData.name,
+                parentId: curData.parentId || 0,
+                sort: curData.sort,
+                principal: curData.principal || null,
+                phone: curData.phone || null,
+                email: curData.email || null,
+                status: curData.status,
+                remark: curData.remark || null
+              };
+              
+              if (title === "新增") {
+                const { code } = await createDept(payload);
+                if (code === 0 || code === 201) {
+                  message(`成功创建部门 ${curData.name}`, { type: "success" });
+                  done();
+                  onSearch();
+                }
+              } else {
+                const { code } = await updateDept(row.id, payload);
+                if (code === 0) {
+                  message(`成功更新部门 ${curData.name}`, { type: "success" });
+                  done();
+                  onSearch();
+                }
+              }
+            } catch (error) {
+              message(`${title}部门失败`, { type: "error" });
             }
           }
         });
@@ -155,8 +171,25 @@ export function useDept() {
   }
 
   function handleDelete(row) {
-    message(`您删除了部门名称为${row.name}的这条数据`, { type: "success" });
-    onSearch();
+    ElMessageBox.confirm(
+      `确认要删除部门 <strong style='color:var(--el-color-primary)'>${row.name}</strong> 吗?`,
+      "系统提示",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+        dangerouslyUseHTMLString: true,
+        draggable: true
+      }
+    )
+      .then(async () => {
+        const { code } = await deleteDept(row.id);
+        if (code === 0) {
+          message(`已成功删除部门 ${row.name}`, { type: "success" });
+          onSearch();
+        }
+      })
+      .catch(() => {});
   }
 
   onMounted(() => {

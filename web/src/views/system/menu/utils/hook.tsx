@@ -1,7 +1,8 @@
 import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
-import { getMenuList } from "@/api/system";
+import { getMenuList, createMenu, updateMenu, deleteMenu } from "@/api/system";
+import { ElMessageBox } from "element-plus";
 import { transformI18n } from "@/plugins/i18n";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h } from "vue";
@@ -182,16 +183,50 @@ export function useMenu() {
           done(); // 关闭弹框
           onSearch(); // 刷新表格数据
         }
-        FormRef.validate(valid => {
+        FormRef.validate(async valid => {
           if (valid) {
-            console.log("curData", curData);
-            // 表单规则校验通过
-            if (title === "新增") {
-              // 实际开发先调用新增接口，再进行下面操作
-              chores();
-            } else {
-              // 实际开发先调用修改接口，再进行下面操作
-              chores();
+            try {
+              const payload = {
+                parentId: curData.parentId || 0,
+                menuType: curData.menuType || 0,
+                title: curData.title,
+                name: curData.name || null,
+                path: curData.path || null,
+                component: curData.component || null,
+                rank: curData.rank || 99,
+                redirect: curData.redirect || null,
+                icon: curData.icon || null,
+                extraIcon: curData.extraIcon || null,
+                enterTransition: curData.enterTransition || null,
+                leaveTransition: curData.leaveTransition || null,
+                activePath: curData.activePath || null,
+                auths: curData.auths || null,
+                frameSrc: curData.frameSrc || null,
+                frameLoading: curData.frameLoading ?? true,
+                keepAlive: curData.keepAlive ?? false,
+                hiddenTag: curData.hiddenTag ?? false,
+                fixedTag: curData.fixedTag ?? false,
+                showLink: curData.showLink ?? true,
+                showParent: curData.showParent ?? false
+              };
+              
+              if (title === "新增") {
+                const { code } = await createMenu(payload);
+                if (code === 0 || code === 201) {
+                  message(`成功创建菜单 ${curData.title}`, { type: "success" });
+                  done();
+                  onSearch();
+                }
+              } else {
+                const { code } = await updateMenu(row.id, payload);
+                if (code === 0) {
+                  message(`成功更新菜单 ${curData.title}`, { type: "success" });
+                  done();
+                  onSearch();
+                }
+              }
+            } catch (error) {
+              message(`${title}菜单失败`, { type: "error" });
             }
           }
         });
@@ -200,10 +235,25 @@ export function useMenu() {
   }
 
   function handleDelete(row) {
-    message(`您删除了菜单名称为${transformI18n(row.title)}的这条数据`, {
-      type: "success"
-    });
-    onSearch();
+    ElMessageBox.confirm(
+      `确认要删除菜单 <strong style='color:var(--el-color-primary)'>${transformI18n(row.title)}</strong> 吗?`,
+      "系统提示",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+        dangerouslyUseHTMLString: true,
+        draggable: true
+      }
+    )
+      .then(async () => {
+        const { code } = await deleteMenu(row.id);
+        if (code === 0) {
+          message(`已成功删除菜单 ${transformI18n(row.title)}`, { type: "success" });
+          onSearch();
+        }
+      })
+      .catch(() => {});
   }
 
   onMounted(() => {

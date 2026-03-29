@@ -200,7 +200,7 @@ async def assign_role_menu(
 
     需要 role:manage 权限。
     前端调用: POST /api/system/role/{id}/menu
-    请求体: { menuIds: [1, 2, 3] }
+    请求体: { menuIds: ["xxx", "yyy", "zzz"] }
 
     Args:
         role_id: 角色ID
@@ -210,10 +210,15 @@ async def assign_role_menu(
     Returns:
         统一响应格式的操作结果消息
     """
-    # TODO: 实现角色-菜单关联存储
-    # menu_ids = data.get("menuIds", [])
-    # service = RBACService(db)
-    # await service.assign_menu_to_role(role_id, menu_ids)
+    from src.infrastructure.repositories.rbac_repository import RoleRepository
+    
+    menu_ids = data.get("menuIds", [])
+    role_repo = RoleRepository(db)
+    
+    # 为角色分配菜单权限
+    await role_repo.assign_menus_to_role(role_id, menu_ids)
+    await db.commit()
+    
     return success_response(message="菜单权限分配成功")
 
 

@@ -326,22 +326,23 @@ async def get_role_menu_ids(
     """根据角色ID获取菜单ID列表。
     
     前端调用: POST /api/system/role-menu-ids
-    请求体: { "id": 1 }
+    请求体: { "id": "xxx" }
     返回角色已分配的菜单ID列表。
     """
     role_id = data.get("id")
     if not role_id:
         return success_response(data=[])
     
-    # TODO: 实现从数据库获取角色-菜单关联
-    # 目前返回空数组作为 stub
-    menu_repo = MenuRepository()
-    all_menus = await menu_repo.get_all(db)
+    role_repo = RoleRepository(db)
     
-    # 如果是超级管理员角色（id=1），返回所有菜单
-    if str(role_id) == "1":
-        menu_ids = [int(m.id) if m.id.isdigit() else m.id for m in all_menus]
+    # 如果是超级管理员角色（code=admin），返回所有菜单
+    role = await role_repo.get_by_id(str(role_id))
+    if role and role.code == "admin":
+        menu_repo = MenuRepository()
+        all_menus = await menu_repo.get_all(db)
+        menu_ids = [m.id for m in all_menus]
         return success_response(data=menu_ids)
     
-    # 其他角色返回空数组（需要实现角色-菜单关联表后完善）
-    return success_response(data=[])
+    # 其他角色返回已分配的菜单ID列表
+    menu_ids = await role_repo.get_role_menu_ids(str(role_id))
+    return success_response(data=menu_ids)

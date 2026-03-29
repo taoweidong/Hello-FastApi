@@ -9,7 +9,7 @@ import { addDialog } from "@/components/ReDialog";
 import type { FormItemProps } from "../utils/types";
 import type { PaginationProps } from "@pureadmin/table";
 import { getKeyList, deviceDetection } from "@pureadmin/utils";
-import { getRoleList, getRoleMenu, getRoleMenuIds } from "@/api/system";
+import { getRoleList, getRoleMenu, getRoleMenuIds, createRole, updateRole, deleteRole, updateRoleStatus, saveRoleMenu } from "@/api/system";
 import { type Ref, reactive, ref, onMounted, h, toRaw, watch } from "vue";
 
 export function useRole(treeRef: Ref) {
@@ -118,7 +118,7 @@ export function useRole(treeRef: Ref) {
         draggable: true
       }
     )
-      .then(() => {
+      .then(async () => {
         switchLoadMap.value[index] = Object.assign(
           {},
           switchLoadMap.value[index],
@@ -126,7 +126,15 @@ export function useRole(treeRef: Ref) {
             loading: true
           }
         );
-        setTimeout(() => {
+        try {
+          const { code } = await updateRoleStatus(row.id, { status: row.status });
+          if (code === 0) {
+            message(`已${row.status === 0 ? "停用" : "启用"}${row.name}`, { type: "success" });
+          }
+        } catch (error) {
+          row.status === 0 ? (row.status = 1) : (row.status = 0);
+          message("修改角色状态失败", { type: "error" });
+        } finally {
           switchLoadMap.value[index] = Object.assign(
             {},
             switchLoadMap.value[index],
@@ -134,10 +142,7 @@ export function useRole(treeRef: Ref) {
               loading: false
             }
           );
-          message(`已${row.status === 0 ? "停用" : "启用"}${row.name}`, {
-            type: "success"
-          });
-        }, 300);
+        }
       })
       .catch(() => {
         row.status === 0 ? (row.status = 1) : (row.status = 0);
@@ -145,8 +150,25 @@ export function useRole(treeRef: Ref) {
   }
 
   function handleDelete(row) {
-    message(`您删除了角色名称为${row.name}的这条数据`, { type: "success" });
-    onSearch();
+    ElMessageBox.confirm(
+      `确认要删除角色 <strong style='color:var(--el-color-primary)'>${row.name}</strong> 吗?`,
+      "系统提示",
+      {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+        dangerouslyUseHTMLString: true,
+        draggable: true
+      }
+    )
+      .then(async () => {
+        const { code } = await deleteRole(row.id);
+        if (code === 0) {
+          message(`已成功删除角色 ${row.name}`, { type: "success" });
+          onSearch();
+        }
+      })
+      .catch(() => {});
   }
 
   function handleSizeChange(val: number) {
@@ -201,23 +223,33 @@ export function useRole(treeRef: Ref) {
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
-        function chores() {
-          message(`您${title}了角色名称为${curData.name}的这条数据`, {
-            type: "success"
-          });
-          done(); // 关闭弹框
-          onSearch(); // 刷新表格数据
-        }
-        FormRef.validate(valid => {
+        
+        FormRef.validate(async valid => {
           if (valid) {
-            console.log("curData", curData);
-            // 表单规则校验通过
-            if (title === "新增") {
-              // 实际开发先调用新增接口，再进行下面操作
-              chores();
-            } else {
-              // 实际开发先调用修改接口，再进行下面操作
-              chores();
+            try {
+              const payload = {
+                name: curData.name,
+                code: curData.code,
+                remark: curData.remark || null
+              };
+              
+              if (title === "新增") {
+                const { code } = await createRole(payload);
+                if (code === 0 || code === 201) {
+                  message(`成功创建角色 ${curData.name}`, { type: "success" });
+                  done();
+                  onSearch();
+                }
+              } else {
+                const { code } = await updateRole(row.id, payload);
+                if (code === 0) {
+                  message(`成功更新角色 ${curData.name}`, { type: "success" });
+                  done();
+                  onSearch();
+                }
+              }
+            } catch (error) {
+              message(`${title}角色失败`, { type: "error" });
             }
           }
         });
@@ -250,13 +282,18 @@ export function useRole(treeRef: Ref) {
   }
 
   /** 菜单权限-保存 */
-  function handleSave() {
+  async function handleSave() {
     const { id, name } = curRow.value;
-    // 根据用户 id 调用实际项目中菜单权限修改接口
-    console.log(id, treeRef.value.getCheckedKeys());
-    message(`角色名称为${name}的菜单权限修改成功`, {
-      type: "success"
-    });
+    const menuIds = treeRef.value.getCheckedKeys();
+    
+    try {
+      const { code } = await saveRoleMenu(id, menuIds);
+      if (code === 0) {
+        message(`角色 ${name} 的菜单权限修改成功`, { type: "success" });
+      }
+    } catch (error) {
+      message("保存菜单权限失败", { type: "error" });
+    }
   }
 
   /** 数据权限 可自行开发 */

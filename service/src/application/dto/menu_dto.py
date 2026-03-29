@@ -1,6 +1,6 @@
 """应用层 - 菜单领域的数据传输对象。"""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Optional
 
@@ -29,6 +29,16 @@ class MenuCreateDTO(BaseModel):
     showLink: bool = True  # 是否显示
     showParent: bool = False  # 是否显示父级
 
+    @field_validator('title', 'name', 'path', 'component', 'redirect',
+                     'icon', 'extraIcon', 'enterTransition', 'leaveTransition',
+                     'activePath', 'auths', 'frameSrc', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v: str | None) -> str | None:
+        """将空字符串转换为None"""
+        if v == '':
+            return None
+        return v
+
 
 class MenuUpdateDTO(BaseModel):
     """更新菜单请求"""
@@ -53,6 +63,16 @@ class MenuUpdateDTO(BaseModel):
     fixedTag: bool | None = None
     showLink: bool | None = None
     showParent: bool | None = None
+
+    @field_validator('title', 'name', 'path', 'component', 'redirect',
+                     'icon', 'extraIcon', 'enterTransition', 'leaveTransition',
+                     'activePath', 'auths', 'frameSrc', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v: str | None) -> str | None:
+        """将空字符串转换为None"""
+        if v == '':
+            return None
+        return v
 
 
 class MenuResponseDTO(BaseModel):

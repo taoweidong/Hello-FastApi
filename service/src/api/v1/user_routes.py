@@ -53,6 +53,17 @@ async def get_user_list(
         user_dict = user.model_dump()
         # 添加 dept 字段（前端期望的部门格式）
         user_dict["dept"] = {"id": user_dict.get("dept_id") or 0, "name": ""}
+        # 处理可能为 null 的字段，转换为空字符串
+        if user_dict.get("phone") is None:
+            user_dict["phone"] = ""
+        if user_dict.get("email") is None:
+            user_dict["email"] = ""
+        if user_dict.get("nickname") is None:
+            user_dict["nickname"] = ""
+        if user_dict.get("avatar") is None:
+            user_dict["avatar"] = ""
+        if user_dict.get("remark") is None:
+            user_dict["remark"] = ""
         # 移除不需要的字段
         user_dict.pop("dept_id", None)
         user_list.append(user_dict)

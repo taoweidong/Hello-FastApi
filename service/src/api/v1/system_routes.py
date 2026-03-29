@@ -1,38 +1,136 @@
-"""System API - 系统管理和监控 stub 路由模块。
+"""System API - 系统管理和监控路由模块。
 
-提供部门管理、在线用户、登录日志、操作日志、系统日志等接口的 stub 实现。
-当前返回示例数据，后续可接入真实数据源。
+提供部门管理、在线用户、登录日志、操作日志、系统日志等接口。
 """
 
 from fastapi import APIRouter, Body, Depends
+from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import Any
 import random
 
-from src.api.common import success_response
+from src.api.common import success_response, list_response
 from src.api.dependencies import get_current_active_user
+from src.application.dto.department_dto import DepartmentListQueryDTO, DepartmentCreateDTO, DepartmentUpdateDTO
+from src.application.dto.log_dto import (
+    LoginLogListQueryDTO,
+    OperationLogListQueryDTO,
+    SystemLogListQueryDTO,
+    BatchDeleteLogDTO,
+)
+from src.application.services.department_service import DepartmentService
+from src.application.services.log_service import LogService
+from src.infrastructure.database import get_db
 
 system_extra_router = APIRouter()
+
+
+# =============================================================================
+# 部门管理
+# =============================================================================
 
 
 @system_extra_router.post("/dept")
 async def get_dept_list(
     data: dict = Body(default={}),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """获取部门管理列表（stub 数据）"""
-    dept_list = [
-        {"name": "杭州总公司", "parentId": 0, "id": 100, "sort": 0, "phone": "15888888888", "principal": "张三", "email": "admin@example.com", "status": 1, "type": 1, "createTime": 1605456000000, "remark": "总部"},
-        {"name": "郑州分公司", "parentId": 100, "id": 101, "sort": 1, "phone": "15888888888", "principal": "李四", "email": "zz@example.com", "status": 1, "type": 2, "createTime": 1605456000000, "remark": ""},
-        {"name": "研发部门", "parentId": 101, "id": 103, "sort": 1, "phone": "15888888888", "principal": "王五", "email": "dev@example.com", "status": 1, "type": 3, "createTime": 1605456000000, "remark": ""},
-        {"name": "市场部门", "parentId": 102, "id": 108, "sort": 1, "phone": "15888888888", "principal": "赵六", "email": "market@example.com", "status": 1, "type": 3, "createTime": 1605456000000, "remark": ""},
-        {"name": "深圳分公司", "parentId": 100, "id": 102, "sort": 2, "phone": "15888888888", "principal": "孙七", "email": "sz@example.com", "status": 1, "type": 2, "createTime": 1605456000000, "remark": ""},
-        {"name": "市场部门", "parentId": 101, "id": 104, "sort": 2, "phone": "15888888888", "principal": "周八", "email": "market2@example.com", "status": 1, "type": 3, "createTime": 1605456000000, "remark": ""},
-        {"name": "财务部门", "parentId": 102, "id": 109, "sort": 2, "phone": "15888888888", "principal": "吴九", "email": "finance@example.com", "status": 1, "type": 3, "createTime": 1605456000000, "remark": ""},
-        {"name": "测试部门", "parentId": 101, "id": 105, "sort": 3, "phone": "15888888888", "principal": "郑十", "email": "test@example.com", "status": 0, "type": 3, "createTime": 1605456000000, "remark": ""},
-        {"name": "财务部门", "parentId": 101, "id": 106, "sort": 4, "phone": "15888888888", "principal": "王十一", "email": "finance2@example.com", "status": 1, "type": 3, "createTime": 1605456000000, "remark": ""},
-        {"name": "运维部门", "parentId": 101, "id": 107, "sort": 5, "phone": "15888888888", "principal": "陈十二", "email": "ops@example.com", "status": 0, "type": 3, "createTime": 1605456000000, "remark": ""}
-    ]
+    """获取部门列表（扁平结构）。
+    
+    前端调用: POST /api/system/dept
+    返回扁平列表格式，前端自动转为树形结构。
+    """
+    # 构建查询参数
+    query = DepartmentListQueryDTO(
+        name=data.get("name"),
+        status=data.get("status"),
+    )
+    
+    service = DepartmentService(db)
+    departments = await service.get_departments(query)
+    
+    # 转换为前端期望的格式
+    dept_list = []
+    for dept in departments:
+        dept_dict = {
+            "id": dept.id,
+            "parentId": 0 if not dept.parent_id else dept.parent_id,
+            "name": dept.name,
+            "sort": dept.sort,
+            "principal": dept.principal or "",
+            "phone": dept.phone or "",
+            "email": dept.email or "",
+            "status": dept.status,
+            "remark": dept.remark or "",
+            "createTime": int(dept.created_at.timestamp() * 1000) if dept.created_at else None,
+        }
+        dept_list.append(dept_dict)
+    
     return success_response(data=dept_list)
+
+
+@system_extra_router.post("/dept/create")
+async def create_department(
+    dto: DepartmentCreateDTO,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """创建部门。
+    
+    前端调用: POST /api/system/dept/create
+    """
+    service = DepartmentService(db)
+    department = await service.create_department(dto)
+    return success_response(
+        data={
+            "id": department.id,
+            "name": department.name,
+        },
+        message="创建成功",
+        code=201,
+    )
+
+
+@system_extra_router.put("/dept/{dept_id}")
+async def update_department(
+    dept_id: str,
+    dto: DepartmentUpdateDTO,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新部门。
+    
+    前端调用: PUT /api/system/dept/{id}
+    """
+    service = DepartmentService(db)
+    department = await service.update_department(dept_id, dto)
+    return success_response(
+        data={
+            "id": department.id,
+            "name": department.name,
+        },
+        message="更新成功",
+    )
+
+
+@system_extra_router.delete("/dept/{dept_id}")
+async def delete_department(
+    dept_id: str,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """删除部门。
+    
+    前端调用: DELETE /api/system/dept/{id}
+    """
+    service = DepartmentService(db)
+    await service.delete_department(dept_id)
+    return success_response(message="删除成功")
+
+
+# =============================================================================
+# 在线用户（stub 实现，需要会话管理机制）
+# =============================================================================
 
 
 @system_extra_router.post("/online-logs")
@@ -40,7 +138,11 @@ async def get_online_logs(
     data: dict = Body(default={}),
     current_user: dict = Depends(get_current_active_user)
 ):
-    """获取在线用户列表（stub 数据）"""
+    """获取在线用户列表（stub 数据）。
+    
+    注意：在线用户管理需要会话管理机制（如 Redis），
+    目前返回 stub 数据，后续可实现真实的会话管理。
+    """
     list_data = [
         {"id": 1, "username": "admin", "ip": "192.168.1.1", "address": "中国河南省信阳市", "system": "macOS", "browser": "Chrome", "loginTime": "2026-03-29T10:00:00"},
         {"id": 2, "username": "common", "ip": "192.168.1.2", "address": "中国广东省深圳市", "system": "Windows", "browser": "Firefox", "loginTime": "2026-03-29T09:30:00"}
@@ -52,85 +154,247 @@ async def get_online_logs(
     return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
 
 
+# =============================================================================
+# 登录日志
+# =============================================================================
+
+
 @system_extra_router.post("/login-logs")
 async def get_login_logs(
-    data: dict = Body(default={}),
-    current_user: dict = Depends(get_current_active_user)
+    query: LoginLogListQueryDTO = Body(default={}),
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """获取登录日志列表（stub 数据）"""
-    list_data = [
-        {"id": 1, "username": "admin", "ip": "192.168.1.1", "address": "中国河南省信阳市", "system": "macOS", "browser": "Chrome", "status": 1, "behavior": "账号登录", "loginTime": "2026-03-29T10:00:00"},
-        {"id": 2, "username": "common", "ip": "192.168.1.2", "address": "中国广东省深圳市", "system": "Windows", "browser": "Firefox", "status": 0, "behavior": "第三方登录", "loginTime": "2026-03-29T09:30:00"}
-    ]
-    username = data.get("username", "")
-    if username:
-        list_data = [item for item in list_data if username in item["username"]]
-    return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
+    """获取登录日志列表。
+    
+    前端调用: POST /api/system/login-logs
+    响应格式: { list, total, pageSize, currentPage }
+    """
+    service = LogService(db)
+    logs, total = await service.get_login_logs(query)
+    
+    # 转换为前端期望的格式
+    log_list = []
+    for log in logs:
+        log_list.append({
+            "id": log.id,
+            "username": log.username,
+            "ip": log.ip or "",
+            "address": log.address or "",
+            "system": log.system or "",
+            "browser": log.browser or "",
+            "status": log.status,
+            "behavior": log.behavior or "",
+            "loginTime": log.login_time.isoformat() if log.login_time else None,
+        })
+    
+    return list_response(
+        list_data=log_list,
+        total=total,
+        page_size=query.pageSize,
+        current_page=query.pageNum,
+    )
+
+
+@system_extra_router.post("/login-logs/batch-delete")
+async def batch_delete_login_logs(
+    dto: BatchDeleteLogDTO,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量删除登录日志。
+    
+    前端调用: POST /api/system/login-logs/batch-delete
+    """
+    service = LogService(db)
+    count = await service.delete_login_logs(dto)
+    return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
+
+
+@system_extra_router.post("/login-logs/clear")
+async def clear_login_logs(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """清空所有登录日志。
+    
+    前端调用: POST /api/system/login-logs/clear
+    """
+    service = LogService(db)
+    count = await service.clear_login_logs()
+    return success_response(data={"deleted": count}, message=f"已清空 {count} 条记录")
+
+
+# =============================================================================
+# 操作日志
+# =============================================================================
 
 
 @system_extra_router.post("/operation-logs")
 async def get_operation_logs(
-    data: dict = Body(default={}),
-    current_user: dict = Depends(get_current_active_user)
+    query: OperationLogListQueryDTO = Body(default={}),
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """获取操作日志列表（stub 数据）"""
-    list_data = [
-        {"id": 1, "username": "admin", "ip": "192.168.1.1", "address": "中国河南省信阳市", "system": "macOS", "browser": "Chrome", "status": 1, "summary": "菜单管理-添加菜单", "module": "系统管理", "operatingTime": "2026-03-29T10:00:00"},
-        {"id": 2, "username": "common", "ip": "192.168.1.2", "address": "中国广东省深圳市", "system": "Windows", "browser": "Firefox", "status": 0, "summary": "列表分页查询", "module": "在线用户", "operatingTime": "2026-03-29T09:30:00"}
-    ]
-    module_filter = data.get("module", "")
-    if module_filter:
-        list_data = [item for item in list_data if module_filter in item["module"]]
-    return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
+    """获取操作日志列表。
+    
+    前端调用: POST /api/system/operation-logs
+    响应格式: { list, total, pageSize, currentPage }
+    """
+    service = LogService(db)
+    logs, total = await service.get_operation_logs(query)
+    
+    # 转换为前端期望的格式
+    log_list = []
+    for log in logs:
+        log_list.append({
+            "id": log.id,
+            "username": log.username,
+            "ip": log.ip or "",
+            "address": log.address or "",
+            "system": log.system or "",
+            "browser": log.browser or "",
+            "status": log.status,
+            "summary": log.summary or "",
+            "module": log.module or "",
+            "operatingTime": log.operating_time.isoformat() if log.operating_time else None,
+        })
+    
+    return list_response(
+        list_data=log_list,
+        total=total,
+        page_size=query.pageSize,
+        current_page=query.pageNum,
+    )
+
+
+@system_extra_router.post("/operation-logs/batch-delete")
+async def batch_delete_operation_logs(
+    dto: BatchDeleteLogDTO,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量删除操作日志。
+    
+    前端调用: POST /api/system/operation-logs/batch-delete
+    """
+    service = LogService(db)
+    count = await service.delete_operation_logs(dto)
+    return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
+
+
+@system_extra_router.post("/operation-logs/clear")
+async def clear_operation_logs(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """清空所有操作日志。
+    
+    前端调用: POST /api/system/operation-logs/clear
+    """
+    service = LogService(db)
+    count = await service.clear_operation_logs()
+    return success_response(data={"deleted": count}, message=f"已清空 {count} 条记录")
+
+
+# =============================================================================
+# 系统日志
+# =============================================================================
 
 
 @system_extra_router.post("/system-logs")
 async def get_system_logs(
-    data: dict = Body(default={}),
-    current_user: dict = Depends(get_current_active_user)
+    query: SystemLogListQueryDTO = Body(default={}),
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """获取系统日志列表（stub 数据）"""
-    list_data = [
-        {"id": 1, "level": 1, "module": "菜单管理", "url": "/menu", "method": "post", "ip": "192.168.1.1", "address": "中国河南省信阳市", "system": "macOS", "browser": "Chrome", "takesTime": 10, "requestTime": "2026-03-29T10:00:00"},
-        {"id": 2, "level": 0, "module": "地图", "url": "/get-map-info", "method": "get", "ip": "192.168.1.2", "address": "中国广东省深圳市", "system": "Windows", "browser": "Firefox", "takesTime": 1200, "requestTime": "2026-03-29T09:30:00"}
-    ]
-    module_filter = data.get("module", "")
-    if module_filter:
-        list_data = [item for item in list_data if module_filter in item["module"]]
-    return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
+    """获取系统日志列表。
+    
+    前端调用: POST /api/system/system-logs
+    响应格式: { list, total, pageSize, currentPage }
+    """
+    service = LogService(db)
+    logs, total = await service.get_system_logs(query)
+    
+    # 转换为前端期望的格式
+    log_list = []
+    for log in logs:
+        log_list.append({
+            "id": log.id,
+            "level": log.level or "",
+            "module": log.module or "",
+            "url": log.url or "",
+            "method": log.method or "",
+            "ip": log.ip or "",
+            "address": log.address or "",
+            "system": log.system or "",
+            "browser": log.browser or "",
+            "takesTime": log.takes_time,
+            "requestTime": log.request_time.isoformat() if log.request_time else None,
+        })
+    
+    return list_response(
+        list_data=log_list,
+        total=total,
+        page_size=query.pageSize,
+        current_page=query.pageNum,
+    )
 
 
 @system_extra_router.post("/system-logs-detail")
 async def get_system_logs_detail(
     data: dict = Body(default={}),
-    current_user: dict = Depends(get_current_active_user)
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """获取系统日志详情（stub 数据）"""
-    log_id = data.get("id", 1)
-    detail = {
-        "id": log_id,
-        "level": 1,
-        "module": "菜单管理",
-        "url": "/menu",
-        "method": "post",
-        "ip": "192.168.1.1",
-        "address": "中国河南省信阳市",
-        "system": "macOS",
-        "browser": "Chrome",
-        "takesTime": 10,
-        "requestTime": "2026-03-29T10:00:00",
-        "responseHeaders": {"Content-Type": "application/json"},
-        "responseBody": {"code": 0, "message": "操作成功", "data": []},
-        "requestHeaders": {"Accept": "application/json", "Authorization": "Bearer token"},
-        "requestBody": {},
-        "traceId": "1495502411171032"
-    }
+    """获取系统日志详情。
+    
+    前端调用: POST /api/system/system-logs-detail
+    请求体: { id: "xxx" }
+    """
+    log_id = data.get("id")
+    if not log_id:
+        return success_response(data=None, message="日志ID不能为空")
+    
+    service = LogService(db)
+    detail = await service.get_system_log_detail(log_id)
+    
     return success_response(data=detail)
 
 
+@system_extra_router.post("/system-logs/batch-delete")
+async def batch_delete_system_logs(
+    dto: BatchDeleteLogDTO,
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """批量删除系统日志。
+    
+    前端调用: POST /api/system/system-logs/batch-delete
+    """
+    service = LogService(db)
+    count = await service.delete_system_logs(dto)
+    return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
+
+
+@system_extra_router.post("/system-logs/clear")
+async def clear_system_logs(
+    current_user: dict = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """清空所有系统日志。
+    
+    前端调用: POST /api/system/system-logs/clear
+    """
+    service = LogService(db)
+    count = await service.clear_system_logs()
+    return success_response(data={"deleted": count}, message=f"已清空 {count} 条记录")
+
+
 # =============================================================================
-# 地图数据接口
+# 地图数据接口（stub 数据）
 # =============================================================================
+
 
 @system_extra_router.get("/get-map-info")
 async def get_map_info(
@@ -164,8 +428,9 @@ async def get_map_info(
 
 
 # =============================================================================
-# 卡片列表接口
+# 卡片列表接口（stub 数据）
 # =============================================================================
+
 
 @system_extra_router.post("/get-card-list")
 async def get_card_list(

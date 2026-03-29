@@ -5,7 +5,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.rbac.repository import PermissionRepositoryInterface, RoleRepositoryInterface
-from src.infrastructure.database.models import Permission, Role, RolePermissionLink, UserRole
+from src.infrastructure.database.models import Permission, Role, RolePermissionLink, UserRole, RoleMenuLink, Menu
 
 
 class RoleRepository(RoleRepositoryInterface):
@@ -153,6 +153,60 @@ class RoleRepository(RoleRepositoryInterface):
 
         await self.session.flush()
         return True
+
+    # ============ 角色-菜单关联 ============
+
+    async def assign_menus_to_role(self, role_id: str, menu_ids: list[str]) -> bool:
+        """为角色分配菜单权限（先清除旧菜单再分配新的）。
+
+        Args:
+            role_id: 角色ID
+            menu_ids: 菜单ID列表
+
+        Returns:
+            是否分配成功
+        """
+        # 先清除角色的所有旧菜单关联
+        stmt = delete(RoleMenuLink).where(RoleMenuLink.role_id == role_id)
+        await self.session.execute(stmt)
+
+        # 创建新的菜单关联
+        for menu_id in menu_ids:
+            link = RoleMenuLink(role_id=role_id, menu_id=menu_id)
+            self.session.add(link)
+
+        await self.session.flush()
+        return True
+
+    async def get_role_menus(self, role_id: str) -> list[Menu]:
+        """获取角色的菜单列表。
+
+        Args:
+            role_id: 角色ID
+
+        Returns:
+            菜单列表
+        """
+        result = await self.session.exec(
+            select(Menu)
+            .join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id)
+            .where(RoleMenuLink.role_id == role_id)
+        )
+        return list(result.all())
+
+    async def get_role_menu_ids(self, role_id: str) -> list[str]:
+        """获取角色的菜单ID列表。
+
+        Args:
+            role_id: 角色ID
+
+        Returns:
+            菜单ID列表
+        """
+        result = await self.session.exec(
+            select(RoleMenuLink.menu_id).where(RoleMenuLink.role_id == role_id)
+        )
+        return [str(menu_id) for menu_id in result.all()]
 
 
 class PermissionRepository(PermissionRepositoryInterface):
