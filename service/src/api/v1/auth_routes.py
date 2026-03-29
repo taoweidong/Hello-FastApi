@@ -240,54 +240,11 @@ async def get_async_routes(current_user: dict = Depends(get_current_active_user)
         ],
     }
 
-    # 外部页面路由
-    frame_router = {
-        "path": "/iframe",
-        "meta": {"icon": "ri:links-fill", "title": "menus.pureExternalPage", "rank": 7},
-        "children": [
-            {
-                "path": "/iframe/embedded",
-                "meta": {"title": "menus.pureEmbeddedDoc"},
-                "children": [
-                    {"path": "/iframe/colorhunt", "name": "FrameColorHunt", "meta": {"title": "menus.pureColorHuntDoc", "frameSrc": "https://colorhunt.co/", "keepAlive": True, "roles": ["admin", "common"]}},
-                    {"path": "/iframe/uigradients", "name": "FrameUiGradients", "meta": {"title": "menus.pureUiGradients", "frameSrc": "https://uigradients.com/", "keepAlive": True, "roles": ["admin", "common"]}},
-                    {"path": "/iframe/ep", "name": "FrameEp", "meta": {"title": "menus.pureEpDoc", "frameSrc": "https://element-plus.org/zh-CN/", "keepAlive": True, "roles": ["admin", "common"]}},
-                    {"path": "/iframe/tailwindcss", "name": "FrameTailwindcss", "meta": {"title": "menus.pureTailwindcssDoc", "frameSrc": "https://tailwindcss.com/docs/installation", "keepAlive": True, "roles": ["admin", "common"]}},
-                    {"path": "/iframe/vue3", "name": "FrameVue", "meta": {"title": "menus.pureVueDoc", "frameSrc": "https://cn.vuejs.org/", "keepAlive": True, "roles": ["admin", "common"]}},
-                    {"path": "/iframe/vite", "name": "FrameVite", "meta": {"title": "menus.pureViteDoc", "frameSrc": "https://cn.vitejs.dev/", "keepAlive": True, "roles": ["admin", "common"]}},
-                    {"path": "/iframe/pinia", "name": "FramePinia", "meta": {"title": "menus.purePiniaDoc", "frameSrc": "https://pinia.vuejs.org/zh/index.html", "keepAlive": True, "roles": ["admin", "common"]}},
-                    {"path": "/iframe/vue-router", "name": "FrameRouter", "meta": {"title": "menus.pureRouterDoc", "frameSrc": "https://router.vuejs.org/zh/", "keepAlive": True, "roles": ["admin", "common"]}},
-                ],
-            },
-            {
-                "path": "/iframe/external",
-                "meta": {"title": "menus.pureExternalDoc"},
-                "children": [
-                    {"path": "/external", "name": "https://pure-admin.cn/", "meta": {"title": "menus.pureExternalLink", "roles": ["admin", "common"]}},
-                    {"path": "/pureUtilsLink", "name": "https://pure-admin-utils.netlify.app/", "meta": {"title": "menus.pureUtilsLink", "roles": ["admin", "common"]}},
-                ],
-            },
-        ],
-    }
-
-    # 标签页路由
-    tabs_router = {
-        "path": "/tabs",
-        "meta": {"icon": "ri:bookmark-2-line", "title": "menus.pureTabs", "rank": 15},
-        "children": [
-            {"path": "/tabs/index", "name": "Tabs", "meta": {"title": "menus.pureTabs", "roles": ["admin", "common"]}},
-            {"path": "/tabs/query-detail", "name": "TabQueryDetail", "meta": {"showLink": False, "activePath": "/tabs/index", "roles": ["admin", "common"]}},
-            {"path": "/tabs/params-detail/:id", "component": "params-detail", "name": "TabParamsDetail", "meta": {"showLink": False, "activePath": "/tabs/index", "roles": ["admin", "common"]}},
-        ],
-    }
-
     return success_response(
         data=[
             system_management_router,
             system_monitor_router,
             permission_router,
-            frame_router,
-            tabs_router,
         ]
     )
 
