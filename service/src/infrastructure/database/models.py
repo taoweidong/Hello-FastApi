@@ -190,3 +190,114 @@ class IPRule(SQLModel, table=True):
 
     def __repr__(self) -> str:
         return f"<IPRule(ip={self.ip_address}, type={self.rule_type})>"
+
+
+# ============ 部门模型 ============
+
+
+class Department(SQLModel, table=True):
+    """部门实体（树形结构）。"""
+
+    __tablename__ = "departments"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)
+    name: str = Field(max_length=64)  # 部门名称
+    parent_id: str | None = Field(default=None, foreign_key="departments.id")  # 父部门ID
+    sort: int = Field(default=0)  # 排序号
+    principal: str | None = Field(default=None, max_length=50)  # 负责人
+    phone: str | None = Field(default=None, max_length=20)  # 联系电话
+    email: str | None = Field(default=None, max_length=100)  # 邮箱
+    status: int = Field(default=1)  # 状态(0-禁用, 1-启用)
+    remark: str | None = Field(default=None, max_length=500)  # 备注
+    created_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+    updated_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    )
+
+    def __repr__(self) -> str:
+        return f"<Department(id={self.id}, name={self.name})>"
+
+
+# ============ 日志模型 ============
+
+
+class LoginLog(SQLModel, table=True):
+    """登录日志实体。"""
+
+    __tablename__ = "login_logs"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)
+    username: str = Field(max_length=50)  # 用户名
+    ip: str | None = Field(default=None, max_length=45)  # IP地址
+    address: str | None = Field(default=None, max_length=200)  # 登录地点
+    system: str | None = Field(default=None, max_length=100)  # 操作系统
+    browser: str | None = Field(default=None, max_length=100)  # 浏览器
+    status: int = Field(default=1)  # 登录状态(0-失败, 1-成功)
+    behavior: str | None = Field(default=None, max_length=200)  # 行为描述
+    login_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+
+    def __repr__(self) -> str:
+        return f"<LoginLog(id={self.id}, username={self.username})>"
+
+
+class OperationLog(SQLModel, table=True):
+    """操作日志实体。"""
+
+    __tablename__ = "operation_logs"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)
+    username: str = Field(max_length=50)  # 操作人员
+    ip: str | None = Field(default=None, max_length=45)  # IP地址
+    address: str | None = Field(default=None, max_length=200)  # 操作地点
+    system: str | None = Field(default=None, max_length=100)  # 操作系统
+    browser: str | None = Field(default=None, max_length=100)  # 浏览器
+    status: int = Field(default=1)  # 操作状态(0-失败, 1-成功)
+    summary: str | None = Field(default=None, max_length=200)  # 操作摘要
+    module: str | None = Field(default=None, max_length=100)  # 操作模块
+    operating_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+
+    def __repr__(self) -> str:
+        return f"<OperationLog(id={self.id}, username={self.username})>"
+
+
+class SystemLog(SQLModel, table=True):
+    """系统日志实体。"""
+
+    __tablename__ = "system_logs"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)
+    level: str | None = Field(default=None, max_length=20)  # 日志级别
+    module: str | None = Field(default=None, max_length=100)  # 所属模块
+    url: str | None = Field(default=None, max_length=500)  # 请求URL
+    method: str | None = Field(default=None, max_length=10)  # 请求方法
+    ip: str | None = Field(default=None, max_length=45)  # IP地址
+    address: str | None = Field(default=None, max_length=200)  # 请求地点
+    system: str | None = Field(default=None, max_length=100)  # 操作系统
+    browser: str | None = Field(default=None, max_length=100)  # 浏览器
+    takes_time: float | None = Field(default=None)  # 耗时(毫秒)
+    request_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+    request_body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 请求体
+    response_body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 响应体
+
+    def __repr__(self) -> str:
+        return f"<SystemLog(id={self.id}, module={self.module})>"
+
+
+# ============ 角色-菜单关联模型 ============
+
+
+class RoleMenuLink(SQLModel, table=True):
+    """角色-菜单关联表（用于多对多关系）。"""
+
+    __tablename__ = "role_menus"
+
+    role_id: str = Field(sa_column=Column(String(36), ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True))
+    menu_id: str = Field(sa_column=Column(String(36), ForeignKey("menus.id", ondelete="CASCADE"), primary_key=True))
