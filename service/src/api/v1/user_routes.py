@@ -10,6 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.api.common import success_response, list_response
 from src.api.dependencies import get_current_user_id, require_permission
 from src.application.dto.user_dto import (
+    AssignRoleDTO,
     BatchDeleteDTO,
     ChangePasswordDTO,
     ResetPasswordDTO,
@@ -45,15 +46,17 @@ async def get_user_list(
     """
     service = UserService(db)
     users, total = await service.get_users(query)
-    
+
     # 转换为前端期望的字段格式
     user_list = []
     for user in users:
         user_dict = user.model_dump()
         # 添加 dept 字段（前端期望的部门格式）
         user_dict["dept"] = {"id": user_dict.get("dept_id") or 0, "name": ""}
+        # 移除不需要的字段
+        user_dict.pop("dept_id", None)
         user_list.append(user_dict)
-    
+
     return list_response(
         list_data=user_list,
         total=total,
@@ -261,3 +264,26 @@ async def change_password(
     service = UserService(db)
     await service.change_password(user_id, dto)
     return success_response(message="密码修改成功")
+
+
+@router.post("/assign-role")
+async def assign_role(
+    dto: AssignRoleDTO,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(require_permission("user:edit")),
+):
+    """为用户分配角色接口。
+
+    需要 user:edit 权限。
+    前端调用: POST /api/system/user/assign-role
+
+    Args:
+        dto: 分配角色请求数据（userId, roleIds）
+        db: 数据库会话
+
+    Returns:
+        统一格式的成功响应
+    """
+    service = UserService(db)
+    await service.assign_roles(dto.userId, dto.roleIds)
+    return success_response(message="角色分配成功")

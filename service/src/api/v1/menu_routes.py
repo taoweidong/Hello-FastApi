@@ -24,19 +24,20 @@ async def get_menu_list(
     current_user: dict = Depends(require_permission("menu:view")),
 ):
     """获取菜单列表（扁平结构）。
-    
+
     前端调用: POST /api/system/menu
     返回扁平列表格式（非树形），符合 Pure Admin 前端标准。
+    前端会自动将扁平列表转换为树形结构。
     """
     menu_repo = MenuRepository()
     all_menus = await menu_repo.get_all(session)
-    
+
     # 转换为前端期望的扁平列表格式
     menu_list = []
     for menu in all_menus:
         menu_dict = {
-            "parentId": int(menu.parent_id) if menu.parent_id else 0,
             "id": int(menu.id) if menu.id.isdigit() else menu.id,
+            "parentId": int(menu.parent_id) if menu.parent_id else 0,
             "menuType": 0,  # 0-菜单, 1-iframe, 2-外链, 3-按钮
             "title": menu.title or menu.name,
             "name": menu.name,
@@ -55,11 +56,11 @@ async def get_menu_list(
             "keepAlive": False,
             "hiddenTag": False,
             "fixedTag": False,
-            "showLink": menu.show_link if menu.show_link is not None else True,
+            "showLink": bool(menu.show_link) if menu.show_link is not None else True,
             "showParent": False,
         }
         menu_list.append(menu_dict)
-    
+
     return success_response(data=menu_list)
 
 

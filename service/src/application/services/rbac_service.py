@@ -37,7 +37,7 @@ class RBACService:
         role = Role(
             name=dto.name,
             code=dto.code,
-            description=dto.description,
+            description=dto.remark,  # 映射 remark 到 description
             status=dto.status
         )
         role = await self.role_repo.create(role)
@@ -59,14 +59,14 @@ class RBACService:
         """获取角色列表（分页）。"""
         # 获取总数
         total = await self.role_repo.count(
-            role_name=query.roleName,
+            role_name=query.name,  # 前端使用 name 字段
             status=query.status
         )
         # 获取列表
         roles = await self.role_repo.get_all(
             page_num=query.pageNum,
             page_size=query.pageSize,
-            role_name=query.roleName,
+            role_name=query.name,  # 前端使用 name 字段
             status=query.status
         )
         # 转换为响应DTO
@@ -96,9 +96,9 @@ class RBACService:
                 raise ConflictError(f"角色编码 '{dto.code}' 已存在")
             role.code = dto.code
 
-        # 更新描述（如果提供）
-        if dto.description is not None:
-            role.description = dto.description
+        # 更新备注（如果提供）
+        if dto.remark is not None:
+            role.description = dto.remark
 
         # 更新状态（如果提供）
         if dto.status is not None:
@@ -209,7 +209,7 @@ class RBACService:
             id=role.id,
             name=role.name,
             code=role.code,
-            description=role.description,
+            remark=role.description,  # 映射 description 到 remark
             status=role.status,
             permissions=perm_list,
             createTime=role.created_at,

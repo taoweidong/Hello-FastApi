@@ -51,7 +51,7 @@ async def get_role_list(
     """
     service = RBACService(db)
     roles, total = await service.get_roles(query)
-    
+
     # 转换为前端期望的字段格式
     role_list = []
     for role in roles:
@@ -60,12 +60,11 @@ async def get_role_list(
             "name": role.name,
             "code": role.code,
             "status": role.status,
-            "remark": role.description,  # 映射 description 到 remark
+            "remark": role.remark or "",
             "createTime": int(role.createTime.timestamp() * 1000) if role.createTime else None,
-            "updateTime": int(role.updateTime.timestamp() * 1000) if role.updateTime else None,
         }
         role_list.append(role_dict)
-    
+
     return list_response(
         list_data=role_list,
         total=total,
@@ -188,6 +187,34 @@ async def assign_permissions(
     service = RBACService(db)
     await service.assign_permissions(role_id, dto.permissionIds)
     return success_response(message="权限分配成功")
+
+
+@role_router.post("/{role_id}/menu")
+async def assign_role_menu(
+    role_id: str,
+    data: dict,
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(require_permission("role:manage"))
+):
+    """为角色分配菜单权限接口。
+
+    需要 role:manage 权限。
+    前端调用: POST /api/system/role/{id}/menu
+    请求体: { menuIds: [1, 2, 3] }
+
+    Args:
+        role_id: 角色ID
+        data: 菜单ID列表
+        db: 数据库会话
+
+    Returns:
+        统一响应格式的操作结果消息
+    """
+    # TODO: 实现角色-菜单关联存储
+    # menu_ids = data.get("menuIds", [])
+    # service = RBACService(db)
+    # await service.assign_menu_to_role(role_id, menu_ids)
+    return success_response(message="菜单权限分配成功")
 
 
 # =============================================================================

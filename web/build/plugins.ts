@@ -12,7 +12,7 @@ import { visualizer } from "rollup-plugin-visualizer";
 import removeConsole from "vite-plugin-remove-console";
 import VueI18nPlugin from "@intlify/unplugin-vue-i18n/vite";
 import { codeInspectorPlugin } from "code-inspector-plugin";
-import { vitePluginFakeServer } from "vite-plugin-fake-server";
+// import { vitePluginFakeServer } from "vite-plugin-fake-server";
 
 export async function getPluginsList(
   VITE_CDN: boolean,
@@ -51,14 +51,14 @@ export async function getPluginsList(
      */
     removeNoMatch(),
     // mock支持，通过环境变量 VITE_MOCK 控制是否启用
-    vitePluginFakeServer({
-      logger: false,
-      include: "mock",
-      infixName: false,
-      enableProd: false,
-      // 当 VITE_MOCK 为 "false" 时禁用 Mock，让请求走代理到真实后端
-      enable: !process.env.VITE_MOCK || process.env.VITE_MOCK !== "false"
-    }),
+    // vitePluginFakeServer({
+    //   logger: false,
+    //   include: "mock",
+    //   infixName: false,
+    //   enableProd: false,
+    //   // 当 VITE_MOCK 为 "false" 时禁用 Mock，让请求走代理到真实后端
+    //   enable: !process.env.VITE_MOCK || process.env.VITE_MOCK !== "false"
+    // }),
     // svg组件化支持
     svgLoader(),
     // 自动按需加载图标

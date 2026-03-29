@@ -9,7 +9,7 @@ class RoleCreateDTO(BaseModel):
     """创建角色请求"""
     name: str = Field(min_length=2, max_length=64)
     code: str = Field(min_length=2, max_length=64)
-    description: str | None = Field(default=None, max_length=500)
+    remark: str | None = Field(default=None, max_length=500)
     status: int = 1
     permissionIds: list[str] = []
 
@@ -18,7 +18,7 @@ class RoleUpdateDTO(BaseModel):
     """更新角色请求"""
     name: str | None = Field(default=None, min_length=2, max_length=64)
     code: str | None = Field(default=None, min_length=2, max_length=64)
-    description: str | None = Field(default=None, max_length=500)
+    remark: str | None = Field(default=None, max_length=500)
     status: int | None = None
     permissionIds: list[str] | None = None
 
@@ -28,7 +28,7 @@ class RoleResponseDTO(BaseModel):
     id: str
     name: str
     code: str
-    description: str | None = None
+    remark: str | None = None
     status: int = 1
     permissions: list[dict] = []
     createTime: datetime | None = None
@@ -41,7 +41,7 @@ class RoleListQueryDTO(BaseModel):
     """角色列表查询"""
     pageNum: int = Field(default=1, ge=1)
     pageSize: int = Field(default=10, ge=1, le=100)
-    roleName: str | None = None
+    name: str | None = None  # 前端使用 name 而不是 roleName
     status: int | None = None
 
 

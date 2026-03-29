@@ -57,8 +57,8 @@ class AuthService:
         # 4. 查询用户角色和权限
         # 超级管理员直接返回 admin 角色和所有权限
         if user.is_superuser:
-            user_roles = await self.role_repo.get_all(page_size=100)
-            user_permissions = await self.perm_repo.get_all(page_size=100)
+            user_roles = await self.role_repo.get_all(page_num=1, page_size=100)
+            user_permissions = await self.perm_repo.get_all(page_num=1, page_size=100)
         else:
             user_roles = await self.role_repo.get_user_roles(user.id)
             user_permissions = await self.perm_repo.get_user_permissions(user.id)

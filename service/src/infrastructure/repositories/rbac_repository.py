@@ -132,6 +132,28 @@ class RoleRepository(RoleRepositoryInterface):
         )
         return list(result.all())
 
+    async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
+        """为用户批量分配角色（先清除旧角色再分配新的）。
+
+        Args:
+            user_id: 用户ID
+            role_ids: 角色ID列表
+
+        Returns:
+            是否分配成功
+        """
+        # 先清除用户的所有旧角色关联
+        stmt = delete(UserRole).where(UserRole.user_id == user_id)
+        await self.session.execute(stmt)
+
+        # 创建新的角色关联
+        for role_id in role_ids:
+            user_role = UserRole(user_id=user_id, role_id=role_id)
+            self.session.add(user_role)
+
+        await self.session.flush()
+        return True
+
 
 class PermissionRepository(PermissionRepositoryInterface):
     """PermissionRepositoryInterface 的 SQLModel 实现。"""

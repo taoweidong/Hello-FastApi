@@ -83,3 +83,9 @@ class UpdateStatusDTO(BaseModel):
 class BatchDeleteDTO(BaseModel):
     """批量删除请求"""
     ids: list[str]
+
+
+class AssignRoleDTO(BaseModel):
+    """分配角色请求"""
+    userId: str
+    roleIds: list[str]

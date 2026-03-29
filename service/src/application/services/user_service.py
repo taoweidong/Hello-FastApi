@@ -13,6 +13,7 @@ from src.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from src.domain.auth.password_service import PasswordService
 from src.infrastructure.database.models import User
 from src.infrastructure.repositories.user_repository import UserRepository
+from src.infrastructure.repositories.rbac_repository import RoleRepository
 
 
 class UserService:
@@ -20,6 +21,7 @@ class UserService:
 
     def __init__(self, session: AsyncSession):
         self.repo = UserRepository(session)
+        self.session = session
         self.password_service = PasswordService()
 
     async def create_user(self, dto: UserCreateDTO) -> UserResponseDTO:
@@ -279,6 +281,28 @@ class UserService:
         )
         user = await self.repo.create(user)
         return await self._to_response(user)
+
+    async def assign_roles(self, user_id: str, role_ids: list[str]) -> bool:
+        """为用户分配角色。
+
+        Args:
+            user_id: 用户ID
+            role_ids: 角色ID列表
+
+        Returns:
+            是否分配成功
+
+        Raises:
+            NotFoundError: 用户不存在
+        """
+        user = await self.repo.get_by_id(user_id)
+        if user is None:
+            raise NotFoundError(f"用户 ID '{user_id}' 不存在")
+
+        # 使用 RoleRepository 分配角色
+        role_repo = RoleRepository(self.session)
+        await role_repo.assign_roles_to_user(user_id, role_ids)
+        return True
 
     async def _to_response(self, user: User) -> UserResponseDTO:
         """将用户实体转换为响应 DTO。
