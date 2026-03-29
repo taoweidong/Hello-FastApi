@@ -1,0 +1,105 @@
+diff --git a/src/api/v1/auth_routes.py b/src/api/v1/auth_routes.py
+index 66a5d9d..bf532e2 100644
+--- a/src/api/v1/auth_routes.py
++++ b/src/api/v1/auth_routes.py
+@@ -1,31 +1,85 @@
+-"""V1 API - 认证路由。"""
++"""System API - 认证路由模块。
++
++提供用户认证相关的接口，包括登录、注册、登出和令牌刷新等功能。
++所有路由直接挂在 /api/system 路径下。
++"""
+ 
+ from fastapi import APIRouter, Depends
+ from sqlmodel.ext.asyncio.session import AsyncSession
+ 
++from src.api.common import success_response
+ from src.api.dependencies import get_current_active_user
+-from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, TokenResponseDTO
++from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
+ from src.application.services.auth_service import AuthService
+ from src.infrastructure.database import get_db
+ 
+-router = APIRouter(prefix="/auth", tags=["Authentication"])
++router = APIRouter()
++
++
++@router.post("/login")
++async def login(dto: LoginDTO, db: AsyncSession = Depends(get_db)):
++    """用户登录接口。
++
++    验证用户凭据并返回完整的登录信息，包括访问令牌、刷新令牌、用户信息、角色和权限。
+ 
++    Args:
++        dto: 登录请求数据，包含用户名和密码
++        db: 数据库会话
+ 
+-@router.post("/login", response_model=TokenResponseDTO)
+-async def login(dto: LoginDTO, db: AsyncSession = Depends(get_db)) -> TokenResponseDTO:
+-    """认证用户并返回 JWT 令牌。"""
++    Returns:
++        dict: 统一格式的登录响应，包含 accessToken, expires, refreshToken, userInfo, roles, permissions
++    """
+     service = AuthService(db)
+-    return await service.login(dto)
++    result = await service.login(dto)
++    return success_response(data=result, message="登录成功")
+ 
+ 
+-@router.post("/refresh", response_model=TokenResponseDTO)
+-async def refresh_token(dto: RefreshTokenDTO, db: AsyncSession = Depends(get_db)) -> TokenResponseDTO:
+-    """使用刷新令牌刷新访问令牌。"""
++@router.post("/register")
++async def register(dto: RegisterDTO, db: AsyncSession = Depends(get_db)):
++    """用户注册接口。
++
++    创建新用户账号。
++
++    Args:
++        dto: 注册请求数据，包含用户名、密码等信息
++        db: 数据库会话
++
++    Returns:
++        dict: 统一格式的注册响应，包含新创建用户的基本信息
++    """
+     service = AuthService(db)
+-    return await service.refresh_token(dto.refresh_token)
++    result = await service.register(dto)
++    return success_response(data=result, message="注册成功")
++
+ 
++@router.post("/logout")
++async def logout(current_user: dict = Depends(get_current_active_user)):
++    """用户登出接口。
+ 
+-@router.get("/me")
+-async def get_current_user(current_user: dict = Depends(get_current_active_user)) -> dict:
+-    """获取当前认证用户信息。"""
+-    return current_user
++    JWT 无状态认证，服务端无需特殊处理，客户端只需删除本地令牌。
++
++    Args:
++        current_user: 当前登录用户信息
++
++    Returns:
++        dict: 统一格式的登出成功响应
++    """
++    return success_response(message="登出成功")
++
++
++@router.post("/refresh")
++async def refresh_token(dto: RefreshTokenDTO, db: AsyncSession = Depends(get_db)):
++    """刷新访问令牌接口。
++
++    使用有效的刷新令牌获取新的访问令牌。
++
++    Args:
++        dto: 刷新令牌请求数据
++        db: 数据库会话
++
++    Returns:
++        dict: 统一格式的刷新响应，包含 accessToken, expires, refreshToken
++    """
++    service = AuthService(db)
++    result = await service.refresh_token(dto.refreshToken)
++    return success_response(data=result, message="刷新成功")
