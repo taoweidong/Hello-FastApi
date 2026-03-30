@@ -1,8 +1,9 @@
 """应用层 - 菜单领域的数据传输对象。"""
 
+
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
-from typing import Optional
+
+from src.core.validators import empty_str_to_none
 
 
 class MenuCreateDTO(BaseModel):
@@ -33,11 +34,9 @@ class MenuCreateDTO(BaseModel):
                      'icon', 'extraIcon', 'enterTransition', 'leaveTransition',
                      'activePath', 'auths', 'frameSrc', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None"""
-        if v == '':
-            return None
-        return v
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
 
 class MenuUpdateDTO(BaseModel):
@@ -68,11 +67,9 @@ class MenuUpdateDTO(BaseModel):
                      'icon', 'extraIcon', 'enterTransition', 'leaveTransition',
                      'activePath', 'auths', 'frameSrc', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None"""
-        if v == '':
-            return None
-        return v
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
 
 class MenuResponseDTO(BaseModel):

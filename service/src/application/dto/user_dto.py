@@ -1,8 +1,10 @@
 """应用层 - 用户领域的数据传输对象。"""
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+from src.core.validators import empty_str_or_zero_to_none, empty_str_to_none
 
 
 class UserCreateDTO(BaseModel):
@@ -22,19 +24,15 @@ class UserCreateDTO(BaseModel):
 
     @field_validator('nickname', 'email', 'phone', 'avatar', 'remark', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None - 单一职责：处理字符串字段"""
-        if v == '':
-            return None
-        return v
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
     @field_validator('sex', 'status', 'dept_id', mode='before')
     @classmethod
-    def empty_str_or_zero_to_none(cls, v: int | str | None) -> int | None:
-        """将空字符串或0转换为None - 单一职责：处理整型字段"""
-        if v == '' or v == 0 or v is None:
-            return None
-        return int(v) if isinstance(v, str) else v
+    def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
+        """将空字符串或 0 转换为 None。"""
+        return empty_str_or_zero_to_none(v)
 
 
 class UserUpdateDTO(BaseModel):
@@ -52,19 +50,15 @@ class UserUpdateDTO(BaseModel):
 
     @field_validator('nickname', 'email', 'phone', 'avatar', 'remark', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None"""
-        if v == '':
-            return None
-        return v
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
     @field_validator('sex', 'status', 'dept_id', mode='before')
     @classmethod
-    def empty_str_or_zero_to_none(cls, v: int | str | None) -> int | None:
-        """将空字符串或0转换为None"""
-        if v == '' or v == 0 or v is None:
-            return None
-        return int(v) if isinstance(v, str) else v
+    def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
+        """将空字符串或 0 转换为 None。"""
+        return empty_str_or_zero_to_none(v)
 
 
 class UserResponseDTO(BaseModel):
@@ -97,11 +91,9 @@ class UserListQueryDTO(BaseModel):
 
     @field_validator('status', 'deptId', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v):
-        """将空字符串转换为None"""
-        if v == '' or v is None:
-            return None
-        return int(v) if isinstance(v, str) else v
+    def validate_empty(cls, v):
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
 
 class ChangePasswordDTO(BaseModel):

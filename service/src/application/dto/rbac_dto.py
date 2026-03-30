@@ -1,8 +1,10 @@
 """应用层 - RBAC 领域的数据传输对象。"""
 
-from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+from src.core.validators import empty_str_or_zero_to_none, empty_str_to_none
 
 
 class RoleCreateDTO(BaseModel):
@@ -15,11 +17,9 @@ class RoleCreateDTO(BaseModel):
 
     @field_validator('remark', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None"""
-        if v == '':
-            return None
-        return v
+    def validate_remark(cls, v: str | None) -> str | None:
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
 
 class RoleUpdateDTO(BaseModel):
@@ -32,19 +32,15 @@ class RoleUpdateDTO(BaseModel):
 
     @field_validator('name', 'code', 'remark', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None"""
-        if v == '':
-            return None
-        return v
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
     @field_validator('status', mode='before')
     @classmethod
-    def empty_str_or_zero_to_none(cls, v: int | str | None) -> int | None:
-        """将空字符串或0转换为None"""
-        if v == '' or v == 0 or v is None:
-            return None
-        return int(v) if isinstance(v, str) else v
+    def validate_status(cls, v: int | str | None) -> int | None:
+        """将空字符串或 0 转换为 None。"""
+        return empty_str_or_zero_to_none(v)
 
 
 class RoleResponseDTO(BaseModel):
@@ -71,11 +67,9 @@ class RoleListQueryDTO(BaseModel):
 
     @field_validator('status', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v):
-        """将空字符串转换为None"""
-        if v == '' or v is None:
-            return None
-        return int(v) if isinstance(v, str) else v
+    def validate_status(cls, v):
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
 
 
 class PermissionCreateDTO(BaseModel):

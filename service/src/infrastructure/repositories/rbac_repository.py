@@ -5,7 +5,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.rbac.repository import PermissionRepositoryInterface, RoleRepositoryInterface
-from src.infrastructure.database.models import Permission, Role, RolePermissionLink, UserRole, RoleMenuLink, Menu
+from src.infrastructure.database.models import Menu, Permission, Role, RoleMenuLink, RolePermissionLink, UserRole
 
 
 class RoleRepository(RoleRepositoryInterface):

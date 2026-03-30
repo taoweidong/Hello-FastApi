@@ -15,7 +15,11 @@ from src.infrastructure.database.connection import get_db
 from src.infrastructure.repositories.menu_repository import MenuRepository
 
 menu_router = APIRouter()
-menu_service = MenuService()
+
+
+def get_menu_service(session: AsyncSession = Depends(get_db)) -> MenuService:
+    """获取菜单服务实例的依赖注入。"""
+    return MenuService(session)
 
 
 @menu_router.post("")
@@ -68,6 +72,7 @@ async def get_menu_list(
 async def get_menu_tree(
     session: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_permission("menu:view")),
+    menu_service: MenuService = Depends(get_menu_service),
 ):
     """获取完整菜单树。"""
     tree = await menu_service.get_menu_tree(session)
@@ -78,6 +83,7 @@ async def get_menu_tree(
 async def get_user_menus(
     session: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_active_user),
+    menu_service: MenuService = Depends(get_menu_service),
 ):
     """获取当前用户可访问的菜单。"""
     menus = await menu_service.get_user_menus(current_user["id"], session)
@@ -89,9 +95,10 @@ async def create_menu(
     dto: MenuCreateDTO,
     session: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_permission("menu:add")),
+    menu_service: MenuService = Depends(get_menu_service),
 ):
     """创建菜单。
-    
+
     前端调用: POST /api/system/menu/create
     """
     menu = await menu_service.create_menu(dto, session)
@@ -104,6 +111,7 @@ async def update_menu(
     dto: MenuUpdateDTO,
     session: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_permission("menu:edit")),
+    menu_service: MenuService = Depends(get_menu_service),
 ):
     """更新菜单。"""
     menu = await menu_service.update_menu(menu_id, dto, session)
@@ -115,6 +123,7 @@ async def delete_menu(
     menu_id: str,
     session: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_permission("menu:delete")),
+    menu_service: MenuService = Depends(get_menu_service),
 ):
     """删除菜单。"""
     await menu_service.delete_menu(menu_id, session)

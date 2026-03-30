@@ -1,7 +1,6 @@
 """应用层 - 认证领域的数据传输对象。"""
 
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel
 
 
 class LoginDTO(BaseModel):

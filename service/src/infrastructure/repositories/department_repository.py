@@ -4,10 +4,11 @@ from sqlalchemy import func as sa_func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.domain.department.repository import DepartmentRepositoryInterface
 from src.infrastructure.database.models import Department
 
 
-class DepartmentRepository:
+class DepartmentRepository(DepartmentRepositoryInterface):
     """部门仓储的 SQLModel 实现。"""
 
     async def get_all(self, session: AsyncSession) -> list[Department]:

@@ -13,9 +13,9 @@ from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
 from src.core.exceptions import UnauthorizedError
 from src.infrastructure.database import get_db
-from src.infrastructure.repositories.user_repository import UserRepository
-from src.infrastructure.repositories.rbac_repository import RoleRepository
 from src.infrastructure.repositories.menu_repository import MenuRepository
+from src.infrastructure.repositories.rbac_repository import RoleRepository
+from src.infrastructure.repositories.user_repository import UserRepository
 
 router = APIRouter()
 
@@ -284,7 +284,7 @@ async def list_role_ids(
     user_id = data.get("userId")
     if not user_id:
         return {"code": 10001, "message": "请求参数缺失或格式不正确", "data": []}
-    
+
     role_repo = RoleRepository(db)
     roles = await role_repo.get_user_roles(str(user_id))
     return success_response(data=[r.id for r in roles])
@@ -302,7 +302,7 @@ async def get_role_menu(
     """
     menu_repo = MenuRepository()
     all_menus = await menu_repo.get_all(db)
-    
+
     # 转换为前端期望的格式
     menu_list = []
     for menu in all_menus:
@@ -313,7 +313,7 @@ async def get_role_menu(
             "title": menu.title or menu.name,
         }
         menu_list.append(menu_dict)
-    
+
     return success_response(data=menu_list)
 
 
@@ -332,9 +332,9 @@ async def get_role_menu_ids(
     role_id = data.get("id")
     if not role_id:
         return success_response(data=[])
-    
+
     role_repo = RoleRepository(db)
-    
+
     # 如果是超级管理员角色（code=admin），返回所有菜单
     role = await role_repo.get_by_id(str(role_id))
     if role and role.code == "admin":
@@ -342,7 +342,7 @@ async def get_role_menu_ids(
         all_menus = await menu_repo.get_all(db)
         menu_ids = [m.id for m in all_menus]
         return success_response(data=menu_ids)
-    
+
     # 其他角色返回已分配的菜单ID列表
     menu_ids = await role_repo.get_role_menu_ids(str(role_id))
     return success_response(data=menu_ids)

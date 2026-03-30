@@ -1,8 +1,10 @@
 """应用层 - 部门领域的数据传输对象。"""
 
-from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
+
+from src.core.validators import empty_str_or_zero_to_none, empty_str_to_none
 
 
 class DepartmentCreateDTO(BaseModel):
@@ -18,16 +20,16 @@ class DepartmentCreateDTO(BaseModel):
 
     @field_validator('parentId', 'principal', 'phone', 'email', 'remark', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None"""
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        """将空字符串或 '0' 转换为 None。"""
         if v == '' or v == '0' or v == 0:
             return None
         return v
 
     @field_validator('sort', 'status', mode='before')
     @classmethod
-    def empty_str_to_zero(cls, v: int | str | None) -> int:
-        """将空字符串或None转换为0"""
+    def validate_empty_to_zero(cls, v: int | str | None) -> int:
+        """将空字符串或 None 转换为 0。"""
         if v == '' or v is None:
             return 0
         return int(v) if isinstance(v, str) else v
@@ -46,19 +48,17 @@ class DepartmentUpdateDTO(BaseModel):
 
     @field_validator('parentId', 'name', 'principal', 'phone', 'email', 'remark', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v: str | None) -> str | None:
-        """将空字符串转换为None"""
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        """将空字符串或 '0' 转换为 None。"""
         if v == '' or v == '0' or v == 0:
             return None
         return v
 
     @field_validator('sort', 'status', mode='before')
     @classmethod
-    def empty_str_or_zero_to_none(cls, v: int | str | None) -> int | None:
-        """将空字符串或0转换为None"""
-        if v == '' or v == 0 or v is None:
-            return None
-        return int(v) if isinstance(v, str) else v
+    def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
+        """将空字符串或 0 转换为 None。"""
+        return empty_str_or_zero_to_none(v)
 
 
 class DepartmentResponseDTO(BaseModel):
@@ -84,8 +84,6 @@ class DepartmentListQueryDTO(BaseModel):
 
     @field_validator('status', mode='before')
     @classmethod
-    def empty_str_to_none(cls, v):
-        """将空字符串转换为None"""
-        if v == '' or v is None:
-            return None
-        return int(v) if isinstance(v, str) else v
+    def validate_status(cls, v):
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)

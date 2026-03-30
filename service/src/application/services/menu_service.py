@@ -15,9 +15,21 @@ from src.infrastructure.repositories.rbac_repository import PermissionRepository
 class MenuService:
     """菜单领域操作的应用服务。"""
 
-    def __init__(self):
+    def __init__(self, session: AsyncSession):
+        """初始化菜单服务。
+
+        Args:
+            session: 数据库会话
+        """
+        self.session = session
         self.menu_repo = MenuRepository()
-        self.perm_repo = PermissionRepository
+        self.perm_repo: PermissionRepository | None = None
+
+    def _get_perm_repo(self) -> PermissionRepository:
+        """获取权限仓储实例（懒加载）。"""
+        if self.perm_repo is None:
+            self.perm_repo = PermissionRepository(self.session)
+        return self.perm_repo
 
     async def get_menu_tree(self, session: AsyncSession) -> list[dict]:
         """获取完整菜单树。"""
@@ -33,7 +45,7 @@ class MenuService:
         all_menus = await self.menu_repo.get_all(session)
 
         # 获取用户的所有权限编码
-        perm_repo = PermissionRepository(session)
+        perm_repo = self._get_perm_repo()
         user_permissions = await perm_repo.get_user_permissions(user_id)
         user_perm_codes = {p.code for p in user_permissions}
 

@@ -11,6 +11,7 @@
 - **JWT 认证**：现代化的 Token 认证机制
 - **异步处理**：全面支持 async/await，高性能并发处理
 - **类型安全**：完整的类型提示，Pydantic 数据验证
+- **代码复用**：公共验证器和仓储基类减少重复代码
 
 ## 技术栈
 
@@ -51,9 +52,11 @@ Hello-FastApi/
 │   │   ├── v1/                 # V1 版本接口
 │   │   │   ├── auth_routes.py  # 认证路由
 │   │   │   ├── rbac_routes.py  # RBAC 路由
+│   │   │   ├── menu_routes.py  # 菜单路由
+│   │   │   ├── system_routes.py # 系统路由
 │   │   │   └── user_routes.py  # 用户路由
-│   │   ├── common.py
-│   │   └── dependencies.py
+│   │   ├── common.py           # 公共响应和转换工具
+│   │   └── dependencies.py    # 依赖注入
 │   ├── application/            # 应用层
 │   │   ├── dto/                # 数据传输对象
 │   │   └── services/           # 应用服务
@@ -62,15 +65,18 @@ Hello-FastApi/
 │   │   ├── asgi.py             # ASGI 入口
 │   │   └── settings.py         # 应用配置
 │   ├── core/                   # 核心模块
-│   │   ├── constants.py
-│   │   ├── decorators.py
-│   │   ├── exceptions.py
+│   │   ├── constants.py        # 常量定义
+│   │   ├── decorators.py       # 装饰器
+│   │   ├── exceptions.py       # 异常类
 │   │   ├── logger.py           # 日志配置 (loguru)
-│   │   ├── middlewares.py
-│   │   ├── utils.py
-│   │   └── validators.py
+│   │   ├── middlewares.py      # 中间件
+│   │   ├── utils.py            # 工具函数
+│   │   └── validators.py       # 公共验证器
 │   ├── domain/                 # 领域层
 │   │   ├── auth/               # 认证领域
+│   │   ├── department/         # 部门领域
+│   │   ├── log/                # 日志领域
+│   │   ├── menu/               # 菜单领域
 │   │   ├── rbac/               # RBAC 领域
 │   │   └── user/               # 用户领域
 │   ├── infrastructure/         # 基础设施层
@@ -79,10 +85,22 @@ Hello-FastApi/
 │   │   │   ├── connection.py
 │   │   │   └── models.py       # ORM 模型
 │   │   └── repositories/       # 仓储实现
+│   │       ├── base.py         # 仓储基类
+│   │       ├── department_repository.py
+│   │       ├── log_repository.py
+│   │       ├── menu_repository.py
+│   │       ├── rbac_repository.py
+│   │       └── user_repository.py
 │   └── main.py                 # 应用入口
 ├── tests/                      # 测试代码
 │   ├── integration/            # 集成测试
+│   │   └── test_api.py         # API 集成测试
 │   └── unit/                   # 单元测试
+│       ├── test_auth.py        # 认证测试
+│       ├── test_core.py        # 核心模块测试
+│       ├── test_dto_validators.py # DTO 验证器测试
+│       ├── test_user_service.py # 用户服务测试
+│       └── test_validators.py  # 公共验证器测试
 ├── .env.example                # 环境变量模板
 ├── .env.development            # 开发环境配置
 ├── .env.production             # 生产环境配置
@@ -194,6 +212,32 @@ python -m scripts.cli seedrbac        # 填充 RBAC 初始数据
 - 遵循 PEP 8 规范
 - 使用 Ruff 进行代码格式化和检查
 - 所有公共接口使用类型提示
+- 所有代码注释使用中文描述
+
+### 公共组件
+
+#### 验证器 (`src/core/validators.py`)
+提供通用的 Pydantic 验证器：
+- `empty_str_to_none`: 将空字符串转换为 None
+- `empty_str_or_zero_to_none`: 将空字符串或 0 转换为 None
+- `parse_time_range`: 解析时间范围参数
+- `parse_status`: 解析状态参数
+
+#### 仓储基类 (`src/infrastructure/repositories/base.py`)
+提供通用的 CRUD 和分页功能：
+- `get_by_id`: 根据 ID 获取实体
+- `get_all_with_pagination`: 分页获取实体列表
+- `count`: 获取实体总数
+- `create`, `update`, `delete`: CRUD 操作
+- `batch_delete`: 批量删除
+- `exists`: 检查字段值是否存在
+
+#### 响应工具 (`src/api/common.py`)
+提供统一的响应格式和转换工具：
+- `success_response`: 成功响应
+- `list_response`: 列表响应
+- `model_to_dict`: 模型转字典
+- `datetime_to_timestamp`: 日期转时间戳
 
 ### 代码检查
 
@@ -207,7 +251,24 @@ mypy src/
 
 # 运行测试
 pytest
+
+# 运行测试（带覆盖率）
+pytest --cov=src --cov-report=term-missing
 ```
+
+### 测试说明
+
+项目包含完整的单元测试和集成测试：
+
+**单元测试：**
+- `test_validators.py`: 公共验证器测试
+- `test_dto_validators.py`: DTO 验证器测试
+- `test_user_service.py`: 用户服务测试
+- `test_auth.py`: 认证服务测试
+- `test_core.py`: 核心模块测试
+
+**集成测试：**
+- `test_api.py`: API 端点集成测试
 
 ## API 概览
 
@@ -215,27 +276,29 @@ pytest
 
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| POST | /api/v1/auth/login | 用户登录 |
-| POST | /api/v1/auth/refresh | 刷新令牌 |
+| POST | /api/system/login | 用户登录 |
+| POST | /api/system/register | 用户注册 |
+| POST | /api/system/logout | 用户登出 |
+| POST | /api/system/refresh-token | 刷新令牌 |
 
 ### 用户接口
 
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| GET | /api/v1/users | 获取用户列表 |
-| POST | /api/v1/users | 创建用户 |
-| GET | /api/v1/users/{id} | 获取用户详情 |
-| PUT | /api/v1/users/{id} | 更新用户 |
-| DELETE | /api/v1/users/{id} | 删除用户 |
+| POST | /api/system/user | 获取用户列表 |
+| POST | /api/system/user/create | 创建用户 |
+| GET | /api/system/user/{id} | 获取用户详情 |
+| PUT | /api/system/user/{id} | 更新用户 |
+| DELETE | /api/system/user/{id} | 删除用户 |
 
 ### RBAC 接口
 
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| GET | /api/v1/roles | 获取角色列表 |
-| POST | /api/v1/roles | 创建角色 |
-| GET | /api/v1/permissions | 获取权限列表 |
-| POST | /api/v1/permissions | 创建权限 |
+| POST | /api/system/role | 获取角色列表 |
+| POST | /api/system/role/create | 创建角色 |
+| GET | /api/system/permission/list | 获取权限列表 |
+| POST | /api/system/permission/ | 创建权限 |
 
 ## 部署
 

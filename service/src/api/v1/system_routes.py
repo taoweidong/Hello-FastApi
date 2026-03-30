@@ -3,19 +3,19 @@
 提供部门管理、在线用户、登录日志、操作日志、系统日志等接口。
 """
 
-from fastapi import APIRouter, Body, Depends
-from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import Any
 import random
 
-from src.api.common import success_response, list_response
+from fastapi import APIRouter, Body, Depends
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.api.common import list_response, success_response
 from src.api.dependencies import get_current_active_user
-from src.application.dto.department_dto import DepartmentListQueryDTO, DepartmentCreateDTO, DepartmentUpdateDTO
+from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
 from src.application.dto.log_dto import (
+    BatchDeleteLogDTO,
     LoginLogListQueryDTO,
     OperationLogListQueryDTO,
     SystemLogListQueryDTO,
-    BatchDeleteLogDTO,
 )
 from src.application.services.department_service import DepartmentService
 from src.application.services.log_service import LogService
@@ -45,10 +45,10 @@ async def get_dept_list(
         name=data.get("name"),
         status=data.get("status"),
     )
-    
+
     service = DepartmentService(db)
     departments = await service.get_departments(query)
-    
+
     # 转换为前端期望的格式
     dept_list = []
     for dept in departments:
@@ -65,7 +65,7 @@ async def get_dept_list(
             "createTime": int(dept.created_at.timestamp() * 1000) if dept.created_at else None,
         }
         dept_list.append(dept_dict)
-    
+
     return success_response(data=dept_list)
 
 
@@ -172,7 +172,7 @@ async def get_login_logs(
     """
     service = LogService(db)
     logs, total = await service.get_login_logs(query)
-    
+
     # 转换为前端期望的格式
     log_list = []
     for log in logs:
@@ -187,7 +187,7 @@ async def get_login_logs(
             "behavior": log.behavior or "",
             "loginTime": log.login_time.isoformat() if log.login_time else None,
         })
-    
+
     return list_response(
         list_data=log_list,
         total=total,
@@ -243,7 +243,7 @@ async def get_operation_logs(
     """
     service = LogService(db)
     logs, total = await service.get_operation_logs(query)
-    
+
     # 转换为前端期望的格式
     log_list = []
     for log in logs:
@@ -259,7 +259,7 @@ async def get_operation_logs(
             "module": log.module or "",
             "operatingTime": log.operating_time.isoformat() if log.operating_time else None,
         })
-    
+
     return list_response(
         list_data=log_list,
         total=total,
@@ -315,7 +315,7 @@ async def get_system_logs(
     """
     service = LogService(db)
     logs, total = await service.get_system_logs(query)
-    
+
     # 转换为前端期望的格式
     log_list = []
     for log in logs:
@@ -332,7 +332,7 @@ async def get_system_logs(
             "takesTime": log.takes_time,
             "requestTime": log.request_time.isoformat() if log.request_time else None,
         })
-    
+
     return list_response(
         list_data=log_list,
         total=total,
@@ -355,10 +355,10 @@ async def get_system_logs_detail(
     log_id = data.get("id")
     if not log_id:
         return success_response(data=None, message="日志ID不能为空")
-    
+
     service = LogService(db)
     detail = await service.get_system_log_detail(log_id)
-    
+
     return success_response(data=detail)
 
 

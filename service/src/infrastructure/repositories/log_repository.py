@@ -4,7 +4,8 @@
 """
 
 from datetime import datetime
-from sqlalchemy import func as sa_func, and_
+
+from sqlalchemy import func as sa_func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 

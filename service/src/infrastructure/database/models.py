@@ -8,7 +8,7 @@ SQLModel 同时充当 SQLAlchemy ORM 模型和 Pydantic 数据模型，
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Column, DateTime, ForeignKey, String, Text, func
 from sqlmodel import Field, Relationship, SQLModel
 
 # ============ 关联模型 ============

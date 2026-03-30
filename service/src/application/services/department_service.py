@@ -5,12 +5,8 @@
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.department_dto import (
-    DepartmentCreateDTO,
-    DepartmentUpdateDTO,
-    DepartmentListQueryDTO,
-)
-from src.core.exceptions import ConflictError, NotFoundError, BusinessError
+from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
+from src.core.exceptions import BusinessError, ConflictError, NotFoundError
 from src.infrastructure.database.models import Department
 from src.infrastructure.repositories.department_repository import DepartmentRepository
 
@@ -104,7 +100,7 @@ class DepartmentService:
 
         # 更新字段
         update_data = dto.model_dump(exclude_unset=True, exclude={"parentId"})
-        
+
         # 处理 parentId
         if dto.parentId is not None:
             if dto.parentId == 0:
@@ -113,7 +109,7 @@ class DepartmentService:
                 # 验证不能将部门设为自己的子部门
                 if str(dto.parentId) == dept_id:
                     raise BusinessError("不能将部门设为自己的子部门")
-                
+
                 parent = await self.dept_repo.get_by_id(str(dto.parentId), self.session)
                 if not parent:
                     raise BusinessError("父部门不存在")

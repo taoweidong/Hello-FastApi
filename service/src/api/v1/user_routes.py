@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.api.common import success_response, list_response
+from src.api.common import list_response, success_response
 from src.api.dependencies import get_current_user_id, require_permission
 from src.application.dto.user_dto import (
     AssignRoleDTO,

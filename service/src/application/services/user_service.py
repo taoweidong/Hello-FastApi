@@ -12,8 +12,8 @@ from src.application.dto.user_dto import (
 from src.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from src.domain.auth.password_service import PasswordService
 from src.infrastructure.database.models import User
-from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.repositories.rbac_repository import RoleRepository
+from src.infrastructure.repositories.user_repository import UserRepository
 
 
 class UserService:

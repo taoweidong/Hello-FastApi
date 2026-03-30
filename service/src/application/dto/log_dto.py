@@ -1,9 +1,8 @@
 """应用层 - 日志领域的数据传输对象。"""
 
-from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
 
+from pydantic import BaseModel, Field
 
 # ============ 登录日志 DTO ============
 

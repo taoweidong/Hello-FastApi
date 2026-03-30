@@ -14,10 +14,8 @@ from src.application.dto.rbac_dto import (
     AssignPermissionsDTO,
     PermissionCreateDTO,
     PermissionListQueryDTO,
-    PermissionResponseDTO,
     RoleCreateDTO,
     RoleListQueryDTO,
-    RoleResponseDTO,
     RoleUpdateDTO,
 )
 from src.application.services.rbac_service import RBACService
@@ -211,14 +209,14 @@ async def assign_role_menu(
         统一响应格式的操作结果消息
     """
     from src.infrastructure.repositories.rbac_repository import RoleRepository
-    
+
     menu_ids = data.get("menuIds", [])
     role_repo = RoleRepository(db)
-    
+
     # 为角色分配菜单权限
     await role_repo.assign_menus_to_role(role_id, menu_ids)
     await db.commit()
-    
+
     return success_response(message="菜单权限分配成功")
 
 
