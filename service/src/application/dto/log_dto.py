@@ -14,7 +14,7 @@ class LoginLogListQueryDTO(BaseModel):
     pageSize: int = Field(default=10, ge=1, le=100)
     username: str | None = None
     status: str | None = None  # 前端传递的是字符串 "0" 或 "1"
-    loginTime: list[datetime] | None = None  # 时间范围
+    loginTime: str | list | None = None  # 前端可能传递空字符串或时间范围数组
 
 
 class LoginLogResponseDTO(BaseModel):
@@ -41,7 +41,7 @@ class OperationLogListQueryDTO(BaseModel):
     pageSize: int = Field(default=10, ge=1, le=100)
     module: str | None = None
     status: str | None = None
-    operatingTime: list[datetime] | None = None  # 时间范围
+    operatingTime: str | list | None = None  # 前端可能传递空字符串或时间范围数组
 
 
 class OperationLogResponseDTO(BaseModel):
@@ -68,7 +68,7 @@ class SystemLogListQueryDTO(BaseModel):
     pageNum: int = Field(default=1, ge=1)
     pageSize: int = Field(default=10, ge=1, le=100)
     module: str | None = None
-    requestTime: list[datetime] | None = None  # 时间范围
+    requestTime: str | list | None = None  # 前端可能传递空字符串或时间范围数组
 
 
 class SystemLogResponseDTO(BaseModel):
