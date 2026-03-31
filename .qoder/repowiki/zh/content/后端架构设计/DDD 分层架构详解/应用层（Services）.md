@@ -6,10 +6,15 @@
 - [user_service.py](file://service/src/application/services/user_service.py)
 - [rbac_service.py](file://service/src/application/services/rbac_service.py)
 - [menu_service.py](file://service/src/application/services/menu_service.py)
+- [department_service.py](file://service/src/application/services/department_service.py)
+- [log_service.py](file://service/src/application/services/log_service.py)
 - [auth_dto.py](file://service/src/application/dto/auth_dto.py)
 - [user_dto.py](file://service/src/application/dto/user_dto.py)
 - [rbac_dto.py](file://service/src/application/dto/rbac_dto.py)
 - [menu_dto.py](file://service/src/application/dto/menu_dto.py)
+- [department_dto.py](file://service/src/application/dto/department_dto.py)
+- [log_dto.py](file://service/src/application/dto/log_dto.py)
+- [validators.py](file://service/src/core/validators.py)
 - [exceptions.py](file://service/src/core/exceptions.py)
 - [settings.py](file://service/src/config/settings.py)
 - [password_service.py](file://service/src/domain/auth/password_service.py)
@@ -18,7 +23,17 @@
 - [user_routes.py](file://service/src/api/v1/user_routes.py)
 - [rbac_routes.py](file://service/src/api/v1/rbac_routes.py)
 - [menu_routes.py](file://service/src/api/v1/menu_routes.py)
+- [department_routes.py](file://service/src/api/v1/department_routes.py)
+- [log_routes.py](file://service/src/api/v1/log_routes.py)
 </cite>
+
+## 更新摘要
+**变更内容**
+- 更新了 DTO 层重大重构的相关内容，包括统一验证系统的引入
+- 新增了 DepartmentDTO 和 LogDTO 的详细说明
+- 更新了导入管理改进的说明
+- 增强了字段验证器的使用说明
+- 扩展了应用服务与 DTO 的交互模式
 
 ## 目录
 1. [引言](#引言)
@@ -33,14 +48,14 @@
 10. [附录](#附录)
 
 ## 引言
-本文件聚焦于 Hello-FastApi 的应用层（Services），系统化阐述应用服务在整体架构中的职责边界、业务流程编排、DTO 数据传输对象的设计与使用，并深入解析认证服务、用户服务、RBAC 服务与菜单服务的核心实现。文档同时说明应用服务如何协调领域服务与基础设施服务，封装业务用例，提供事务管理与错误处理策略，以及面向表现层与领域层的交互模式与最佳实践。
+本文件聚焦于 Hello-FastApi 的应用层（Services），系统化阐述应用服务在整体架构中的职责边界、业务流程编排、DTO 数据传输对象的设计与使用，并深入解析认证服务、用户服务、RBAC 服务、菜单服务、部门服务与日志服务的核心实现。文档同时说明应用服务如何协调领域服务与基础设施服务，封装业务用例，提供事务管理与错误处理策略，以及面向表现层与领域层的交互模式与最佳实践。
 
 ## 项目结构
 应用层位于 service/src/application 下，按领域划分服务与 DTO：
-- application/services：应用服务（认证、用户、RBAC、菜单）
-- application/dto：各领域 DTO（认证、用户、RBAC、菜单）
+- application/services：应用服务（认证、用户、RBAC、菜单、部门、日志）
+- application/dto：各领域 DTO（认证、用户、RBAC、菜单、部门、日志）
 - domain/auth：领域服务（密码与令牌）
-- infrastructure/repositories：仓储（用户、RBAC、菜单）
+- infrastructure/repositories：仓储（用户、RBAC、菜单、部门、日志）
 - infrastructure/database/models：数据库模型
 - api/v1：表现层路由，绑定应用服务
 
@@ -51,12 +66,16 @@ RAuth["认证路由<br/>auth_routes.py"]
 RUser["用户路由<br/>user_routes.py"]
 RRbac["RBAC路由<br/>rbac_routes.py"]
 RMenu["菜单路由<br/>menu_routes.py"]
+RDept["部门路由<br/>department_routes.py"]
+RLog["日志路由<br/>log_routes.py"]
 end
 subgraph "应用层"
 SAuth["认证服务<br/>auth_service.py"]
 SUser["用户服务<br/>user_service.py"]
 SRbac["RBAC服务<br/>rbac_service.py"]
 SMenu["菜单服务<br/>menu_service.py"]
+SDept["部门服务<br/>department_service.py"]
+SLog["日志服务<br/>log_service.py"]
 end
 subgraph "领域层"
 DPass["密码服务<br/>password_service.py"]
@@ -66,12 +85,16 @@ subgraph "基础设施"
 RepoUser["用户仓储"]
 RepoRbac["RBAC仓储"]
 RepoMenu["菜单仓储"]
+RepoDept["部门仓储"]
+RepoLog["日志仓储"]
 Models["数据库模型"]
 end
 RAuth --> SAuth
 RUser --> SUser
 RRbac --> SRbac
 RMenu --> SMenu
+RDept --> SDept
+RLog --> SLog
 SAuth --> DPass
 SAuth --> DToken
 SAuth --> RepoUser
@@ -81,28 +104,38 @@ SUser --> RepoUser
 SRbac --> RepoRbac
 SMenu --> RepoMenu
 SMenu --> RepoRbac
+SDept --> RepoDept
+SLog --> RepoLog
 RepoUser --> Models
 RepoRbac --> Models
 RepoMenu --> Models
+RepoDept --> Models
+RepoLog --> Models
 ```
 
-图表来源
+**图表来源**
 - [auth_routes.py:19-85](file://service/src/api/v1/auth_routes.py#L19-L85)
 - [user_routes.py:27-251](file://service/src/api/v1/user_routes.py#L27-L251)
 - [rbac_routes.py:33-256](file://service/src/api/v1/rbac_routes.py#L33-L256)
 - [menu_routes.py:19-70](file://service/src/api/v1/menu_routes.py#L19-L70)
+- [department_routes.py:1-200](file://service/src/api/v1/department_routes.py#L1-L200)
+- [log_routes.py:1-200](file://service/src/api/v1/log_routes.py#L1-L200)
 - [auth_service.py:15-154](file://service/src/application/services/auth_service.py#L15-L154)
 - [user_service.py:18-322](file://service/src/application/services/user_service.py#L18-L322)
 - [rbac_service.py:19-231](file://service/src/application/services/rbac_service.py#L19-L231)
 - [menu_service.py:15-169](file://service/src/application/services/menu_service.py#L15-L169)
+- [department_service.py:1-200](file://service/src/application/services/department_service.py#L1-L200)
+- [log_service.py:1-200](file://service/src/application/services/log_service.py#L1-L200)
 - [password_service.py:6-21](file://service/src/domain/auth/password_service.py#L6-L21)
 - [token_service.py:11-45](file://service/src/domain/auth/token_service.py#L11-L45)
 
-章节来源
+**章节来源**
 - [auth_routes.py:1-86](file://service/src/api/v1/auth_routes.py#L1-L86)
 - [user_routes.py:1-252](file://service/src/api/v1/user_routes.py#L1-L252)
 - [rbac_routes.py:1-257](file://service/src/api/v1/rbac_routes.py#L1-L257)
 - [menu_routes.py:1-71](file://service/src/api/v1/menu_routes.py#L1-L71)
+- [department_routes.py:1-200](file://service/src/api/v1/department_routes.py#L1-L200)
+- [log_routes.py:1-200](file://service/src/api/v1/log_routes.py#L1-L200)
 
 ## 核心组件
 - 应用服务职责边界
@@ -112,6 +145,7 @@ RepoMenu --> Models
   - 事务管理：在关键写操作后提交数据库会话，确保一致性。
 - DTO 设计原则
   - Pydantic 基础模型，内置字段校验（长度、范围、别名等）。
+  - 统一验证系统：使用 `field_validator` 和自定义验证器处理空值转换。
   - from_attributes 与 populate_by_name 支持 ORM 与前端字段命名差异。
   - 响应 DTO 使用 from_attributes，简化模型到 DTO 的映射。
 - 与领域/基础设施协作
@@ -119,7 +153,7 @@ RepoMenu --> Models
   - 仓储：数据持久化与查询封装。
   - 配置：JWT 过期时间、密钥等由配置模块集中管理。
 
-章节来源
+**章节来源**
 - [auth_service.py:15-25](file://service/src/application/services/auth_service.py#L15-L25)
 - [user_service.py:18-24](file://service/src/application/services/user_service.py#L18-L24)
 - [rbac_service.py:19-25](file://service/src/application/services/rbac_service.py#L19-L25)
@@ -159,7 +193,7 @@ Service-->>Router : LoginResponseDTO
 Router-->>Client : 统一响应
 ```
 
-图表来源
+**图表来源**
 - [auth_routes.py:19-34](file://service/src/api/v1/auth_routes.py#L19-L34)
 - [auth_service.py:26-74](file://service/src/application/services/auth_service.py#L26-L74)
 - [password_service.py:18-20](file://service/src/domain/auth/password_service.py#L18-L20)
@@ -204,10 +238,10 @@ BuildResp --> End(["返回"])
 ErrUnauth --> End
 ```
 
-图表来源
+**图表来源**
 - [auth_service.py:26-74](file://service/src/application/services/auth_service.py#L26-L74)
 
-章节来源
+**章节来源**
 - [auth_service.py:15-154](file://service/src/application/services/auth_service.py#L15-L154)
 - [auth_dto.py:7-54](file://service/src/application/dto/auth_dto.py#L7-L54)
 - [exceptions.py:27-31](file://service/src/core/exceptions.py#L27-L31)
@@ -252,14 +286,14 @@ Service-->>Router : UserResponseDTO
 Router-->>Client : 统一响应
 ```
 
-图表来源
+**图表来源**
 - [user_routes.py:117-138](file://service/src/api/v1/user_routes.py#L117-L138)
 - [user_service.py:115-156](file://service/src/application/services/user_service.py#L115-L156)
 - [user_dto.py:24-35](file://service/src/application/dto/user_dto.py#L24-L35)
 
-章节来源
+**章节来源**
 - [user_service.py:18-322](file://service/src/application/services/user_service.py#L18-L322)
-- [user_dto.py:8-86](file://service/src/application/dto/user_dto.py#L8-L86)
+- [user_dto.py:8-124](file://service/src/application/dto/user_dto.py#L8-L124)
 - [exceptions.py:13-24](file://service/src/core/exceptions.py#L13-L24)
 
 ### RBAC 服务（RBACService）
@@ -291,12 +325,12 @@ Assign --> Done["返回成功"]
 ErrNotFound --> Done
 ```
 
-图表来源
+**图表来源**
 - [rbac_service.py:169-177](file://service/src/application/services/rbac_service.py#L169-L177)
 
-章节来源
+**章节来源**
 - [rbac_service.py:19-231](file://service/src/application/services/rbac_service.py#L19-L231)
-- [rbac_dto.py:8-88](file://service/src/application/dto/rbac_dto.py#L8-L88)
+- [rbac_dto.py:8-115](file://service/src/application/dto/rbac_dto.py#L8-L115)
 - [exceptions.py:13-24](file://service/src/core/exceptions.py#L13-L24)
 
 ### 菜单服务（MenuService）
@@ -334,18 +368,64 @@ ErrLoop --> Save
 Save --> End(["返回响应"])
 ```
 
-图表来源
+**图表来源**
 - [menu_service.py:76-115](file://service/src/application/services/menu_service.py#L76-L115)
 
-章节来源
+**章节来源**
 - [menu_service.py:15-169](file://service/src/application/services/menu_service.py#L15-L169)
-- [menu_dto.py:8-56](file://service/src/application/dto/menu_dto.py#L8-L56)
+- [menu_dto.py:8-106](file://service/src/application/dto/menu_dto.py#L8-L106)
+- [exceptions.py:13-24](file://service/src/core/exceptions.py#L13-L24)
+
+### 部门服务（DepartmentService）
+- 职责边界
+  - 部门全生命周期：创建、查询、列表、更新、删除。
+  - 部门树构建：支持多级部门结构。
+  - 部门与用户关联：查询部门下的用户。
+- 关键流程
+  - 创建部门：唯一性检查 → 实体映射 → 保存 → 响应 DTO 转换。
+  - 更新部门：按 DTO 非空字段选择性更新 → 唯一性约束检查。
+  - 列表查询：仓储分页查询 + 计数 → 响应 DTO 列表。
+- DTO 使用
+  - 输入：DepartmentCreateDTO、DepartmentUpdateDTO、DepartmentListQueryDTO。
+  - 输出：DepartmentResponseDTO。
+- 错误处理
+  - NotFoundError：资源不存在。
+  - ConflictError：部门名称重复。
+- 事务管理
+  - 写操作通过仓储完成持久化；调用方负责会话生命周期。
+
+**章节来源**
+- [department_service.py:1-200](file://service/src/application/services/department_service.py#L1-L200)
+- [department_dto.py:8-90](file://service/src/application/dto/department_dto.py#L8-L90)
+- [exceptions.py:13-24](file://service/src/core/exceptions.py#L13-L24)
+
+### 日志服务（LogService）
+- 职责边界
+  - 登录日志管理：查询、删除登录日志。
+  - 操作日志管理：查询、删除操作日志。
+  - 系统日志管理：查询、查看详情、删除系统日志。
+- 关键流程
+  - 查询日志：根据条件分页查询 → 响应 DTO 列表。
+  - 删除日志：批量删除指定 ID 的日志记录。
+  - 查看详情：获取系统日志的详细信息。
+- DTO 使用
+  - 输入：LoginLogListQueryDTO、OperationLogListQueryDTO、SystemLogListQueryDTO、BatchDeleteLogDTO。
+  - 输出：LoginLogResponseDTO、OperationLogResponseDTO、SystemLogResponseDTO、SystemLogDetailDTO。
+- 错误处理
+  - NotFoundError：资源不存在。
+  - ConflictError：删除失败。
+- 事务管理
+  - 写操作通过仓储完成持久化；调用方负责会话生命周期。
+
+**章节来源**
+- [log_service.py:1-200](file://service/src/application/services/log_service.py#L1-L200)
+- [log_dto.py:8-115](file://service/src/application/dto/log_dto.py#L8-L115)
 - [exceptions.py:13-24](file://service/src/core/exceptions.py#L13-L24)
 
 ## 依赖分析
 - 应用服务依赖
   - 领域服务：PasswordService、TokenService（密码哈希、令牌签发/校验）。
-  - 仓储：UserRepository、RoleRepository、PermissionRepository、MenuRepository。
+  - 仓储：UserRepository、RoleRepository、PermissionRepository、MenuRepository、DepartmentRepository、LogRepository。
   - 配置：settings（JWT 过期时间等）。
 - 路由依赖
   - FastAPI 路由绑定应用服务，注入数据库会话与权限中间件。
@@ -357,6 +437,8 @@ AuthRoutes["auth_routes.py"] --> AuthSvc["auth_service.py"]
 UserRoutes["user_routes.py"] --> UserSvc["user_service.py"]
 RbacRoutes["rbac_routes.py"] --> RbacSvc["rbac_service.py"]
 MenuRoutes["menu_routes.py"] --> MenuSvc["menu_service.py"]
+DeptRoutes["department_routes.py"] --> DeptSvc["department_service.py"]
+LogRoutes["log_routes.py"] --> LogSvc["log_service.py"]
 AuthSvc --> Pass["password_service.py"]
 AuthSvc --> Token["token_service.py"]
 AuthSvc --> RepoU["user_repository.py"]
@@ -366,31 +448,42 @@ UserSvc --> RepoU
 RbacSvc --> RepoRP
 MenuSvc --> RepoMenu["menu_repository.py"]
 MenuSvc --> RepoRP
+DeptSvc --> RepoDept["department_repository.py"]
+LogSvc --> RepoLog["log_repository.py"]
 AuthSvc --> Cfg["settings.py"]
 UserSvc --> Cfg
 RbacSvc --> Cfg
 MenuSvc --> Cfg
+DeptSvc --> Cfg
+LogSvc --> Cfg
 ```
 
-图表来源
+**图表来源**
 - [auth_routes.py:12-14](file://service/src/api/v1/auth_routes.py#L12-L14)
 - [user_routes.py:20-22](file://service/src/api/v1/user_routes.py#L20-L22)
 - [rbac_routes.py:22-24](file://service/src/api/v1/rbac_routes.py#L22-L24)
 - [menu_routes.py:11-13](file://service/src/api/v1/menu_routes.py#L11-L13)
+- [department_routes.py:1-200](file://service/src/api/v1/department_routes.py#L1-L200)
+- [log_routes.py:1-200](file://service/src/api/v1/log_routes.py#L1-L200)
 - [auth_service.py:3-24](file://service/src/application/services/auth_service.py#L3-L24)
 - [user_service.py:3-23](file://service/src/application/services/user_service.py#L3-L23)
 - [rbac_service.py:3-24](file://service/src/application/services/rbac_service.py#L3-L24)
 - [menu_service.py:6-20](file://service/src/application/services/menu_service.py#L6-L20)
+- [department_service.py:1-200](file://service/src/application/services/department_service.py#L1-L200)
+- [log_service.py:1-200](file://service/src/application/services/log_service.py#L1-L200)
 - [settings.py:63-67](file://service/src/config/settings.py#L63-L67)
 
-章节来源
+**章节来源**
 - [auth_service.py:3-24](file://service/src/application/services/auth_service.py#L3-L24)
 - [user_service.py:3-23](file://service/src/application/services/user_service.py#L3-L23)
 - [rbac_service.py:3-24](file://service/src/application/services/rbac_service.py#L3-L24)
 - [menu_service.py:6-20](file://service/src/application/services/menu_service.py#L6-L20)
+- [department_service.py:1-200](file://service/src/application/services/department_service.py#L1-L200)
+- [log_service.py:1-200](file://service/src/application/services/log_service.py#L1-L200)
 
 ## 性能考虑
 - DTO 校验前置：Pydantic 校验在路由层完成，减少服务层无效调用。
+- 统一验证系统：使用 `field_validator` 和自定义验证器，提高数据验证效率。
 - 仓储分页：用户与角色/权限列表查询采用分页与计数，避免一次性加载大量数据。
 - 权限过滤：菜单服务基于权限集合进行集合运算，建议权限编码去重以降低比较成本。
 - 令牌配置：JWT 过期时间由配置集中管理，便于按环境调整。
@@ -398,7 +491,7 @@ MenuSvc --> Cfg
 
 ## 故障排查指南
 - 常见异常
-  - 未找到资源：NotFoundError（用户、角色、权限、菜单）。
+  - 未找到资源：NotFoundError（用户、角色、权限、菜单、部门、日志）。
   - 冲突/重复：ConflictError（用户名/邮箱、角色/权限编码、角色已分配、循环引用）。
   - 未授权：UnauthorizedError（登录凭据错误、旧密码错误、令牌无效）。
   - 业务错误：BusinessError（注册用户名已存在）。
@@ -407,21 +500,23 @@ MenuSvc --> Cfg
   - 刷新失败：确认刷新令牌有效、类型为 refresh、用户存在且启用。
   - 更新失败：确认资源存在、唯一性约束（邮箱）、权限校验通过。
   - 菜单更新失败：确认父节点存在、无循环引用、无子节点依赖。
+  - DTO 验证失败：检查字段长度、格式、必填项是否符合要求。
 - 配置核对
   - JWT 密钥与算法、过期时间。
   - 数据库连接与会话生命周期。
 
-章节来源
+**章节来源**
 - [exceptions.py:13-59](file://service/src/core/exceptions.py#L13-L59)
 - [auth_service.py:40-48](file://service/src/application/services/auth_service.py#L40-L48)
 - [menu_service.py:82-93](file://service/src/application/services/menu_service.py#L82-L93)
 
 ## 结论
-应用层通过清晰的服务边界与 DTO 设计，将表现层与领域/基础设施层解耦，实现了高内聚、低耦合的业务编排。认证、用户、RBAC、菜单四大服务覆盖了系统核心业务用例，配合统一异常体系与配置中心，具备良好的可维护性与扩展性。建议在新增业务时遵循现有模式：以 DTO 驱动输入输出、以仓储封装数据访问、以领域服务提供核心算法、以服务编排业务流程、以配置管理关键参数。
+应用层通过清晰的服务边界与 DTO 设计，将表现层与领域/基础设施层解耦，实现了高内聚、低耦合的业务编排。认证、用户、RBAC、菜单、部门、日志六大服务覆盖了系统核心业务用例，配合统一异常体系与配置中心，具备良好的可维护性与扩展性。新的统一验证系统进一步提升了数据验证的一致性和可靠性。建议在新增业务时遵循现有模式：以 DTO 驱动输入输出、以仓储封装数据访问、以领域服务提供核心算法、以服务编排业务流程、以配置管理关键参数。
 
 ## 附录
 - 最佳实践
   - DTO 字段校验优先，保持输入数据质量。
+  - 使用统一验证系统处理空值转换，确保数据一致性。
   - 服务方法单一职责，复杂流程拆分为私有辅助方法。
   - 事务提交时机明确，写操作后及时提交。
   - 权限与状态检查前置，尽早失败。
@@ -431,3 +526,4 @@ MenuSvc --> Cfg
   - 新增仓储：在 infrastructure/repositories 下新增仓储，应用服务注入使用。
   - 新增路由：在 api/v1 下新增路由，绑定应用服务并配置权限中间件。
   - 新增 DTO：在 application/dto 下新增 DTO，并在 __init__.py 暴露导出。
+  - 使用统一验证器：在新 DTO 中使用 `empty_str_to_none` 和 `empty_str_or_zero_to_none` 处理空值转换。

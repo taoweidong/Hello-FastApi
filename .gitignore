@@ -1,0 +1,19 @@
+# 测试截图和临时文件
+*.png
+*.jpg
+*.jpeg
+
+# IDE 配置
+.idea/
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 工具缓存目录
+.codeartsdoer/
+.codebuddy/
+
+# Qoder 临时文件
+.qoder/*.diff
+.qoder/review_diff.txt

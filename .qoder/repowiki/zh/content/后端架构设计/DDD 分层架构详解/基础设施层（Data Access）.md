@@ -5,10 +5,13 @@
 - [service/src/infrastructure/database/models.py](file://service/src/infrastructure/database/models.py)
 - [service/src/infrastructure/database/connection.py](file://service/src/infrastructure/database/connection.py)
 - [service/src/infrastructure/cache/redis_client.py](file://service/src/infrastructure/cache/redis_client.py)
+- [service/src/infrastructure/repositories/base.py](file://service/src/infrastructure/repositories/base.py)
 - [service/src/infrastructure/repositories/user_repository.py](file://service/src/infrastructure/repositories/user_repository.py)
 - [service/src/infrastructure/repositories/menu_repository.py](file://service/src/infrastructure/repositories/menu_repository.py)
 - [service/src/infrastructure/repositories/rbac_repository.py](file://service/src/infrastructure/repositories/rbac_repository.py)
 - [service/src/domain/user/repository.py](file://service/src/domain/user/repository.py)
+- [service/src/domain/menu/repository.py](file://service/src/domain/menu/repository.py)
+- [service/src/domain/rbac/repository.py](file://service/src/domain/rbac/repository.py)
 - [service/src/config/settings.py](file://service/src/config/settings.py)
 - [service/src/main.py](file://service/src/main.py)
 - [service/src/api/v1/auth_routes.py](file://service/src/api/v1/auth_routes.py)
@@ -16,6 +19,13 @@
 - [service/src/application/services/auth_service.py](file://service/src/application/services/auth_service.py)
 - [service/tests/conftest.py](file://service/tests/conftest.py)
 </cite>
+
+## 更新摘要
+**所做更改**
+- 新增仓储基类章节，详细介绍 BaseRepository 提供的 210 行通用 CRUD 实现
+- 更新仓储实现类章节，说明如何利用基础仓储减少样板代码
+- 新增仓储基类使用示例和最佳实践指导
+- 更新架构图以反映新的仓储层次结构
 
 ## 目录
 1. [引言](#引言)
@@ -33,21 +43,24 @@
 本章节面向基础设施层（Data Access）的技术文档，聚焦于数据访问抽象、外部服务集成与基础设施配置。内容涵盖：
 - SQLModel ORM 模型的表结构设计、关系映射与查询优化思路
 - 数据库连接管理、事务处理与连接池配置
+- 通用仓储基类的实现与使用，显著减少仓储层样板代码
 - 仓储实现类的编写范式、SQL 查询构建与异步数据库操作
 - Redis 缓存客户端的集成、缓存策略、数据序列化与性能优化
 - 通过依赖注入实现基础设施层的替换与测试
 
 ## 项目结构
-基础设施层位于 service/src/infrastructure 下，主要分为三部分：
+基础设施层位于 service/src/infrastructure 下，主要分为四部分：
 - database：数据库连接与 ORM 模型
-- repositories：领域仓库接口与 SQLModel 实现
+- repositories：通用仓储基类与具体仓储实现
 - cache：Redis 缓存客户端
+- domain：领域接口定义
 
 ```mermaid
 graph TB
 subgraph "基础设施层"
 DB["数据库<br/>connection.py / models.py"]
-REPO["仓储实现<br/>user_repository.py / menu_repository.py / rbac_repository.py"]
+BASE["通用仓储基类<br/>base.py"]
+REPO["具体仓储实现<br/>user_repository.py / menu_repository.py / rbac_repository.py"]
 CACHE["缓存<br/>redis_client.py"]
 end
 subgraph "应用层"
@@ -63,43 +76,48 @@ DEPS --> REPO
 SVC --> DB
 ROUTES --> DB
 CACHE -.-> SVC
+BASE --> REPO
 ```
 
-图表来源
+**图表来源**
 - [service/src/infrastructure/database/connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 - [service/src/infrastructure/database/models.py:1-193](file://service/src/infrastructure/database/models.py#L1-L193)
+- [service/src/infrastructure/repositories/base.py:1-211](file://service/src/infrastructure/repositories/base.py#L1-L211)
 - [service/src/infrastructure/repositories/user_repository.py:1-185](file://service/src/infrastructure/repositories/user_repository.py#L1-L185)
 - [service/src/infrastructure/repositories/menu_repository.py:1-50](file://service/src/infrastructure/repositories/menu_repository.py#L1-L50)
-- [service/src/infrastructure/repositories/rbac_repository.py:1-213](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L213)
+- [service/src/infrastructure/repositories/rbac_repository.py:1-289](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L289)
 - [service/src/infrastructure/cache/redis_client.py:1-24](file://service/src/infrastructure/cache/redis_client.py#L1-L24)
 - [service/src/application/services/auth_service.py:1-154](file://service/src/application/services/auth_service.py#L1-L154)
 - [service/src/api/v1/auth_routes.py:1-86](file://service/src/api/v1/auth_routes.py#L1-L86)
 - [service/src/api/dependencies.py:1-72](file://service/src/api/dependencies.py#L1-L72)
 
-章节来源
+**章节来源**
 - [service/src/infrastructure/database/connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 - [service/src/infrastructure/database/models.py:1-193](file://service/src/infrastructure/database/models.py#L1-L193)
+- [service/src/infrastructure/repositories/base.py:1-211](file://service/src/infrastructure/repositories/base.py#L1-L211)
 - [service/src/infrastructure/repositories/user_repository.py:1-185](file://service/src/infrastructure/repositories/user_repository.py#L1-L185)
 - [service/src/infrastructure/repositories/menu_repository.py:1-50](file://service/src/infrastructure/repositories/menu_repository.py#L1-L50)
-- [service/src/infrastructure/repositories/rbac_repository.py:1-213](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L213)
+- [service/src/infrastructure/repositories/rbac_repository.py:1-289](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L289)
 - [service/src/infrastructure/cache/redis_client.py:1-24](file://service/src/infrastructure/cache/redis_client.py#L1-L24)
 
 ## 核心组件
 - 数据库引擎与会话：基于 SQLModel/SQLAlchemy 异步引擎，提供 get_db 依赖项，自动提交/回滚事务，支持连接池预检测
 - ORM 模型：统一使用 SQLModel 定义，兼顾 SQLAlchemy ORM 与 Pydantic 数据校验；模型具备索引、外键、默认值与关系映射
-- 仓储实现：面向领域接口的 SQLModel 实现，封装 CRUD、分页、筛选与复杂关联查询
+- 通用仓储基类：BaseRepository 提供 210 行通用 CRUD 实现，包括 get_by_id、批量操作、分页、带过滤器的计数等功能，显著减少专门仓储的样板代码
+- 具体仓储实现：面向领域接口的具体实现，继承自通用仓储基类，仅需实现特定业务逻辑
 - Redis 客户端：提供异步 Redis 客户端获取与关闭方法，支持连接复用与编码配置
 
-章节来源
+**章节来源**
 - [service/src/infrastructure/database/connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 - [service/src/infrastructure/database/models.py:1-193](file://service/src/infrastructure/database/models.py#L1-L193)
-- [service/src/infrastructure/repositories/user_repository.py:1-185](file://service/src/infrastructure/repositories/user_repository.py#L1-L185)
-- [service/src/infrastructure/repositories/menu_repository.py:1-50](file://service/src/infrastructure/repositories/menu_repository.py#L1-L50)
-- [service/src/infrastructure/repositories/rbac_repository.py:1-213](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L213)
+- [service/src/infrastructure/repositories/base.py:15-36](file://service/src/infrastructure/repositories/base.py#L15-L36)
+- [service/src/infrastructure/repositories/user_repository.py:11-16](file://service/src/infrastructure/repositories/user_repository.py#L11-L16)
+- [service/src/infrastructure/repositories/menu_repository.py:10-11](file://service/src/infrastructure/repositories/menu_repository.py#L10-L11)
+- [service/src/infrastructure/repositories/rbac_repository.py:11-16](file://service/src/infrastructure/repositories/rbac_repository.py#L11-L16)
 - [service/src/infrastructure/cache/redis_client.py:1-24](file://service/src/infrastructure/cache/redis_client.py#L1-L24)
 
 ## 架构总览
-基础设施层通过依赖注入向应用层与 API 层提供数据访问能力，同时通过配置模块集中管理数据库与缓存连接参数。
+基础设施层通过依赖注入向应用层与 API 层提供数据访问能力，同时通过配置模块集中管理数据库与缓存连接参数。新的仓储基类架构提供了更好的代码复用性和维护性。
 
 ```mermaid
 sequenceDiagram
@@ -107,31 +125,38 @@ participant Client as "客户端"
 participant API as "路由(auth_routes.py)"
 participant Dep as "依赖项(dependencies.py)"
 participant Svc as "应用服务(auth_service.py)"
-participant Repo as "仓储(repositories/*)"
+participant Repo as "具体仓储实现"
+participant BaseRepo as "通用仓储基类(BaseRepository)"
 participant DB as "数据库(connection.py)"
 participant Model as "模型(models.py)"
 Client->>API : "POST /api/system/login"
 API->>Dep : "获取当前用户(get_current_active_user)"
 Dep->>Repo : "UserRepository.get_by_id/get_by_username"
-Repo->>DB : "AsyncSession.exec/select"
-DB-->>Repo : "User 对象"
+Repo->>BaseRepo : "继承的通用方法"
+BaseRepo->>DB : "AsyncSession.exec/select"
+DB-->>BaseRepo : "User 对象"
+BaseRepo-->>Repo : "User 对象"
 Repo-->>Dep : "User 对象"
 Dep-->>API : "当前用户信息"
 API->>Svc : "AuthService.login"
 Svc->>Repo : "RoleRepository/PermissionRepository 查询"
-Repo->>DB : "关联查询/聚合"
-DB-->>Repo : "结果集"
+Repo->>BaseRepo : "使用通用分页和筛选"
+BaseRepo->>DB : "关联查询/聚合"
+DB-->>BaseRepo : "结果集"
+BaseRepo-->>Repo : "角色/权限列表"
 Repo-->>Svc : "角色/权限列表"
 Svc-->>API : "登录响应(含令牌)"
 API-->>Client : "JSON 响应"
 ```
 
-图表来源
+**图表来源**
 - [service/src/api/v1/auth_routes.py:1-86](file://service/src/api/v1/auth_routes.py#L1-L86)
 - [service/src/api/dependencies.py:1-72](file://service/src/api/dependencies.py#L1-L72)
 - [service/src/application/services/auth_service.py:1-154](file://service/src/application/services/auth_service.py#L1-L154)
-- [service/src/infrastructure/repositories/user_repository.py:1-185](file://service/src/infrastructure/repositories/user_repository.py#L1-L185)
-- [service/src/infrastructure/repositories/rbac_repository.py:1-213](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L213)
+- [service/src/infrastructure/repositories/user_repository.py:17-30](file://service/src/infrastructure/repositories/user_repository.py#L17-L30)
+- [service/src/infrastructure/repositories/rbac_repository.py:128-133](file://service/src/infrastructure/repositories/rbac_repository.py#L128-L133)
+- [service/src/infrastructure/repositories/rbac_repository.py:203-212](file://service/src/infrastructure/repositories/rbac_repository.py#L203-L212)
+- [service/src/infrastructure/repositories/base.py:37-104](file://service/src/infrastructure/repositories/base.py#L37-L104)
 - [service/src/infrastructure/database/connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 - [service/src/infrastructure/database/models.py:1-193](file://service/src/infrastructure/database/models.py#L1-L193)
 
@@ -159,12 +184,12 @@ End --> Shutdown["应用关闭"]
 Shutdown --> CloseEngine["close_db() 释放引擎"]
 ```
 
-图表来源
+**图表来源**
 - [service/src/infrastructure/database/connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 - [service/src/config/settings.py:57-62](file://service/src/config/settings.py#L57-L62)
 - [service/src/main.py:19-32](file://service/src/main.py#L19-L32)
 
-章节来源
+**章节来源**
 - [service/src/infrastructure/database/connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 - [service/src/config/settings.py:57-62](file://service/src/config/settings.py#L57-L62)
 - [service/src/main.py:19-32](file://service/src/main.py#L19-L32)
@@ -241,24 +266,111 @@ Permission "1" o-- "many" RolePermissionLink : "关联"
 Menu "1" --> "0..*" Menu : "父子"
 ```
 
-图表来源
+**图表来源**
 - [service/src/infrastructure/database/models.py:17-193](file://service/src/infrastructure/database/models.py#L17-L193)
 
-章节来源
+**章节来源**
 - [service/src/infrastructure/database/models.py:1-193](file://service/src/infrastructure/database/models.py#L1-L193)
 
-### 仓储实现类与查询构建
-- UserRepository：支持按 id/username/email 查询、分页筛选、计数、创建/更新/删除、批量删除、状态更新、密码重置
-- MenuRepository：支持获取全部/按 id/按父 id 查询、创建/更新/删除
-- RoleRepository/PermissionRepository：支持角色/权限的增删改查、角色权限分配、用户角色/权限查询
+### 通用仓储基类（新增）
+BaseRepository 是一个泛型仓储基类，提供了 210 行通用 CRUD 操作实现，显著减少了专门仓储的样板代码：
+
+#### 核心功能特性
+- **类型安全**：使用 TypeVar 和泛型，确保编译时类型检查
+- **通用 CRUD**：提供 get_by_id、create、update、delete 等基础操作
+- **批量操作**：支持批量删除和批量操作
+- **分页查询**：内置分页支持，支持动态筛选和排序
+- **灵活筛选**：支持多种数据类型的筛选，字符串使用模糊查询
+- **存在性检查**：支持字段值存在性检查，常用于唯一性验证
+
+#### 主要方法详解
+
+**ID 查询**
+```python
+async def get_by_id(self, id: str) -> ModelType | None:
+    """根据 ID 获取实体，使用 session.get 方法直接查询"""
+```
+
+**字段查询**
+```python
+async def get_by_field(self, field_name: str, value: Any) -> ModelType | None:
+    """根据指定字段获取单个实体，支持动态字段名"""
+```
+
+**分页查询**
+```python
+async def get_all_with_pagination(
+    self,
+    page_num: int = 1,
+    page_size: int = 10,
+    order_by: Any = None,
+    **filters,
+) -> list[ModelType]:
+    """获取实体列表（支持分页和筛选），字符串类型使用 contains 模糊查询"""
+```
+
+**计数统计**
+```python
+async def count(self, **filters) -> int:
+    """获取实体总数（支持筛选），使用 func.count 统计"""
+```
+
+**批量删除**
+```python
+async def batch_delete(self, ids: list[str]) -> int:
+    """批量删除实体，逐个删除并统计数量"""
+```
+
+**存在性检查**
+```python
+async def exists(self, field_name: str, value: Any, exclude_id: str | None = None) -> bool:
+    """检查字段值是否已存在，支持排除特定 ID（用于更新时排除自身）"""
+```
+
+#### 使用示例
+```python
+class UserRepository(BaseRepository[User]):
+    def __init__(self, session: AsyncSession):
+        super().__init__(session, User)
+    
+    async def get_by_username(self, username: str) -> User | None:
+        return await self.get_by_field("username", username)
+    
+    async def get_by_email(self, email: str) -> User | None:
+        return await self.get_by_field("email", email)
+```
+
+**章节来源**
+- [service/src/infrastructure/repositories/base.py:15-211](file://service/src/infrastructure/repositories/base.py#L15-L211)
+
+### 具体仓储实现类与查询构建
+新的仓储架构通过继承通用基类，大幅减少了样板代码：
+
+#### UserRepository 示例
+继承自 BaseRepository，仅需实现特定业务方法：
+- get_by_username：基于通用 get_by_field 实现
+- get_by_email：基于通用 get_by_field 实现  
+- update_status：特定业务逻辑
+- reset_password：特定业务逻辑
+
+#### MenuRepository 示例
+保持原有实现，因为菜单操作相对简单：
+- get_all：获取所有菜单并排序
+- get_by_parent_id：按父 ID 获取子菜单
+
+#### RoleRepository 和 PermissionRepository 示例
+继续使用原有实现，因为涉及复杂的多对多关系：
+- 角色权限分配
+- 用户角色管理
+- 菜单权限关联
 
 ```mermaid
 sequenceDiagram
 participant API as "路由"
 participant Svc as "AuthService"
-participant URepo as "UserRepository"
-participant RRepo as "RoleRepository"
-participant PRepo as "PermissionRepository"
+participant URepo as "UserRepository(BaseRepository)"
+participant RRepo as "RoleRepository(SQLModel)"
+participant PRepo as "PermissionRepository(SQLModel)"
 participant DB as "AsyncSession"
 API->>Svc : "login(LoginDTO)"
 Svc->>URepo : "get_by_username()"
@@ -276,17 +388,19 @@ PRepo-->>Svc : "permissions"
 Svc-->>API : "登录响应"
 ```
 
-图表来源
+**图表来源**
 - [service/src/application/services/auth_service.py:26-74](file://service/src/application/services/auth_service.py#L26-L74)
 - [service/src/infrastructure/repositories/user_repository.py:17-30](file://service/src/infrastructure/repositories/user_repository.py#L17-L30)
 - [service/src/infrastructure/repositories/rbac_repository.py:128-133](file://service/src/infrastructure/repositories/rbac_repository.py#L128-L133)
 - [service/src/infrastructure/repositories/rbac_repository.py:203-212](file://service/src/infrastructure/repositories/rbac_repository.py#L203-L212)
 
-章节来源
+**章节来源**
 - [service/src/infrastructure/repositories/user_repository.py:1-185](file://service/src/infrastructure/repositories/user_repository.py#L1-L185)
 - [service/src/infrastructure/repositories/menu_repository.py:1-50](file://service/src/infrastructure/repositories/menu_repository.py#L1-L50)
-- [service/src/infrastructure/repositories/rbac_repository.py:1-213](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L213)
+- [service/src/infrastructure/repositories/rbac_repository.py:1-289](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L289)
 - [service/src/domain/user/repository.py:1-50](file://service/src/domain/user/repository.py#L1-L50)
+- [service/src/domain/menu/repository.py:1-43](file://service/src/domain/menu/repository.py#L1-L43)
+- [service/src/domain/rbac/repository.py:1-77](file://service/src/domain/rbac/repository.py#L1-L77)
 
 ### Redis 缓存客户端集成
 - 客户端获取：get_redis 从 settings.REDIS_URL 创建/复用 Redis 实例，设置编码与解码
@@ -296,7 +410,7 @@ Svc-->>API : "登录响应"
   - 对热点数据进行序列化存储，注意一致性与缓存穿透防护
   - 结合业务场景选择合适的过期策略与淘汰机制
 
-章节来源
+**章节来源**
 - [service/src/infrastructure/cache/redis_client.py:1-24](file://service/src/infrastructure/cache/redis_client.py#L1-L24)
 - [service/src/config/settings.py:60-61](file://service/src/config/settings.py#L60-L61)
 
@@ -324,12 +438,12 @@ App-->>Test : "响应"
 Test->>App : "清理覆盖"
 ```
 
-图表来源
+**图表来源**
 - [service/tests/conftest.py:54-61](file://service/tests/conftest.py#L54-L61)
 - [service/src/api/dependencies.py:32-43](file://service/src/api/dependencies.py#L32-L43)
 - [service/src/infrastructure/database/connection.py:12-21](file://service/src/infrastructure/database/connection.py#L12-L21)
 
-章节来源
+**章节来源**
 - [service/src/api/dependencies.py:1-72](file://service/src/api/dependencies.py#L1-L72)
 - [service/tests/conftest.py:1-105](file://service/tests/conftest.py#L1-L105)
 
@@ -338,6 +452,7 @@ Test->>App : "清理覆盖"
 - 应用生命周期：main.py 在 lifespan 中初始化数据库并在关闭时释放连接
 - 路由与依赖：auth_routes 与 dependencies 通过 get_db 与 TokenService 协作
 - 仓储与模型：各仓储依赖 AsyncSession 与 models 中的实体类
+- 仓储层次：具体仓储继承自通用仓储基类，实现领域接口
 
 ```mermaid
 graph LR
@@ -348,24 +463,28 @@ Conn --> Deps["dependencies.py"]
 Deps --> Svc["auth_service.py"]
 Svc --> URepo["user_repository.py"]
 Svc --> RRepo["rbac_repository.py"]
+URepo --> BaseRepo["base.py"]
+RRepo --> BaseRepo
 URepo --> Models["models.py"]
 RRepo --> Models
 MRepo["menu_repository.py"] --> Models
+BaseRepo --> Models
 ```
 
-图表来源
+**图表来源**
 - [service/src/config/settings.py:57-62](file://service/src/config/settings.py#L57-L62)
 - [service/src/infrastructure/database/connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 - [service/src/infrastructure/cache/redis_client.py:1-24](file://service/src/infrastructure/cache/redis_client.py#L1-L24)
 - [service/src/api/v1/auth_routes.py:1-86](file://service/src/api/v1/auth_routes.py#L1-L86)
 - [service/src/api/dependencies.py:1-72](file://service/src/api/dependencies.py#L1-L72)
 - [service/src/application/services/auth_service.py:1-154](file://service/src/application/services/auth_service.py#L1-L154)
-- [service/src/infrastructure/repositories/user_repository.py:1-185](file://service/src/infrastructure/repositories/user_repository.py#L1-L185)
-- [service/src/infrastructure/repositories/rbac_repository.py:1-213](file://service/src/infrastructure/repositories/rbac_repository.py#L1-L213)
-- [service/src/infrastructure/repositories/menu_repository.py:1-50](file://service/src/infrastructure/repositories/menu_repository.py#L1-L50)
+- [service/src/infrastructure/repositories/base.py:15-36](file://service/src/infrastructure/repositories/base.py#L15-L36)
+- [service/src/infrastructure/repositories/user_repository.py:11-16](file://service/src/infrastructure/repositories/user_repository.py#L11-L16)
+- [service/src/infrastructure/repositories/rbac_repository.py:11-16](file://service/src/infrastructure/repositories/rbac_repository.py#L11-L16)
+- [service/src/infrastructure/repositories/menu_repository.py:10-11](file://service/src/infrastructure/repositories/menu_repository.py#L10-L11)
 - [service/src/infrastructure/database/models.py:1-193](file://service/src/infrastructure/database/models.py#L1-L193)
 
-章节来源
+**章节来源**
 - [service/src/config/settings.py:1-198](file://service/src/config/settings.py#L1-L198)
 - [service/src/main.py:1-96](file://service/src/main.py#L1-L96)
 
@@ -375,6 +494,7 @@ MRepo["menu_repository.py"] --> Models
   - 分页与限制：避免一次性加载大量数据，使用 offset/limit
   - 关联查询：优先使用 join 并配合 distinct，减少往返
   - 事务：合并多次写操作，减少 flush 次数
+  - 仓储基类：利用通用方法减少重复查询逻辑
 - 缓存
   - 热点数据缓存：对读多写少的数据设置合理 TTL
   - 序列化：统一序列化方案，避免频繁转换开销
@@ -393,19 +513,25 @@ MRepo["menu_repository.py"] --> Models
 - 查询性能问题
   - 使用 explain/analyze 分析慢查询
   - 为过滤字段添加索引，避免全表扫描
+  - 利用仓储基类的分页和筛选功能优化查询
 - 缓存不生效
   - 检查 REDIS_URL 与编码设置
   - 校验键空间命名与 TTL 设置
 - 依赖注入问题
   - 测试中使用 dependency_overrides 覆盖 get_db
   - 确保路由依赖链路正确传递 AsyncSession
+- 仓储基类问题
+  - 确认泛型类型正确传入
+  - 检查 session 参数传递是否正确
+  - 验证模型类是否正确注册到会话
 
-章节来源
+**章节来源**
 - [service/src/infrastructure/database/connection.py:12-21](file://service/src/infrastructure/database/connection.py#L12-L21)
 - [service/tests/conftest.py:54-61](file://service/tests/conftest.py#L54-L61)
+- [service/src/infrastructure/repositories/base.py:27-36](file://service/src/infrastructure/repositories/base.py#L27-L36)
 
 ## 结论
-基础设施层通过 SQLModel 提供一致的 ORM 抽象，结合依赖注入与配置中心，实现了数据库与缓存的可替换与可测试化。仓储层封装了领域所需的 CRUD 与复杂查询，配合合理的索引与分页策略，能够满足大多数业务场景的数据访问需求。建议在实际项目中持续关注查询性能、连接池配置与缓存策略，并通过依赖覆盖实现高效的单元测试。
+基础设施层通过 SQLModel 提供一致的 ORM 抽象，结合依赖注入与配置中心，实现了数据库与缓存的可替换与可测试化。新增的通用仓储基类（BaseRepository）提供了 210 行通用 CRUD 实现，显著减少了专门仓储的样板代码，提高了开发效率和代码复用性。仓储层封装了领域所需的 CRUD 与复杂查询，配合合理的索引与分页策略，能够满足大多数业务场景的数据访问需求。建议在实际项目中持续关注查询性能、连接池配置与缓存策略，并通过依赖覆盖实现高效的单元测试。
 
 ## 附录
 - 配置项参考
@@ -416,3 +542,9 @@ MRepo["menu_repository.py"] --> Models
   - 分页查询：offset/limit + where 条件
   - 聚合计数：func.count + where 条件
   - 多表关联：select(...).join(...).where(...).distinct()
+- 仓储基类最佳实践
+  - 继承 BaseRepository 时确保泛型类型正确
+  - 仅实现特定业务逻辑，复用通用方法
+  - 利用 exists 方法进行唯一性验证
+  - 使用 get_all_with_pagination 实现分页查询
+  - 通过 batch_delete 进行批量操作

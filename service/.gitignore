@@ -21,11 +21,6 @@ env/
 
 # Environment
 .env
-.env.local
-.env.*.local
-.env.development
-.env.production
-.env.testing
 
 # Database (存放在 sql 目录)
 sql/*.db

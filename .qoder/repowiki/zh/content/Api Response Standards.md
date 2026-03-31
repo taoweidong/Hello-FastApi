@@ -1,33 +1,22 @@
-# API 响应标准
+# Api 响应标准
 
 <cite>
 **本文档引用的文件**
-- [common.py](file://service/src/api/common.py)
-- [exceptions.py](file://service/src/core/exceptions.py)
-- [auth_routes.py](file://service/src/api/v1/auth_routes.py)
-- [user_routes.py](file://service/src/api/v1/user_routes.py)
-- [menu_routes.py](file://service/src/api/v1/menu_routes.py)
-- [rbac_routes.py](file://service/src/api/v1/rbac_routes.py)
-- [system_routes.py](file://service/src/api/v1/system_routes.py)
-- [dependencies.py](file://service/src/api/dependencies.py)
-- [auth_dto.py](file://service/src/application/dto/auth_dto.py)
-- [user_dto.py](file://service/src/application/dto/user_dto.py)
-- [settings.py](file://service/src/config/settings.py)
-- [middlewares.py](file://service/src/core/middlewares.py)
-- [main.py](file://service/src/main.py)
-- [constants.py](file://service/src/core/constants.py)
-- [index.ts](file://web/src/utils/http/index.ts)
-- [types.d.ts](file://web/src/utils/http/types.d.ts)
-- [system.ts](file://web/src/api/system.ts)
-- [test_api.py](file://service/tests/integration/test_api.py)
+- [service/src/api/common.py](file://service/src/api/common.py)
+- [service/src/main.py](file://service/src/main.py)
+- [service/src/core/exceptions.py](file://service/src/core/exceptions.py)
+- [service/src/api/v1/auth_routes.py](file://service/src/api/v1/auth_routes.py)
+- [service/src/api/v1/user_routes.py](file://service/src/api/v1/user_routes.py)
+- [service/src/api/v1/system_routes.py](file://service/src/api/v1/system_routes.py)
+- [service/src/application/dto/auth_dto.py](file://service/src/application/dto/auth_dto.py)
+- [service/src/application/dto/user_dto.py](file://service/src/application/dto/user_dto.py)
+- [service/src/core/constants.py](file://service/src/core/constants.py)
+- [service/src/core/middlewares.py](file://service/src/core/middlewares.py)
+- [service/src/config/settings.py](file://service/src/config/settings.py)
+- [service/pyproject.toml](file://service/pyproject.toml)
+- [README.md](file://README.md)
+- [service/README.md](file://service/README.md)
 </cite>
-
-## 更新摘要
-**所做更改**
-- 更新统一响应格式以匹配Pure Admin前端标准
-- 新增Pure Admin前端响应格式的详细说明
-- 更新响应代码和消息格式的标准化要求
-- 增强前后端一致性响应格式的文档说明
 
 ## 目录
 1. [简介](#简介)
@@ -42,64 +31,79 @@
 
 ## 简介
 
-本项目采用统一的API响应标准，基于Pure Admin前端框架设计，确保前后端交互的一致性和规范性。该标准通过标准化的响应格式、错误处理机制和权限控制，为整个系统的API接口提供了统一的规范。
+Hello-FastApi 是一个基于 FastAPI 框架的 RESTful API 服务，采用 DDD（领域驱动设计）架构和 RBAC 权限控制。该项目的核心特色之一是实现了标准化的 API 响应格式，确保前后端交互的一致性和可靠性。
 
-**更新** 本版本重点更新了统一响应系统的标准化，完全匹配Pure Admin前端标准的响应代码和消息格式，确保前后端一致的响应格式。
+该项目遵循 Pure Admin 前端标准，提供了统一的响应格式和错误处理机制，支持 JWT 双令牌认证、RBAC 细粒度权限控制、动态路由加载等功能。
 
 ## 项目结构
 
-项目采用分层架构设计，主要分为以下层次：
+项目采用分层架构设计，主要分为以下几个层次：
 
 ```mermaid
 graph TB
-subgraph "表现层 (API Layer)"
+subgraph "API 层"
 A[路由模块]
 B[依赖注入]
-C[响应格式化]
 end
-subgraph "应用层 (Application Layer)"
+subgraph "应用层"
+C[DTO 数据传输对象]
 D[服务层]
-E[数据传输对象 DTO]
 end
-subgraph "领域层 (Domain Layer)"
-F[认证服务]
-G[RBAC服务]
-H[菜单服务]
+subgraph "领域层"
+E[实体模型]
 end
-subgraph "基础设施层 (Infrastructure Layer)"
-I[数据库连接]
-J[仓储模式]
-K[外部服务]
+subgraph "基础设施层"
+F[数据库]
+G[缓存]
+H[仓储]
 end
-A --> D
-B --> F
-C --> A
-D --> F
-F --> I
-G --> I
-H --> I
+subgraph "核心模块"
+I[异常处理]
+J[中间件]
+K[配置管理]
+end
+A --> C
+C --> D
+D --> E
+E --> H
+H --> F
+H --> G
+A --> I
+A --> J
+A --> K
 ```
 
 **图表来源**
-- [main.py:34-96](file://service/src/main.py#L34-L96)
-- [constants.py:1-37](file://service/src/core/constants.py#L1-L37)
+- [service/src/api/v1/__init__.py:1-46](file://service/src/api/v1/__init__.py#L1-L46)
+- [service/src/application/dto/user_dto.py:1-124](file://service/src/application/dto/user_dto.py#L1-L124)
+- [service/src/core/exceptions.py:1-60](file://service/src/core/exceptions.py#L1-L60)
 
 **章节来源**
-- [main.py:1-96](file://service/src/main.py#L1-L96)
-- [constants.py:1-37](file://service/src/core/constants.py#L1-L37)
+- [service/README.md:28-111](file://service/README.md#L28-L111)
+- [README.md:48-76](file://README.md#L48-L76)
 
 ## 核心组件
 
 ### 统一响应格式
 
-系统实现了标准化的响应格式，确保所有API接口返回一致的数据结构，并完全匹配Pure Admin前端标准：
+项目实现了标准化的 API 响应格式，确保所有接口返回一致的数据结构：
 
 ```mermaid
 classDiagram
 class UnifiedResponse {
-+int code = 0
-+string message = "操作成功"
-+Any data = None
++int code
++string message
++Any data
+}
+class ErrorResponse {
++string detail
+}
+class MessageResponse {
++string message
+}
+class HealthResponse {
++string status
++string version
 }
 class PageResponse {
 +int total
@@ -108,38 +112,32 @@ class PageResponse {
 +int totalPage
 +list rows
 }
-class MessageResponse {
-+string message
-}
-class ErrorResponse {
-+string detail
-}
-class HealthResponse {
-+string status
-+string version
-}
-class PureAdminResponse {
-+int code : 前端状态码
-+string message : 前端消息
-+Any data : 前端数据
-}
-UnifiedResponse --> PageResponse : "包含"
-UnifiedResponse --> MessageResponse : "包含"
-UnifiedResponse --> ErrorResponse : "包含"
-PureAdminResponse --> UnifiedResponse : "匹配"
+UnifiedResponse --> ErrorResponse : "错误响应"
+UnifiedResponse --> MessageResponse : "消息响应"
+UnifiedResponse --> HealthResponse : "健康检查"
+PageResponse --> ListResponse : "列表响应"
 ```
 
 **图表来源**
-- [common.py:29-43](file://service/src/api/common.py#L29-L43)
+- [service/src/api/common.py:30-44](file://service/src/api/common.py#L30-L44)
 
-**更新** 统一响应格式现已完全标准化，采用Pure Admin前端标准格式：
-- `code`: 前端状态码，0表示成功，非0表示错误
-- `message`: 前端消息，描述操作结果
-- `data`: 前端数据，包含具体业务数据
+### 响应工具函数
 
-### 错误处理机制
+项目提供了多种响应工具函数来简化 API 响应的构建：
 
-系统建立了完善的异常处理体系，支持多种类型的错误场景：
+| 函数名称 | 功能描述 | 参数 | 返回值 |
+|---------|---------|------|--------|
+| success_response | 构建成功响应 | data: Any = None, message: str = "操作成功", code: int = 0 | dict |
+| list_response | 构建列表响应 | list_data: list, total: int, page_size: int = 10, current_page: int = 1 | dict |
+| page_response | 构建分页响应 | rows: list, total: int, page_num: int, page_size: int | dict |
+| error_response | 构建错误响应 | message: str, code: int = 400 | dict |
+
+**章节来源**
+- [service/src/api/common.py:46-88](file://service/src/api/common.py#L46-L88)
+
+### 自定义异常类
+
+项目实现了完整的异常处理体系，提供语义化的错误响应：
 
 ```mermaid
 classDiagram
@@ -149,386 +147,317 @@ class AppException {
 +string detail
 }
 class NotFoundError {
-+status_code = 404
-+detail = "Resource not found"
++int status_code = 404
 }
 class ConflictError {
-+status_code = 409
-+detail = "Resource already exists"
++int status_code = 409
 }
 class UnauthorizedError {
-+status_code = 401
-+detail = "Authentication required"
++int status_code = 401
 }
 class ForbiddenError {
-+status_code = 403
-+detail = "Insufficient permissions"
++int status_code = 403
 }
 class ValidationError {
-+status_code = 422
-+detail = "Validation error"
++int status_code = 422
+}
+class RateLimitError {
++int status_code = 429
 }
 class BusinessError {
-+status_code = 400
-+detail = "Business error"
++int status_code = 400
 }
 AppException <|-- NotFoundError
 AppException <|-- ConflictError
 AppException <|-- UnauthorizedError
 AppException <|-- ForbiddenError
 AppException <|-- ValidationError
+AppException <|-- RateLimitError
 AppException <|-- BusinessError
 ```
 
 **图表来源**
-- [exceptions.py:6-60](file://service/src/core/exceptions.py#L6-L60)
+- [service/src/core/exceptions.py:6-59](file://service/src/core/exceptions.py#L6-L59)
 
 **章节来源**
-- [common.py:1-88](file://service/src/api/common.py#L1-L88)
-- [exceptions.py:1-60](file://service/src/core/exceptions.py#L1-L60)
+- [service/src/core/exceptions.py:1-60](file://service/src/core/exceptions.py#L1-L60)
 
 ## 架构概览
 
-系统采用FastAPI框架构建，实现了现代化的API服务架构：
+项目采用 FastAPI 框架，实现了完整的 API 响应标准体系：
 
 ```mermaid
 sequenceDiagram
 participant Client as 客户端
-participant API as FastAPI应用
-participant Router as 路由处理器
-participant Service as 业务服务
+participant API as API 路由
+participant Service as 应用服务
+participant Repo as 仓储层
 participant DB as 数据库
-Client->>API : HTTP请求
-API->>API : 中间件处理
-API->>Router : 路由分发
-Router->>Service : 业务逻辑调用
-Service->>DB : 数据持久化
-DB-->>Service : 查询结果
-Service-->>Router : 处理结果
-Router->>API : 统一响应格式
-API-->>Client : 标准化响应
-Note over API,DB : 异常处理和日志记录
+participant Handler as 异常处理器
+Client->>API : HTTP 请求
+API->>Service : 调用业务逻辑
+Service->>Repo : 数据访问
+Repo->>DB : 查询数据
+DB-->>Repo : 返回结果
+Repo-->>Service : 返回实体
+Service-->>API : 返回业务结果
+API->>API : 构建统一响应
+API-->>Client : 返回标准化响应
+Note over Handler : 异常处理
+API->>Handler : 抛出异常
+Handler->>Handler : 标准化错误响应
+Handler-->>Client : 返回错误响应
 ```
 
 **图表来源**
-- [main.py:60-83](file://service/src/main.py#L60-L83)
-- [middlewares.py:12-39](file://service/src/core/middlewares.py#L12-L39)
+- [service/src/main.py:61-82](file://service/src/main.py#L61-L82)
+- [service/src/api/common.py:46-88](file://service/src/api/common.py#L46-L88)
 
 ## 详细组件分析
 
-### 认证路由模块
+### 认证接口响应标准
 
-认证模块提供了完整的用户身份验证功能，采用JWT令牌机制：
-
-```mermaid
-flowchart TD
-A[用户登录] --> B[验证凭据]
-B --> C{验证成功?}
-C --> |是| D[生成访问令牌]
-C --> |否| E[返回认证错误]
-D --> F[生成刷新令牌]
-F --> G[获取用户信息]
-G --> H[返回完整登录响应]
-I[令牌刷新] --> J[验证刷新令牌]
-J --> K{令牌有效?}
-K --> |是| L[生成新访问令牌]
-K --> |否| M[返回刷新错误]
-L --> N[返回刷新响应]
-O[用户注册] --> P[创建用户记录]
-P --> Q[返回注册成功]
-```
-
-**图表来源**
-- [auth_routes.py:23-89](file://service/src/api/v1/auth_routes.py#L23-L89)
-- [auth_dto.py:7-54](file://service/src/application/dto/auth_dto.py#L7-L54)
-
-认证路由的主要特点：
-- 支持标准JWT令牌认证
-- 提供登录、注册、登出、令牌刷新功能
-- 集成RBAC权限控制
-- 使用统一响应格式
-
-**章节来源**
-- [auth_routes.py:1-391](file://service/src/api/v1/auth_routes.py#L1-L391)
-- [auth_dto.py:1-54](file://service/src/application/dto/auth_dto.py#L1-L54)
-
-### 用户管理路由模块
-
-用户管理模块实现了完整的用户生命周期管理：
+认证模块实现了完整的用户认证流程，所有接口都遵循统一的响应格式：
 
 ```mermaid
 sequenceDiagram
-participant Admin as 管理员
-participant UserAPI as 用户API
-participant UserService as 用户服务
-participant UserRepo as 用户仓储
-Admin->>UserAPI : 创建用户
-UserAPI->>UserService : 验证权限
-UserService->>UserRepo : 检查用户名唯一性
-UserRepo-->>UserService : 唯一性验证
-UserService->>UserRepo : 创建用户记录
-UserRepo-->>UserService : 用户创建成功
-UserService-->>UserAPI : 返回用户信息
-UserAPI-->>Admin : 统一响应格式
-Admin->>UserAPI : 获取用户列表
-UserAPI->>UserService : 获取用户列表
-UserService->>UserRepo : 查询用户数据
-UserRepo-->>UserService : 用户列表
-UserService-->>UserAPI : 返回分页数据
-UserAPI-->>Admin : 统一响应格式
+participant Client as 客户端
+participant Auth as 认证路由
+participant Service as 认证服务
+participant Repo as 仓储层
+participant JWT as JWT 服务
+Client->>Auth : POST /api/system/login
+Auth->>Service : 验证用户凭据
+Service->>Repo : 查询用户信息
+Repo-->>Service : 返回用户数据
+Service->>JWT : 生成访问令牌
+JWT-->>Service : 返回令牌
+Service-->>Auth : 返回认证结果
+Auth->>Auth : success_response()
+Auth-->>Client : {"code" : 0, "message" : "登录成功", "data" : {...}}
+Client->>Auth : POST /api/system/refresh-token
+Auth->>Service : 刷新访问令牌
+Service->>JWT : 验证刷新令牌
+JWT-->>Service : 验证通过
+Service->>JWT : 生成新访问令牌
+JWT-->>Service : 返回新令牌
+Service-->>Auth : 返回新令牌
+Auth->>Auth : success_response()
+Auth-->>Client : {"code" : 0, "message" : "刷新成功", "data" : {...}}
 ```
 
 **图表来源**
-- [user_routes.py:27-264](file://service/src/api/v1/user_routes.py#L27-L264)
-- [user_dto.py:8-86](file://service/src/application/dto/user_dto.py#L8-L86)
-
-用户管理的核心功能：
-- 用户增删改查操作
-- 批量用户管理
-- 密码管理和状态控制
-- 权限验证和RBAC集成
+- [service/src/api/v1/auth_routes.py:23-89](file://service/src/api/v1/auth_routes.py#L23-L89)
+- [service/src/api/common.py:46-48](file://service/src/api/common.py#L46-L48)
 
 **章节来源**
-- [user_routes.py:1-264](file://service/src/api/v1/user_routes.py#L1-L264)
-- [user_dto.py:1-86](file://service/src/application/dto/user_dto.py#L1-L86)
+- [service/src/api/v1/auth_routes.py:1-349](file://service/src/api/v1/auth_routes.py#L1-L349)
 
-### RBAC权限管理模块
+### 用户管理接口响应标准
 
-RBAC模块提供了细粒度的权限控制机制：
+用户管理模块提供了完整的 CRUD 操作，所有接口都遵循统一的响应格式：
 
 ```mermaid
 flowchart TD
-A[权限检查] --> B[获取用户权限]
-B --> C{超级用户?}
-C --> |是| D[允许所有操作]
-C --> |否| E[验证具体权限]
-E --> F{权限匹配?}
-F --> |是| G[授权访问]
-F --> |否| H[拒绝访问]
-I[角色管理] --> J[创建角色]
-J --> K[分配权限]
-K --> L[角色列表]
-M[权限管理] --> N[创建权限]
-N --> O[权限列表]
-O --> P[删除权限]
+Start([用户请求]) --> Validate["验证请求参数"]
+Validate --> Valid{"参数有效?"}
+Valid --> |否| ErrorResponse["返回错误响应<br/>{'code': 400, 'message': '参数错误'}"]
+Valid --> |是| Process["处理业务逻辑"]
+Process --> Success{"操作成功?"}
+Success --> |否| BusinessError["抛出业务异常"]
+Success --> |是| Transform["转换数据格式"]
+Transform --> Response["构建统一响应<br/>{'code': 0, 'message': '操作成功', 'data': {}}"]
+BusinessError --> ErrorHandler["异常处理器"]
+ErrorHandler --> ErrorResp["返回标准化错误响应"]
+Response --> End([结束])
+ErrorResp --> End
+ErrorResponse --> End
 ```
 
 **图表来源**
-- [rbac_routes.py:33-271](file://service/src/api/v1/rbac_routes.py#L33-L271)
-- [dependencies.py:45-60](file://service/src/api/dependencies.py#L45-L60)
-
-RBAC系统的关键特性：
-- 基于角色的权限控制
-- 细粒度的权限验证
-- 动态权限分配
-- 支持超级用户特权
+- [service/src/api/v1/user_routes.py:28-76](file://service/src/api/v1/user_routes.py#L28-L76)
+- [service/src/api/common.py:46-88](file://service/src/api/common.py#L46-L88)
 
 **章节来源**
-- [rbac_routes.py:1-271](file://service/src/api/v1/rbac_routes.py#L1-L271)
-- [dependencies.py:1-72](file://service/src/api/dependencies.py#L1-L72)
+- [service/src/api/v1/user_routes.py:1-301](file://service/src/api/v1/user_routes.py#L1-L301)
 
-### 菜单管理模块
+### 系统管理接口响应标准
 
-菜单管理模块支持动态菜单配置和权限控制：
+系统管理模块提供了部门管理、日志管理等功能，所有接口都遵循统一的响应格式：
+
+**章节来源**
+- [service/src/api/v1/system_routes.py:1-474](file://service/src/api/v1/system_routes.py#L1-L474)
+
+### 数据传输对象（DTO）
+
+项目使用 Pydantic 实现数据验证和序列化：
 
 ```mermaid
 classDiagram
-class MenuCreateDTO {
-+string name
-+string path
-+string component
-+int order_num
-+bool show_link
-+string permissions
+class LoginDTO {
++string username
++string password
 }
-class MenuUpdateDTO {
-+string name
-+string path
-+string component
-+int order_num
-+bool show_link
-+string permissions
+class RegisterDTO {
++string username
++string password
++string? nickname
++string? email
++string? phone
 }
-class MenuRepository {
-+get_all(session) list
-+create_menu(dto) Menu
-+update_menu(id, dto) Menu
-+delete_menu(id) void
+class RefreshTokenDTO {
++string refreshToken
 }
-class MenuService {
-+get_menu_tree(session) dict
-+get_user_menus(user_id, session) list
-+create_menu(dto, session) Menu
-+update_menu(id, dto, session) Menu
-+delete_menu(id, session) void
+class UserCreateDTO {
++string username
++string password
++string? nickname
++string? email
++string? phone
++int? sex
++string? avatar
++int status
++int? dept_id
++string? remark
 }
-MenuService --> MenuRepository : "使用"
-MenuCreateDTO --> MenuService : "输入"
-MenuUpdateDTO --> MenuService : "输入"
+class UserUpdateDTO {
++string? nickname
++string? email
++string? phone
++int? sex
++string? avatar
++int? status
++int? dept_id
++string? remark
+}
+LoginDTO --> LoginResponseDTO : "响应"
+UserCreateDTO --> UserResponseDTO : "响应"
+UserUpdateDTO --> UserResponseDTO : "响应"
 ```
 
 **图表来源**
-- [menu_routes.py:21-121](file://service/src/api/v1/menu_routes.py#L21-L121)
-
-菜单管理的功能特性：
-- 支持菜单树形结构
-- 动态菜单权限控制
-- 用户个性化菜单展示
-- 完整的CRUD操作
+- [service/src/application/dto/auth_dto.py:6-53](file://service/src/application/dto/auth_dto.py#L6-L53)
+- [service/src/application/dto/user_dto.py:10-124](file://service/src/application/dto/user_dto.py#L10-L124)
 
 **章节来源**
-- [menu_routes.py:1-121](file://service/src/api/v1/menu_routes.py#L1-L121)
-
-### 系统监控模块
-
-系统监控模块提供各种系统状态和日志信息：
-
-```mermaid
-flowchart TD
-A[系统监控] --> B[在线用户]
-A --> C[登录日志]
-A --> D[操作日志]
-A --> E[系统日志]
-B --> F[实时用户统计]
-C --> G[登录行为追踪]
-D --> H[操作审计]
-E --> I[系统性能监控]
-F --> J[用户活跃度分析]
-G --> K[安全事件检测]
-H --> L[合规性审计]
-I --> M[性能指标分析]
-```
-
-**图表来源**
-- [system_routes.py:16-128](file://service/src/api/v1/system_routes.py#L16-L128)
-
-系统监控的主要功能：
-- 在线用户实时监控
-- 安全日志追踪
-- 操作行为审计
-- 系统性能监控
-
-**章节来源**
-- [system_routes.py:1-128](file://service/src/api/v1/system_routes.py#L1-L128)
+- [service/src/application/dto/auth_dto.py:1-53](file://service/src/application/dto/auth_dto.py#L1-L53)
+- [service/src/application/dto/user_dto.py:1-124](file://service/src/application/dto/user_dto.py#L1-L124)
 
 ## 依赖分析
 
-系统采用模块化的依赖管理，确保各组件间的松耦合：
+项目的技术栈和依赖关系如下：
 
 ```mermaid
 graph TB
-subgraph "核心依赖"
+subgraph "核心框架"
 A[FastAPI]
 B[SQLModel]
 C[Pydantic]
-D[HTTPBearer]
 end
-subgraph "配置管理"
-E[Settings]
-F[Environment]
-G[CORS]
+subgraph "数据库"
+D[SQLite]
+E[PostgreSQL]
+F[Redis]
 end
-subgraph "中间件"
-H[RequestLoggingMiddleware]
-I[IPFilterMiddleware]
+subgraph "认证"
+G[python-jose]
+H[bcrypt]
 end
-subgraph "异常处理"
-J[AppException]
-K[自定义异常类]
+subgraph "工具库"
+I[loguru]
+J[httpx]
+K[mypy]
+L[ruff]
 end
-A --> E
-A --> H
-A --> J
+subgraph "测试"
+M[pytest]
+N[faker]
+O[factory-boy]
+end
+A --> B
 B --> C
-D --> J
-E --> F
-E --> G
+A --> G
+G --> H
+A --> I
+A --> J
+M --> N
+M --> O
+L --> K
 ```
 
 **图表来源**
-- [main.py:34-96](file://service/src/main.py#L34-L96)
-- [settings.py:41-198](file://service/src/config/settings.py#L41-L198)
-- [middlewares.py:12-65](file://service/src/core/middlewares.py#L12-L65)
+- [service/pyproject.toml:7-32](file://service/pyproject.toml#L7-L32)
 
 **章节来源**
-- [main.py:1-96](file://service/src/main.py#L1-L96)
-- [settings.py:1-198](file://service/src/config/settings.py#L1-L198)
-- [middlewares.py:1-65](file://service/src/core/middlewares.py#L1-L65)
+- [service/pyproject.toml:1-76](file://service/pyproject.toml#L1-L76)
 
 ## 性能考虑
 
-系统在设计时充分考虑了性能优化：
+项目在性能方面采用了多项优化措施：
 
-### 缓存策略
-- 使用Redis进行会话和缓存管理
-- 实现LRU缓存机制减少数据库查询
-- 支持配置化的缓存过期策略
-
-### 连接池管理
-- 数据库连接池优化
-- 异步数据库操作
-- 连接复用和回收机制
-
-### 响应优化
-- 统一响应格式减少前端处理复杂度
-- 分页查询避免大数据量传输
-- 条件查询优化索引使用
+1. **异步处理**：全面支持 async/await，提高并发处理能力
+2. **连接池**：数据库连接池管理，减少连接开销
+3. **缓存机制**：Redis 缓存提升数据访问速度
+4. **中间件优化**：请求日志中间件，便于性能监控
+5. **类型检查**：MyPy 类型检查，提前发现性能问题
 
 ## 故障排除指南
 
-### 常见问题诊断
+### 常见响应错误处理
 
-```mermaid
-flowchart TD
-A[API响应异常] --> B{响应格式正确?}
-B --> |否| C[检查统一响应格式]
-B --> |是| D{状态码正常?}
-D --> |否| E[检查异常处理]
-D --> |是| F{权限验证通过?}
-F --> |否| G[检查RBAC配置]
-F --> |是| H{数据库连接正常?}
-H --> |否| I[检查数据库配置]
-H --> |是| J[检查服务层逻辑]
-C --> K[重新部署]
-E --> L[调整异常处理]
-G --> M[更新权限配置]
-I --> N[重启数据库服务]
-J --> O[检查日志]
-```
+项目实现了完善的异常处理机制：
 
-### 调试工具
-
-系统提供了完善的调试和监控工具：
-
-1. **请求日志中间件**：记录所有HTTP请求的详细信息
-2. **异常处理机制**：统一的错误响应格式
-3. **健康检查接口**：系统状态监控
-4. **性能指标**：请求处理时间和资源使用情况
+| 错误类型 | HTTP 状态码 | 响应格式 | 处理建议 |
+|---------|-------------|----------|----------|
+| 未找到资源 | 404 | {"code": 404, "message": "Resource not found"} | 检查资源是否存在 |
+| 权限不足 | 403 | {"code": 403, "message": "Insufficient permissions"} | 检查用户权限 |
+| 认证失败 | 401 | {"code": 401, "message": "Authentication required"} | 检查令牌有效性 |
+| 参数验证错误 | 422 | {"code": 422, "message": "参数验证失败", "errors": []} | 检查请求参数 |
+| 业务逻辑错误 | 400 | {"code": 400, "message": "Business error"} | 检查业务规则 |
 
 **章节来源**
-- [middlewares.py:12-65](file://service/src/core/middlewares.py#L12-L65)
-- [main.py:60-83](file://service/src/main.py#L60-L83)
+- [service/src/main.py:61-82](file://service/src/main.py#L61-L82)
+- [service/src/core/exceptions.py:13-59](file://service/src/core/exceptions.py#L13-L59)
+
+### 日志和监控
+
+项目使用 Loguru 进行日志管理，支持请求日志中间件：
+
+```mermaid
+flowchart LR
+Request[HTTP 请求] --> Middleware[请求日志中间件]
+Middleware --> Handler[业务处理]
+Handler --> Response[响应返回]
+Middleware --> Logger[日志记录]
+Logger --> File[日志文件]
+subgraph "日志级别"
+Debug[DEBUG]
+Info[INFO]
+Warning[WARNING]
+Error[ERROR]
+Critical[CRITICAL]
+end
+Logger --> Debug
+Logger --> Info
+Logger --> Warning
+Logger --> Error
+Logger --> Critical
+```
+
+**图表来源**
+- [service/src/core/middlewares.py:12-39](file://service/src/core/middlewares.py#L12-L39)
+
+**章节来源**
+- [service/src/core/middlewares.py:1-65](file://service/src/core/middlewares.py#L1-L65)
 
 ## 结论
 
-本项目的API响应标准通过统一的架构设计和严格的规范约束，为现代Web应用提供了可靠的技术基础。系统的主要优势包括：
+Hello-FastApi 项目通过实现标准化的 API 响应格式和完善的异常处理机制，为前后端交互提供了可靠的保障。项目的主要优势包括：
 
-1. **一致性**：统一的响应格式确保前后端交互的稳定性
-2. **安全性**：完善的RBAC权限控制和JWT认证机制
-3. **可扩展性**：模块化的架构设计支持功能扩展
-4. **可维护性**：清晰的代码结构和文档规范
-5. **性能优化**：合理的缓存策略和连接池管理
+1. **一致性**：所有接口遵循统一的响应格式，便于前端处理
+2. **可维护性**：清晰的分层架构和模块化设计
+3. **可扩展性**：基于 FastAPI 的高性能异步处理能力
+4. **安全性**：JWT 双令牌认证和 RBAC 权限控制
+5. **可观测性**：完整的日志记录和异常处理机制
 
-**更新** 本版本特别强调了与Pure Admin前端的完全兼容性，通过标准化的响应代码和消息格式，确保前后端一致的响应格式，为团队协作和项目长期发展奠定了坚实的基础，适用于各种规模的企业级应用开发。
-
-### Pure Admin前端响应格式标准
-
-系统现已完全匹配Pure Admin前端的响应格式标准：
-
-- **响应结构**：`{"code": 0, "message": "操作成功", "data": null}`
-- **成功状态**：`code = 0` 表示操作成功
-- **错误状态**：`code ≠ 0` 表示操作失败，`message`提供错误描述
-- **数据承载**：所有业务数据通过`data`字段传递
-- **消息国际化**：`message`字段支持多语言消息
-
-这种标准化确保了前后端开发的一致性，减少了接口对接的复杂度，提高了开发效率和系统稳定性。
+这些特性使得该项目成为构建企业级 API 服务的良好参考实现，特别适合需要与前端框架（如 Pure Admin）进行深度集成的项目。
