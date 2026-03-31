@@ -159,6 +159,19 @@ class Menu(SQLModel, table=True):
     order_num: int = Field(default=0)  # 排序号
     permissions: str | None = Field(default=None, max_length=500)  # 关联权限编码，逗号分隔
     status: int = Field(default=1)  # 状态(0-禁用, 1-启用)
+    # Pure Admin 扩展字段
+    menu_type: int = Field(default=0)  # 菜单类型(0-菜单, 1-iframe, 2-外链, 3-按钮)
+    redirect: str | None = Field(default=None, max_length=256)  # 重定向路径
+    extra_icon: str | None = Field(default=None, max_length=64)  # 菜单名称右侧额外图标
+    enter_transition: str | None = Field(default=None, max_length=64)  # 进场动画
+    leave_transition: str | None = Field(default=None, max_length=64)  # 离场动画
+    active_path: str | None = Field(default=None, max_length=256)  # 激活菜单路径
+    frame_src: str | None = Field(default=None, max_length=500)  # iframe链接地址
+    frame_loading: bool = Field(default=True)  # iframe首次加载动画
+    keep_alive: bool = Field(default=False)  # 是否缓存页面
+    hidden_tag: bool = Field(default=False)  # 禁止添加到标签页
+    fixed_tag: bool = Field(default=False)  # 固定标签页
+    show_parent: bool = Field(default=False)  # 是否显示父级菜单
     created_at: datetime | None = Field(
         default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )

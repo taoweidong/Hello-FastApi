@@ -120,24 +120,76 @@ async def seed_data() -> None:
         if not existing_menus:
             print("  添加系统菜单...")
             menus_data = [
-                # 系统管理
-                {"id": "1", "name": "System", "path": "/system", "component": "", "icon": "ri:settings-3-line", "title": "系统管理", "order_num": 1, "parent_id": None},
-                {"id": "11", "name": "User", "path": "/system/user/index", "component": "system/user/index", "icon": "ri:admin-line", "title": "用户管理", "order_num": 1, "parent_id": "1", "permissions": "user:view"},
-                {"id": "12", "name": "Role", "path": "/system/role/index", "component": "system/role/index", "icon": "ri:admin-fill", "title": "角色管理", "order_num": 2, "parent_id": "1", "permissions": "role:view"},
-                {"id": "13", "name": "Dept", "path": "/system/dept/index", "component": "system/dept/index", "icon": "ri:git-branch-line", "title": "部门管理", "order_num": 3, "parent_id": "1"},
-                {"id": "14", "name": "Menu", "path": "/system/menu/index", "component": "system/menu/index", "icon": "ep:menu", "title": "菜单管理", "order_num": 4, "parent_id": "1", "permissions": "menu:view"},
+                # 系统管理（顶级菜单）
+                {
+                    "id": "1", "name": "System", "path": "/system", "component": "",
+                    "icon": "ri:settings-3-line", "title": "系统管理", "order_num": 1, "parent_id": None,
+                    "menu_type": 0, "redirect": "/system/user/index", "show_parent": False
+                },
+                {
+                    "id": "11", "name": "User", "path": "/system/user/index", "component": "system/user/index",
+                    "icon": "ri:admin-line", "title": "用户管理", "order_num": 1, "parent_id": "1",
+                    "permissions": "user:view", "menu_type": 0, "show_parent": False
+                },
+                {
+                    "id": "12", "name": "Role", "path": "/system/role/index", "component": "system/role/index",
+                    "icon": "ri:admin-fill", "title": "角色管理", "order_num": 2, "parent_id": "1",
+                    "permissions": "role:view", "menu_type": 0, "show_parent": False
+                },
+                {
+                    "id": "13", "name": "Dept", "path": "/system/dept/index", "component": "system/dept/index",
+                    "icon": "ri:git-branch-line", "title": "部门管理", "order_num": 3, "parent_id": "1",
+                    "menu_type": 0, "show_parent": False
+                },
+                {
+                    "id": "14", "name": "Menu", "path": "/system/menu/index", "component": "system/menu/index",
+                    "icon": "ep:menu", "title": "菜单管理", "order_num": 4, "parent_id": "1",
+                    "permissions": "menu:view", "menu_type": 0, "show_parent": False
+                },
                 
-                # 系统监控
-                {"id": "2", "name": "Monitor", "path": "/monitor", "component": "", "icon": "ep:monitor", "title": "系统监控", "order_num": 2, "parent_id": None},
-                {"id": "21", "name": "OnlineUser", "path": "/monitor/online-user", "component": "monitor/online/index", "icon": "ri:user-voice-line", "title": "在线用户", "order_num": 1, "parent_id": "2"},
-                {"id": "22", "name": "LoginLog", "path": "/monitor/login-logs", "component": "monitor/logs/login/index", "icon": "ri:window-line", "title": "登录日志", "order_num": 2, "parent_id": "2"},
-                {"id": "23", "name": "OperationLog", "path": "/monitor/operation-logs", "component": "monitor/logs/operation/index", "icon": "ri:history-fill", "title": "操作日志", "order_num": 3, "parent_id": "2"},
-                {"id": "24", "name": "SystemLog", "path": "/monitor/system-logs", "component": "monitor/logs/system/index", "icon": "ri:file-list-2-line", "title": "系统日志", "order_num": 4, "parent_id": "2"},
+                # 系统监控（顶级菜单）
+                {
+                    "id": "2", "name": "Monitor", "path": "/monitor", "component": "",
+                    "icon": "ep:monitor", "title": "系统监控", "order_num": 2, "parent_id": None,
+                    "menu_type": 0, "redirect": "/monitor/online-user", "show_parent": False
+                },
+                {
+                    "id": "21", "name": "OnlineUser", "path": "/monitor/online-user", "component": "monitor/online/index",
+                    "icon": "ri:user-voice-line", "title": "在线用户", "order_num": 1, "parent_id": "2",
+                    "menu_type": 0, "show_parent": False
+                },
+                {
+                    "id": "22", "name": "LoginLog", "path": "/monitor/login-logs", "component": "monitor/logs/login/index",
+                    "icon": "ri:window-line", "title": "登录日志", "order_num": 2, "parent_id": "2",
+                    "menu_type": 0, "show_parent": False
+                },
+                {
+                    "id": "23", "name": "OperationLog", "path": "/monitor/operation-logs", "component": "monitor/logs/operation/index",
+                    "icon": "ri:history-fill", "title": "操作日志", "order_num": 3, "parent_id": "2",
+                    "menu_type": 0, "show_parent": False
+                },
+                {
+                    "id": "24", "name": "SystemLog", "path": "/monitor/system-logs", "component": "monitor/logs/system/index",
+                    "icon": "ri:file-list-2-line", "title": "系统日志", "order_num": 4, "parent_id": "2",
+                    "menu_type": 0, "show_parent": False
+                },
                 
-                # 权限管理
-                {"id": "3", "name": "Permission", "path": "/permission", "component": "", "icon": "ep:lollipop", "title": "权限管理", "order_num": 3, "parent_id": None},
-                {"id": "31", "name": "PermissionPage", "path": "/permission/page/index", "component": "permission/page/index", "icon": "ep:document", "title": "页面权限", "order_num": 1, "parent_id": "3"},
-                {"id": "32", "name": "PermissionButton", "path": "/permission/button/router", "component": "permission/button/index", "icon": "ep:mouse", "title": "按钮权限", "order_num": 2, "parent_id": "3"},
+                # 权限管理（顶级菜单）
+                {
+                    "id": "3", "name": "Permission", "path": "/permission", "component": "",
+                    "icon": "ep:lollipop", "title": "权限管理", "order_num": 3, "parent_id": None,
+                    "menu_type": 0, "redirect": "/permission/page/index", "show_parent": False
+                },
+                {
+                    "id": "31", "name": "PermissionPage", "path": "/permission/page/index", "component": "permission/page/index",
+                    "icon": "ep:document", "title": "页面权限", "order_num": 1, "parent_id": "3",
+                    "menu_type": 0, "show_parent": False
+                },
+                {
+                    "id": "32", "name": "PermissionButton", "path": "/permission/button/router", "component": "permission/button/index",
+                    "icon": "ep:mouse", "title": "按钮权限", "order_num": 2, "parent_id": "3",
+                    "menu_type": 0, "show_parent": False
+                },
             ]
             
             for menu_data in menus_data:

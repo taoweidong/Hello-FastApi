@@ -70,17 +70,31 @@ class MenuService:
             if not parent:
                 raise NotFoundError("父菜单不存在")
 
+        # 创建菜单实体，映射所有 DTO 字段到 ORM 模型
         menu = Menu(
-            name=dto.name,
+            name=dto.name or dto.title,  # 如果没有 name，使用 title
             path=dto.path,
             component=dto.component,
             icon=dto.icon,
             title=dto.title,
-            show_link=dto.showLink,
-            parent_id=dto.parentId,
-            order_num=dto.order,
-            permissions=",".join(dto.permissions) if dto.permissions else None,
+            show_link=1 if dto.showLink else 0,  # bool 转 int
+            parent_id=dto.parentId if dto.parentId else None,
+            order_num=dto.rank,
+            permissions=dto.auths,
             status=1,
+            # Pure Admin 扩展字段
+            menu_type=dto.menuType,
+            redirect=dto.redirect,
+            extra_icon=dto.extraIcon,
+            enter_transition=dto.enterTransition,
+            leave_transition=dto.leaveTransition,
+            active_path=dto.activePath,
+            frame_src=dto.frameSrc,
+            frame_loading=dto.frameLoading,
+            keep_alive=dto.keepAlive,
+            hidden_tag=dto.hiddenTag,
+            fixed_tag=dto.fixedTag,
+            show_parent=dto.showParent,
         )
         menu = await self.menu_repo.create(menu, session)
         return self._to_response(menu)
@@ -95,17 +109,20 @@ class MenuService:
         if dto.parentId == menu_id:
             raise ConflictError("不能将菜单设置为自己的子菜单")
 
-        # 如果有父菜单，验证父菜单是否存在
-        if dto.parentId:
-            parent = await self.menu_repo.get_by_id(dto.parentId, session)
-            if not parent:
-                raise NotFoundError("父菜单不存在")
-            # 检查是否将菜单设置为其子菜单的子菜单（避免循环）
-            if await self._is_descendant(menu_id, dto.parentId, session):
-                raise ConflictError("不能将菜单设置为其子菜单的子菜单")
-            menu.parent_id = dto.parentId
+        # 处理父菜单ID更新
+        if dto.parentId is not None:
+            if dto.parentId:  # 非空字符串，验证父菜单是否存在
+                parent = await self.menu_repo.get_by_id(dto.parentId, session)
+                if not parent:
+                    raise NotFoundError("父菜单不存在")
+                # 检查是否将菜单设置为其子菜单的子菜单（避免循环）
+                if await self._is_descendant(menu_id, dto.parentId, session):
+                    raise ConflictError("不能将菜单设置为其子菜单的子菜单")
+                menu.parent_id = dto.parentId
+            else:  # 空字符串表示设置为顶级菜单
+                menu.parent_id = None
 
-        # 选择性更新非 None 字段
+        # 选择性更新基本字段
         if dto.name is not None:
             menu.name = dto.name
         if dto.path is not None:
@@ -117,11 +134,39 @@ class MenuService:
         if dto.title is not None:
             menu.title = dto.title
         if dto.showLink is not None:
-            menu.show_link = dto.showLink
-        if dto.permissions is not None:
-            menu.permissions = ",".join(dto.permissions) if dto.permissions else None
-        if dto.order is not None:
-            menu.order_num = dto.order
+            menu.show_link = 1 if dto.showLink else 0  # bool 转 int
+        if dto.auths is not None:
+            menu.permissions = dto.auths
+        if dto.rank is not None:
+            menu.order_num = dto.rank
+        if dto.status is not None:
+            menu.status = dto.status
+        
+        # 选择性更新 Pure Admin 扩展字段
+        if dto.menuType is not None:
+            menu.menu_type = dto.menuType
+        if dto.redirect is not None:
+            menu.redirect = dto.redirect
+        if dto.extraIcon is not None:
+            menu.extra_icon = dto.extraIcon
+        if dto.enterTransition is not None:
+            menu.enter_transition = dto.enterTransition
+        if dto.leaveTransition is not None:
+            menu.leave_transition = dto.leaveTransition
+        if dto.activePath is not None:
+            menu.active_path = dto.activePath
+        if dto.frameSrc is not None:
+            menu.frame_src = dto.frameSrc
+        if dto.frameLoading is not None:
+            menu.frame_loading = dto.frameLoading
+        if dto.keepAlive is not None:
+            menu.keep_alive = dto.keepAlive
+        if dto.hiddenTag is not None:
+            menu.hidden_tag = dto.hiddenTag
+        if dto.fixedTag is not None:
+            menu.fixed_tag = dto.fixedTag
+        if dto.showParent is not None:
+            menu.show_parent = dto.showParent
 
         menu = await self.menu_repo.update(menu, session)
         return self._to_response(menu)
@@ -161,18 +206,30 @@ class MenuService:
         return tree
 
     def _to_response(self, menu: Menu) -> dict:
-        """将 Menu 模型转为响应字典。"""
+        """将 Menu 模型转为响应字典（Pure Admin 标准格式）。"""
         return {
             "id": menu.id,
+            "parentId": menu.parent_id or 0,
+            "menuType": menu.menu_type,
+            "title": menu.title or menu.name,
             "name": menu.name,
-            "path": menu.path,
-            "component": menu.component,
-            "icon": menu.icon,
-            "title": menu.title,
-            "showLink": menu.show_link,
-            "parentId": menu.parent_id,
-            "permissions": menu.permissions.split(",") if menu.permissions else [],
-            "order": menu.order_num,
+            "path": menu.path or "",
+            "component": menu.component or "",
+            "rank": menu.order_num,
+            "redirect": menu.redirect or "",
+            "icon": menu.icon or "",
+            "extraIcon": menu.extra_icon or "",
+            "enterTransition": menu.enter_transition or "",
+            "leaveTransition": menu.leave_transition or "",
+            "activePath": menu.active_path or "",
+            "auths": menu.permissions or "",
+            "frameSrc": menu.frame_src or "",
+            "frameLoading": menu.frame_loading,
+            "keepAlive": menu.keep_alive,
+            "hiddenTag": menu.hidden_tag,
+            "fixedTag": menu.fixed_tag,
+            "showLink": bool(menu.show_link),
+            "showParent": menu.show_parent,
             "status": menu.status,
             "children": [],
             "createTime": menu.created_at.isoformat() if menu.created_at else None,

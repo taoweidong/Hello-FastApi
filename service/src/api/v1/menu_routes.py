@@ -26,6 +26,7 @@ def get_menu_service(session: AsyncSession = Depends(get_db)) -> MenuService:
 async def get_menu_list(
     session: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_permission("menu:view")),
+    menu_service: MenuService = Depends(get_menu_service),
 ):
     """获取菜单列表（扁平结构）。
 
@@ -33,38 +34,13 @@ async def get_menu_list(
     返回扁平列表格式（非树形），符合 Pure Admin 前端标准。
     前端会自动将扁平列表转换为树形结构。
     """
+    # 直接使用 Service 层的 _to_response 方法，不再做额外的字段转换
     menu_repo = MenuRepository()
     all_menus = await menu_repo.get_all(session)
-
-    # 转换为前端期望的扁平列表格式
-    menu_list = []
-    for menu in all_menus:
-        menu_dict = {
-            "id": int(menu.id) if menu.id.isdigit() else menu.id,
-            "parentId": int(menu.parent_id) if menu.parent_id else 0,
-            "menuType": 0,  # 0-菜单, 1-iframe, 2-外链, 3-按钮
-            "title": menu.title or menu.name,
-            "name": menu.name,
-            "path": menu.path or "",
-            "component": menu.component or "",
-            "rank": menu.order_num,
-            "redirect": "",
-            "icon": menu.icon or "",
-            "extraIcon": "",
-            "enterTransition": "",
-            "leaveTransition": "",
-            "activePath": "",
-            "auths": menu.permissions or "",
-            "frameSrc": "",
-            "frameLoading": True,
-            "keepAlive": False,
-            "hiddenTag": False,
-            "fixedTag": False,
-            "showLink": bool(menu.show_link) if menu.show_link is not None else True,
-            "showParent": False,
-        }
-        menu_list.append(menu_dict)
-
+    
+    # 转换为 Pure Admin 标准格式
+    menu_list = [menu_service._to_response(menu) for menu in all_menus]
+    
     return success_response(data=menu_list)
 
 
