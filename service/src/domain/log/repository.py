@@ -11,16 +11,7 @@ class LogRepositoryInterface:
     """日志仓储的抽象接口（非强制继承，仅作为类型参考）。"""
 
     # 登录日志相关
-    async def get_login_logs(
-        self,
-        session: AsyncSession,
-        page_num: int = 1,
-        page_size: int = 10,
-        username: str | None = None,
-        status: int | None = None,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-    ) -> tuple[list[LoginLog], int]:
+    async def get_login_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, username: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLog], int]:
         """获取登录日志列表。"""
         ...
 
@@ -33,16 +24,7 @@ class LogRepositoryInterface:
         ...
 
     # 操作日志相关
-    async def get_operation_logs(
-        self,
-        session: AsyncSession,
-        page_num: int = 1,
-        page_size: int = 10,
-        module: str | None = None,
-        status: int | None = None,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-    ) -> tuple[list[OperationLog], int]:
+    async def get_operation_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLog], int]:
         """获取操作日志列表。"""
         ...
 
@@ -55,15 +37,7 @@ class LogRepositoryInterface:
         ...
 
     # 系统日志相关
-    async def get_system_logs(
-        self,
-        session: AsyncSession,
-        page_num: int = 1,
-        page_size: int = 10,
-        module: str | None = None,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-    ) -> tuple[list[SystemLog], int]:
+    async def get_system_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[SystemLog], int]:
         """获取系统日志列表。"""
         ...
 

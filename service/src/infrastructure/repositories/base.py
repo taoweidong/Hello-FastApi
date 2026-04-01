@@ -59,13 +59,7 @@ class BaseRepository(Generic[ModelType]):
         result = await self.session.exec(select(self.model).where(field == value))
         return result.one_or_none()
 
-    async def get_all_with_pagination(
-        self,
-        page_num: int = 1,
-        page_size: int = 10,
-        order_by: Any = None,
-        **filters,
-    ) -> list[ModelType]:
+    async def get_all_with_pagination(self, page_num: int = 1, page_size: int = 10, order_by: Any = None, **filters) -> list[ModelType]:
         """获取实体列表（支持分页和筛选）。
 
         Args:

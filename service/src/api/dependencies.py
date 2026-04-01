@@ -18,36 +18,32 @@ async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Securi
     token = credentials.credentials
     payload = TokenService.decode_token(token)
     if payload is None:
-        raise UnauthorizedError("Invalid or expired token")
+        raise UnauthorizedError("无效或已过期的令牌")
 
     if not TokenService.verify_token_type(payload, "access"):
-        raise UnauthorizedError("Invalid token type")
+        raise UnauthorizedError("无效的令牌类型")
 
     user_id = payload.get("sub")
     if user_id is None:
-        raise UnauthorizedError("Invalid token payload")
+        raise UnauthorizedError("无效的令牌负载")
     return str(user_id)
 
 
-async def get_current_active_user(
-    user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
-) -> dict:
+async def get_current_active_user(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)) -> dict:
     """从数据库获取当前活跃用户。"""
     repo = UserRepository(db)
     user = await repo.get_by_id(user_id)
     if user is None:
-        raise UnauthorizedError("User not found")
+        raise UnauthorizedError("用户不存在")
     if not user.is_active:
-        raise UnauthorizedError("User account is disabled")
+        raise UnauthorizedError("用户账号已被禁用")
     return {"id": user.id, "username": user.username, "email": user.email, "is_superuser": user.is_superuser}
 
 
 def require_permission(code: str):
     """依赖工厂：要求特定权限。"""
 
-    async def permission_checker(
-        current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)
-    ) -> dict:
+    async def permission_checker(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)) -> dict:
         if current_user["is_superuser"]:
             return current_user
 
@@ -65,7 +61,7 @@ def require_superuser():
 
     async def superuser_checker(current_user: dict = Depends(get_current_active_user)) -> dict:
         if not current_user["is_superuser"]:
-            raise ForbiddenError("Superuser access required")
+            raise ForbiddenError("需要超级用户权限")
         return current_user
 
     return superuser_checker

@@ -9,16 +9,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import list_response, success_response
 from src.api.dependencies import get_current_user_id, require_permission
-from src.application.dto.user_dto import (
-    AssignRoleDTO,
-    BatchDeleteDTO,
-    ChangePasswordDTO,
-    ResetPasswordDTO,
-    UpdateStatusDTO,
-    UserCreateDTO,
-    UserListQueryDTO,
-    UserUpdateDTO,
-)
+from src.application.dto.user_dto import AssignRoleDTO, BatchDeleteDTO, ChangePasswordDTO, ResetPasswordDTO, UpdateStatusDTO, UserCreateDTO, UserListQueryDTO, UserUpdateDTO
 from src.application.services.user_service import UserService
 from src.infrastructure.database import get_db
 
@@ -26,11 +17,7 @@ router = APIRouter()
 
 
 @router.post("")
-async def get_user_list(
-    query: UserListQueryDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:view")),
-):
+async def get_user_list(query: UserListQueryDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:view"))):
     """获取用户列表接口（支持筛选和分页）。
 
     需要 user:view 权限。
@@ -52,7 +39,7 @@ async def get_user_list(
     for user in users:
         user_dict = user.model_dump()
         # 添加 dept 字段（前端期望的部门格式）
-        user_dict["dept"] = {"id": user_dict.get("dept_id") or 0, "name": ""}
+        user_dict["dept"] = {"id": user_dict.get("dept_id") or "", "name": ""}
         # 处理可能为 null 的字段，转换为空字符串
         if user_dict.get("phone") is None:
             user_dict["phone"] = ""
@@ -68,20 +55,11 @@ async def get_user_list(
         user_dict.pop("dept_id", None)
         user_list.append(user_dict)
 
-    return list_response(
-        list_data=user_list,
-        total=total,
-        page_size=query.pageSize,
-        current_page=query.pageNum,
-    )
+    return list_response(list_data=user_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
 
 @router.post("/create", status_code=201)
-async def create_user(
-    dto: UserCreateDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:add")),
-):
+async def create_user(dto: UserCreateDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:add"))):
     """创建用户接口。
 
     需要 user:add 权限。
@@ -100,10 +78,7 @@ async def create_user(
 
 
 @router.get("/info")
-async def get_current_user_info(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-):
+async def get_current_user_info(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     """获取当前登录用户信息接口。
 
     Args:
@@ -119,11 +94,7 @@ async def get_current_user_info(
 
 
 @router.get("/{user_id}")
-async def get_user_detail(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:view")),
-):
+async def get_user_detail(user_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:view"))):
     """获取用户详情接口。
 
     需要 user:view 权限。
@@ -141,12 +112,7 @@ async def get_user_detail(
 
 
 @router.put("/{user_id}")
-async def update_user(
-    user_id: str,
-    dto: UserUpdateDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:edit")),
-):
+async def update_user(user_id: str, dto: UserUpdateDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:edit"))):
     """更新用户接口。
 
     需要 user:edit 权限。
@@ -165,11 +131,7 @@ async def update_user(
 
 
 @router.delete("/{user_id}")
-async def delete_user(
-    user_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:delete")),
-):
+async def delete_user(user_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:delete"))):
     """删除用户接口。
 
     需要 user:delete 权限。
@@ -187,11 +149,7 @@ async def delete_user(
 
 
 @router.post("/batch-delete")
-async def batch_delete_users(
-    dto: BatchDeleteDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:delete")),
-):
+async def batch_delete_users(dto: BatchDeleteDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:delete"))):
     """批量删除用户接口。
 
     需要 user:delete 权限。
@@ -209,12 +167,7 @@ async def batch_delete_users(
 
 
 @router.put("/{user_id}/reset-password")
-async def reset_user_password(
-    user_id: str,
-    dto: ResetPasswordDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:edit")),
-):
+async def reset_user_password(user_id: str, dto: ResetPasswordDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:edit"))):
     """重置用户密码接口（管理员功能）。
 
     需要 user:edit 权限。
@@ -233,12 +186,7 @@ async def reset_user_password(
 
 
 @router.put("/{user_id}/status")
-async def update_user_status(
-    user_id: str,
-    dto: UpdateStatusDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:edit")),
-):
+async def update_user_status(user_id: str, dto: UpdateStatusDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:edit"))):
     """更改用户状态接口。
 
     需要 user:edit 权限。
@@ -257,11 +205,7 @@ async def update_user_status(
 
 
 @router.post("/change-password")
-async def change_password(
-    dto: ChangePasswordDTO,
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-):
+async def change_password(dto: ChangePasswordDTO, user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)):
     """修改当前用户密码接口。
 
     Args:
@@ -278,11 +222,7 @@ async def change_password(
 
 
 @router.post("/assign-role")
-async def assign_role(
-    dto: AssignRoleDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("user:edit")),
-):
+async def assign_role(dto: AssignRoleDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("user:edit"))):
     """为用户分配角色接口。
 
     需要 user:edit 权限。

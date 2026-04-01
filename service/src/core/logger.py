@@ -18,58 +18,18 @@ from src.config.settings import LOGS_DIR, settings
 logger.remove()
 
 # ============ 控制台处理器 ============
-logger.add(
-    sys.stdout,
-    level=settings.LOG_LEVEL,
-    format=(
-        "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | "
-        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"
-    ),
-    colorize=True,
-    enqueue=True,
-)
+logger.add(sys.stdout, level=settings.LOG_LEVEL, format=("<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"), colorize=True, enqueue=True)
 
 # ============ 文件处理器 ============
 
 # 应用程序日志（所有级别）
-logger.add(
-    LOGS_DIR / "app.log",
-    level="DEBUG",
-    rotation="10 MB",
-    retention="30 days",
-    compression="zip",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-    encoding="utf-8",
-    enqueue=True,
-    filter=lambda record: record["level"].name != "ERROR",
-)
+logger.add(LOGS_DIR / "app.log", level="DEBUG", rotation="10 MB", retention="30 days", compression="zip", format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}", encoding="utf-8", enqueue=True, filter=lambda record: record["level"].name != "ERROR")
 
 # 错误日志（仅错误级别）
-logger.add(
-    LOGS_DIR / "error.log",
-    level="ERROR",
-    rotation="10 MB",
-    retention="60 days",
-    compression="zip",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-    encoding="utf-8",
-    enqueue=True,
-    backtrace=True,
-    diagnose=True,
-)
+logger.add(LOGS_DIR / "error.log", level="ERROR", rotation="10 MB", retention="60 days", compression="zip", format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}", encoding="utf-8", enqueue=True, backtrace=True, diagnose=True)
 
 # 访问日志（HTTP 请求）
-logger.add(
-    LOGS_DIR / "access.log",
-    level="INFO",
-    rotation="10 MB",
-    retention="30 days",
-    compression="zip",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
-    encoding="utf-8",
-    enqueue=True,
-    filter=lambda record: record["extra"].get("type") == "access",
-)
+logger.add(LOGS_DIR / "access.log", level="INFO", rotation="10 MB", retention="30 days", compression="zip", format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}", encoding="utf-8", enqueue=True, filter=lambda record: record["extra"].get("type") == "access")
 
 
 def log_request(method: str, path: str, status_code: int, duration_ms: float, client_ip: str) -> None:

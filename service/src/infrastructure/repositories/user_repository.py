@@ -29,16 +29,7 @@ class UserRepository(UserRepositoryInterface):
         result = await self.session.exec(select(User).where(User.email == email))
         return result.one_or_none()
 
-    async def get_all(
-        self,
-        page_num: int = 1,
-        page_size: int = 10,
-        username: str | None = None,
-        phone: str | None = None,
-        email: str | None = None,
-        status: int | None = None,
-        dept_id: int | None = None,
-    ) -> list[User]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> list[User]:
         """获取用户列表（支持筛选和分页）。
 
         Args:
@@ -74,14 +65,7 @@ class UserRepository(UserRepositoryInterface):
         result = await self.session.exec(query)
         return list(result.all())
 
-    async def count(
-        self,
-        username: str | None = None,
-        phone: str | None = None,
-        email: str | None = None,
-        status: int | None = None,
-        dept_id: int | None = None,
-    ) -> int:
+    async def count(self, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> int:
         """获取用户总数（支持筛选）。
 
         Args:

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class LoginLogListQueryDTO(BaseModel):
     """登录日志列表查询请求"""
+
     pageNum: int = Field(default=1, ge=1)
     pageSize: int = Field(default=10, ge=1, le=100)
     username: str | None = None
@@ -18,7 +19,8 @@ class LoginLogListQueryDTO(BaseModel):
 
 class LoginLogResponseDTO(BaseModel):
     """登录日志响应"""
-    id: int
+
+    id: str
     username: str
     ip: str | None = None
     address: str | None = None
@@ -36,6 +38,7 @@ class LoginLogResponseDTO(BaseModel):
 
 class OperationLogListQueryDTO(BaseModel):
     """操作日志列表查询请求"""
+
     pageNum: int = Field(default=1, ge=1)
     pageSize: int = Field(default=10, ge=1, le=100)
     module: str | None = None
@@ -45,7 +48,8 @@ class OperationLogListQueryDTO(BaseModel):
 
 class OperationLogResponseDTO(BaseModel):
     """操作日志响应"""
-    id: int
+
+    id: str
     username: str
     ip: str | None = None
     address: str | None = None
@@ -64,6 +68,7 @@ class OperationLogResponseDTO(BaseModel):
 
 class SystemLogListQueryDTO(BaseModel):
     """系统日志列表查询请求"""
+
     pageNum: int = Field(default=1, ge=1)
     pageSize: int = Field(default=10, ge=1, le=100)
     module: str | None = None
@@ -72,7 +77,8 @@ class SystemLogListQueryDTO(BaseModel):
 
 class SystemLogResponseDTO(BaseModel):
     """系统日志响应"""
-    id: int
+
+    id: str
     level: str | None = None
     module: str | None = None
     url: str | None = None
@@ -89,7 +95,8 @@ class SystemLogResponseDTO(BaseModel):
 
 class SystemLogDetailDTO(BaseModel):
     """系统日志详情响应"""
-    id: int
+
+    id: str
     level: str | None = None
     module: str | None = None
     url: str | None = None
@@ -111,4 +118,5 @@ class SystemLogDetailDTO(BaseModel):
 
 class BatchDeleteLogDTO(BaseModel):
     """批量删除日志请求"""
+
     ids: list[str]

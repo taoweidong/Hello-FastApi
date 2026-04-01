@@ -68,16 +68,7 @@ class AuthService:
         expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
 
         # 6. 构建扁平结构的登录响应（与 Pure Admin 前端 Mock 一致）
-        return {
-            "avatar": user.avatar or "",
-            "username": user.username,
-            "nickname": user.nickname or user.username,
-            "roles": [role.name for role in user_roles],
-            "permissions": [perm.code for perm in user_permissions],
-            "accessToken": access_token,
-            "refreshToken": refresh_token,
-            "expires": expires_str
-        }
+        return {"avatar": user.avatar or "", "username": user.username, "nickname": user.nickname or user.username, "roles": [role.name for role in user_roles], "permissions": [perm.code for perm in user_permissions], "accessToken": access_token, "refreshToken": refresh_token, "expires": expires_str}
 
     async def register(self, dto: RegisterDTO) -> dict:
         """用户注册。
@@ -100,26 +91,12 @@ class AuthService:
         hashed_password = self.password_service.hash_password(dto.password)
 
         # 3. 创建用户（status=1 表示启用）
-        new_user = User(
-            username=dto.username,
-            hashed_password=hashed_password,
-            nickname=dto.nickname,
-            email=dto.email or "",
-            phone=dto.phone,
-            status=1
-        )
+        new_user = User(username=dto.username, hashed_password=hashed_password, nickname=dto.nickname, email=dto.email or "", phone=dto.phone, status=1)
         created_user = await self.user_repo.create(new_user)
         await self.session.commit()
 
         # 4. 返回用户基本信息
-        return {
-            "id": created_user.id,
-            "username": created_user.username,
-            "nickname": created_user.nickname,
-            "email": created_user.email,
-            "phone": created_user.phone,
-            "status": created_user.status
-        }
+        return {"id": created_user.id, "username": created_user.username, "nickname": created_user.nickname, "email": created_user.email, "phone": created_user.phone, "status": created_user.status}
 
     async def refresh_token(self, refresh_token: str) -> dict:
         """使用刷新令牌刷新访问令牌。
@@ -156,8 +133,4 @@ class AuthService:
         expires_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
 
-        return {
-            "accessToken": new_access_token,
-            "refreshToken": new_refresh_token,
-            "expires": expires_str
-        }
+        return {"accessToken": new_access_token, "refreshToken": new_refresh_token, "expires": expires_str}

@@ -2,13 +2,7 @@
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.user_dto import (
-    ChangePasswordDTO,
-    UserCreateDTO,
-    UserListQueryDTO,
-    UserResponseDTO,
-    UserUpdateDTO,
-)
+from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserListQueryDTO, UserResponseDTO, UserUpdateDTO
 from src.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from src.domain.auth.password_service import PasswordService
 from src.infrastructure.database.models import User
@@ -43,18 +37,7 @@ class UserService:
             raise ConflictError(f"邮箱 '{dto.email}' 已存在")
 
         # 创建用户实体，映射所有新字段
-        user = User(
-            username=dto.username,
-            email=dto.email,
-            hashed_password=self.password_service.hash_password(dto.password),
-            nickname=dto.nickname,
-            phone=dto.phone,
-            sex=dto.sex,
-            avatar=dto.avatar,
-            status=dto.status,
-            dept_id=dto.dept_id,
-            remark=dto.remark,
-        )
+        user = User(username=dto.username, email=dto.email, hashed_password=self.password_service.hash_password(dto.password), nickname=dto.nickname, phone=dto.phone, sex=dto.sex, avatar=dto.avatar, status=dto.status, dept_id=dto.dept_id, remark=dto.remark)
         user = await self.repo.create(user)
         return await self._to_response(user)
 
@@ -79,9 +62,7 @@ class UserService:
         """根据用户名获取用户实体（供内部使用）。"""
         return await self.repo.get_by_username(username)
 
-    async def get_users(
-        self, query: UserListQueryDTO
-    ) -> tuple[list[UserResponseDTO], int]:
+    async def get_users(self, query: UserListQueryDTO) -> tuple[list[UserResponseDTO], int]:
         """获取用户列表（支持筛选和分页）。
 
         Args:
@@ -91,24 +72,10 @@ class UserService:
             (用户响应列表, 总数) 元组
         """
         # 获取筛选后的用户列表
-        users = await self.repo.get_all(
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            username=query.username,
-            phone=query.phone,
-            email=query.email,
-            status=query.status,
-            dept_id=query.deptId,
-        )
+        users = await self.repo.get_all(page_num=query.pageNum, page_size=query.pageSize, username=query.username, phone=query.phone, email=query.email, status=query.status, dept_id=query.deptId)
 
         # 获取总数
-        total = await self.repo.count(
-            username=query.username,
-            phone=query.phone,
-            email=query.email,
-            status=query.status,
-            dept_id=query.deptId,
-        )
+        total = await self.repo.count(username=query.username, phone=query.phone, email=query.email, status=query.status, dept_id=query.deptId)
 
         # 转换为响应DTO
         user_responses = [await self._to_response(u) for u in users]
@@ -183,10 +150,7 @@ class UserService:
             包含删除结果的字典
         """
         deleted_count = await self.repo.batch_delete(user_ids)
-        return {
-            "deleted_count": deleted_count,
-            "total_requested": len(user_ids),
-        }
+        return {"deleted_count": deleted_count, "total_requested": len(user_ids)}
 
     async def reset_password(self, user_id: str, new_password: str) -> bool:
         """管理员重置用户密码。
@@ -266,19 +230,7 @@ class UserService:
         if dto.email and await self.repo.get_by_email(dto.email):
             raise ConflictError(f"邮箱 '{dto.email}' 已存在")
 
-        user = User(
-            username=dto.username,
-            email=dto.email,
-            hashed_password=self.password_service.hash_password(dto.password),
-            nickname=dto.nickname,
-            phone=dto.phone,
-            sex=dto.sex,
-            avatar=dto.avatar,
-            status=dto.status,
-            dept_id=dto.dept_id,
-            remark=dto.remark,
-            is_superuser=True,
-        )
+        user = User(username=dto.username, email=dto.email, hashed_password=self.password_service.hash_password(dto.password), nickname=dto.nickname, phone=dto.phone, sex=dto.sex, avatar=dto.avatar, status=dto.status, dept_id=dto.dept_id, remark=dto.remark, is_superuser=True)
         user = await self.repo.create(user)
         return await self._to_response(user)
 
@@ -329,17 +281,4 @@ class UserService:
                         if perm.code and perm.code not in permissions:
                             permissions.append(perm.code)
 
-        return UserResponseDTO(
-            id=user.id,
-            username=user.username,
-            nickname=user.nickname,
-            avatar=user.avatar,
-            email=user.email,
-            phone=user.phone,
-            sex=user.sex,
-            status=user.status,
-            roles=roles,
-            permissions=permissions,
-            createTime=user.created_at,
-            updateTime=user.updated_at,
-        )
+        return UserResponseDTO(id=user.id, username=user.username, nickname=user.nickname, avatar=user.avatar, email=user.email, phone=user.phone, sex=user.sex, status=user.status, roles=roles, permissions=permissions, createTime=user.created_at, updateTime=user.updated_at)

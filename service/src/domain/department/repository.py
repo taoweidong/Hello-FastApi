@@ -46,11 +46,6 @@ class DepartmentRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def count(
-        self,
-        name: str | None = None,
-        status: int | None = None,
-        session: AsyncSession = None,
-    ) -> int:
+    async def count(self, name: str | None = None, status: int | None = None, session: AsyncSession = None) -> int:
         """获取部门总数。"""
         ...

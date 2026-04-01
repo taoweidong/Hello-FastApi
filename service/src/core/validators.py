@@ -11,20 +11,20 @@ T = TypeVar("T")
 def validate_username(username: str) -> str:
     """验证用户名：3-50个字符，字母数字和下划线。"""
     if not re.match(r"^[a-zA-Z0-9_]{3,50}$", username):
-        raise ValidationError("Username must be 3-50 characters, alphanumeric and underscores only")
+        raise ValidationError("用户名必须为 3-50 个字符，只允许字母数字和下划线")
     return username
 
 
 def validate_password_strength(password: str) -> str:
     """验证密码强度。"""
     if len(password) < 8:
-        raise ValidationError("Password must be at least 8 characters long")
+        raise ValidationError("密码长度必须至少 8 个字符")
     if not re.search(r"[A-Z]", password):
-        raise ValidationError("Password must contain at least one uppercase letter")
+        raise ValidationError("密码必须包含至少一个大写字母")
     if not re.search(r"[a-z]", password):
-        raise ValidationError("Password must contain at least one lowercase letter")
+        raise ValidationError("密码必须包含至少一个小写字母")
     if not re.search(r"\d", password):
-        raise ValidationError("Password must contain at least one digit")
+        raise ValidationError("密码必须包含至少一个数字")
     return password
 
 
@@ -119,3 +119,28 @@ def parse_status(status: str | int | None) -> int | None:
         except ValueError:
             return None
     return status
+
+
+def normalize_optional_id(v: str | int | None) -> str | None:
+    """统一处理可选 ID 字段。
+
+    用于 Pydantic field_validator，处理前端传递的 parentId、deptId 等字段。
+    将空字符串、0、'0'、None 统一转换为 None，将整型转换为字符串。
+
+    Args:
+        v: 待验证的值，可以是字符串、整型或 None
+
+    Returns:
+        统一处理后的字符串 ID，或 None
+
+    Example:
+        @field_validator('parentId', 'deptId', mode='before')
+        @classmethod
+        def validate_id(cls, v):
+            return normalize_optional_id(v)
+    """
+    if v is None or v == "" or v == 0 or v == "0":
+        return None
+    if isinstance(v, int):
+        return str(v)
+    return v

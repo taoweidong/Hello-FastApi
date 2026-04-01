@@ -54,12 +54,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         await session.flush()
         return True
 
-    async def count(
-        self,
-        name: str | None = None,
-        status: int | None = None,
-        session: AsyncSession = None,
-    ) -> int:
+    async def count(self, name: str | None = None, status: int | None = None, session: AsyncSession = None) -> int:
         """获取部门总数（支持筛选）。"""
         query = select(sa_func.count()).select_from(Department)
 

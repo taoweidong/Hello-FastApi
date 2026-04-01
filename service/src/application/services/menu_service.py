@@ -141,7 +141,7 @@ class MenuService:
             menu.order_num = dto.rank
         if dto.status is not None:
             menu.status = dto.status
-        
+
         # 选择性更新 Pure Admin 扩展字段
         if dto.menuType is not None:
             menu.menu_type = dto.menuType

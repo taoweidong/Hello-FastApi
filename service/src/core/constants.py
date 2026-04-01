@@ -9,11 +9,7 @@ DEFAULT_PAGE_SIZE = 20
 MAX_PAGE_SIZE = 100
 
 # RBAC 默认角色
-DEFAULT_ROLES = {
-    "admin": "System administrator with full access",
-    "user": "Regular user with basic access",
-    "moderator": "Moderator with elevated permissions",
-}
+DEFAULT_ROLES = {"admin": "System administrator with full access", "user": "Regular user with basic access", "moderator": "Moderator with elevated permissions"}
 
 # RBAC 默认权限
 DEFAULT_PERMISSIONS = [

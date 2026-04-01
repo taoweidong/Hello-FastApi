@@ -10,14 +10,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import list_response, page_response, success_response
 from src.api.dependencies import require_permission
-from src.application.dto.rbac_dto import (
-    AssignPermissionsDTO,
-    PermissionCreateDTO,
-    PermissionListQueryDTO,
-    RoleCreateDTO,
-    RoleListQueryDTO,
-    RoleUpdateDTO,
-)
+from src.application.dto.rbac_dto import AssignPermissionsDTO, PermissionCreateDTO, PermissionListQueryDTO, RoleCreateDTO, RoleListQueryDTO, RoleUpdateDTO
 from src.application.services.rbac_service import RBACService
 from src.infrastructure.database import get_db
 
@@ -29,11 +22,7 @@ role_router = APIRouter()
 
 
 @role_router.post("")
-async def get_role_list(
-    query: RoleListQueryDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role:view")),
-):
+async def get_role_list(query: RoleListQueryDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role:view"))):
     """获取角色列表接口（分页）。
 
     需要 role:view 权限。
@@ -53,30 +42,14 @@ async def get_role_list(
     # 转换为前端期望的字段格式
     role_list = []
     for role in roles:
-        role_dict = {
-            "id": role.id,
-            "name": role.name,
-            "code": role.code,
-            "status": role.status,
-            "remark": role.remark or "",
-            "createTime": int(role.createTime.timestamp() * 1000) if role.createTime else None,
-        }
+        role_dict = {"id": role.id, "name": role.name, "code": role.code, "status": role.status, "remark": role.remark or "", "createTime": int(role.createTime.timestamp() * 1000) if role.createTime else None}
         role_list.append(role_dict)
 
-    return list_response(
-        list_data=role_list,
-        total=total,
-        page_size=query.pageSize,
-        current_page=query.pageNum,
-    )
+    return list_response(list_data=role_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
 
 @role_router.post("/create")
-async def create_role(
-    dto: RoleCreateDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role:manage"))
-):
+async def create_role(dto: RoleCreateDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role:manage"))):
     """创建角色接口。
 
     需要 role:manage 权限。
@@ -95,11 +68,7 @@ async def create_role(
 
 
 @role_router.get("/{role_id}")
-async def get_role(
-    role_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role:view"))
-):
+async def get_role(role_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role:view"))):
     """获取角色详情接口。
 
     需要 role:view 权限。
@@ -117,12 +86,7 @@ async def get_role(
 
 
 @role_router.put("/{role_id}")
-async def update_role(
-    role_id: str,
-    dto: RoleUpdateDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role:manage")),
-):
+async def update_role(role_id: str, dto: RoleUpdateDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role:manage"))):
     """更新角色接口。
 
     需要 role:manage 权限。
@@ -141,11 +105,7 @@ async def update_role(
 
 
 @role_router.delete("/{role_id}")
-async def delete_role(
-    role_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role:manage"))
-):
+async def delete_role(role_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role:manage"))):
     """删除角色接口。
 
     需要 role:manage 权限。
@@ -163,12 +123,7 @@ async def delete_role(
 
 
 @role_router.post("/{role_id}/permissions")
-async def assign_permissions(
-    role_id: str,
-    dto: AssignPermissionsDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role:manage"))
-):
+async def assign_permissions(role_id: str, dto: AssignPermissionsDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role:manage"))):
     """为角色分配权限接口。
 
     需要 role:manage 权限。
@@ -188,12 +143,7 @@ async def assign_permissions(
 
 
 @role_router.post("/{role_id}/menu")
-async def assign_role_menu(
-    role_id: str,
-    data: dict,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("role:manage"))
-):
+async def assign_role_menu(role_id: str, data: dict, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("role:manage"))):
     """为角色分配菜单权限接口。
 
     需要 role:manage 权限。
@@ -228,13 +178,7 @@ permission_router = APIRouter()
 
 
 @permission_router.get("/list")
-async def get_permission_list(
-    pageNum: int = Query(1, ge=1, description="页码"),
-    pageSize: int = Query(10, ge=1, le=100, description="每页条数"),
-    permissionName: str = Query(None, description="权限名称"),
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("permission:view")),
-):
+async def get_permission_list(pageNum: int = Query(1, ge=1, description="页码"), pageSize: int = Query(10, ge=1, le=100, description="每页条数"), permissionName: str = Query(None, description="权限名称"), db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("permission:view"))):
     """获取权限列表接口（分页）。
 
     需要 permission:view 权限。
@@ -257,11 +201,7 @@ async def get_permission_list(
 
 
 @permission_router.post("/")
-async def create_permission(
-    dto: PermissionCreateDTO,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("permission:manage")),
-):
+async def create_permission(dto: PermissionCreateDTO, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("permission:manage"))):
     """创建权限接口。
 
     需要 permission:manage 权限。
@@ -279,11 +219,7 @@ async def create_permission(
 
 
 @permission_router.delete("/{permission_id}")
-async def delete_permission(
-    permission_id: str,
-    db: AsyncSession = Depends(get_db),
-    _: dict = Depends(require_permission("permission:manage"))
-):
+async def delete_permission(permission_id: str, db: AsyncSession = Depends(get_db), _: dict = Depends(require_permission("permission:manage"))):
     """删除权限接口。
 
     需要 permission:manage 权限。

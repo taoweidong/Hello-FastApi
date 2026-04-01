@@ -26,13 +26,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         duration_ms = process_time * 1000
 
         # 记录请求完成
-        log_request(
-            method=request.method,
-            path=request.url.path,
-            status_code=response.status_code,
-            duration_ms=duration_ms,
-            client_ip=client_ip,
-        )
+        log_request(method=request.method, path=request.url.path, status_code=response.status_code, duration_ms=duration_ms, client_ip=client_ip)
 
         # 添加处理时间到响应头
         response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
@@ -52,13 +46,13 @@ class IPFilterMiddleware(BaseHTTPMiddleware):
 
         # 如果配置了白名单，只允许白名单中的 IP 访问
         if self.whitelist and client_ip not in self.whitelist:
-            logger.warning(f"IP {client_ip} not in whitelist, access denied")
-            return Response(content='{"detail": "Access denied"}', status_code=403, media_type="application/json")
+            logger.warning(f"IP {client_ip} 不在白名单中，访问被拒绝")
+            return Response(content='{"detail": "访问被拒绝"}', status_code=403, media_type="application/json")
 
         # 检查黑名单
         if client_ip in self.blacklist:
-            logger.warning(f"IP {client_ip} is blacklisted, access denied")
-            return Response(content='{"detail": "Access denied"}', status_code=403, media_type="application/json")
+            logger.warning(f"IP {client_ip} 在黑名单中，访问被拒绝")
+            return Response(content='{"detail": "访问被拒绝"}', status_code=403, media_type="application/json")
 
         response: Response = await call_next(request)
         return response

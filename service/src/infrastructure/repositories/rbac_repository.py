@@ -97,19 +97,13 @@ class RoleRepository(RoleRepositoryInterface):
 
     async def get_role_permissions(self, role_id: str) -> list[Permission]:
         """获取角色的权限列表。"""
-        result = await self.session.exec(
-            select(Permission)
-            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
-            .where(RolePermissionLink.role_id == role_id)
-        )
+        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).where(RolePermissionLink.role_id == role_id))
         return list(result.all())
 
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
         """为用户分配角色。"""
         # 检查是否已分配
-        result = await self.session.exec(
-            select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
-        )
+        result = await self.session.exec(select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id))
         if result.one_or_none() is not None:
             return False
 
@@ -127,9 +121,7 @@ class RoleRepository(RoleRepositoryInterface):
 
     async def get_user_roles(self, user_id: str) -> list[Role]:
         """获取用户的所有角色。"""
-        result = await self.session.exec(
-            select(Role).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id)
-        )
+        result = await self.session.exec(select(Role).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id))
         return list(result.all())
 
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
@@ -187,11 +179,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             菜单列表
         """
-        result = await self.session.exec(
-            select(Menu)
-            .join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id)
-            .where(RoleMenuLink.role_id == role_id)
-        )
+        result = await self.session.exec(select(Menu).join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id).where(RoleMenuLink.role_id == role_id))
         return list(result.all())
 
     async def get_role_menu_ids(self, role_id: str) -> list[str]:
@@ -203,9 +191,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             菜单ID列表
         """
-        result = await self.session.exec(
-            select(RoleMenuLink.menu_id).where(RoleMenuLink.role_id == role_id)
-        )
+        result = await self.session.exec(select(RoleMenuLink.menu_id).where(RoleMenuLink.role_id == role_id))
         return [str(menu_id) for menu_id in result.all()]
 
 
@@ -269,20 +255,10 @@ class PermissionRepository(PermissionRepositoryInterface):
 
     async def get_permissions_by_role(self, role_id: str) -> list[Permission]:
         """获取角色的权限列表。"""
-        result = await self.session.exec(
-            select(Permission)
-            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
-            .where(RolePermissionLink.role_id == role_id)
-        )
+        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).where(RolePermissionLink.role_id == role_id))
         return list(result.all())
 
     async def get_user_permissions(self, user_id: str) -> list[Permission]:
         """获取用户的所有权限（通过其角色）。"""
-        result = await self.session.exec(
-            select(Permission)
-            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
-            .join(UserRole, UserRole.role_id == RolePermissionLink.role_id)
-            .where(UserRole.user_id == user_id)
-            .distinct()
-        )
+        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).join(UserRole, UserRole.role_id == RolePermissionLink.role_id).where(UserRole.user_id == user_id).distinct())
         return list(result.all())

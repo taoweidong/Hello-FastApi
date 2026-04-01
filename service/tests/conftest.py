@@ -13,10 +13,10 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.infrastructure.database import get_db
 from src.main import app
 
-# 测试数据库 URL - 内存 SQLite
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# 测试数据库 URL - 使用共享内存 SQLite (支持多连接共享同一数据库)
+TEST_DATABASE_URL = "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true"
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
+test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
 
 
 @pytest.fixture(scope="session")
@@ -64,18 +64,7 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 @pytest_asyncio.fixture
 async def test_user_data() -> dict:
     """提供测试用户数据（使用新字段格式）。"""
-    return {
-        "username": "testuser",
-        "password": "TestPass123",
-        "nickname": "测试用户",
-        "email": "test@example.com",
-        "phone": "13800138000",
-        "sex": 0,
-        "status": 1,
-        "avatar": None,
-        "deptId": None,
-        "remark": "测试备注"
-    }
+    return {"username": "testuser", "password": "TestPass123", "nickname": "测试用户", "email": "test@example.com", "phone": "13800138000", "sex": 0, "status": 1, "avatar": None, "deptId": None, "remark": "测试备注"}
 
 
 @pytest_asyncio.fixture
@@ -87,15 +76,7 @@ async def auth_headers(client: AsyncClient, db_session: AsyncSession) -> AsyncGe
 
     # 创建测试用户
     service = UserService(db_session)
-    user = await service.create_user(
-        UserCreateDTO(
-            username="authtestuser",
-            password="TestPass123",
-            nickname="认证测试用户",
-            email="auth@example.com",
-            status=1
-        )
-    )
+    user = await service.create_user(UserCreateDTO(username="authtestuser", password="TestPass123", nickname="认证测试用户", email="auth@example.com", status=1))
     await db_session.commit()
 
     # 生成访问令牌

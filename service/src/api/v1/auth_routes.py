@@ -20,6 +20,11 @@ from src.infrastructure.repositories.user_repository import UserRepository
 router = APIRouter()
 
 
+def get_menu_repository() -> MenuRepository:
+    """获取菜单仓储实例的依赖注入。"""
+    return MenuRepository()
+
+
 @router.post("/login")
 async def login(dto: LoginDTO, db: AsyncSession = Depends(get_db)):
     """用户登录接口。
@@ -90,10 +95,7 @@ async def refresh_token(dto: RefreshTokenDTO, db: AsyncSession = Depends(get_db)
 
 
 @router.get("/mine")
-async def get_mine(
-    current_user: dict = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
+async def get_mine(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
     """获取当前登录用户的个人信息。
 
     Args:
@@ -107,16 +109,7 @@ async def get_mine(
     user = await user_repo.get_by_id(current_user["id"])
     if user is None:
         raise UnauthorizedError("用户不存在")
-    return success_response(
-        data={
-            "avatar": user.avatar or "",
-            "username": user.username,
-            "nickname": user.nickname or user.username,
-            "email": user.email or "",
-            "phone": user.phone or "",
-            "description": "",
-        }
-    )
+    return success_response(data={"avatar": user.avatar or "", "username": user.username, "nickname": user.nickname or user.username, "email": user.email or "", "phone": user.phone or "", "description": ""})
 
 
 @router.get("/mine-logs")
@@ -129,9 +122,7 @@ async def get_mine_logs(current_user: dict = Depends(get_current_active_user)):
     Returns:
         dict: 统一格式的安全日志响应，包含分页的日志列表
     """
-    return success_response(
-        data={"list": [], "total": 0, "pageSize": 10, "currentPage": 1}
-    )
+    return success_response(data={"list": [], "total": 0, "pageSize": 10, "currentPage": 1})
 
 
 @router.get("/get-async-routes")
@@ -151,26 +142,10 @@ async def get_async_routes(current_user: dict = Depends(get_current_active_user)
         "path": "/system",
         "meta": {"icon": "ri:settings-3-line", "title": "menus.pureSysManagement", "rank": 10},
         "children": [
-            {
-                "path": "/system/user/index",
-                "name": "SystemUser",
-                "meta": {"icon": "ri:admin-line", "title": "menus.pureUser", "roles": ["admin"]},
-            },
-            {
-                "path": "/system/role/index",
-                "name": "SystemRole",
-                "meta": {"icon": "ri:admin-fill", "title": "menus.pureRole", "roles": ["admin"]},
-            },
-            {
-                "path": "/system/menu/index",
-                "name": "SystemMenu",
-                "meta": {"icon": "ep:menu", "title": "menus.pureSystemMenu", "roles": ["admin"]},
-            },
-            {
-                "path": "/system/dept/index",
-                "name": "SystemDept",
-                "meta": {"icon": "ri:git-branch-line", "title": "menus.pureDept", "roles": ["admin"]},
-            },
+            {"path": "/system/user/index", "name": "SystemUser", "meta": {"icon": "ri:admin-line", "title": "menus.pureUser", "roles": ["admin"]}},
+            {"path": "/system/role/index", "name": "SystemRole", "meta": {"icon": "ri:admin-fill", "title": "menus.pureRole", "roles": ["admin"]}},
+            {"path": "/system/menu/index", "name": "SystemMenu", "meta": {"icon": "ep:menu", "title": "menus.pureSystemMenu", "roles": ["admin"]}},
+            {"path": "/system/dept/index", "name": "SystemDept", "meta": {"icon": "ri:git-branch-line", "title": "menus.pureDept", "roles": ["admin"]}},
         ],
     }
 
@@ -179,30 +154,10 @@ async def get_async_routes(current_user: dict = Depends(get_current_active_user)
         "path": "/monitor",
         "meta": {"icon": "ep:monitor", "title": "menus.pureSysMonitor", "rank": 11},
         "children": [
-            {
-                "path": "/monitor/online-user",
-                "component": "monitor/online/index",
-                "name": "OnlineUser",
-                "meta": {"icon": "ri:user-voice-line", "title": "menus.pureOnlineUser", "roles": ["admin"]},
-            },
-            {
-                "path": "/monitor/login-logs",
-                "component": "monitor/logs/login/index",
-                "name": "LoginLog",
-                "meta": {"icon": "ri:window-line", "title": "menus.pureLoginLog", "roles": ["admin"]},
-            },
-            {
-                "path": "/monitor/operation-logs",
-                "component": "monitor/logs/operation/index",
-                "name": "OperationLog",
-                "meta": {"icon": "ri:history-fill", "title": "menus.pureOperationLog", "roles": ["admin"]},
-            },
-            {
-                "path": "/monitor/system-logs",
-                "component": "monitor/logs/system/index",
-                "name": "SystemLog",
-                "meta": {"icon": "ri:file-search-line", "title": "menus.pureSystemLog", "roles": ["admin"]},
-            },
+            {"path": "/monitor/online-user", "component": "monitor/online/index", "name": "OnlineUser", "meta": {"icon": "ri:user-voice-line", "title": "menus.pureOnlineUser", "roles": ["admin"]}},
+            {"path": "/monitor/login-logs", "component": "monitor/logs/login/index", "name": "LoginLog", "meta": {"icon": "ri:window-line", "title": "menus.pureLoginLog", "roles": ["admin"]}},
+            {"path": "/monitor/operation-logs", "component": "monitor/logs/operation/index", "name": "OperationLog", "meta": {"icon": "ri:history-fill", "title": "menus.pureOperationLog", "roles": ["admin"]}},
+            {"path": "/monitor/system-logs", "component": "monitor/logs/system/index", "name": "SystemLog", "meta": {"icon": "ri:file-search-line", "title": "menus.pureSystemLog", "roles": ["admin"]}},
         ],
     }
 
@@ -211,42 +166,19 @@ async def get_async_routes(current_user: dict = Depends(get_current_active_user)
         "path": "/permission",
         "meta": {"title": "menus.purePermission", "icon": "ep:lollipop", "rank": 9},
         "children": [
-            {
-                "path": "/permission/page/index",
-                "name": "PermissionPage",
-                "meta": {"title": "menus.purePermissionPage", "roles": ["admin", "common"]},
-            },
+            {"path": "/permission/page/index", "name": "PermissionPage", "meta": {"title": "menus.purePermissionPage", "roles": ["admin", "common"]}},
             {
                 "path": "/permission/button",
                 "meta": {"title": "menus.purePermissionButton", "roles": ["admin", "common"]},
                 "children": [
-                    {
-                        "path": "/permission/button/router",
-                        "component": "permission/button/index",
-                        "name": "PermissionButtonRouter",
-                        "meta": {
-                            "title": "menus.purePermissionButtonRouter",
-                            "auths": ["permission:btn:add", "permission:btn:edit", "permission:btn:delete"],
-                        },
-                    },
-                    {
-                        "path": "/permission/button/login",
-                        "component": "permission/button/perms",
-                        "name": "PermissionButtonLogin",
-                        "meta": {"title": "menus.purePermissionButtonLogin"},
-                    },
+                    {"path": "/permission/button/router", "component": "permission/button/index", "name": "PermissionButtonRouter", "meta": {"title": "menus.purePermissionButtonRouter", "auths": ["permission:btn:add", "permission:btn:edit", "permission:btn:delete"]}},
+                    {"path": "/permission/button/login", "component": "permission/button/perms", "name": "PermissionButtonLogin", "meta": {"title": "menus.purePermissionButtonLogin"}},
                 ],
             },
         ],
     }
 
-    return success_response(
-        data=[
-            system_management_router,
-            system_monitor_router,
-            permission_router,
-        ]
-    )
+    return success_response(data=[system_management_router, system_monitor_router, permission_router])
 
 
 # =============================================================================
@@ -255,12 +187,9 @@ async def get_async_routes(current_user: dict = Depends(get_current_active_user)
 
 
 @router.get("/list-all-role")
-async def list_all_roles(
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user),
-):
+async def list_all_roles(db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_active_user)):
     """获取所有角色简单列表。
-    
+
     前端调用: GET /api/system/list-all-role
     用于用户管理中的角色分配下拉选择。
     """
@@ -271,13 +200,9 @@ async def list_all_roles(
 
 
 @router.post("/list-role-ids")
-async def list_role_ids(
-    data: dict,
-    db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user),
-):
+async def list_role_ids(data: dict, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_active_user)):
     """根据用户ID获取对应角色ID列表。
-    
+
     前端调用: POST /api/system/list-role-ids
     请求体: { "userId": 1 }
     """
@@ -291,16 +216,12 @@ async def list_role_ids(
 
 
 @router.post("/role-menu")
-async def get_role_menu(
-    current_user: dict = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
+async def get_role_menu(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository)):
     """获取角色菜单权限树。
-    
+
     前端调用: POST /api/system/role-menu
     返回菜单权限树形结构，用于角色权限分配。
     """
-    menu_repo = MenuRepository()
     all_menus = await menu_repo.get_all(db)
 
     # 转换为前端期望的格式
@@ -318,13 +239,9 @@ async def get_role_menu(
 
 
 @router.post("/role-menu-ids")
-async def get_role_menu_ids(
-    data: dict,
-    current_user: dict = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
+async def get_role_menu_ids(data: dict, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository)):
     """根据角色ID获取菜单ID列表。
-    
+
     前端调用: POST /api/system/role-menu-ids
     请求体: { "id": "xxx" }
     返回角色已分配的菜单ID列表。
@@ -338,7 +255,6 @@ async def get_role_menu_ids(
     # 如果是超级管理员角色（code=admin），返回所有菜单
     role = await role_repo.get_by_id(str(role_id))
     if role and role.code == "admin":
-        menu_repo = MenuRepository()
         all_menus = await menu_repo.get_all(db)
         menu_ids = [m.id for m in all_menus]
         return success_response(data=menu_ids)

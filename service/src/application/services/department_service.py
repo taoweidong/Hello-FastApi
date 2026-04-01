@@ -65,16 +65,7 @@ class DepartmentService:
             parent_id = str(dto.parentId)
 
         # 创建部门
-        department = Department(
-            name=dto.name,
-            parent_id=parent_id,
-            sort=dto.sort,
-            principal=dto.principal,
-            phone=dto.phone,
-            email=dto.email,
-            status=dto.status,
-            remark=dto.remark,
-        )
+        department = Department(name=dto.name, parent_id=parent_id, sort=dto.sort, principal=dto.principal, phone=dto.phone, email=dto.email, status=dto.status, remark=dto.remark)
 
         created = await self.dept_repo.create(department, self.session)
         await self.session.commit()

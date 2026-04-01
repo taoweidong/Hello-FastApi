@@ -110,9 +110,7 @@ class Settings(BaseSettings):
 class DevelopmentSettings(Settings):
     """开发环境配置。"""
 
-    model_config = SettingsConfigDict(
-        env_file=[".env", ".env.development"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(env_file=[".env", ".env.development"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True)
 
     DEBUG: bool = True
     LOG_LEVEL: str = "DEBUG"
@@ -121,9 +119,7 @@ class DevelopmentSettings(Settings):
 class ProductionSettings(Settings):
     """生产环境配置。"""
 
-    model_config = SettingsConfigDict(
-        env_file=[".env", ".env.production"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(env_file=[".env", ".env.production"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True)
 
     DEBUG: bool = False
     LOG_LEVEL: str = "WARNING"
@@ -132,9 +128,7 @@ class ProductionSettings(Settings):
 class TestingSettings(Settings):
     """测试环境配置。"""
 
-    model_config = SettingsConfigDict(
-        env_file=[".env", ".env.testing"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
-    )
+    model_config = SettingsConfigDict(env_file=[".env", ".env.testing"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True)
 
     DEBUG: bool = True
     DATABASE_URL: str = "sqlite+aiosqlite:///./sql/test.db"
@@ -173,11 +167,7 @@ def get_settings() -> Settings:
         env = "development"
 
     # 返回对应环境的配置
-    settings_map: dict[str, type[Settings]] = {
-        "development": DevelopmentSettings,
-        "production": ProductionSettings,
-        "testing": TestingSettings,
-    }
+    settings_map: dict[str, type[Settings]] = {"development": DevelopmentSettings, "production": ProductionSettings, "testing": TestingSettings}
 
     settings_class = settings_map.get(env, DevelopmentSettings)
     return settings_class()

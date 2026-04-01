@@ -2,15 +2,7 @@
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.rbac_dto import (
-    PermissionCreateDTO,
-    PermissionListQueryDTO,
-    PermissionResponseDTO,
-    RoleCreateDTO,
-    RoleListQueryDTO,
-    RoleResponseDTO,
-    RoleUpdateDTO,
-)
+from src.application.dto.rbac_dto import PermissionCreateDTO, PermissionListQueryDTO, PermissionResponseDTO, RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
 from src.core.exceptions import ConflictError, NotFoundError
 from src.infrastructure.database.models import Permission, Role
 from src.infrastructure.repositories.rbac_repository import PermissionRepository, RoleRepository
@@ -38,7 +30,7 @@ class RBACService:
             name=dto.name,
             code=dto.code,
             description=dto.remark,  # 映射 remark 到 description
-            status=dto.status
+            status=dto.status,
         )
         role = await self.role_repo.create(role)
 
@@ -60,14 +52,14 @@ class RBACService:
         # 获取总数
         total = await self.role_repo.count(
             role_name=query.name,  # 前端使用 name 字段
-            status=query.status
+            status=query.status,
         )
         # 获取列表
         roles = await self.role_repo.get_all(
             page_num=query.pageNum,
             page_size=query.pageSize,
             role_name=query.name,  # 前端使用 name 字段
-            status=query.status
+            status=query.status,
         )
         # 转换为响应DTO
         role_responses = []
@@ -136,13 +128,7 @@ class RBACService:
         if await self.perm_repo.get_by_code(dto.code):
             raise ConflictError(f"权限编码 '{dto.code}' 已存在")
 
-        permission = Permission(
-            name=dto.name,
-            code=dto.code,
-            category=dto.category,
-            description=dto.description,
-            status=dto.status
-        )
+        permission = Permission(name=dto.name, code=dto.code, category=dto.category, description=dto.description, status=dto.status)
         permission = await self.perm_repo.create(permission)
         return self._perm_to_response(permission)
 
@@ -151,11 +137,7 @@ class RBACService:
         # 获取总数
         total = await self.perm_repo.count(permission_name=query.permissionName)
         # 获取列表
-        perms = await self.perm_repo.get_all(
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            permission_name=query.permissionName
-        )
+        perms = await self.perm_repo.get_all(page_num=query.pageNum, page_size=query.pageSize, permission_name=query.permissionName)
         return [self._perm_to_response(p) for p in perms], total
 
     async def delete_permission(self, permission_id: str) -> bool:
@@ -170,16 +152,16 @@ class RBACService:
         """为用户分配角色。"""
         role = await self.role_repo.get_by_id(role_id)
         if role is None:
-            raise NotFoundError(f"Role with id '{role_id}' not found")
+            raise NotFoundError(f"角色 ID '{role_id}' 不存在")
 
         if not await self.role_repo.assign_role_to_user(user_id, role_id):
-            raise ConflictError("Role already assigned to user")
+            raise ConflictError("角色已分配给该用户")
         return True
 
     async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
         """移除用户的角色。"""
         if not await self.role_repo.remove_role_from_user(user_id, role_id):
-            raise NotFoundError("Role assignment not found")
+            raise NotFoundError("角色分配关系不存在")
         return True
 
     async def get_user_roles(self, user_id: str) -> list[RoleResponseDTO]:
@@ -213,18 +195,10 @@ class RBACService:
             status=role.status,
             permissions=perm_list,
             createTime=role.created_at,
-            updateTime=role.updated_at
+            updateTime=role.updated_at,
         )
 
     @staticmethod
     def _perm_to_response(perm: Permission) -> PermissionResponseDTO:
         """将Permission模型转换为响应DTO。"""
-        return PermissionResponseDTO(
-            id=perm.id,
-            name=perm.name,
-            code=perm.code,
-            category=perm.category,
-            description=perm.description,
-            status=perm.status,
-            createTime=perm.created_at
-        )
+        return PermissionResponseDTO(id=perm.id, name=perm.name, code=perm.code, category=perm.category, description=perm.description, status=perm.status, createTime=perm.created_at)

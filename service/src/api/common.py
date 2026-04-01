@@ -29,6 +29,7 @@ class HealthResponse(SQLModel):
 
 class UnifiedResponse(BaseModel):
     """统一响应格式（Pure Admin 前端标准）"""
+
     code: int = 0
     message: str = "操作成功"
     data: Any = None
@@ -36,6 +37,7 @@ class UnifiedResponse(BaseModel):
 
 class PageResponse(BaseModel):
     """分页响应格式"""
+
     total: int
     pageNum: int
     pageSize: int
@@ -60,12 +62,7 @@ def list_response(list_data: list, total: int, page_size: int = 10, current_page
     Returns:
         符合 Pure Admin 前端标准的分页响应字典
     """
-    return success_response(data={
-        "list": list_data,
-        "total": total,
-        "pageSize": page_size,
-        "currentPage": current_page
-    })
+    return success_response(data={"list": list_data, "total": total, "pageSize": page_size, "currentPage": current_page})
 
 
 def page_response(rows: list, total: int, page_num: int, page_size: int) -> dict:
@@ -74,13 +71,7 @@ def page_response(rows: list, total: int, page_num: int, page_size: int) -> dict
     注意：此函数保留用于向后兼容，新代码请使用 list_response()
     """
     total_page = math.ceil(total / page_size) if page_size > 0 else 0
-    return success_response(data={
-        "total": total,
-        "pageNum": page_num,
-        "pageSize": page_size,
-        "totalPage": total_page,
-        "rows": rows
-    })
+    return success_response(data={"total": total, "pageNum": page_num, "pageSize": page_size, "totalPage": total_page, "rows": rows})
 
 
 def error_response(message: str, code: int = 400) -> dict:

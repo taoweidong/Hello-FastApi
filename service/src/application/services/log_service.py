@@ -5,12 +5,7 @@
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.log_dto import (
-    BatchDeleteLogDTO,
-    LoginLogListQueryDTO,
-    OperationLogListQueryDTO,
-    SystemLogListQueryDTO,
-)
+from src.application.dto.log_dto import BatchDeleteLogDTO, LoginLogListQueryDTO, OperationLogListQueryDTO, SystemLogListQueryDTO
 from src.core.exceptions import NotFoundError
 from src.infrastructure.repositories.log_repository import LogRepository
 
@@ -45,15 +40,7 @@ class LogService:
         if query.status:
             status = int(query.status)
 
-        logs, total = await self.log_repo.get_login_logs(
-            session=self.session,
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            username=query.username,
-            status=status,
-            start_time=start_time,
-            end_time=end_time,
-        )
+        logs, total = await self.log_repo.get_login_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, username=query.username, status=status, start_time=start_time, end_time=end_time)
 
         return logs, total
 
@@ -103,15 +90,7 @@ class LogService:
         if query.status:
             status = int(query.status)
 
-        logs, total = await self.log_repo.get_operation_logs(
-            session=self.session,
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            module=query.module,
-            status=status,
-            start_time=start_time,
-            end_time=end_time,
-        )
+        logs, total = await self.log_repo.get_operation_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, module=query.module, status=status, start_time=start_time, end_time=end_time)
 
         return logs, total
 
@@ -156,14 +135,7 @@ class LogService:
             start_time = query.requestTime[0]
             end_time = query.requestTime[1]
 
-        logs, total = await self.log_repo.get_system_logs(
-            session=self.session,
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            module=query.module,
-            start_time=start_time,
-            end_time=end_time,
-        )
+        logs, total = await self.log_repo.get_system_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, module=query.module, start_time=start_time, end_time=end_time)
 
         return logs, total
 

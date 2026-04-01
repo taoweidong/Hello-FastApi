@@ -30,60 +30,25 @@
 ```
 Hello-FastApi/
 ├── docs/                       # 文档目录
-│   ├── api/                    # API 文档
-│   └── design/                 # 设计文档
 ├── docker/                     # Docker 配置
 │   ├── Dockerfile
 │   └── docker-compose.yml
 ├── logs/                       # 日志目录
-│   ├── app.log                 # 应用日志
-│   ├── access.log              # 访问日志
-│   └── error.log               # 错误日志
 ├── scripts/                    # 脚本文件
-│   ├── lint.sh
-│   ├── setup_dev.bat
-│   ├── setup_dev.sh
-│   └── verify_api.py
 ├── sql/                        # 数据库文件目录
-│   ├── dev.db                  # 开发数据库
-│   └── test.db                 # 测试数据库
 ├── src/                        # 源代码（所有业务代码）
 │   ├── api/                    # API 接口层
-│   │   ├── v1/                 # V1 版本接口
-│   │   │   ├── auth_routes.py  # 认证路由
-│   │   │   ├── rbac_routes.py  # RBAC 路由
-│   │   │   ├── menu_routes.py  # 菜单路由
-│   │   │   ├── system_routes.py # 系统路由
-│   │   │   └── user_routes.py  # 用户路由
-│   │   ├── common.py           # 公共响应和转换工具
-│   │   └── dependencies.py    # 依赖注入
 │   ├── application/            # 应用层
 │   │   ├── dto/                # 数据传输对象
-│   │   └── services/           # 应用服务
-│   ├── config/                 # 配置模块
-│   │   ├── __init__.py
-│   │   ├── asgi.py             # ASGI 入口
-│   │   └── settings.py         # 应用配置
-│   ├── core/                   # 核心模块
-│   │   ├── constants.py        # 常量定义
-│   │   ├── decorators.py       # 装饰器
-│   │   ├── exceptions.py       # 异常类
-│   │   ├── logger.py           # 日志配置 (loguru)
-│   │   ├── middlewares.py      # 中间件
-│   │   ├── utils.py            # 工具函数
-│   │   └── validators.py       # 公共验证器
+│   │   ├── services
 │   ├── domain/                 # 领域层
-│   │   ├── auth/               # 认证领域
-│   │   ├── department/         # 部门领域
-│   │   ├── log/                # 日志领域
-│   │   ├── menu/               # 菜单领域
-│   │   ├── rbac/               # RBAC 领域
-│   │   └── user/               # 用户领域
-│   ├── infrastructure/         # 基础设施层
-│   │   ├── cache/              # 缓存实现
-│   │   ├── database/           # 数据库实现
-│   │   │   ├── connection.py
-│   │   │   └── models.py       # ORM 模型
+│   │   └── services/           # 应用服务
+    │   │   ├── auth/               # 认证领域
+    │   │   ├── department/         # 部门领域
+    │   │   ├── log/                # 日志领域
+    │   │   ├── menu/               # 菜单领域
+    │   │   ├── rbac/               # RBAC 领域
+    │   │   └── user/               # 用户领域
 │   │   └── repositories/       # 仓储实现
 │   │       ├── base.py         # 仓储基类
 │   │       ├── department_repository.py
@@ -91,6 +56,24 @@ Hello-FastApi/
 │   │       ├── menu_repository.py
 │   │       ├── rbac_repository.py
 │   │       └── user_repository.py
+│   ├── infrastructure/         # 基础设施层
+    │   ├── config/                 # 配置模块
+    │   │   ├── __init__.py
+    │   │   ├── asgi.py             # ASGI 入口
+    │   │   └── settings.py         # 应用配置
+│   │   ├── common.py           # 公共响应和转换工具
+│   │   └── dependencies.py    # 依赖注入
+│   │   ├── constants.py        # 常量定义
+│   │   ├── decorators.py       # 装饰器
+│   │   ├── exceptions.py       # 异常类
+│   │   ├── logger.py           # 日志配置 (loguru)
+│   │   ├── middlewares.py      # 中间件
+│   │   ├── utils.py            # 工具函数
+│   │   └── validators.py       # 公共验证器
+│   │   ├── cache/              # 缓存实现
+│   │   ├── database/           # 数据库实现
+│   │   │   ├── connection.py
+│   │   │   └── models.py       # ORM 模型
 │   └── main.py                 # 应用入口
 ├── tests/                      # 测试代码
 │   ├── integration/            # 集成测试
@@ -109,6 +92,16 @@ Hello-FastApi/
 ├── pyproject.toml              # 项目配置
 └── README.md
 ```
+- 调用关系：接口层(api) → 应用层(application-services) → 领域层(domain-services)
+- 基础设施层(infrastructure) 实现 领域层(domain) 定义的抽象接口（仓储、领域服务等），但 领域层不依赖基础设施层（依赖倒置原则）。
+- 将项目中的 src目录下的所有文件清空，服务仍然可以启动，即基础设施不依赖任何src下的具体业务逻辑。
+
+层级	职责
+接口层	处理 HTTP 请求/响应，参数校验，认证授权，调用应用服务，返回结果。不包含业务逻辑。
+应用层	编排用例：获取输入（DTO），调用领域对象，协调事务边界，调用仓储，发布领域事件。不包含核心业务规则。
+领域层	核心业务逻辑：实体、值对象、聚合根、领域服务、仓储接口、领域事件。确保业务规则不变性。
+基础设施层	技术实现：数据库访问（ORM）、外部服务调用、配置管理、日志等。实现领域层定义的抽象接口。
+
 
 ## 快速开始
 
@@ -214,31 +207,6 @@ python -m scripts.cli seedrbac        # 填充 RBAC 初始数据
 - 所有公共接口使用类型提示
 - 所有代码注释使用中文描述
 
-### 公共组件
-
-#### 验证器 (`src/core/validators.py`)
-提供通用的 Pydantic 验证器：
-- `empty_str_to_none`: 将空字符串转换为 None
-- `empty_str_or_zero_to_none`: 将空字符串或 0 转换为 None
-- `parse_time_range`: 解析时间范围参数
-- `parse_status`: 解析状态参数
-
-#### 仓储基类 (`src/infrastructure/repositories/base.py`)
-提供通用的 CRUD 和分页功能：
-- `get_by_id`: 根据 ID 获取实体
-- `get_all_with_pagination`: 分页获取实体列表
-- `count`: 获取实体总数
-- `create`, `update`, `delete`: CRUD 操作
-- `batch_delete`: 批量删除
-- `exists`: 检查字段值是否存在
-
-#### 响应工具 (`src/api/common.py`)
-提供统一的响应格式和转换工具：
-- `success_response`: 成功响应
-- `list_response`: 列表响应
-- `model_to_dict`: 模型转字典
-- `datetime_to_timestamp`: 日期转时间戳
-
 ### 代码检查
 
 ```bash
@@ -270,35 +238,6 @@ pytest --cov=src --cov-report=term-missing
 **集成测试：**
 - `test_api.py`: API 端点集成测试
 
-## API 概览
-
-### 认证接口
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| POST | /api/system/login | 用户登录 |
-| POST | /api/system/register | 用户注册 |
-| POST | /api/system/logout | 用户登出 |
-| POST | /api/system/refresh-token | 刷新令牌 |
-
-### 用户接口
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| POST | /api/system/user | 获取用户列表 |
-| POST | /api/system/user/create | 创建用户 |
-| GET | /api/system/user/{id} | 获取用户详情 |
-| PUT | /api/system/user/{id} | 更新用户 |
-| DELETE | /api/system/user/{id} | 删除用户 |
-
-### RBAC 接口
-
-| 方法 | 路径 | 描述 |
-|------|------|------|
-| POST | /api/system/role | 获取角色列表 |
-| POST | /api/system/role/create | 创建角色 |
-| GET | /api/system/permission/list | 获取权限列表 |
-| POST | /api/system/permission/ | 创建权限 |
 
 ## 部署
 

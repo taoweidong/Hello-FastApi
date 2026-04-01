@@ -1,13 +1,6 @@
 """公共验证器的单元测试。"""
 
-import pytest
-
-from src.core.validators import (
-    empty_str_to_none,
-    empty_str_or_zero_to_none,
-    parse_time_range,
-    parse_status,
-)
+from src.core.validators import empty_str_or_zero_to_none, empty_str_to_none, parse_status, parse_time_range
 
 
 class TestEmptyStrToNone:

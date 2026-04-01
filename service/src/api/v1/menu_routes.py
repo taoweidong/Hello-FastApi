@@ -12,7 +12,6 @@ from src.api.dependencies import get_current_active_user, require_permission
 from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
 from src.application.services.menu_service import MenuService
 from src.infrastructure.database.connection import get_db
-from src.infrastructure.repositories.menu_repository import MenuRepository
 
 menu_router = APIRouter()
 
@@ -23,56 +22,38 @@ def get_menu_service(session: AsyncSession = Depends(get_db)) -> MenuService:
 
 
 @menu_router.post("")
-async def get_menu_list(
-    session: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_permission("menu:view")),
-    menu_service: MenuService = Depends(get_menu_service),
-):
+async def get_menu_list(session: AsyncSession = Depends(get_db), current_user: dict = Depends(require_permission("menu:view")), menu_service: MenuService = Depends(get_menu_service)):
     """获取菜单列表（扁平结构）。
 
     前端调用: POST /api/system/menu
     返回扁平列表格式（非树形），符合 Pure Admin 前端标准。
     前端会自动将扁平列表转换为树形结构。
     """
-    # 直接使用 Service 层的 _to_response 方法，不再做额外的字段转换
-    menu_repo = MenuRepository()
-    all_menus = await menu_repo.get_all(session)
-    
+    # 直接使用 Service 层的 menu_repo 获取菜单列表
+    all_menus = await menu_service.menu_repo.get_all(session)
+
     # 转换为 Pure Admin 标准格式
     menu_list = [menu_service._to_response(menu) for menu in all_menus]
-    
+
     return success_response(data=menu_list)
 
 
 @menu_router.get("/tree")
-async def get_menu_tree(
-    session: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_permission("menu:view")),
-    menu_service: MenuService = Depends(get_menu_service),
-):
+async def get_menu_tree(session: AsyncSession = Depends(get_db), current_user: dict = Depends(require_permission("menu:view")), menu_service: MenuService = Depends(get_menu_service)):
     """获取完整菜单树。"""
     tree = await menu_service.get_menu_tree(session)
     return success_response(data=tree)
 
 
 @menu_router.get("/user-menus")
-async def get_user_menus(
-    session: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_active_user),
-    menu_service: MenuService = Depends(get_menu_service),
-):
+async def get_user_menus(session: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_active_user), menu_service: MenuService = Depends(get_menu_service)):
     """获取当前用户可访问的菜单。"""
     menus = await menu_service.get_user_menus(current_user["id"], session)
     return success_response(data=menus)
 
 
 @menu_router.post("/create")
-async def create_menu(
-    dto: MenuCreateDTO,
-    session: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_permission("menu:add")),
-    menu_service: MenuService = Depends(get_menu_service),
-):
+async def create_menu(dto: MenuCreateDTO, session: AsyncSession = Depends(get_db), current_user: dict = Depends(require_permission("menu:add")), menu_service: MenuService = Depends(get_menu_service)):
     """创建菜单。
 
     前端调用: POST /api/system/menu/create
@@ -82,25 +63,14 @@ async def create_menu(
 
 
 @menu_router.put("/{menu_id}")
-async def update_menu(
-    menu_id: str,
-    dto: MenuUpdateDTO,
-    session: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_permission("menu:edit")),
-    menu_service: MenuService = Depends(get_menu_service),
-):
+async def update_menu(menu_id: str, dto: MenuUpdateDTO, session: AsyncSession = Depends(get_db), current_user: dict = Depends(require_permission("menu:edit")), menu_service: MenuService = Depends(get_menu_service)):
     """更新菜单。"""
     menu = await menu_service.update_menu(menu_id, dto, session)
     return success_response(data=menu, message="更新成功")
 
 
 @menu_router.delete("/{menu_id}")
-async def delete_menu(
-    menu_id: str,
-    session: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(require_permission("menu:delete")),
-    menu_service: MenuService = Depends(get_menu_service),
-):
+async def delete_menu(menu_id: str, session: AsyncSession = Depends(get_db), current_user: dict = Depends(require_permission("menu:delete")), menu_service: MenuService = Depends(get_menu_service)):
     """删除菜单。"""
     await menu_service.delete_menu(menu_id, session)
     return success_response(message="删除成功")
