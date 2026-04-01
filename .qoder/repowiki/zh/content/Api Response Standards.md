@@ -1,4 +1,4 @@
-# Api 响应标准
+# API 响应标准
 
 <cite>
 **本文档引用的文件**
@@ -16,7 +16,15 @@
 - [service/pyproject.toml](file://service/pyproject.toml)
 - [README.md](file://README.md)
 - [service/README.md](file://service/README.md)
+- [service/tests/integration/test_api.py](file://service/tests/integration/test_api.py)
 </cite>
+
+## 更新摘要
+**变更内容**
+- 统一的API响应格式标准化改进
+- `list_response` 函数响应格式更新：从 `{"rows": rows, "total": total, "pageNum": page_num, "pageSize": page_size, "totalPage": total_page}` 改为 `{"list": list_data, "total": total, "pageSize": page_size, "currentPage": current_page}`
+- `page_response` 函数标记为向后兼容，建议使用新的 `list_response`
+- 增强的响应工具函数文档说明
 
 ## 目录
 1. [简介](#简介)
@@ -34,6 +42,8 @@
 Hello-FastApi 是一个基于 FastAPI 框架的 RESTful API 服务，采用 DDD（领域驱动设计）架构和 RBAC 权限控制。该项目的核心特色之一是实现了标准化的 API 响应格式，确保前后端交互的一致性和可靠性。
 
 该项目遵循 Pure Admin 前端标准，提供了统一的响应格式和错误处理机制，支持 JWT 双令牌认证、RBAC 细粒度权限控制、动态路由加载等功能。
+
+**更新** 本版本重点改进了统一的API响应格式标准化，特别是分页响应格式的统一化处理。
 
 ## 项目结构
 
@@ -119,21 +129,23 @@ PageResponse --> ListResponse : "列表响应"
 ```
 
 **图表来源**
-- [service/src/api/common.py:30-44](file://service/src/api/common.py#L30-L44)
+- [service/src/api/common.py:30-46](file://service/src/api/common.py#L30-L46)
 
 ### 响应工具函数
 
-项目提供了多种响应工具函数来简化 API 响应的构建：
+项目提供了多种响应工具函数来简化 API 响应的构建，其中分页响应格式已标准化：
 
-| 函数名称 | 功能描述 | 参数 | 返回值 |
-|---------|---------|------|--------|
-| success_response | 构建成功响应 | data: Any = None, message: str = "操作成功", code: int = 0 | dict |
-| list_response | 构建列表响应 | list_data: list, total: int, page_size: int = 10, current_page: int = 1 | dict |
-| page_response | 构建分页响应 | rows: list, total: int, page_num: int, page_size: int | dict |
-| error_response | 构建错误响应 | message: str, code: int = 400 | dict |
+| 函数名称 | 功能描述 | 参数 | 返回值 | 更新说明 |
+|---------|---------|------|--------|----------|
+| success_response | 构建成功响应 | data: Any = None, message: str = "操作成功", code: int = 0 | dict | 标准化统一响应格式 |
+| list_response | 构建列表响应 | list_data: list, total: int, page_size: int = 10, current_page: int = 1 | dict | **更新** 新格式：{"list": list_data, "total": total, "pageSize": page_size, "currentPage": current_page} |
+| page_response | 构建分页响应 | rows: list, total: int, page_num: int, page_size: int | dict | **更新** 向后兼容，建议使用 list_response |
+| error_response | 构建错误响应 | message: str, code: int = 400 | dict | 标准化错误响应格式 |
+
+**更新** 分页响应格式标准化：`list_response` 函数现在使用新的响应格式，移除了 `pageNum` 和 `totalPage` 字段，改为更简洁的 `currentPage` 字段，与前端 Pure Admin 标准保持一致。
 
 **章节来源**
-- [service/src/api/common.py:46-88](file://service/src/api/common.py#L46-L88)
+- [service/src/api/common.py:48-79](file://service/src/api/common.py#L48-L79)
 
 ### 自定义异常类
 
@@ -210,8 +222,8 @@ Handler-->>Client : 返回错误响应
 ```
 
 **图表来源**
-- [service/src/main.py:61-82](file://service/src/main.py#L61-L82)
-- [service/src/api/common.py:46-88](file://service/src/api/common.py#L46-L88)
+- [service/src/main.py:61-73](file://service/src/main.py#L61-L73)
+- [service/src/api/common.py:48-79](file://service/src/api/common.py#L48-L79)
 
 ## 详细组件分析
 
@@ -247,15 +259,15 @@ Auth-->>Client : {"code" : 0, "message" : "刷新成功", "data" : {...}}
 ```
 
 **图表来源**
-- [service/src/api/v1/auth_routes.py:23-89](file://service/src/api/v1/auth_routes.py#L23-L89)
-- [service/src/api/common.py:46-48](file://service/src/api/common.py#L46-L48)
+- [service/src/api/v1/auth_routes.py:28-94](file://service/src/api/v1/auth_routes.py#L28-L94)
+- [service/src/api/common.py:48-50](file://service/src/api/common.py#L48-L50)
 
 **章节来源**
-- [service/src/api/v1/auth_routes.py:1-349](file://service/src/api/v1/auth_routes.py#L1-L349)
+- [service/src/api/v1/auth_routes.py:1-265](file://service/src/api/v1/auth_routes.py#L1-L265)
 
 ### 用户管理接口响应标准
 
-用户管理模块提供了完整的 CRUD 操作，所有接口都遵循统一的响应格式：
+用户管理模块提供了完整的 CRUD 操作，所有接口都遵循统一的响应格式。**更新** 分页响应现在使用标准化的 `list_response` 函数：
 
 ```mermaid
 flowchart TD
@@ -266,27 +278,29 @@ Valid --> |是| Process["处理业务逻辑"]
 Process --> Success{"操作成功?"}
 Success --> |否| BusinessError["抛出业务异常"]
 Success --> |是| Transform["转换数据格式"]
-Transform --> Response["构建统一响应<br/>{'code': 0, 'message': '操作成功', 'data': {}}"]
+Transform --> ListResponse["使用 list_response 构建统一响应<br/>{'code': 0, 'message': '操作成功', 'data': {'list': [...], 'total': n, 'pageSize': 10, 'currentPage': 1}}"]
 BusinessError --> ErrorHandler["异常处理器"]
 ErrorHandler --> ErrorResp["返回标准化错误响应"]
-Response --> End([结束])
+ListResponse --> End([结束])
 ErrorResp --> End
 ErrorResponse --> End
 ```
 
+**更新** 分页响应格式标准化：使用新的 `list_response` 函数，返回格式为 `{"list": list_data, "total": total, "pageSize": page_size, "currentPage": current_page}`，移除了 `pageNum` 和 `totalPage` 字段，与前端 Pure Admin 标准保持一致。
+
 **图表来源**
-- [service/src/api/v1/user_routes.py:28-76](file://service/src/api/v1/user_routes.py#L28-L76)
-- [service/src/api/common.py:46-88](file://service/src/api/common.py#L46-L88)
+- [service/src/api/v1/user_routes.py:19-58](file://service/src/api/v1/user_routes.py#L19-L58)
+- [service/src/api/common.py:53-65](file://service/src/api/common.py#L53-L65)
 
 **章节来源**
-- [service/src/api/v1/user_routes.py:1-301](file://service/src/api/v1/user_routes.py#L1-L301)
+- [service/src/api/v1/user_routes.py:1-241](file://service/src/api/v1/user_routes.py#L1-L241)
 
 ### 系统管理接口响应标准
 
-系统管理模块提供了部门管理、日志管理等功能，所有接口都遵循统一的响应格式：
+系统管理模块提供了部门管理、日志管理等功能，所有接口都遵循统一的响应格式。**更新** 日志管理接口现在使用标准化的 `list_response` 函数：
 
 **章节来源**
-- [service/src/api/v1/system_routes.py:1-474](file://service/src/api/v1/system_routes.py#L1-L474)
+- [service/src/api/v1/system_routes.py:1-351](file://service/src/api/v1/system_routes.py#L1-L351)
 
 ### 数据传输对象（DTO）
 
@@ -416,7 +430,7 @@ L --> K
 | 业务逻辑错误 | 400 | {"code": 400, "message": "Business error"} | 检查业务规则 |
 
 **章节来源**
-- [service/src/main.py:61-82](file://service/src/main.py#L61-L82)
+- [service/src/main.py:61-73](file://service/src/main.py#L61-L73)
 - [service/src/core/exceptions.py:13-59](file://service/src/core/exceptions.py#L13-L59)
 
 ### 日志和监控
@@ -452,12 +466,14 @@ Logger --> Critical
 
 ## 结论
 
-Hello-FastApi 项目通过实现标准化的 API 响应格式和完善的异常处理机制，为前后端交互提供了可靠的保障。项目的主要优势包括：
+Hello-FastApi 项目通过实现标准化的 API 响应格式和完善的异常处理机制，为前后端交互提供了可靠的保障。**更新** 本版本的重点改进包括：
 
-1. **一致性**：所有接口遵循统一的响应格式，便于前端处理
-2. **可维护性**：清晰的分层架构和模块化设计
-3. **可扩展性**：基于 FastAPI 的高性能异步处理能力
-4. **安全性**：JWT 双令牌认证和 RBAC 权限控制
-5. **可观测性**：完整的日志记录和异常处理机制
+1. **响应格式标准化**：统一的 `list_response` 函数确保分页响应格式的一致性
+2. **向前兼容性**：`page_response` 函数保留向后兼容，但建议使用新的 `list_response`
+3. **一致性增强**：所有接口遵循统一的响应格式，便于前端处理
+4. **可维护性**：清晰的分层架构和模块化设计
+5. **可扩展性**：基于 FastAPI 的高性能异步处理能力
+6. **安全性**：JWT 双令牌认证和 RBAC 权限控制
+7. **可观测性**：完整的日志记录和异常处理机制
 
-这些特性使得该项目成为构建企业级 API 服务的良好参考实现，特别适合需要与前端框架（如 Pure Admin）进行深度集成的项目。
+这些特性使得该项目成为构建企业级 API 服务的良好参考实现，特别适合需要与前端框架（如 Pure Admin）进行深度集成的项目。新的响应格式标准化进一步提升了系统的可靠性和用户体验。

@@ -19,10 +19,7 @@ def test_user_operations():
     """测试用户操作"""
     print("=== 2. 创建测试用户 ===")
     # 先尝试登录，如果用户存在则跳过创建
-    resp = httpx.post(
-        f"{BASE_URL}/api/v1/auth/login",
-        json={"username": "testuser", "password": "TestPass123"},
-    )
+    resp = httpx.post(f"{BASE_URL}/api/v1/auth/login", json={"username": "testuser", "password": "TestPass123"})
 
     if resp.status_code == 200:
         print("用户已存在，跳过创建")
@@ -31,15 +28,7 @@ def test_user_operations():
     elif resp.status_code == 401:
         # 用户不存在，尝试创建（需要权限，可能会失败）
         print("用户不存在，尝试创建...")
-        resp = httpx.post(
-            f"{BASE_URL}/api/v1/users",
-            json={
-                "username": "testuser",
-                "email": "test@example.com",
-                "password": "TestPass123",
-                "full_name": "测试用户",
-            },
-        )
+        resp = httpx.post(f"{BASE_URL}/api/v1/users", json={"username": "testuser", "email": "test@example.com", "password": "TestPass123", "full_name": "测试用户"})
         print(f"创建用户状态码: {resp.status_code}")
         if resp.status_code in (201, 401, 403):
             # 需要权限，使用数据库中已有的用户测试
@@ -51,10 +40,7 @@ def test_user_operations():
 def test_login():
     """测试登录"""
     print("=== 3. 用户登录 ===")
-    resp = httpx.post(
-        f"{BASE_URL}/api/v1/auth/login",
-        json={"username": "testuser", "password": "TestPass123"},
-    )
+    resp = httpx.post(f"{BASE_URL}/api/v1/auth/login", json={"username": "testuser", "password": "TestPass123"})
     print(f"状态码: {resp.status_code}")
 
     if resp.status_code == 200:
@@ -85,11 +71,7 @@ def test_update_profile(token: str):
     """测试更新个人资料"""
     print("=== 5. 更新个人资料 ===")
     headers = {"Authorization": f"Bearer {token}"}
-    resp = httpx.put(
-        f"{BASE_URL}/api/v1/users/me",
-        headers=headers,
-        json={"full_name": "更新后的用户名"},
-    )
+    resp = httpx.put(f"{BASE_URL}/api/v1/users/me", headers=headers, json={"full_name": "更新后的用户名"})
     print(f"状态码: {resp.status_code}")
     print(f"响应: {resp.json()}")
     print()

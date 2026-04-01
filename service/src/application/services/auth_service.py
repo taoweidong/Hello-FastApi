@@ -7,23 +7,33 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
 from src.config.settings import settings
 from src.core.exceptions import BusinessError, UnauthorizedError
-from src.domain.auth.password_service import PasswordService
-from src.domain.auth.token_service import TokenService
+from src.domain.repositories.rbac_repository import PermissionRepositoryInterface, RoleRepositoryInterface
+from src.domain.repositories.user_repository import UserRepositoryInterface
+from src.domain.services.password_service import PasswordService
+from src.domain.services.token_service import TokenService
 from src.infrastructure.database.models import User
-from src.infrastructure.repositories.rbac_repository import PermissionRepository, RoleRepository
-from src.infrastructure.repositories.user_repository import UserRepository
 
 
 class AuthService:
     """认证操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, user_repo: UserRepositoryInterface, role_repo: RoleRepositoryInterface, perm_repo: PermissionRepositoryInterface, token_service: TokenService, password_service: PasswordService):
+        """初始化认证服务。
+
+        Args:
+            session: 数据库会话，用于事务控制
+            user_repo: 用户仓储接口实例
+            role_repo: 角色仓储接口实例
+            perm_repo: 权限仓储接口实例
+            token_service: 令牌服务实例
+            password_service: 密码服务实例
+        """
         self.session = session
-        self.user_repo = UserRepository(session)
-        self.role_repo = RoleRepository(session)
-        self.perm_repo = PermissionRepository(session)
-        self.token_service = TokenService()
-        self.password_service = PasswordService()
+        self.user_repo = user_repo
+        self.role_repo = role_repo
+        self.perm_repo = perm_repo
+        self.token_service = token_service
+        self.password_service = password_service
 
     async def login(self, dto: LoginDTO) -> dict:
         """认证用户并返回完整登录信息。

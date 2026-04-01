@@ -8,17 +8,12 @@ from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import success_response
-from src.api.dependencies import get_current_active_user, require_permission
+from src.api.dependencies import get_current_active_user, get_menu_service, require_permission
 from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
 from src.application.services.menu_service import MenuService
 from src.infrastructure.database.connection import get_db
 
 menu_router = APIRouter()
-
-
-def get_menu_service(session: AsyncSession = Depends(get_db)) -> MenuService:
-    """获取菜单服务实例的依赖注入。"""
-    return MenuService(session)
 
 
 @menu_router.post("")

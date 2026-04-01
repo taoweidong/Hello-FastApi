@@ -6,15 +6,13 @@
 import random
 
 from fastapi import APIRouter, Body, Depends
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import list_response, success_response
-from src.api.dependencies import get_current_active_user
+from src.api.dependencies import get_current_active_user, get_department_service, get_log_service
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
 from src.application.dto.log_dto import BatchDeleteLogDTO, LoginLogListQueryDTO, OperationLogListQueryDTO, SystemLogListQueryDTO
 from src.application.services.department_service import DepartmentService
 from src.application.services.log_service import LogService
-from src.infrastructure.database import get_db
 
 system_extra_router = APIRouter()
 
@@ -25,7 +23,7 @@ system_extra_router = APIRouter()
 
 
 @system_extra_router.post("/dept")
-async def get_dept_list(data: dict = Body(default={}), current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def get_dept_list(data: dict = Body(default={}), current_user: dict = Depends(get_current_active_user), service: DepartmentService = Depends(get_department_service)):
     """获取部门列表（扁平结构）。
 
     前端调用: POST /api/system/dept
@@ -34,7 +32,6 @@ async def get_dept_list(data: dict = Body(default={}), current_user: dict = Depe
     # 构建查询参数
     query = DepartmentListQueryDTO(name=data.get("name"), status=data.get("status"))
 
-    service = DepartmentService(db)
     departments = await service.get_departments(query)
 
     # 转换为前端期望的格式
@@ -58,34 +55,31 @@ async def get_dept_list(data: dict = Body(default={}), current_user: dict = Depe
 
 
 @system_extra_router.post("/dept/create")
-async def create_department(dto: DepartmentCreateDTO, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def create_department(dto: DepartmentCreateDTO, current_user: dict = Depends(get_current_active_user), service: DepartmentService = Depends(get_department_service)):
     """创建部门。
 
     前端调用: POST /api/system/dept/create
     """
-    service = DepartmentService(db)
     department = await service.create_department(dto)
     return success_response(data={"id": department.id, "name": department.name}, message="创建成功", code=201)
 
 
 @system_extra_router.put("/dept/{dept_id}")
-async def update_department(dept_id: str, dto: DepartmentUpdateDTO, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def update_department(dept_id: str, dto: DepartmentUpdateDTO, current_user: dict = Depends(get_current_active_user), service: DepartmentService = Depends(get_department_service)):
     """更新部门。
 
     前端调用: PUT /api/system/dept/{id}
     """
-    service = DepartmentService(db)
     department = await service.update_department(dept_id, dto)
     return success_response(data={"id": department.id, "name": department.name}, message="更新成功")
 
 
 @system_extra_router.delete("/dept/{dept_id}")
-async def delete_department(dept_id: str, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def delete_department(dept_id: str, current_user: dict = Depends(get_current_active_user), service: DepartmentService = Depends(get_department_service)):
     """删除部门。
 
     前端调用: DELETE /api/system/dept/{id}
     """
-    service = DepartmentService(db)
     await service.delete_department(dept_id)
     return success_response(message="删除成功")
 
@@ -119,13 +113,12 @@ async def get_online_logs(data: dict = Body(default={}), current_user: dict = De
 
 
 @system_extra_router.post("/login-logs")
-async def get_login_logs(query: LoginLogListQueryDTO = Body(default={}), current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def get_login_logs(query: LoginLogListQueryDTO = Body(default={}), current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """获取登录日志列表。
 
     前端调用: POST /api/system/login-logs
     响应格式: { list, total, pageSize, currentPage }
     """
-    service = LogService(db)
     logs, total = await service.get_login_logs(query)
 
     # 转换为前端期望的格式
@@ -137,23 +130,21 @@ async def get_login_logs(query: LoginLogListQueryDTO = Body(default={}), current
 
 
 @system_extra_router.post("/login-logs/batch-delete")
-async def batch_delete_login_logs(dto: BatchDeleteLogDTO, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def batch_delete_login_logs(dto: BatchDeleteLogDTO, current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """批量删除登录日志。
 
     前端调用: POST /api/system/login-logs/batch-delete
     """
-    service = LogService(db)
     count = await service.delete_login_logs(dto)
     return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
 
 
 @system_extra_router.post("/login-logs/clear")
-async def clear_login_logs(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def clear_login_logs(current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """清空所有登录日志。
 
     前端调用: POST /api/system/login-logs/clear
     """
-    service = LogService(db)
     count = await service.clear_login_logs()
     return success_response(data={"deleted": count}, message=f"已清空 {count} 条记录")
 
@@ -164,13 +155,12 @@ async def clear_login_logs(current_user: dict = Depends(get_current_active_user)
 
 
 @system_extra_router.post("/operation-logs")
-async def get_operation_logs(query: OperationLogListQueryDTO = Body(default={}), current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def get_operation_logs(query: OperationLogListQueryDTO = Body(default={}), current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """获取操作日志列表。
 
     前端调用: POST /api/system/operation-logs
     响应格式: { list, total, pageSize, currentPage }
     """
-    service = LogService(db)
     logs, total = await service.get_operation_logs(query)
 
     # 转换为前端期望的格式
@@ -195,23 +185,21 @@ async def get_operation_logs(query: OperationLogListQueryDTO = Body(default={}),
 
 
 @system_extra_router.post("/operation-logs/batch-delete")
-async def batch_delete_operation_logs(dto: BatchDeleteLogDTO, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def batch_delete_operation_logs(dto: BatchDeleteLogDTO, current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """批量删除操作日志。
 
     前端调用: POST /api/system/operation-logs/batch-delete
     """
-    service = LogService(db)
     count = await service.delete_operation_logs(dto)
     return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
 
 
 @system_extra_router.post("/operation-logs/clear")
-async def clear_operation_logs(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def clear_operation_logs(current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """清空所有操作日志。
 
     前端调用: POST /api/system/operation-logs/clear
     """
-    service = LogService(db)
     count = await service.clear_operation_logs()
     return success_response(data={"deleted": count}, message=f"已清空 {count} 条记录")
 
@@ -222,13 +210,12 @@ async def clear_operation_logs(current_user: dict = Depends(get_current_active_u
 
 
 @system_extra_router.post("/system-logs")
-async def get_system_logs(query: SystemLogListQueryDTO = Body(default={}), current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def get_system_logs(query: SystemLogListQueryDTO = Body(default={}), current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """获取系统日志列表。
 
     前端调用: POST /api/system/system-logs
     响应格式: { list, total, pageSize, currentPage }
     """
-    service = LogService(db)
     logs, total = await service.get_system_logs(query)
 
     # 转换为前端期望的格式
@@ -254,7 +241,7 @@ async def get_system_logs(query: SystemLogListQueryDTO = Body(default={}), curre
 
 
 @system_extra_router.post("/system-logs-detail")
-async def get_system_logs_detail(data: dict = Body(default={}), current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def get_system_logs_detail(data: dict = Body(default={}), current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """获取系统日志详情。
 
     前端调用: POST /api/system/system-logs-detail
@@ -264,30 +251,27 @@ async def get_system_logs_detail(data: dict = Body(default={}), current_user: di
     if not log_id:
         return success_response(data=None, message="日志ID不能为空")
 
-    service = LogService(db)
     detail = await service.get_system_log_detail(log_id)
 
     return success_response(data=detail)
 
 
 @system_extra_router.post("/system-logs/batch-delete")
-async def batch_delete_system_logs(dto: BatchDeleteLogDTO, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def batch_delete_system_logs(dto: BatchDeleteLogDTO, current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """批量删除系统日志。
 
     前端调用: POST /api/system/system-logs/batch-delete
     """
-    service = LogService(db)
     count = await service.delete_system_logs(dto)
     return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
 
 
 @system_extra_router.post("/system-logs/clear")
-async def clear_system_logs(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def clear_system_logs(current_user: dict = Depends(get_current_active_user), service: LogService = Depends(get_log_service)):
     """清空所有系统日志。
 
     前端调用: POST /api/system/system-logs/clear
     """
-    service = LogService(db)
     count = await service.clear_system_logs()
     return success_response(data={"deleted": count}, message=f"已清空 {count} 条记录")
 

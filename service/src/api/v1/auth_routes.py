@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import success_response
-from src.api.dependencies import get_current_active_user
+from src.api.dependencies import get_auth_service, get_current_active_user, get_menu_repository, get_role_repository, get_user_repository
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
 from src.core.exceptions import UnauthorizedError
@@ -20,43 +20,36 @@ from src.infrastructure.repositories.user_repository import UserRepository
 router = APIRouter()
 
 
-def get_menu_repository() -> MenuRepository:
-    """获取菜单仓储实例的依赖注入。"""
-    return MenuRepository()
-
-
 @router.post("/login")
-async def login(dto: LoginDTO, db: AsyncSession = Depends(get_db)):
+async def login(dto: LoginDTO, service: AuthService = Depends(get_auth_service)):
     """用户登录接口。
 
     验证用户凭据并返回完整的登录信息，包括访问令牌、刷新令牌、用户信息、角色和权限。
 
     Args:
         dto: 登录请求数据，包含用户名和密码
-        db: 数据库会话
+        service: 认证服务实例（通过 DI 注入）
 
     Returns:
         dict: 统一格式的登录响应，包含 accessToken, expires, refreshToken, userInfo, roles, permissions
     """
-    service = AuthService(db)
     result = await service.login(dto)
     return success_response(data=result, message="登录成功")
 
 
 @router.post("/register")
-async def register(dto: RegisterDTO, db: AsyncSession = Depends(get_db)):
+async def register(dto: RegisterDTO, service: AuthService = Depends(get_auth_service)):
     """用户注册接口。
 
     创建新用户账号。
 
     Args:
         dto: 注册请求数据，包含用户名、密码等信息
-        db: 数据库会话
+        service: 认证服务实例（通过 DI 注入）
 
     Returns:
         dict: 统一格式的注册响应，包含新创建用户的基本信息
     """
-    service = AuthService(db)
     result = await service.register(dto)
     return success_response(data=result, message="注册成功")
 
@@ -77,35 +70,33 @@ async def logout(current_user: dict = Depends(get_current_active_user)):
 
 
 @router.post("/refresh-token")
-async def refresh_token(dto: RefreshTokenDTO, db: AsyncSession = Depends(get_db)):
+async def refresh_token(dto: RefreshTokenDTO, service: AuthService = Depends(get_auth_service)):
     """刷新访问令牌接口。
 
     使用有效的刷新令牌获取新的访问令牌。
 
     Args:
         dto: 刷新令牌请求数据
-        db: 数据库会话
+        service: 认证服务实例（通过 DI 注入）
 
     Returns:
         dict: 统一格式的刷新响应，包含 accessToken, expires, refreshToken
     """
-    service = AuthService(db)
     result = await service.refresh_token(dto.refreshToken)
     return success_response(data=result, message="刷新成功")
 
 
 @router.get("/mine")
-async def get_mine(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)):
+async def get_mine(current_user: dict = Depends(get_current_active_user), user_repo: UserRepository = Depends(get_user_repository)):
     """获取当前登录用户的个人信息。
 
     Args:
         current_user: 当前登录用户信息
-        db: 数据库会话
+        user_repo: 用户仓储实例（通过 DI 注入）
 
     Returns:
         dict: 统一格式的用户信息响应，包含 avatar, username, nickname, email, phone, description
     """
-    user_repo = UserRepository(db)
     user = await user_repo.get_by_id(current_user["id"])
     if user is None:
         raise UnauthorizedError("用户不存在")
@@ -187,20 +178,19 @@ async def get_async_routes(current_user: dict = Depends(get_current_active_user)
 
 
 @router.get("/list-all-role")
-async def list_all_roles(db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_active_user)):
+async def list_all_roles(role_repo: RoleRepository = Depends(get_role_repository), current_user: dict = Depends(get_current_active_user)):
     """获取所有角色简单列表。
 
     前端调用: GET /api/system/list-all-role
     用于用户管理中的角色分配下拉选择。
     """
-    role_repo = RoleRepository(db)
     # 获取所有角色（不分页）
     roles = await role_repo.get_all(page_num=1, page_size=1000)
     return success_response(data=[{"id": r.id, "name": r.name} for r in roles])
 
 
 @router.post("/list-role-ids")
-async def list_role_ids(data: dict, db: AsyncSession = Depends(get_db), current_user: dict = Depends(get_current_active_user)):
+async def list_role_ids(data: dict, role_repo: RoleRepository = Depends(get_role_repository), current_user: dict = Depends(get_current_active_user)):
     """根据用户ID获取对应角色ID列表。
 
     前端调用: POST /api/system/list-role-ids
@@ -210,7 +200,6 @@ async def list_role_ids(data: dict, db: AsyncSession = Depends(get_db), current_
     if not user_id:
         return {"code": 10001, "message": "请求参数缺失或格式不正确", "data": []}
 
-    role_repo = RoleRepository(db)
     roles = await role_repo.get_user_roles(str(user_id))
     return success_response(data=[r.id for r in roles])
 
@@ -239,7 +228,7 @@ async def get_role_menu(current_user: dict = Depends(get_current_active_user), d
 
 
 @router.post("/role-menu-ids")
-async def get_role_menu_ids(data: dict, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository)):
+async def get_role_menu_ids(data: dict, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository)):
     """根据角色ID获取菜单ID列表。
 
     前端调用: POST /api/system/role-menu-ids
@@ -249,8 +238,6 @@ async def get_role_menu_ids(data: dict, current_user: dict = Depends(get_current
     role_id = data.get("id")
     if not role_id:
         return success_response(data=[])
-
-    role_repo = RoleRepository(db)
 
     # 如果是超级管理员角色（code=admin），返回所有菜单
     role = await role_repo.get_by_id(str(role_id))

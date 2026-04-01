@@ -7,6 +7,7 @@ import pytest
 from src.application.dto.user_dto import UserCreateDTO
 from src.application.services.user_service import UserService
 from src.core.exceptions import ConflictError, NotFoundError
+from src.domain.services.password_service import PasswordService
 from src.infrastructure.database.models import User
 
 
@@ -30,9 +31,23 @@ class TestUserService:
         return repo
 
     @pytest.fixture
-    def user_service(self, mock_session):
-        """创建用户服务实例。"""
-        return UserService(mock_session)
+    def mock_role_repo(self):
+        """创建模拟角色仓储。"""
+        repo = AsyncMock()
+        return repo
+
+    @pytest.fixture
+    def mock_password_service(self):
+        """创建模拟密码服务。"""
+        service = AsyncMock()
+        service.hash_password = PasswordService.hash_password
+        service.verify_password = PasswordService.verify_password
+        return service
+
+    @pytest.fixture
+    def user_service(self, mock_session, mock_user_repo, mock_password_service, mock_role_repo):
+        """创建用户服务实例（使用依赖注入模式）。"""
+        return UserService(session=mock_session, repo=mock_user_repo, password_service=mock_password_service, role_repo=mock_role_repo)
 
     @pytest.mark.asyncio
     async def test_create_user_success(self, user_service, mock_user_repo):

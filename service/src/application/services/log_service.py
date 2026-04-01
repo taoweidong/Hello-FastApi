@@ -13,9 +13,15 @@ from src.infrastructure.repositories.log_repository import LogRepository
 class LogService:
     """日志领域操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, log_repo: LogRepository):
+        """初始化日志服务。
+
+        Args:
+            session: 数据库会话，用于事务控制
+            log_repo: 日志仓储实例
+        """
         self.session = session
-        self.log_repo = LogRepository()
+        self.log_repo = log_repo
 
     # ============ 登录日志 ============
 

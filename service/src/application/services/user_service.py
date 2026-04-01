@@ -4,19 +4,28 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserListQueryDTO, UserResponseDTO, UserUpdateDTO
 from src.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
-from src.domain.auth.password_service import PasswordService
+from src.domain.repositories.rbac_repository import RoleRepositoryInterface
+from src.domain.repositories.user_repository import UserRepositoryInterface
+from src.domain.services.password_service import PasswordService
 from src.infrastructure.database.models import User
-from src.infrastructure.repositories.rbac_repository import RoleRepository
-from src.infrastructure.repositories.user_repository import UserRepository
 
 
 class UserService:
     """用户领域操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession):
-        self.repo = UserRepository(session)
+    def __init__(self, session: AsyncSession, repo: UserRepositoryInterface, password_service: PasswordService, role_repo: RoleRepositoryInterface):
+        """初始化用户服务。
+
+        Args:
+            session: 数据库会话，用于事务控制
+            repo: 用户仓储接口实例
+            password_service: 密码服务实例
+            role_repo: 角色仓储接口实例
+        """
         self.session = session
-        self.password_service = PasswordService()
+        self.repo = repo
+        self.password_service = password_service
+        self.role_repo = role_repo
 
     async def create_user(self, dto: UserCreateDTO) -> UserResponseDTO:
         """创建新用户。
@@ -251,9 +260,8 @@ class UserService:
         if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
 
-        # 使用 RoleRepository 分配角色
-        role_repo = RoleRepository(self.session)
-        await role_repo.assign_roles_to_user(user_id, role_ids)
+        # 使用注入的角色仓储分配角色
+        await self.role_repo.assign_roles_to_user(user_id, role_ids)
         return True
 
     async def _to_response(self, user: User) -> UserResponseDTO:

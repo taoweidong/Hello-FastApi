@@ -4,7 +4,7 @@ from sqlalchemy import func as sa_func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.domain.user.repository import UserRepositoryInterface
+from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.infrastructure.database.models import User
 
 

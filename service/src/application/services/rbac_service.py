@@ -4,16 +4,24 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.rbac_dto import PermissionCreateDTO, PermissionListQueryDTO, PermissionResponseDTO, RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
 from src.core.exceptions import ConflictError, NotFoundError
+from src.domain.repositories.rbac_repository import PermissionRepositoryInterface, RoleRepositoryInterface
 from src.infrastructure.database.models import Permission, Role
-from src.infrastructure.repositories.rbac_repository import PermissionRepository, RoleRepository
 
 
 class RBACService:
     """RBAC 操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession):
-        self.role_repo = RoleRepository(session)
-        self.perm_repo = PermissionRepository(session)
+    def __init__(self, session: AsyncSession, role_repo: RoleRepositoryInterface, perm_repo: PermissionRepositoryInterface):
+        """初始化 RBAC 服务。
+
+        Args:
+            session: 数据库会话，用于事务控制
+            role_repo: 角色仓储接口实例
+            perm_repo: 权限仓储接口实例
+        """
+        self.session = session
+        self.role_repo = role_repo
+        self.perm_repo = perm_repo
 
     # --- 角色操作 ---
 

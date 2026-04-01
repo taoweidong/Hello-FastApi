@@ -3,7 +3,7 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.domain.menu.repository import MenuRepositoryInterface
+from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.infrastructure.database.models import Menu
 
 

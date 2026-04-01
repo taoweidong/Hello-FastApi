@@ -5,11 +5,23 @@ SQLModel 同时充当 SQLAlchemy ORM 模型和 Pydantic 数据模型，
 减少了重复的模型定义代码。
 """
 
+# 注意：不要使用 from __future__ import annotations，
+# 否则会导致 SQLModel Relationship 类型解析问题
+
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING, List, Optional
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text, func
 from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from src.domain.entities.department import DepartmentEntity
+    from src.domain.entities.log import LoginLogEntity, OperationLogEntity, SystemLogEntity
+    from src.domain.entities.menu import MenuEntity
+    from src.domain.entities.permission import PermissionEntity
+    from src.domain.entities.role import RoleEntity
+    from src.domain.entities.user import UserEntity
 
 # ============ 关联模型 ============
 
@@ -47,12 +59,53 @@ class User(SQLModel, table=True):
     updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))
 
     # 关系
-    roles: list["UserRole"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
+    roles: List["UserRole"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
 
     @property
     def is_active(self) -> bool:
         """是否启用（兼容属性，status=1表示启用）。"""
         return self.status == 1
+
+    def to_domain(self) -> "UserEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.user import UserEntity
+
+        return UserEntity(
+            id=self.id,
+            username=self.username,
+            hashed_password=self.hashed_password,
+            email=self.email,
+            nickname=self.nickname,
+            avatar=self.avatar,
+            phone=self.phone,
+            sex=self.sex,
+            status=self.status,
+            dept_id=self.dept_id,
+            remark=self.remark,
+            is_superuser=self.is_superuser,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
+
+    @classmethod
+    def from_domain(cls, entity: "UserEntity") -> "User":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(
+            id=entity.id,
+            username=entity.username,
+            hashed_password=entity.hashed_password,
+            email=entity.email,
+            nickname=entity.nickname,
+            avatar=entity.avatar,
+            phone=entity.phone,
+            sex=entity.sex,
+            status=entity.status,
+            dept_id=entity.dept_id,
+            remark=entity.remark,
+            is_superuser=entity.is_superuser,
+            created_at=entity.created_at,
+            updated_at=entity.updated_at,
+        )
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username={self.username})>"
@@ -75,8 +128,19 @@ class Role(SQLModel, table=True):
     updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))
 
     # 关系
-    permissions: list["Permission"] = Relationship(back_populates="roles", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
-    users: list["UserRole"] = Relationship(back_populates="role", sa_relationship_kwargs={"lazy": "selectin"})
+    permissions: List["Permission"] = Relationship(back_populates="roles", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
+    users: List["UserRole"] = Relationship(back_populates="role", sa_relationship_kwargs={"lazy": "selectin"})
+
+    def to_domain(self) -> "RoleEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.role import RoleEntity
+
+        return RoleEntity(id=self.id, name=self.name, code=self.code, description=self.description, status=self.status, created_at=self.created_at, updated_at=self.updated_at)
+
+    @classmethod
+    def from_domain(cls, entity: "RoleEntity") -> "Role":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(id=entity.id, name=entity.name, code=entity.code, description=entity.description, status=entity.status, created_at=entity.created_at, updated_at=entity.updated_at)
 
     def __repr__(self) -> str:
         return f"<Role(id={self.id}, name={self.name})>"
@@ -98,7 +162,18 @@ class Permission(SQLModel, table=True):
     created_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
 
     # 关系
-    roles: list["Role"] = Relationship(back_populates="permissions", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
+    roles: List["Role"] = Relationship(back_populates="permissions", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
+
+    def to_domain(self) -> "PermissionEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.permission import PermissionEntity
+
+        return PermissionEntity(id=self.id, name=self.name, code=self.code, category=self.category, description=self.description, resource=self.resource, action=self.action, status=self.status, created_at=self.created_at)
+
+    @classmethod
+    def from_domain(cls, entity: "PermissionEntity") -> "Permission":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(id=entity.id, name=entity.name, code=entity.code, category=entity.category, description=entity.description, resource=entity.resource, action=entity.action, status=entity.status, created_at=entity.created_at)
 
     def __repr__(self) -> str:
         return f"<Permission(id={self.id}, code={self.code})>"
@@ -115,8 +190,8 @@ class UserRole(SQLModel, table=True):
     assigned_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
 
     # 关系
-    user: User | None = Relationship(back_populates="roles")
-    role: Role | None = Relationship(back_populates="users")
+    user: Optional["User"] = Relationship(back_populates="roles")
+    role: Optional["Role"] = Relationship(back_populates="users")
 
     def __repr__(self) -> str:
         return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"
@@ -156,6 +231,69 @@ class Menu(SQLModel, table=True):
     show_parent: bool = Field(default=False)  # 是否显示父级菜单
     created_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
     updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))
+
+    def to_domain(self) -> "MenuEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.menu import MenuEntity
+
+        return MenuEntity(
+            id=self.id,
+            name=self.name,
+            path=self.path,
+            component=self.component,
+            icon=self.icon,
+            title=self.title,
+            show_link=self.show_link,
+            parent_id=self.parent_id,
+            order_num=self.order_num,
+            permissions=self.permissions,
+            status=self.status,
+            menu_type=self.menu_type,
+            redirect=self.redirect,
+            extra_icon=self.extra_icon,
+            enter_transition=self.enter_transition,
+            leave_transition=self.leave_transition,
+            active_path=self.active_path,
+            frame_src=self.frame_src,
+            frame_loading=self.frame_loading,
+            keep_alive=self.keep_alive,
+            hidden_tag=self.hidden_tag,
+            fixed_tag=self.fixed_tag,
+            show_parent=self.show_parent,
+            created_at=self.created_at,
+            updated_at=self.updated_at,
+        )
+
+    @classmethod
+    def from_domain(cls, entity: "MenuEntity") -> "Menu":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(
+            id=entity.id,
+            name=entity.name,
+            path=entity.path,
+            component=entity.component,
+            icon=entity.icon,
+            title=entity.title,
+            show_link=entity.show_link,
+            parent_id=entity.parent_id,
+            order_num=entity.order_num,
+            permissions=entity.permissions,
+            status=entity.status,
+            menu_type=entity.menu_type,
+            redirect=entity.redirect,
+            extra_icon=entity.extra_icon,
+            enter_transition=entity.enter_transition,
+            leave_transition=entity.leave_transition,
+            active_path=entity.active_path,
+            frame_src=entity.frame_src,
+            frame_loading=entity.frame_loading,
+            keep_alive=entity.keep_alive,
+            hidden_tag=entity.hidden_tag,
+            fixed_tag=entity.fixed_tag,
+            show_parent=entity.show_parent,
+            created_at=entity.created_at,
+            updated_at=entity.updated_at,
+        )
 
     def __repr__(self) -> str:
         return f"<Menu(id={self.id}, name={self.name})>"
@@ -201,6 +339,17 @@ class Department(SQLModel, table=True):
     created_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
     updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))
 
+    def to_domain(self) -> "DepartmentEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.department import DepartmentEntity
+
+        return DepartmentEntity(id=self.id, name=self.name, parent_id=self.parent_id, sort=self.sort, principal=self.principal, phone=self.phone, email=self.email, status=self.status, remark=self.remark, created_at=self.created_at, updated_at=self.updated_at)
+
+    @classmethod
+    def from_domain(cls, entity: "DepartmentEntity") -> "Department":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(id=entity.id, name=entity.name, parent_id=entity.parent_id, sort=entity.sort, principal=entity.principal, phone=entity.phone, email=entity.email, status=entity.status, remark=entity.remark, created_at=entity.created_at, updated_at=entity.updated_at)
+
     def __repr__(self) -> str:
         return f"<Department(id={self.id}, name={self.name})>"
 
@@ -223,6 +372,17 @@ class LoginLog(SQLModel, table=True):
     behavior: str | None = Field(default=None, max_length=200)  # 行为描述
     login_time: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
 
+    def to_domain(self) -> "LoginLogEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.log import LoginLogEntity
+
+        return LoginLogEntity(id=self.id, username=self.username, ip=self.ip, address=self.address, system=self.system, browser=self.browser, status=self.status, behavior=self.behavior, login_time=self.login_time)
+
+    @classmethod
+    def from_domain(cls, entity: "LoginLogEntity") -> "LoginLog":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(id=entity.id, username=entity.username, ip=entity.ip, address=entity.address, system=entity.system, browser=entity.browser, status=entity.status, behavior=entity.behavior, login_time=entity.login_time)
+
     def __repr__(self) -> str:
         return f"<LoginLog(id={self.id}, username={self.username})>"
 
@@ -242,6 +402,17 @@ class OperationLog(SQLModel, table=True):
     summary: str | None = Field(default=None, max_length=200)  # 操作摘要
     module: str | None = Field(default=None, max_length=100)  # 操作模块
     operating_time: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
+
+    def to_domain(self) -> "OperationLogEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.log import OperationLogEntity
+
+        return OperationLogEntity(id=self.id, username=self.username, ip=self.ip, address=self.address, system=self.system, browser=self.browser, status=self.status, summary=self.summary, module=self.module, operating_time=self.operating_time)
+
+    @classmethod
+    def from_domain(cls, entity: "OperationLogEntity") -> "OperationLog":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(id=entity.id, username=entity.username, ip=entity.ip, address=entity.address, system=entity.system, browser=entity.browser, status=entity.status, summary=entity.summary, module=entity.module, operating_time=entity.operating_time)
 
     def __repr__(self) -> str:
         return f"<OperationLog(id={self.id}, username={self.username})>"
@@ -265,6 +436,31 @@ class SystemLog(SQLModel, table=True):
     request_time: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
     request_body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 请求体
     response_body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 响应体
+
+    def to_domain(self) -> "SystemLogEntity":
+        """将 ORM 模型转换为领域实体。"""
+        from src.domain.entities.log import SystemLogEntity
+
+        return SystemLogEntity(id=self.id, level=self.level, module=self.module, url=self.url, method=self.method, ip=self.ip, address=self.address, system=self.system, browser=self.browser, takes_time=self.takes_time, request_time=self.request_time, request_body=self.request_body, response_body=self.response_body)
+
+    @classmethod
+    def from_domain(cls, entity: "SystemLogEntity") -> "SystemLog":
+        """从领域实体创建 ORM 模型实例。"""
+        return cls(
+            id=entity.id,
+            level=entity.level,
+            module=entity.module,
+            url=entity.url,
+            method=entity.method,
+            ip=entity.ip,
+            address=entity.address,
+            system=entity.system,
+            browser=entity.browser,
+            takes_time=entity.takes_time,
+            request_time=entity.request_time,
+            request_body=entity.request_body,
+            response_body=entity.response_body,
+        )
 
     def __repr__(self) -> str:
         return f"<SystemLog(id={self.id}, module={self.module})>"

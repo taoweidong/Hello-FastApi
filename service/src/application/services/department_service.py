@@ -7,16 +7,22 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
 from src.core.exceptions import BusinessError, ConflictError, NotFoundError
+from src.domain.repositories.department_repository import DepartmentRepositoryInterface
 from src.infrastructure.database.models import Department
-from src.infrastructure.repositories.department_repository import DepartmentRepository
 
 
 class DepartmentService:
     """部门领域操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, dept_repo: DepartmentRepositoryInterface):
+        """初始化部门服务。
+
+        Args:
+            session: 数据库会话，用于事务控制
+            dept_repo: 部门仓储接口实例
+        """
         self.session = session
-        self.dept_repo = DepartmentRepository()
+        self.dept_repo = dept_repo
 
     async def get_departments(self, query: DepartmentListQueryDTO) -> list[Department]:
         """获取部门列表（扁平结构，前端自动转树）。

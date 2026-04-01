@@ -72,14 +72,23 @@ async def auth_headers(client: AsyncClient, db_session: AsyncSession) -> AsyncGe
     """提供认证请求头（自动创建用户并登录）。"""
     from src.application.dto.user_dto import UserCreateDTO
     from src.application.services.user_service import UserService
-    from src.domain.auth.token_service import TokenService
+    from src.config.settings import get_settings
+    from src.domain.services.password_service import PasswordService
+    from src.domain.services.token_service import TokenService
+    from src.infrastructure.repositories.rbac_repository import RoleRepository
+    from src.infrastructure.repositories.user_repository import UserRepository
 
-    # 创建测试用户
-    service = UserService(db_session)
+    # 创建测试用户（适配新的依赖注入模式）
+    user_repo = UserRepository(db_session)
+    role_repo = RoleRepository(db_session)
+    password_service = PasswordService()
+    service = UserService(session=db_session, repo=user_repo, password_service=password_service, role_repo=role_repo)
     user = await service.create_user(UserCreateDTO(username="authtestuser", password="TestPass123", nickname="认证测试用户", email="auth@example.com", status=1))
     await db_session.commit()
 
-    # 生成访问令牌
-    token = TokenService.create_access_token({"sub": user.id, "username": user.username})
+    # 创建令牌服务实例并生成访问令牌
+    settings = get_settings()
+    token_service = TokenService(secret_key=settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM, access_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES, refresh_expire_days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    token = token_service.create_access_token({"sub": user.id, "username": user.username})
 
     yield {"Authorization": f"Bearer {token}"}
