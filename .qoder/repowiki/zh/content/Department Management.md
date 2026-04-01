@@ -2,12 +2,15 @@
 
 <cite>
 **本文档引用的文件**
+- [department.py](file://service/src/domain/entities/department.py)
+- [department_repository.py](file://service/src/domain/repositories/department_repository.py)
+- [department_repository.py](file://service/src/infrastructure/repositories/department_repository.py)
+- [department_service.py](file://service/src/application/services/department_service.py)
 - [department_dto.py](file://service/src/application/dto/department_dto.py)
 - [validators.py](file://service/src/core/validators.py)
-- [department_service.py](file://service/src/application/services/department_service.py)
-- [department_repository.py](file://service/src/infrastructure/repositories/department_repository.py)
 - [system_routes.py](file://service/src/api/v1/system_routes.py)
 - [models.py](file://service/src/infrastructure/database/models.py)
+- [dependencies.py](file://service/src/api/dependencies.py)
 - [index.vue](file://web/src/views/system/dept/index.vue)
 - [form.vue](file://web/src/views/system/dept/form.vue)
 - [hook.tsx](file://web/src/views/system/dept/utils/hook.tsx)
@@ -20,6 +23,8 @@
 
 ## 更新摘要
 **变更内容**
+- 部门实体和仓储已迁移到新的domain结构中
+- 引入了领域驱动设计（DDD）架构模式
 - 增强了部门管理DTO的验证机制，引入field_validator装饰器
 - 新增了统一的空值处理验证器
 - 完善了状态字段的验证逻辑
@@ -42,7 +47,7 @@
 
 系统支持部门的增删改查操作，具备树形结构的组织架构展示能力，提供完整的数据验证和业务逻辑处理。通过标准化的API接口，为前端提供了灵活的部门管理功能。
 
-**更新** 系统现已采用增强的Pydantic验证机制，通过field_validator装饰器实现更精确的数据验证和转换，确保数据的一致性和完整性。
+**更新** 系统现已采用增强的Pydantic验证机制，通过field_validator装饰器实现更精确的数据验证和转换，确保数据的一致性和完整性。同时，系统已完全迁移到领域驱动设计（DDD）架构模式，将部门实体和仓储逻辑重构到新的domain结构中，实现了更好的关注点分离和代码组织。
 
 ## 项目结构
 
@@ -64,6 +69,10 @@ VALIDATORS[验证器]
 REPO[仓储层]
 MODEL[数据模型]
 end
+subgraph "领域层 (Domain)"
+ENTITY[领域实体]
+REPO_INTERFACE[仓储接口]
+end
 subgraph "基础设施层"
 DATABASE[数据库]
 CONFIG[配置管理]
@@ -74,24 +83,65 @@ FE_FORM --> FE_HOOK
 API_ROUTER --> SERVICE
 SERVICE --> DTO
 DTO --> VALIDATORS
-VALIDATORS --> REPO
-REPO --> MODEL
+VALIDATORS --> REPO_INTERFACE
+REPO_INTERFACE --> ENTITY
+REPO_INTERFACE --> MODEL
 MODEL --> DATABASE
 ```
 
 **图表来源**
-- [system_routes.py:1-474](file://service/src/api/v1/system_routes.py#L1-L474)
-- [department_service.py:1-156](file://service/src/application/services/department_service.py#L1-L156)
+- [system_routes.py:1-335](file://service/src/api/v1/system_routes.py#L1-L335)
+- [department_service.py:1-149](file://service/src/application/services/department_service.py#L1-L149)
 - [validators.py:1-147](file://service/src/core/validators.py#L1-L147)
-- [models.py:198-221](file://service/src/infrastructure/database/models.py#L198-L221)
+- [models.py:325-354](file://service/src/infrastructure/database/models.py#L325-L354)
 
 **章节来源**
-- [system_routes.py:1-474](file://service/src/api/v1/system_routes.py#L1-L474)
-- [department_service.py:1-156](file://service/src/application/services/department_service.py#L1-L156)
+- [system_routes.py:1-335](file://service/src/api/v1/system_routes.py#L1-L335)
+- [department_service.py:1-149](file://service/src/application/services/department_service.py#L1-L149)
 - [validators.py:1-147](file://service/src/core/validators.py#L1-L147)
-- [models.py:198-221](file://service/src/infrastructure/database/models.py#L198-L221)
+- [models.py:325-354](file://service/src/infrastructure/database/models.py#L325-L354)
 
 ## 核心组件
+
+### 领域实体 (DepartmentEntity)
+
+**更新** 部门实体已迁移到domain/entities目录，采用dataclass实现，完全独立于任何ORM或外部库：
+
+DepartmentEntity是部门的领域实体，使用Python dataclass实现，不依赖任何外部层：
+
+- **基础属性**：id、name、parent_id、sort等核心字段
+- **可选属性**：principal、phone、email、remark等扩展信息
+- **状态管理**：is_active属性提供便捷的状态判断
+- **类型安全**：完整的类型注解确保编译时类型检查
+
+**章节来源**
+- [department.py:11-44](file://service/src/domain/entities/department.py#L11-L44)
+
+### 仓储接口 (DepartmentRepositoryInterface)
+
+**更新** 仓储接口已迁移到domain/repositories目录，定义了完整的抽象接口：
+
+DepartmentRepositoryInterface是部门仓储的抽象接口，遵循依赖倒置原则：
+
+- **查询操作**：get_all、get_by_id、get_by_name、get_by_parent_id
+- **CRUD操作**：create、update、delete、count
+- **类型定义**：使用Any作为过渡方案，便于上层代码兼容
+
+**章节来源**
+- [department_repository.py:11-117](file://service/src/domain/repositories/department_repository.py#L11-L117)
+
+### 基础设施仓储实现
+
+**更新** 基础设施仓储实现保持不变，但已迁移到新的domain结构中：
+
+DepartmentRepository是DepartmentRepositoryInterface的SQLModel实现：
+
+- **数据库操作**：完整的CRUD操作实现
+- **查询优化**：支持排序、筛选和分页
+- **事务管理**：完整的异步事务支持
+
+**章节来源**
+- [department_repository.py:11-69](file://service/src/infrastructure/repositories/department_repository.py#L11-L69)
 
 ### 数据传输对象 (DTO)
 
@@ -140,20 +190,7 @@ DepartmentService作为核心业务逻辑处理层，提供了完整的部门管
 - **部门删除**：检查子部门存在性，防止误删除
 
 **章节来源**
-- [department_service.py:18-156](file://service/src/application/services/department_service.py#L18-L156)
-
-### 仓储层
-
-DepartmentRepository实现了数据访问层的抽象，提供标准的CRUD操作：
-
-- **get_all**：获取所有部门，按排序号排序
-- **get_by_id**：根据ID获取部门
-- **get_by_name**：根据名称获取部门
-- **get_by_parent_id**：根据父部门ID获取子部门
-- **create/update/delete**：标准的增删改操作
-
-**章节来源**
-- [department_repository.py:10-73](file://service/src/infrastructure/repositories/department_repository.py#L10-L73)
+- [department_service.py:14-149](file://service/src/application/services/department_service.py#L14-L149)
 
 ## 架构概览
 
@@ -167,6 +204,7 @@ participant Service as 应用服务层
 participant DTO as 数据传输对象
 participant Validators as 验证器
 participant Repo as 仓储层
+participant DomainEntity as 领域实体
 participant DB as 数据库
 Client->>API : POST /api/system/dept
 API->>Service : get_departments(query)
@@ -175,17 +213,17 @@ DTO->>Validators : empty_str_to_none()
 Validators-->>DTO : 转换后的值
 DTO-->>Service : 验证后的查询参数
 Service->>Repo : get_all(session)
-Repo->>DB : SELECT departments
-DB-->>Repo : 部门列表
-Repo-->>Service : 部门列表
+Repo->>DomainEntity : DepartmentEntity
+DomainEntity-->>Repo : 领域实体
+Repo-->>Service : 领域实体列表
 Service-->>API : 过滤后的部门列表
 API-->>Client : JSON响应
 Note over Client,DB : 增强验证机制确保数据质量
 ```
 
 **图表来源**
-- [system_routes.py:32-69](file://service/src/api/v1/system_routes.py#L32-L69)
-- [department_service.py:25-43](file://service/src/application/services/department_service.py#L25-L43)
+- [system_routes.py:25-54](file://service/src/api/v1/system_routes.py#L25-L54)
+- [department_service.py:27-45](file://service/src/application/services/department_service.py#L27-L45)
 - [department_dto.py:96-102](file://service/src/application/dto/department_dto.py#L96-L102)
 - [validators.py:34-54](file://service/src/core/validators.py#L34-L54)
 
@@ -260,7 +298,7 @@ CallAPI --> RefreshData
 | `/api/system/dept/{id}` | DELETE | 删除部门 | 删除指定ID的部门记录 |
 
 **章节来源**
-- [system_routes.py:32-129](file://service/src/api/v1/system_routes.py#L32-L129)
+- [system_routes.py:25-84](file://service/src/api/v1/system_routes.py#L25-L84)
 
 ### 数据模型设计
 
@@ -281,6 +319,19 @@ class Department {
 +datetime created_at
 +datetime updated_at
 }
+class DepartmentEntity {
++string id
++string name
++string parent_id
++integer sort
++string principal
++string phone
++string email
++integer status
++string remark
++datetime created_at
++datetime updated_at
+}
 class User {
 +string id
 +string username
@@ -289,13 +340,14 @@ class User {
 +integer status
 +integer dept_id
 }
+DepartmentEntity <|-- Department : "ORM映射"
 Department "1" -- "0..*" User : "包含"
 Department "1" --> "0..*" Department : "子部门"
 ```
 
 **图表来源**
-- [models.py:198-221](file://service/src/infrastructure/database/models.py#L198-L221)
-- [models.py:31-57](file://service/src/infrastructure/database/models.py#L31-L57)
+- [models.py:325-354](file://service/src/infrastructure/database/models.py#L325-L354)
+- [department.py:29-39](file://service/src/domain/entities/department.py#L29-L39)
 
 #### 字段说明
 
@@ -309,7 +361,7 @@ Department "1" --> "0..*" Department : "子部门"
 - **remark**: 备注信息
 
 **章节来源**
-- [models.py:198-221](file://service/src/infrastructure/database/models.py#L198-L221)
+- [models.py:325-354](file://service/src/infrastructure/database/models.py#L325-L354)
 
 ## 依赖关系分析
 
@@ -350,8 +402,8 @@ SQLAlchemy --> PostgreSQL
 ```
 
 **图表来源**
-- [system_routes.py:6-22](file://service/src/api/v1/system_routes.py#L6-L22)
-- [department_service.py:6-15](file://service/src/application/services/department_service.py#L6-L15)
+- [system_routes.py:8-15](file://service/src/api/v1/system_routes.py#L8-L15)
+- [department_service.py:6-11](file://service/src/application/services/department_service.py#L6-L11)
 - [validators.py:34-147](file://service/src/core/validators.py#L34-L147)
 
 ### 依赖注入机制
@@ -365,9 +417,9 @@ SQLAlchemy --> PostgreSQL
 - **DTO**依赖验证器工具集
 
 **章节来源**
-- [system_routes.py:20-22](file://service/src/api/v1/system_routes.py#L20-L22)
-- [department_service.py:21-23](file://service/src/application/services/department_service.py#L21-L23)
-- [department_dto.py:7](file://service/src/application/dto/department_dto.py#L7)
+- [system_routes.py:11](file://service/src/api/v1/system_routes.py#L11)
+- [department_service.py:17-25](file://service/src/application/services/department_service.py#L17-L25)
+- [dependencies.py:155-161](file://service/src/api/dependencies.py#L155-L161)
 
 ## 性能考虑
 
@@ -450,7 +502,7 @@ Success --> SuccessResp[成功响应]
 
 部门管理系统是一个设计合理、架构清晰的企业级应用模块。系统采用分层架构设计，实现了良好的关注点分离和职责明确。通过标准化的API接口和完整的数据验证机制，为前端提供了稳定可靠的部门管理功能。
 
-**更新** 系统现已采用增强的Pydantic验证机制，通过field_validator装饰器和统一的验证器工具集，显著提升了数据验证的准确性和一致性。这种改进不仅增强了系统的可靠性，还为未来的功能扩展奠定了坚实的基础。
+**更新** 系统现已采用增强的Pydantic验证机制，通过field_validator装饰器和统一的验证器工具集，显著提升了数据验证的准确性和一致性。更重要的是，系统已完全迁移到领域驱动设计（DDD）架构模式，将部门实体和仓储逻辑重构到新的domain结构中，实现了更好的关注点分离和代码组织。
 
 系统的优点包括：
 
@@ -459,6 +511,7 @@ Success --> SuccessResp[成功响应]
 - **用户体验**：友好的前端界面和交互体验
 - **性能优化**：异步处理和数据库优化策略
 - **验证增强**：统一的验证器工具集确保数据质量
+- **领域驱动**：DDD架构模式提升代码质量和可维护性
 
 未来可以考虑的改进方向：
 
@@ -467,3 +520,4 @@ Success --> SuccessResp[成功响应]
 - **缓存优化**：引入Redis缓存提升性能
 - **监控告警**：添加系统监控和告警机制
 - **验证扩展**：进一步扩展验证器功能支持更多数据类型
+- **领域服务**：引入更多领域服务提升业务逻辑封装

@@ -11,3 +11,4 @@ collecting ... collected 1 item
 tests/integration/test_api.py::TestAuthEndpoints::test_login_success PASSED [100%]
 
 ============================== 1 passed in 1.72s ==============================
+^C

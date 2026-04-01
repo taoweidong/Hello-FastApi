@@ -17,39 +17,30 @@ def test_health():
 
 def test_user_operations():
     """测试用户操作"""
-    print("=== 2. 创建测试用户 ===")
-    # 先尝试登录，如果用户存在则跳过创建
-    resp = httpx.post(f"{BASE_URL}/api/v1/auth/login", json={"username": "testuser", "password": "TestPass123"})
-
-    if resp.status_code == 200:
-        print("用户已存在，跳过创建")
-        data = resp.json()
-        return data.get("access_token")
-    elif resp.status_code == 401:
-        # 用户不存在，尝试创建（需要权限，可能会失败）
-        print("用户不存在，尝试创建...")
-        resp = httpx.post(f"{BASE_URL}/api/v1/users", json={"username": "testuser", "email": "test@example.com", "password": "TestPass123", "full_name": "测试用户"})
-        print(f"创建用户状态码: {resp.status_code}")
-        if resp.status_code in (201, 401, 403):
-            # 需要权限，使用数据库中已有的用户测试
-            print("需要权限创建用户，使用数据库已有用户测试")
-        print()
-        return None
+    print("=== 2. 准备使用 admin 用户测试 ===")
+    # 使用创建的超级管理员进行测试
+    print("将使用 admin 用户进行后续测试")
+    print()
+    return None
 
 
 def test_login():
     """测试登录"""
     print("=== 3. 用户登录 ===")
-    resp = httpx.post(f"{BASE_URL}/api/v1/auth/login", json={"username": "testuser", "password": "TestPass123"})
+    # 使用正确的API路径: /api/system/login
+    resp = httpx.post(f"{BASE_URL}/api/system/login", json={"username": "admin", "password": "admin123"})
     print(f"状态码: {resp.status_code}")
 
     if resp.status_code == 200:
         data = resp.json()
-        print(f"Access Token: {data['access_token'][:50]}...")
-        print(f"Refresh Token: {data['refresh_token'][:50]}...")
-        print(f"Token Type: {data['token_type']}")
+        # 响应格式: { success, code, message, data: { accessToken, expires, refreshToken, ... } }
+        result = data.get("data", {})
+        access_token = result.get("accessToken", "")
+        refresh_token = result.get("refreshToken", "")
+        print(f"Access Token: {access_token[:50] if access_token else 'N/A'}...")
+        print(f"Refresh Token: {refresh_token[:50] if refresh_token else 'N/A'}...")
         print()
-        return data.get("access_token")
+        return access_token
     else:
         print(f"登录失败: {resp.json()}")
         print()
@@ -60,7 +51,8 @@ def test_protected_endpoint(token: str):
     """测试受保护的端点"""
     print("=== 4. 获取当前用户信息 (需要认证) ===")
     headers = {"Authorization": f"Bearer {token}"}
-    resp = httpx.get(f"{BASE_URL}/api/v1/auth/me", headers=headers)
+    # 使用正确的API路径: /api/system/mine
+    resp = httpx.get(f"{BASE_URL}/api/system/mine", headers=headers)
     print(f"状态码: {resp.status_code}")
     print(f"响应: {resp.json()}")
     print()
@@ -68,10 +60,11 @@ def test_protected_endpoint(token: str):
 
 
 def test_update_profile(token: str):
-    """测试更新个人资料"""
-    print("=== 5. 更新个人资料 ===")
+    """测试获取用户详情"""
+    print("=== 5. 获取用户详情 ===")
     headers = {"Authorization": f"Bearer {token}"}
-    resp = httpx.put(f"{BASE_URL}/api/v1/users/me", headers=headers, json={"full_name": "更新后的用户名"})
+    # 使用正确的API路径: /api/system/user/info
+    resp = httpx.get(f"{BASE_URL}/api/system/user/info", headers=headers)
     print(f"状态码: {resp.status_code}")
     print(f"响应: {resp.json()}")
     print()
@@ -82,25 +75,29 @@ def test_rbac_endpoints(token: str):
     """测试 RBAC 端点"""
     print("=== 6. 获取角色列表 ===")
     headers = {"Authorization": f"Bearer {token}"}
-    resp = httpx.get(f"{BASE_URL}/api/v1/rbac/roles", headers=headers)
+    # 使用正确的API路径: POST /api/system/role
+    resp = httpx.post(f"{BASE_URL}/api/system/role", headers=headers, json={"pageNum": 1, "pageSize": 10})
     print(f"状态码: {resp.status_code}")
     if resp.status_code == 200:
-        roles = resp.json()
+        data = resp.json()
+        roles = data.get("data", {}).get("list", [])
         print(f"角色数量: {len(roles)}")
         for role in roles:
-            print(f"  - {role['name']}: {role['description']}")
+            print(f"  - {role.get('name', 'N/A')}: {role.get('code', 'N/A')}")
     else:
         print(f"响应: {resp.json()}")
     print()
 
     print("=== 7. 获取权限列表 ===")
-    resp = httpx.get(f"{BASE_URL}/api/v1/rbac/permissions", headers=headers)
+    # 使用正确的API路径: GET /api/system/permission/list
+    resp = httpx.get(f"{BASE_URL}/api/system/permission/list", headers=headers, params={"pageNum": 1, "pageSize": 10})
     print(f"状态码: {resp.status_code}")
     if resp.status_code == 200:
-        perms = resp.json()
+        data = resp.json()
+        perms = data.get("data", {}).get("rows", [])
         print(f"权限数量: {len(perms)}")
         for perm in perms[:5]:  # 只显示前5个
-            print(f"  - {perm['codename']}: {perm['name']}")
+            print(f"  - {perm.get('code', 'N/A')}: {perm.get('name', 'N/A')}")
     else:
         print(f"响应: {resp.json()}")
     print()
@@ -109,7 +106,8 @@ def test_rbac_endpoints(token: str):
 def test_no_auth():
     """测试未认证访问"""
     print("=== 8. 测试未认证访问受保护端点 ===")
-    resp = httpx.get(f"{BASE_URL}/api/v1/auth/me")
+    # 使用正确的API路径: /api/system/mine
+    resp = httpx.get(f"{BASE_URL}/api/system/mine")
     print(f"状态码: {resp.status_code}")
     print(f"响应: {resp.json()}")
     print()
