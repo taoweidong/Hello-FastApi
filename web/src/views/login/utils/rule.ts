@@ -11,6 +11,9 @@ export const REGEXP_SIX = /^\d{6}$/;
 export const REGEXP_PWD =
   /^(?![0-9]+$)(?![a-z]+$)(?![A-Z]+$)(?!([^(0-9a-zA-Z)]|[()])+$)(?!^.*[\u4E00-\u9FA5].*$)([^(0-9a-zA-Z)]|[()]|[a-z]|[A-Z]|[0-9]){8,18}$/;
 
+/** 是否跳过验证码校验（开发环境配置） */
+const skipCaptcha = import.meta.env.VITE_SKIP_CAPTCHA === "true";
+
 /** 登录校验 */
 const loginRules = reactive<FormRules>({
   password: [
@@ -30,6 +33,11 @@ const loginRules = reactive<FormRules>({
   verifyCode: [
     {
       validator: (rule, value, callback) => {
+        // 开发环境跳过验证码校验
+        if (skipCaptcha) {
+          callback();
+          return;
+        }
         if (value === "") {
           callback(new Error(transformI18n($t("login.pureVerifyCodeReg"))));
         } else if (useUserStoreHook().verifyCode !== value) {

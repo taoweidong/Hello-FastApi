@@ -63,6 +63,9 @@ const ruleForm = reactive({
   verifyCode: ""
 });
 
+/** 是否跳过验证码（开发环境配置） */
+const skipCaptcha = import.meta.env.VITE_SKIP_CAPTCHA === "true";
+
 const onLogin = async (formEl: FormInstance | undefined) => {
   if (!formEl) return;
   await formEl.validate(valid => {
@@ -217,7 +220,8 @@ watch(loginDay, value => {
               </el-form-item>
             </Motion>
 
-            <Motion :delay="200">
+            <!-- 开发环境可通过配置跳过验证码 -->
+            <Motion v-if="!skipCaptcha" :delay="200">
               <el-form-item prop="verifyCode">
                 <el-input
                   v-model="ruleForm.verifyCode"
