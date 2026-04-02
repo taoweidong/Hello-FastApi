@@ -10,7 +10,7 @@ SQLModel 同时充当 SQLAlchemy ORM 模型和 Pydantic 数据模型，
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text, func
 from sqlmodel import Field, Relationship, SQLModel
@@ -59,7 +59,7 @@ class User(SQLModel, table=True):
     updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))
 
     # 关系
-    roles: List["UserRole"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
+    roles: list["UserRole"] = Relationship(back_populates="user", sa_relationship_kwargs={"lazy": "selectin"})
 
     @property
     def is_active(self) -> bool:
@@ -128,8 +128,8 @@ class Role(SQLModel, table=True):
     updated_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now()))
 
     # 关系
-    permissions: List["Permission"] = Relationship(back_populates="roles", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
-    users: List["UserRole"] = Relationship(back_populates="role", sa_relationship_kwargs={"lazy": "selectin"})
+    permissions: list["Permission"] = Relationship(back_populates="roles", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
+    users: list["UserRole"] = Relationship(back_populates="role", sa_relationship_kwargs={"lazy": "selectin"})
 
     def to_domain(self) -> "RoleEntity":
         """将 ORM 模型转换为领域实体。"""
@@ -162,7 +162,7 @@ class Permission(SQLModel, table=True):
     created_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
 
     # 关系
-    roles: List["Role"] = Relationship(back_populates="permissions", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
+    roles: list["Role"] = Relationship(back_populates="permissions", link_model=RolePermissionLink, sa_relationship_kwargs={"lazy": "selectin"})
 
     def to_domain(self) -> "PermissionEntity":
         """将 ORM 模型转换为领域实体。"""

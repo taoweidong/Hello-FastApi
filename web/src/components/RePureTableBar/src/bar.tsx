@@ -19,9 +19,10 @@ import {
   getKeyList
 } from "@pureadmin/utils";
 
-import PinAngle from "~icons/bi/pin-angle";
+// 固定列图标（使用 Remix Icon 替代 Bootstrap Icon）
+import PinAngle from "~icons/ri/pushpin-2-line";
 import Fullscreen from "~icons/ri/fullscreen-fill";
-import PinAngleFill from "~icons/bi/pin-angle-fill";
+import PinAngleFill from "~icons/ri/pushpin-2-fill";
 import ExitFullscreen from "~icons/ri/fullscreen-exit-fill";
 import DragIcon from "@/assets/table-bar/drag.svg?component";
 import ExpandIcon from "@/assets/table-bar/expand.svg?component";
