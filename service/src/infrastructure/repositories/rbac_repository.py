@@ -1,6 +1,7 @@
-"""使用 SQLModel 实现的 RBAC 仓库。"""
+"""使用 SQLModel 和 FastCRUD 实现的 RBAC 仓库。"""
 
 from sqlalchemy import delete
+from fastcrud import FastCRUD
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,80 +10,148 @@ from src.infrastructure.database.models import Menu, Permission, Role, RoleMenuL
 
 
 class RoleRepository(RoleRepositoryInterface):
-    """RoleRepositoryInterface 的 SQLModel 实现。"""
+    """RoleRepositoryInterface 的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
+        """初始化角色仓储。
+
+        Args:
+            session: 数据库会话
+        """
         self.session = session
+        self._crud = FastCRUD(Role)
 
     async def get_by_id(self, role_id: str) -> Role | None:
-        """根据ID获取角色。"""
-        result = await self.session.exec(select(Role).where(Role.id == role_id))
-        return result.one_or_none()
+        """根据ID获取角色。
+
+        Args:
+            role_id: 角色ID
+
+        Returns:
+            角色对象或 None
+        """
+        return await self._crud.get(self.session, id=role_id)
 
     async def get_by_name(self, name: str) -> Role | None:
-        """根据名称获取角色。"""
-        result = await self.session.exec(select(Role).where(Role.name == name))
-        return result.one_or_none()
+        """根据名称获取角色。
+
+        Args:
+            name: 角色名称
+
+        Returns:
+            角色对象或 None
+        """
+        return await self._crud.get_one(self.session, name=name)
 
     async def get_by_code(self, code: str) -> Role | None:
-        """根据编码获取角色。"""
-        result = await self.session.exec(select(Role).where(Role.code == code))
-        return result.one_or_none()
+        """根据编码获取角色。
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str = None, status: int = None) -> list[Role]:
-        """获取角色列表，支持分页和筛选。"""
-        query = select(Role)
+        Args:
+            code: 角色编码
 
-        # 应用筛选条件
+        Returns:
+            角色对象或 None
+        """
+        return await self._crud.get_one(self.session, code=code)
+
+    async def get_all(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        role_name: str | None = None,
+        status: int | None = None,
+    ) -> list[Role]:
+        """获取角色列表，支持分页和筛选。
+
+        Args:
+            page_num: 页码，从1开始
+            page_size: 每页数量
+            role_name: 角色名称模糊查询
+            status: 角色状态
+
+        Returns:
+            角色列表
+        """
+        filters: dict[str, any] = {}
         if role_name:
-            query = query.where(Role.name.contains(role_name))
+            filters["name"] = role_name
         if status is not None:
-            query = query.where(Role.status == status)
+            filters["status"] = status
 
-        # 分页
-        offset = (page_num - 1) * page_size
-        query = query.offset(offset).limit(page_size)
+        result = await self._crud.get_multi(
+            self.session,
+            offset=(page_num - 1) * page_size,
+            limit=page_size,
+            **filters,
+        )
+        return list(result.get("data", []))
 
-        result = await self.session.exec(query)
-        return list(result.all())
+    async def count(
+        self,
+        role_name: str | None = None,
+        status: int | None = None,
+    ) -> int:
+        """获取角色总数，支持筛选。
 
-    async def count(self, role_name: str = None, status: int = None) -> int:
-        """获取角色总数，支持筛选。"""
-        query = select(Role)
+        Args:
+            role_name: 角色名称模糊查询
+            status: 角色状态
 
-        # 应用筛选条件
+        Returns:
+            角色数量
+        """
+        filters: dict[str, any] = {}
         if role_name:
-            query = query.where(Role.name.contains(role_name))
+            filters["name"] = role_name
         if status is not None:
-            query = query.where(Role.status == status)
+            filters["status"] = status
 
-        result = await self.session.exec(query)
-        return len(result.all())
+        return await self._crud.count(self.session, **filters)
 
     async def create(self, role: Role) -> Role:
-        """创建角色。"""
-        self.session.add(role)
-        await self.session.flush()
-        await self.session.refresh(role)
-        return role
+        """创建角色。
+
+        Args:
+            role: 角色对象
+
+        Returns:
+            创建后的角色对象
+        """
+        return await self._crud.create(self.session, role)
 
     async def update(self, role: Role) -> Role:
-        """更新角色。"""
-        await self.session.merge(role)
-        await self.session.flush()
-        return role
+        """更新角色。
+
+        Args:
+            role: 角色对象
+
+        Returns:
+            更新后的角色对象
+        """
+        return await self._crud.update(self.session, role)
 
     async def delete(self, role_id: str) -> bool:
-        """删除角色。"""
-        role = await self.get_by_id(role_id)
-        if role is None:
-            return False
-        await self.session.delete(role)
-        await self.session.flush()
-        return True
+        """删除角色。
+
+        Args:
+            role_id: 角色ID
+
+        Returns:
+            是否删除成功
+        """
+        deleted_count = await self._crud.delete(self.session, id=role_id)
+        return deleted_count > 0
 
     async def assign_permissions_to_role(self, role_id: str, permission_ids: list[str]) -> bool:
-        """为角色分配权限（先清除旧权限再分配新的）。"""
+        """为角色分配权限（先清除旧权限再分配新的）。
+
+        Args:
+            role_id: 角色ID
+            permission_ids: 权限ID列表
+
+        Returns:
+            是否分配成功
+        """
         # 先清除角色的所有旧权限关联
         stmt = delete(RolePermissionLink).where(RolePermissionLink.role_id == role_id)
         await self.session.execute(stmt)
@@ -96,14 +165,35 @@ class RoleRepository(RoleRepositoryInterface):
         return True
 
     async def get_role_permissions(self, role_id: str) -> list[Permission]:
-        """获取角色的权限列表。"""
-        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).where(RolePermissionLink.role_id == role_id))
+        """获取角色的权限列表。
+
+        Args:
+            role_id: 角色ID
+
+        Returns:
+            权限列表
+        """
+        result = await self.session.exec(
+            select(Permission)
+            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
+            .where(RolePermissionLink.role_id == role_id)
+        )
         return list(result.all())
 
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
-        """为用户分配角色。"""
+        """为用户分配角色。
+
+        Args:
+            user_id: 用户ID
+            role_id: 角色ID
+
+        Returns:
+            是否分配成功
+        """
         # 检查是否已分配
-        result = await self.session.exec(select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id))
+        result = await self.session.exec(
+            select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
+        )
         if result.one_or_none() is not None:
             return False
 
@@ -113,15 +203,33 @@ class RoleRepository(RoleRepositoryInterface):
         return True
 
     async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
-        """移除用户的角色。"""
+        """移除用户的角色。
+
+        Args:
+            user_id: 用户ID
+            role_id: 角色ID
+
+        Returns:
+            是否移除成功
+        """
         stmt = delete(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
         result = await self.session.execute(stmt)
-        # DML 语句返回的 CursorResult 具有 rowcount 属性
         return bool(getattr(result, "rowcount", 0) > 0)
 
     async def get_user_roles(self, user_id: str) -> list[Role]:
-        """获取用户的所有角色。"""
-        result = await self.session.exec(select(Role).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id))
+        """获取用户的所有角色。
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            角色列表
+        """
+        result = await self.session.exec(
+            select(Role)
+            .join(UserRole, UserRole.role_id == Role.id)
+            .where(UserRole.user_id == user_id)
+        )
         return list(result.all())
 
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
@@ -145,8 +253,6 @@ class RoleRepository(RoleRepositoryInterface):
 
         await self.session.flush()
         return True
-
-    # ============ 角色-菜单关联 ============
 
     async def assign_menus_to_role(self, role_id: str, menu_ids: list[str]) -> bool:
         """为角色分配菜单权限（先清除旧菜单再分配新的）。
@@ -179,7 +285,11 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             菜单列表
         """
-        result = await self.session.exec(select(Menu).join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id).where(RoleMenuLink.role_id == role_id))
+        result = await self.session.exec(
+            select(Menu)
+            .join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id)
+            .where(RoleMenuLink.role_id == role_id)
+        )
         return list(result.all())
 
     async def get_role_menu_ids(self, role_id: str) -> list[str]:
@@ -191,74 +301,142 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             菜单ID列表
         """
-        result = await self.session.exec(select(RoleMenuLink.menu_id).where(RoleMenuLink.role_id == role_id))
+        result = await self.session.exec(
+            select(RoleMenuLink.menu_id).where(RoleMenuLink.role_id == role_id)
+        )
         return [str(menu_id) for menu_id in result.all()]
 
 
 class PermissionRepository(PermissionRepositoryInterface):
-    """PermissionRepositoryInterface 的 SQLModel 实现。"""
+    """PermissionRepositoryInterface 的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
+        """初始化权限仓储。
+
+        Args:
+            session: 数据库会话
+        """
         self.session = session
+        self._crud = FastCRUD(Permission)
 
     async def get_by_id(self, permission_id: str) -> Permission | None:
-        """根据ID获取权限。"""
-        result = await self.session.exec(select(Permission).where(Permission.id == permission_id))
-        return result.one_or_none()
+        """根据ID获取权限。
+
+        Args:
+            permission_id: 权限ID
+
+        Returns:
+            权限对象或 None
+        """
+        return await self._crud.get(self.session, id=permission_id)
 
     async def get_by_code(self, code: str) -> Permission | None:
-        """根据编码获取权限。"""
-        result = await self.session.exec(select(Permission).where(Permission.code == code))
-        return result.one_or_none()
+        """根据编码获取权限。
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, permission_name: str = None) -> list[Permission]:
-        """获取权限列表，支持分页和筛选。"""
-        query = select(Permission)
+        Args:
+            code: 权限编码
 
-        # 应用筛选条件
+        Returns:
+            权限对象或 None
+        """
+        return await self._crud.get_one(self.session, code=code)
+
+    async def get_all(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        permission_name: str | None = None,
+    ) -> list[Permission]:
+        """获取权限列表，支持分页和筛选。
+
+        Args:
+            page_num: 页码，从1开始
+            page_size: 每页数量
+            permission_name: 权限名称模糊查询
+
+        Returns:
+            权限列表
+        """
+        filters: dict[str, any] = {}
         if permission_name:
-            query = query.where(Permission.name.contains(permission_name))
+            filters["name"] = permission_name
 
-        # 分页
-        offset = (page_num - 1) * page_size
-        query = query.offset(offset).limit(page_size)
+        result = await self._crud.get_multi(
+            self.session,
+            offset=(page_num - 1) * page_size,
+            limit=page_size,
+            **filters,
+        )
+        return list(result.get("data", []))
 
-        result = await self.session.exec(query)
-        return list(result.all())
+    async def count(self, permission_name: str | None = None) -> int:
+        """获取权限总数，支持筛选。
 
-    async def count(self, permission_name: str = None) -> int:
-        """获取权限总数，支持筛选。"""
-        query = select(Permission)
+        Args:
+            permission_name: 权限名称模糊查询
 
-        # 应用筛选条件
+        Returns:
+            权限数量
+        """
+        filters: dict[str, any] = {}
         if permission_name:
-            query = query.where(Permission.name.contains(permission_name))
+            filters["name"] = permission_name
 
-        result = await self.session.exec(query)
-        return len(result.all())
+        return await self._crud.count(self.session, **filters)
 
     async def create(self, permission: Permission) -> Permission:
-        """创建权限。"""
-        self.session.add(permission)
-        await self.session.flush()
-        await self.session.refresh(permission)
-        return permission
+        """创建权限。
+
+        Args:
+            permission: 权限对象
+
+        Returns:
+            创建后的权限对象
+        """
+        return await self._crud.create(self.session, permission)
 
     async def delete(self, permission_id: str) -> bool:
-        """删除权限。"""
-        perm = await self.get_by_id(permission_id)
-        if perm is None:
-            return False
-        await self.session.delete(perm)
-        await self.session.flush()
-        return True
+        """删除权限。
+
+        Args:
+            permission_id: 权限ID
+
+        Returns:
+            是否删除成功
+        """
+        deleted_count = await self._crud.delete(self.session, id=permission_id)
+        return deleted_count > 0
 
     async def get_permissions_by_role(self, role_id: str) -> list[Permission]:
-        """获取角色的权限列表。"""
-        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).where(RolePermissionLink.role_id == role_id))
+        """获取角色的权限列表。
+
+        Args:
+            role_id: 角色ID
+
+        Returns:
+            权限列表
+        """
+        result = await self.session.exec(
+            select(Permission)
+            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
+            .where(RolePermissionLink.role_id == role_id)
+        )
         return list(result.all())
 
     async def get_user_permissions(self, user_id: str) -> list[Permission]:
-        """获取用户的所有权限（通过其角色）。"""
-        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).join(UserRole, UserRole.role_id == RolePermissionLink.role_id).where(UserRole.user_id == user_id).distinct())
+        """获取用户的所有权限（通过其角色）。
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            权限列表
+        """
+        result = await self.session.exec(
+            select(Permission)
+            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
+            .join(UserRole, UserRole.role_id == RolePermissionLink.role_id)
+            .where(UserRole.user_id == user_id)
+            .distinct()
+        )
         return list(result.all())

@@ -1,7 +1,6 @@
-"""使用 SQLModel 实现的用户仓库。"""
+"""使用 SQLModel 和 FastCRUD 实现的用户仓库。"""
 
-from sqlalchemy import func as sa_func
-from sqlmodel import select
+from fastcrud import FastCRUD
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.repositories.user_repository import UserRepositoryInterface
@@ -9,27 +8,60 @@ from src.infrastructure.database.models import User
 
 
 class UserRepository(UserRepositoryInterface):
-    """UserRepositoryInterface 的 SQLModel 实现。"""
+    """UserRepositoryInterface 的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
+        """初始化用户仓储。
+
+        Args:
+            session: 数据库会话
+        """
         self.session = session
+        self._crud = FastCRUD(User)
 
     async def get_by_id(self, user_id: str) -> User | None:
-        """根据 ID 获取用户。"""
-        result = await self.session.exec(select(User).where(User.id == user_id))
-        return result.one_or_none()
+        """根据 ID 获取用户。
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            用户对象或 None
+        """
+        return await self._crud.get(self.session, id=user_id)
 
     async def get_by_username(self, username: str) -> User | None:
-        """根据用户名获取用户。"""
-        result = await self.session.exec(select(User).where(User.username == username))
-        return result.one_or_none()
+        """根据用户名获取用户。
+
+        Args:
+            username: 用户名
+
+        Returns:
+            用户对象或 None
+        """
+        return await self._crud.get_one(self.session, username=username)
 
     async def get_by_email(self, email: str) -> User | None:
-        """根据邮箱获取用户。"""
-        result = await self.session.exec(select(User).where(User.email == email))
-        return result.one_or_none()
+        """根据邮箱获取用户。
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> list[User]:
+        Args:
+            email: 电子邮箱
+
+        Returns:
+            用户对象或 None
+        """
+        return await self._crud.get_one(self.session, email=email)
+
+    async def get_all(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        username: str | None = None,
+        phone: str | None = None,
+        email: str | None = None,
+        status: int | None = None,
+        dept_id: int | None = None,
+    ) -> list[User]:
         """获取用户列表（支持筛选和分页）。
 
         Args:
@@ -44,28 +76,36 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户列表
         """
-        query = select(User)
-
-        # 应用筛选条件
+        # 构建筛选条件
+        filters: dict[str, any] = {}
         if username:
-            query = query.where(User.username.contains(username))
+            filters["username"] = username
         if phone:
-            query = query.where(User.phone.contains(phone))
+            filters["phone"] = phone
         if email:
-            query = query.where(User.email.contains(email))
+            filters["email"] = email
         if status is not None:
-            query = query.where(User.status == status)
+            filters["status"] = status
         if dept_id is not None:
-            query = query.where(User.dept_id == dept_id)
+            filters["dept_id"] = dept_id
 
-        # 分页
-        offset = (page_num - 1) * page_size
-        query = query.offset(offset).limit(page_size)
+        # 使用 FastCRUD 的 get_multi 方法，支持分页和筛选
+        result = await self._crud.get_multi(
+            self.session,
+            offset=(page_num - 1) * page_size,
+            limit=page_size,
+            **filters,
+        )
+        return list(result.get("data", []))
 
-        result = await self.session.exec(query)
-        return list(result.all())
-
-    async def count(self, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> int:
+    async def count(
+        self,
+        username: str | None = None,
+        phone: str | None = None,
+        email: str | None = None,
+        status: int | None = None,
+        dept_id: int | None = None,
+    ) -> int:
         """获取用户总数（支持筛选）。
 
         Args:
@@ -78,45 +118,53 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户数量
         """
-        query = select(sa_func.count()).select_from(User)
-
-        # 应用筛选条件
+        filters: dict[str, any] = {}
         if username:
-            query = query.where(User.username.contains(username))
+            filters["username"] = username
         if phone:
-            query = query.where(User.phone.contains(phone))
+            filters["phone"] = phone
         if email:
-            query = query.where(User.email.contains(email))
+            filters["email"] = email
         if status is not None:
-            query = query.where(User.status == status)
+            filters["status"] = status
         if dept_id is not None:
-            query = query.where(User.dept_id == dept_id)
+            filters["dept_id"] = dept_id
 
-        result = await self.session.execute(query)
-        return result.scalar_one()
+        return await self._crud.count(self.session, **filters)
 
     async def create(self, user: User) -> User:
-        """创建用户。"""
-        self.session.add(user)
-        await self.session.flush()
-        await self.session.refresh(user)
-        return user
+        """创建用户。
+
+        Args:
+            user: 用户对象
+
+        Returns:
+            创建后的用户对象
+        """
+        return await self._crud.create(self.session, user)
 
     async def update(self, user: User) -> User:
-        """更新用户。"""
-        merged = await self.session.merge(user)
-        await self.session.flush()
-        await self.session.refresh(merged)
-        return merged
+        """更新用户。
+
+        Args:
+            user: 用户对象
+
+        Returns:
+            更新后的用户对象
+        """
+        return await self._crud.update(self.session, user)
 
     async def delete(self, user_id: str) -> bool:
-        """删除用户。"""
-        user = await self.get_by_id(user_id)
-        if user is None:
-            return False
-        await self.session.delete(user)
-        await self.session.flush()
-        return True
+        """删除用户。
+
+        Args:
+            user_id: 用户ID
+
+        Returns:
+            是否删除成功
+        """
+        deleted_count = await self._crud.delete(self.session, id=user_id)
+        return deleted_count > 0
 
     async def batch_delete(self, user_ids: list[str]) -> int:
         """批量删除用户。
@@ -127,11 +175,11 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             删除的用户数量
         """
-        count = 0
+        deleted_count = 0
         for user_id in user_ids:
             if await self.delete(user_id):
-                count += 1
-        return count
+                deleted_count += 1
+        return deleted_count
 
     async def update_status(self, user_id: str, status: int) -> bool:
         """更新用户状态。
