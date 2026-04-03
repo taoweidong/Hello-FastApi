@@ -1,11 +1,15 @@
 """日志领域 - 仓储接口。
 
 定义日志仓储的抽象接口，遵循依赖倒置原则。
-返回类型使用 Any 作为过渡方案，因为上层代码仍大量使用 ORM 模型属性。
 """
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING
+
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+if TYPE_CHECKING:
+    from src.infrastructure.database.models import LoginLog, OperationLog, SystemLog
 
 
 class LogRepositoryInterface:
@@ -13,7 +17,16 @@ class LogRepositoryInterface:
 
     # ============ 登录日志相关 ============
 
-    async def get_login_logs(self, session: Any, page_num: int = 1, page_size: int = 10, username: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[Any], int]:
+    async def get_login_logs(
+        self,
+        session: AsyncSession,
+        page_num: int = 1,
+        page_size: int = 10,
+        username: str | None = None,
+        status: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list["LoginLog"], int]:
         """获取登录日志列表。
 
         Args:
@@ -30,7 +43,7 @@ class LogRepositoryInterface:
         """
         ...
 
-    async def delete_login_logs(self, session: Any, log_ids: list[str]) -> int:
+    async def delete_login_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
         """批量删除登录日志。
 
         Args:
@@ -42,7 +55,7 @@ class LogRepositoryInterface:
         """
         ...
 
-    async def clear_login_logs(self, session: Any) -> int:
+    async def clear_login_logs(self, session: AsyncSession) -> int:
         """清空所有登录日志。
 
         Args:
@@ -55,7 +68,16 @@ class LogRepositoryInterface:
 
     # ============ 操作日志相关 ============
 
-    async def get_operation_logs(self, session: Any, page_num: int = 1, page_size: int = 10, module: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[Any], int]:
+    async def get_operation_logs(
+        self,
+        session: AsyncSession,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        status: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list["OperationLog"], int]:
         """获取操作日志列表。
 
         Args:
@@ -72,7 +94,7 @@ class LogRepositoryInterface:
         """
         ...
 
-    async def delete_operation_logs(self, session: Any, log_ids: list[str]) -> int:
+    async def delete_operation_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
         """批量删除操作日志。
 
         Args:
@@ -84,7 +106,7 @@ class LogRepositoryInterface:
         """
         ...
 
-    async def clear_operation_logs(self, session: Any) -> int:
+    async def clear_operation_logs(self, session: AsyncSession) -> int:
         """清空所有操作日志。
 
         Args:
@@ -97,7 +119,15 @@ class LogRepositoryInterface:
 
     # ============ 系统日志相关 ============
 
-    async def get_system_logs(self, session: Any, page_num: int = 1, page_size: int = 10, module: str | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[Any], int]:
+    async def get_system_logs(
+        self,
+        session: AsyncSession,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list["SystemLog"], int]:
         """获取系统日志列表。
 
         Args:
@@ -113,7 +143,7 @@ class LogRepositoryInterface:
         """
         ...
 
-    async def get_system_log_detail(self, session: Any, log_id: str) -> Any | None:
+    async def get_system_log_detail(self, session: AsyncSession, log_id: str) -> "SystemLog | None":
         """获取系统日志详情。
 
         Args:
@@ -125,7 +155,7 @@ class LogRepositoryInterface:
         """
         ...
 
-    async def delete_system_logs(self, session: Any, log_ids: list[str]) -> int:
+    async def delete_system_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
         """批量删除系统日志。
 
         Args:
@@ -137,7 +167,7 @@ class LogRepositoryInterface:
         """
         ...
 
-    async def clear_system_logs(self, session: Any) -> int:
+    async def clear_system_logs(self, session: AsyncSession) -> int:
         """清空所有系统日志。
 
         Args:

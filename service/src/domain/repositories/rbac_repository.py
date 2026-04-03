@@ -1,33 +1,35 @@
 """RBAC 领域 - 仓储接口。
 
 定义角色和权限仓储的抽象接口，遵循依赖倒置原则。
-返回类型使用 Any 作为过渡方案，因为上层代码仍大量使用 ORM 模型属性。
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.infrastructure.database.models import Permission, Role
 
 
 class RoleRepositoryInterface(ABC):
     """角色的抽象仓储接口。"""
 
     @abstractmethod
-    async def get_by_id(self, role_id: str) -> Any | None:
+    async def get_by_id(self, role_id: str) -> "Role | None":
         """根据 ID 获取角色。"""
         ...
 
     @abstractmethod
-    async def get_by_name(self, name: str) -> Any | None:
+    async def get_by_name(self, name: str) -> "Role | None":
         """根据名称获取角色。"""
         ...
 
     @abstractmethod
-    async def get_by_code(self, code: str) -> Any | None:
+    async def get_by_code(self, code: str) -> "Role | None":
         """根据编码获取角色。"""
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str = None, status: int = None) -> list[Any]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str = None, status: int = None) -> list["Role"]:
         """获取所有角色（分页）。
 
         Args:
@@ -55,7 +57,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def create(self, role: Any) -> Any:
+    async def create(self, role: "Role") -> "Role":
         """创建角色。
 
         Args:
@@ -67,7 +69,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def update(self, role: Any) -> Any:
+    async def update(self, role: "Role") -> "Role":
         """更新角色。
 
         Args:
@@ -104,7 +106,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_role_permissions(self, role_id: str) -> list[Any]:
+    async def get_role_permissions(self, role_id: str) -> list["Permission"]:
         """获取角色的权限列表。
 
         Args:
@@ -142,7 +144,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_user_roles(self, user_id: str) -> list[Any]:
+    async def get_user_roles(self, user_id: str) -> list["Role"]:
         """获取用户的角色列表。
 
         Args:
@@ -158,17 +160,17 @@ class PermissionRepositoryInterface(ABC):
     """权限的抽象仓储接口。"""
 
     @abstractmethod
-    async def get_by_id(self, permission_id: str) -> Any | None:
+    async def get_by_id(self, permission_id: str) -> "Permission | None":
         """根据 ID 获取权限。"""
         ...
 
     @abstractmethod
-    async def get_by_code(self, code: str) -> Any | None:
+    async def get_by_code(self, code: str) -> "Permission | None":
         """根据编码获取权限。"""
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, permission_name: str = None) -> list[Any]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, permission_name: str = None) -> list["Permission"]:
         """获取所有权限（分页）。
 
         Args:
@@ -194,7 +196,7 @@ class PermissionRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def create(self, permission: Any) -> Any:
+    async def create(self, permission: "Permission") -> "Permission":
         """创建权限。
 
         Args:
@@ -218,7 +220,7 @@ class PermissionRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_permissions_by_role(self, role_id: str) -> list[Any]:
+    async def get_permissions_by_role(self, role_id: str) -> list["Permission"]:
         """获取角色的权限列表。
 
         Args:
@@ -230,7 +232,7 @@ class PermissionRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_user_permissions(self, user_id: str) -> list[Any]:
+    async def get_user_permissions(self, user_id: str) -> list["Permission"]:
         """获取用户的所有权限（通过角色）。
 
         Args:

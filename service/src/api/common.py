@@ -2,10 +2,13 @@
 
 import math
 from datetime import datetime
-from typing import Any
+from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 from sqlmodel import SQLModel
+
+# 泛型类型变量
+T = TypeVar("T")
 
 
 class ErrorResponse(SQLModel):
@@ -27,30 +30,30 @@ class HealthResponse(SQLModel):
     version: str
 
 
-class UnifiedResponse(BaseModel):
+class UnifiedResponse(BaseModel, Generic[T]):
     """统一响应格式（Pure Admin 前端标准）"""
 
     code: int = 0
     message: str = "操作成功"
-    data: Any = None
+    data: T | None = None
 
 
-class PageResponse(BaseModel):
+class PageResponse(BaseModel, Generic[T]):
     """分页响应格式"""
 
     total: int
     pageNum: int
     pageSize: int
     totalPage: int
-    rows: list
+    rows: list[T]
 
 
-def success_response(data: Any = None, message: str = "操作成功", code: int = 0) -> dict:
+def success_response(data: T | None = None, message: str = "操作成功", code: int = 0) -> dict[str, T | str | int]:
     """构建成功响应（Pure Admin 前端标准：code=0 表示成功）"""
     return {"code": code, "message": message, "data": data}
 
 
-def list_response(list_data: list, total: int, page_size: int = 10, current_page: int = 1) -> dict:
+def list_response(list_data: list[T], total: int, page_size: int = 10, current_page: int = 1) -> dict[str, list[T] | int]:
     """构建列表响应（Pure Admin 前端标准格式）
 
     Args:
@@ -65,7 +68,7 @@ def list_response(list_data: list, total: int, page_size: int = 10, current_page
     return success_response(data={"list": list_data, "total": total, "pageSize": page_size, "currentPage": current_page})
 
 
-def page_response(rows: list, total: int, page_num: int, page_size: int) -> dict:
+def page_response(rows: list[T], total: int, page_num: int, page_size: int) -> dict[str, list[T] | int]:
     """构建分页响应（旧版，建议使用 list_response）
 
     注意：此函数保留用于向后兼容，新代码请使用 list_response()
@@ -74,7 +77,7 @@ def page_response(rows: list, total: int, page_num: int, page_size: int) -> dict
     return success_response(data={"total": total, "pageNum": page_num, "pageSize": page_size, "totalPage": total_page, "rows": rows})
 
 
-def error_response(message: str, code: int = 400) -> dict:
+def error_response(message: str, code: int = 400) -> dict[str, str | int]:
     """构建错误响应"""
     return {"code": code, "message": message}
 
@@ -82,7 +85,7 @@ def error_response(message: str, code: int = 400) -> dict:
 # ============ 模型转换工具 ============
 
 
-def model_to_dict(model: Any, exclude_none: bool = False, exclude: set[str] | None = None) -> dict:
+def model_to_dict(model: BaseModel | SQLModel | object, exclude_none: bool = False, exclude: set[str] | None = None) -> dict[str, object]:
     """将模型转换为字典。
 
     Args:
@@ -98,14 +101,14 @@ def model_to_dict(model: Any, exclude_none: bool = False, exclude: set[str] | No
 
     # 如果有 model_dump 方法（Pydantic v2）
     if hasattr(model, "model_dump"):
-        result = model.model_dump(exclude_none=exclude_none)
+        result = model.model_dump(exclude_none=exclude_none)  # type: ignore
     # 如果有 dict 方法（Pydantic v1）
     elif hasattr(model, "dict"):
-        result = model.dict(exclude_none=exclude_none)
+        result = model.dict(exclude_none=exclude_none)  # type: ignore
     # 如果有 __dict__ 属性
     elif hasattr(model, "__dict__"):
         result = {}
-        for key, value in model.__dict__.items():
+        for key, value in model.__dict__.items():  # type: ignore
             if not key.startswith("_"):
                 if not exclude_none or value is not None:
                     result[key] = value
@@ -119,7 +122,7 @@ def model_to_dict(model: Any, exclude_none: bool = False, exclude: set[str] | No
     return result
 
 
-def models_to_list(models: list, exclude_none: bool = False, exclude: set[str] | None = None) -> list[dict]:
+def models_to_list(models: list[BaseModel | SQLModel | object], exclude_none: bool = False, exclude: set[str] | None = None) -> list[dict[str, object]]:
     """将模型列表转换为字典列表。
 
     Args:
@@ -161,7 +164,7 @@ def datetime_to_timestamp(dt: datetime | None) -> int | None:
     return int(dt.timestamp() * 1000)
 
 
-def safe_str(value: Any, default: str = "") -> str:
+def safe_str(value: object | None, default: str = "") -> str:
     """安全转换为字符串。
 
     将 None 或空值转换为默认字符串。
@@ -178,7 +181,7 @@ def safe_str(value: Any, default: str = "") -> str:
     return str(value)
 
 
-def safe_int(value: Any, default: int | None = None) -> int | None:
+def safe_int(value: object | None, default: int | None = None) -> int | None:
     """安全转换为整数。
 
     Args:

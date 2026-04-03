@@ -1,18 +1,22 @@
 """菜单领域 - 仓储接口。
 
 定义菜单仓储的抽象接口，遵循依赖倒置原则。
-返回类型使用 Any 作为过渡方案，因为上层代码仍大量使用 ORM 模型属性。
 """
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING
+
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+if TYPE_CHECKING:
+    from src.infrastructure.database.models import Menu
 
 
 class MenuRepositoryInterface(ABC):
     """菜单领域的抽象仓储接口。"""
 
     @abstractmethod
-    async def get_all(self, session: Any) -> list[Any]:
+    async def get_all(self, session: AsyncSession) -> list["Menu"]:
         """获取所有菜单。
 
         Args:
@@ -24,7 +28,7 @@ class MenuRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_by_id(self, menu_id: str, session: Any) -> Any | None:
+    async def get_by_id(self, menu_id: str, session: AsyncSession) -> "Menu | None":
         """根据 ID 获取菜单。
 
         Args:
@@ -37,7 +41,7 @@ class MenuRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def create(self, menu: Any, session: Any) -> Any:
+    async def create(self, menu: "Menu", session: AsyncSession) -> "Menu":
         """创建新菜单。
 
         Args:
@@ -50,7 +54,7 @@ class MenuRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def update(self, menu: Any, session: Any) -> Any:
+    async def update(self, menu: "Menu", session: AsyncSession) -> "Menu":
         """更新现有菜单。
 
         Args:
@@ -63,7 +67,7 @@ class MenuRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def delete(self, menu_id: str, session: Any) -> bool:
+    async def delete(self, menu_id: str, session: AsyncSession) -> bool:
         """根据 ID 删除菜单。
 
         Args:
@@ -76,7 +80,7 @@ class MenuRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_by_parent_id(self, parent_id: str | None, session: Any) -> list[Any]:
+    async def get_by_parent_id(self, parent_id: str | None, session: AsyncSession) -> list["Menu"]:
         """根据父菜单 ID 获取子菜单。
 
         Args:
