@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     # ============ 应用配置 ============
     APP_NAME: str = "Hello-FastApi"
     APP_ENV: Environment = "development"
-    DEBUG: bool = True
+    DEBUG: bool = False
     SECRET_KEY: str = Field(default="your-secret-key-change-in-production", min_length=32)
     API_VERSION: str = "v1"
 

@@ -14,7 +14,7 @@ from src.application.services.auth_service import AuthService
 from src.core.exceptions import UnauthorizedError
 from src.infrastructure.database import get_db
 from src.infrastructure.repositories.menu_repository import MenuRepository
-from src.infrastructure.repositories.rbac_repository import RoleRepository
+from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
 router = APIRouter()

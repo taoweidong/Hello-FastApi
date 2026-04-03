@@ -32,7 +32,7 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
     from src.application.services.user_service import UserService
     from src.domain.services.password_service import PasswordService
     from src.infrastructure.database import async_session_factory, init_db
-    from src.infrastructure.repositories.rbac_repository import RoleRepository
+    from src.infrastructure.repositories.role_repository import RoleRepository
     from src.infrastructure.repositories.user_repository import UserRepository
 
     await init_db()
@@ -63,7 +63,8 @@ async def seed_rbac() -> None:
     from src.core.constants import DEFAULT_PERMISSIONS, DEFAULT_ROLES
     from src.infrastructure.database import async_session_factory, init_db
     from src.infrastructure.database.models import Permission, Role
-    from src.infrastructure.repositories.rbac_repository import PermissionRepository, RoleRepository
+    from src.infrastructure.repositories.permission_repository import PermissionRepository
+    from src.infrastructure.repositories.role_repository import RoleRepository
 
     await init_db()
 

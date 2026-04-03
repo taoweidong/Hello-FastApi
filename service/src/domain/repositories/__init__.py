@@ -7,7 +7,8 @@
 from src.domain.repositories.department_repository import DepartmentRepositoryInterface
 from src.domain.repositories.log_repository import LogRepositoryInterface
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
-from src.domain.repositories.rbac_repository import PermissionRepositoryInterface, RoleRepositoryInterface
+from src.domain.repositories.permission_repository import PermissionRepositoryInterface
+from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 
 __all__ = ["UserRepositoryInterface", "RoleRepositoryInterface", "PermissionRepositoryInterface", "MenuRepositoryInterface", "DepartmentRepositoryInterface", "LogRepositoryInterface"]

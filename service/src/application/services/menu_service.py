@@ -8,7 +8,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
 from src.core.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
-from src.domain.repositories.rbac_repository import PermissionRepositoryInterface
+from src.domain.repositories.permission_repository import PermissionRepositoryInterface
 from src.infrastructure.database.models import Menu
 
 

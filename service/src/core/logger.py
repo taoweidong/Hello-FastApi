@@ -7,12 +7,19 @@
 - 访问日志（HTTP 请求）
 """
 
+import logging
 import sys
 from datetime import datetime
 
 from loguru import logger
 
 from src.config.settings import LOGS_DIR, settings
+
+# 禁用 SQLAlchemy 的 INFO 级别日志
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.dialects").setLevel(logging.WARNING)
+logging.getLogger("sqlalchemy.orm").setLevel(logging.WARNING)
 
 # 移除默认处理器
 logger.remove()
@@ -45,12 +52,14 @@ def log_request(method: str, path: str, status_code: int, duration_ms: float, cl
     logger.bind(type="access").info(f"{client_ip} | {method} {path} | {status_code} | {duration_ms:.2f}ms")
 
 
-def log_startup(app_name: str, version: str) -> None:
+def log_startup(app_name: str, version: str, docs_url: str | None = None, redoc_url: str | None = None) -> None:
     """记录应用启动日志。
 
     Args:
         app_name: 应用名称
         version: 应用版本
+        docs_url: API 文档地址（Swagger UI）
+        redoc_url: API 文档地址（ReDoc）
     """
     logger.info(f"{'=' * 60}")
     logger.info(f"启动 {app_name} v{version}")
@@ -58,6 +67,10 @@ def log_startup(app_name: str, version: str) -> None:
     logger.info(f"调试模式: {settings.DEBUG}")
     logger.info(f"日志级别: {settings.LOG_LEVEL}")
     logger.info(f"启动时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if docs_url:
+        logger.info(f"API 文档 (Swagger): http://{settings.HOST}:{settings.PORT}{docs_url}")
+    if redoc_url:
+        logger.info(f"API 文档 (ReDoc): http://{settings.HOST}:{settings.PORT}{redoc_url}")
     logger.info(f"{'=' * 60}")
 
 

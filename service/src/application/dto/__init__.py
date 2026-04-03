@@ -4,7 +4,8 @@ from src.application.dto.auth_dto import LoginDTO, LoginResponseDTO, RefreshToke
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentResponseDTO, DepartmentUpdateDTO
 from src.application.dto.log_dto import BatchDeleteLogDTO, LoginLogListQueryDTO, LoginLogResponseDTO, OperationLogListQueryDTO, OperationLogResponseDTO, SystemLogDetailDTO, SystemLogListQueryDTO, SystemLogResponseDTO
 from src.application.dto.menu_dto import MenuCreateDTO, MenuResponseDTO, MenuUpdateDTO
-from src.application.dto.rbac_dto import AssignPermissionsDTO, AssignRoleDTO, PermissionCreateDTO, PermissionListQueryDTO, PermissionResponseDTO, RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
+from src.application.dto.permission_dto import PermissionCreateDTO, PermissionListQueryDTO, PermissionResponseDTO
+from src.application.dto.role_dto import AssignPermissionsDTO, AssignRoleDTO, RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
 from src.application.dto.user_dto import BatchDeleteDTO, ChangePasswordDTO, ResetPasswordDTO, UpdateStatusDTO, UserCreateDTO, UserListQueryDTO, UserResponseDTO, UserUpdateDTO
 
 __all__ = [

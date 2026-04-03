@@ -1,29 +1,31 @@
-"""应用层 - RBAC 服务。"""
+"""应用层 - 角色服务。"""
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.rbac_dto import PermissionCreateDTO, PermissionListQueryDTO, PermissionResponseDTO, RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
+from src.application.dto.role_dto import (
+    AssignPermissionsDTO,
+    RoleCreateDTO,
+    RoleListQueryDTO,
+    RoleResponseDTO,
+    RoleUpdateDTO,
+)
 from src.core.exceptions import ConflictError, NotFoundError
-from src.domain.repositories.rbac_repository import PermissionRepositoryInterface, RoleRepositoryInterface
-from src.infrastructure.database.models import Permission, Role
+from src.domain.repositories.role_repository import RoleRepositoryInterface
+from src.infrastructure.database.models import Role
 
 
-class RBACService:
-    """RBAC 操作的应用服务。"""
+class RoleService:
+    """角色操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession, role_repo: RoleRepositoryInterface, perm_repo: PermissionRepositoryInterface):
-        """初始化 RBAC 服务。
+    def __init__(self, session: AsyncSession, role_repo: RoleRepositoryInterface):
+        """初始化角色服务。
 
         Args:
             session: 数据库会话，用于事务控制
             role_repo: 角色仓储接口实例
-            perm_repo: 权限仓储接口实例
         """
         self.session = session
         self.role_repo = role_repo
-        self.perm_repo = perm_repo
-
-    # --- 角色操作 ---
 
     async def create_role(self, dto: RoleCreateDTO) -> RoleResponseDTO:
         """创建新角色，可选分配权限。"""
@@ -128,34 +130,6 @@ class RBACService:
         await self.role_repo.assign_permissions_to_role(role_id, permission_ids)
         return True
 
-    # --- 权限操作 ---
-
-    async def create_permission(self, dto: PermissionCreateDTO) -> PermissionResponseDTO:
-        """创建新权限。"""
-        # 检查权限编码是否已存在
-        if await self.perm_repo.get_by_code(dto.code):
-            raise ConflictError(f"权限编码 '{dto.code}' 已存在")
-
-        permission = Permission(name=dto.name, code=dto.code, category=dto.category, description=dto.description, status=dto.status)
-        permission = await self.perm_repo.create(permission)
-        return self._perm_to_response(permission)
-
-    async def get_permissions(self, query: PermissionListQueryDTO) -> tuple[list[PermissionResponseDTO], int]:
-        """获取权限列表（分页）。"""
-        # 获取总数
-        total = await self.perm_repo.count(permission_name=query.permissionName)
-        # 获取列表
-        perms = await self.perm_repo.get_all(page_num=query.pageNum, page_size=query.pageSize, permission_name=query.permissionName)
-        return [self._perm_to_response(p) for p in perms], total
-
-    async def delete_permission(self, permission_id: str) -> bool:
-        """删除权限。"""
-        if not await self.perm_repo.delete(permission_id):
-            raise NotFoundError(f"权限ID '{permission_id}' 不存在")
-        return True
-
-    # --- 分配操作 ---
-
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
         """为用户分配角色。"""
         role = await self.role_repo.get_by_id(role_id)
@@ -177,18 +151,6 @@ class RBACService:
         roles = await self.role_repo.get_user_roles(user_id)
         return [await self._role_to_response(r) for r in roles]
 
-    async def get_user_permissions(self, user_id: str) -> list[PermissionResponseDTO]:
-        """获取用户的所有权限（通过其角色）。"""
-        perms = await self.perm_repo.get_user_permissions(user_id)
-        return [self._perm_to_response(p) for p in perms]
-
-    async def check_permission(self, user_id: str, codename: str) -> bool:
-        """检查用户是否具有特定权限。"""
-        perms = await self.perm_repo.get_user_permissions(user_id)
-        return any(p.code == codename for p in perms)
-
-    # --- 辅助方法 ---
-
     async def _role_to_response(self, role: Role) -> RoleResponseDTO:
         """将Role模型转换为响应DTO。"""
         # 获取角色的权限列表
@@ -205,8 +167,3 @@ class RBACService:
             createTime=role.created_at,
             updateTime=role.updated_at,
         )
-
-    @staticmethod
-    def _perm_to_response(perm: Permission) -> PermissionResponseDTO:
-        """将Permission模型转换为响应DTO。"""
-        return PermissionResponseDTO(id=perm.id, name=perm.name, code=perm.code, category=perm.category, description=perm.description, status=perm.status, createTime=perm.created_at)

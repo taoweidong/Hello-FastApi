@@ -7,7 +7,8 @@ from fastapi import APIRouter
 
 from src.api.v1.auth_routes import router as auth_router
 from src.api.v1.menu_routes import menu_router
-from src.api.v1.rbac_routes import permission_router, role_router
+from src.api.v1.permission_routes import permission_router
+from src.api.v1.role_routes import role_router
 from src.api.v1.system_routes import system_extra_router
 from src.api.v1.user_routes import router as user_router
 

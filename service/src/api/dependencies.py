@@ -12,7 +12,8 @@ from src.application.services.auth_service import AuthService
 from src.application.services.department_service import DepartmentService
 from src.application.services.log_service import LogService
 from src.application.services.menu_service import MenuService
-from src.application.services.rbac_service import RBACService
+from src.application.services.permission_service import PermissionService
+from src.application.services.role_service import RoleService
 from src.application.services.user_service import UserService
 from src.config.settings import get_settings
 from src.core.exceptions import ForbiddenError, UnauthorizedError
@@ -22,7 +23,8 @@ from src.infrastructure.database import get_db
 from src.infrastructure.repositories.department_repository import DepartmentRepository
 from src.infrastructure.repositories.log_repository import LogRepository
 from src.infrastructure.repositories.menu_repository import MenuRepository
-from src.infrastructure.repositories.rbac_repository import PermissionRepository, RoleRepository
+from src.infrastructure.repositories.permission_repository import PermissionRepository
+from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
 security_scheme = HTTPBearer()
@@ -142,14 +144,22 @@ async def get_menu_service(db: AsyncSession = Depends(get_db)) -> MenuService:
     return MenuService(session=db, menu_repo=menu_repo, perm_repo=perm_repo)
 
 
-async def get_rbac_service(db: AsyncSession = Depends(get_db)) -> RBACService:
-    """获取 RBAC 服务实例。
+async def get_role_service(db: AsyncSession = Depends(get_db)) -> RoleService:
+    """获取角色服务实例。
 
-    注入角色仓储和权限仓储依赖。
+    注入角色仓储依赖。
     """
     role_repo = RoleRepository(db)
+    return RoleService(session=db, role_repo=role_repo)
+
+
+async def get_permission_service(db: AsyncSession = Depends(get_db)) -> PermissionService:
+    """获取权限服务实例。
+
+    注入权限仓储依赖。
+    """
     perm_repo = PermissionRepository(db)
-    return RBACService(session=db, role_repo=role_repo, perm_repo=perm_repo)
+    return PermissionService(session=db, perm_repo=perm_repo)
 
 
 async def get_department_service(db: AsyncSession = Depends(get_db)) -> DepartmentService:

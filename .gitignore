@@ -12,7 +12,6 @@ Thumbs.db
 
 # 工具缓存目录
 .codeartsdoer/
-.codebuddy/
 
 # Qoder 临时文件
 .qoder/*.diff

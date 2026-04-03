@@ -4,7 +4,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserListQueryDTO, UserResponseDTO, UserUpdateDTO
 from src.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
-from src.domain.repositories.rbac_repository import RoleRepositoryInterface
+from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.password_service import PasswordService
 from src.infrastructure.database.models import User

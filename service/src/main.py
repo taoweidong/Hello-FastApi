@@ -20,7 +20,12 @@ from src.infrastructure.database import close_db, init_db
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """应用生命周期管理器 - 启动和关闭。"""
     # 启动
-    log_startup(settings.APP_NAME, settings.API_VERSION)
+    log_startup(
+        app_name=settings.APP_NAME,
+        version=settings.API_VERSION,
+        docs_url=app.docs_url,
+        redoc_url=app.redoc_url
+    )
     await init_db()
     logger.info("数据库初始化完成")
     yield
@@ -33,7 +38,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 def create_app() -> FastAPI:
     """应用程序工厂 - 创建并配置 FastAPI 应用。"""
-    app = FastAPI(title=settings.APP_NAME, description="FastAPI + DDD + RBAC API Service", version=settings.API_VERSION, docs_url=f"{API_SYSTEM_PREFIX}/docs", redoc_url=f"{API_SYSTEM_PREFIX}/redoc", openapi_url=f"{API_SYSTEM_PREFIX}/openapi.json", lifespan=lifespan)
+    app = FastAPI(
+        title=settings.APP_NAME,
+        description="FastAPI + DDD + RBAC API Service",
+        version=settings.API_VERSION,
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
+        lifespan=lifespan,
+    )
 
     # CORS 中间件
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])

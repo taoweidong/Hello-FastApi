@@ -1,13 +1,13 @@
-"""RBAC 领域 - 仓储接口。
+"""角色仓储接口。
 
-定义角色和权限仓储的抽象接口，遵循依赖倒置原则。
+定义角色仓储的抽象接口，遵循依赖倒置原则。
 """
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.infrastructure.database.models import Permission, Role
+    from src.infrastructure.database.models import Menu, Permission, Role
 
 
 class RoleRepositoryInterface(ABC):
@@ -29,7 +29,9 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str = None, status: int = None) -> list["Role"]:
+    async def get_all(
+        self, page_num: int = 1, page_size: int = 10, role_name: str = None, status: int = None
+    ) -> list["Role"]:
         """获取所有角色（分页）。
 
         Args:
@@ -155,90 +157,52 @@ class RoleRepositoryInterface(ABC):
         """
         ...
 
-
-class PermissionRepositoryInterface(ABC):
-    """权限的抽象仓储接口。"""
-
     @abstractmethod
-    async def get_by_id(self, permission_id: str) -> "Permission | None":
-        """根据 ID 获取权限。"""
-        ...
-
-    @abstractmethod
-    async def get_by_code(self, code: str) -> "Permission | None":
-        """根据编码获取权限。"""
-        ...
-
-    @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, permission_name: str = None) -> list["Permission"]:
-        """获取所有权限（分页）。
+    async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
+        """为用户批量分配角色（先清除旧角色再分配新的）。
 
         Args:
-            page_num: 页码
-            page_size: 每页数量
-            permission_name: 权限名称过滤
+            user_id: 用户ID
+            role_ids: 角色ID列表
 
         Returns:
-            权限列表
+            是否分配成功
         """
         ...
 
     @abstractmethod
-    async def count(self, permission_name: str = None) -> int:
-        """统计权限总数。
+    async def assign_menus_to_role(self, role_id: str, menu_ids: list[str]) -> bool:
+        """为角色分配菜单权限（先清除旧菜单再分配新的）。
 
         Args:
-            permission_name: 权限名称过滤
+            role_id: 角色ID
+            menu_ids: 菜单ID列表
 
         Returns:
-            权限总数
+            是否分配成功
         """
         ...
 
     @abstractmethod
-    async def create(self, permission: "Permission") -> "Permission":
-        """创建权限。
-
-        Args:
-            permission: 权限对象
-
-        Returns:
-            创建后的权限对象
-        """
-        ...
-
-    @abstractmethod
-    async def delete(self, permission_id: str) -> bool:
-        """删除权限。
-
-        Args:
-            permission_id: 权限ID
-
-        Returns:
-            是否删除成功
-        """
-        ...
-
-    @abstractmethod
-    async def get_permissions_by_role(self, role_id: str) -> list["Permission"]:
-        """获取角色的权限列表。
+    async def get_role_menus(self, role_id: str) -> list["Menu"]:
+        """获取角色的菜单列表。
 
         Args:
             role_id: 角色ID
 
         Returns:
-            权限列表
+            菜单列表
         """
         ...
 
     @abstractmethod
-    async def get_user_permissions(self, user_id: str) -> list["Permission"]:
-        """获取用户的所有权限（通过角色）。
+    async def get_role_menu_ids(self, role_id: str) -> list[str]:
+        """获取角色的菜单ID列表。
 
         Args:
-            user_id: 用户ID
+            role_id: 角色ID
 
         Returns:
-            权限列表
+            菜单ID列表
         """
         ...
