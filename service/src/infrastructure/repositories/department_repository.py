@@ -51,7 +51,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             部门对象或 None
         """
-        return await self._crud.get_one(session, name=name)
+        return await self._crud.get(session, name=name)
 
     async def get_by_parent_id(self, parent_id: str | None, session: AsyncSession) -> list[Department]:
         """根据父部门 ID 获取子部门，按排序号排序。

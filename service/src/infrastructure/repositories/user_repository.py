@@ -39,7 +39,7 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户对象或 None
         """
-        return await self._crud.get_one(self.session, username=username)
+        return await self._crud.get(self.session, username=username)
 
     async def get_by_email(self, email: str) -> User | None:
         """根据邮箱获取用户。
@@ -50,7 +50,7 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户对象或 None
         """
-        return await self._crud.get_one(self.session, email=email)
+        return await self._crud.get(self.session, email=email)
 
     async def get_all(
         self,
