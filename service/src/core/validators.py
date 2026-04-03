@@ -81,7 +81,7 @@ def empty_str_or_zero_to_none(v: int | str | T) -> int | T | None:
     return v
 
 
-def parse_time_range(time_values: list | None) -> tuple:
+def parse_time_range(time_values: list[str] | None) -> tuple[str | None, str | None]:
     """解析时间范围参数。
 
     将前端传递的时间范围数组解析为开始时间和结束时间。

@@ -51,7 +51,7 @@ class MenuUpdateDTO(BaseModel):
 
     @field_validator("parentId", mode="before")
     @classmethod
-    def validate_parent_id(cls, v) -> str | None:
+    def validate_parent_id(cls, v: str | int | None) -> str | None:
         """将 parentId 统一处理：int 0、空字符串、None 都转换为 None 表示顶级菜单。"""
         return normalize_optional_id(v)
 
