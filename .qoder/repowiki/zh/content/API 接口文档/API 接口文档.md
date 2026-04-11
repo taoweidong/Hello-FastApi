@@ -9,6 +9,7 @@
 - [service/src/api/v1/user_routes.py](file://service/src/api/v1/user_routes.py)
 - [service/src/api/v1/rbac_routes.py](file://service/src/api/v1/rbac_routes.py)
 - [service/src/api/v1/menu_routes.py](file://service/src/api/v1/menu_routes.py)
+- [service/src/api/v1/system_routes.py](file://service/src/api/v1/system_routes.py)
 - [service/src/application/dto/auth_dto.py](file://service/src/application/dto/auth_dto.py)
 - [service/src/application/dto/user_dto.py](file://service/src/application/dto/user_dto.py)
 - [service/src/application/dto/rbac_dto.py](file://service/src/application/dto/rbac_dto.py)
@@ -33,30 +34,31 @@
 10. [附录](#附录)
 
 ## 简介
-本文件为 Hello-FastApi 的 API 接口文档，覆盖认证接口、用户管理接口、RBAC 接口与菜单管理接口。文档提供每个接口的 HTTP 方法、URL 模式、请求参数、响应格式与状态码说明，并解释 JWT 认证与权限校验机制。同时给出统一响应格式、版本管理策略、兼容性考虑以及测试与调试建议，帮助前后端与第三方集成快速上手。
+本文件为 Hello-FastApi 的 API 接口文档，覆盖认证接口、用户管理接口、RBAC 接口、菜单管理接口与系统管理接口。文档提供每个接口的 HTTP 方法、URL 模式、请求参数、响应格式与状态码说明，并解释 JWT 认证与权限校验机制。同时给出统一响应格式、版本管理策略、兼容性考虑以及测试与调试建议，帮助前后端与第三方集成快速上手。
 
 ## 项目结构
 - 后端采用 FastAPI + DDD 分层架构，API 路由位于 v1 版本命名空间，统一前缀为 /api/system。
-- 核心模块包括：认证、用户管理、RBAC（角色与权限）、菜单管理。
+- 核心模块包括：认证、用户管理、RBAC（角色与权限）、菜单管理、系统管理（部门、日志等）。
 - 统一响应格式与分页格式在公共模块定义；认证依赖与权限校验通过依赖注入实现。
 
 ```mermaid
 graph TB
 A["应用入口<br/>service/src/main.py"] --> B["系统路由<br/>/api/system"]
-B --> C["认证路由<br/>/api/system/login, /register, /logout, /refresh"]
+B --> C["认证路由<br/>/api/system/login, /register, /logout, /refresh-token"]
 B --> D["用户路由<br/>/api/system/user/*"]
 B --> E["RBAC 路由<br/>/api/system/role/*, /api/system/permission/*"]
 B --> F["菜单路由<br/>/api/system/menu/*"]
-A --> G["统一响应与分页<br/>service/src/api/common.py"]
-A --> H["认证与权限依赖<br/>service/src/api/dependencies.py"]
+B --> G["系统管理路由<br/>/api/system/dept/*, /api/system/login-logs/*, /api/system/operation-logs/*, /api/system/system-logs/*"]
+A --> H["统一响应与分页<br/>service/src/api/common.py"]
+A --> I["认证与权限依赖<br/>service/src/api/dependencies.py"]
 ```
 
-图表来源
+**图表来源**
 - [service/src/main.py:34-96](file://service/src/main.py#L34-L96)
 - [service/src/api/common.py:29-65](file://service/src/api/common.py#L29-L65)
 - [service/src/api/dependencies.py:16-72](file://service/src/api/dependencies.py#L16-L72)
 
-章节来源
+**章节来源**
 - [service/src/main.py:34-96](file://service/src/main.py#L34-L96)
 - [service/src/core/constants.py:4-6](file://service/src/core/constants.py#L4-L6)
 
@@ -68,7 +70,7 @@ A --> H["认证与权限依赖<br/>service/src/api/dependencies.py"]
 - JWT 令牌服务
   - 支持创建访问令牌与刷新令牌，设定过期时间；解码并验证令牌有效性；校验令牌类型。
 
-章节来源
+**章节来源**
 - [service/src/api/common.py:29-65](file://service/src/api/common.py#L29-L65)
 - [service/src/api/dependencies.py:16-72](file://service/src/api/dependencies.py#L16-L72)
 - [service/src/domain/auth/token_service.py:14-45](file://service/src/domain/auth/token_service.py#L14-L45)
@@ -99,11 +101,11 @@ Handler-->>API : "统一响应"
 API-->>Client : "JSON 响应"
 ```
 
-图表来源
+**图表来源**
 - [service/src/main.py:34-96](file://service/src/main.py#L34-L96)
 - [service/src/api/common.py:45-65](file://service/src/api/common.py#L45-L65)
 
-章节来源
+**章节来源**
 - [service/src/main.py:34-96](file://service/src/main.py#L34-L96)
 - [service/src/config/settings.py:47-51](file://service/src/config/settings.py#L47-L51)
 
@@ -126,32 +128,32 @@ API-->>Client : "JSON 响应"
   - 成功响应：登出成功
   - 说明：JWT 无状态，服务端不存储会话
 - 刷新令牌
-  - 方法与路径：POST /api/system/refresh
+  - 方法与路径：POST /api/system/refresh-token
   - 请求体：refreshToken
   - 成功响应：返回新的 accessToken、expires、refreshToken
   - 失败响应：401 未授权（无效或过期的刷新令牌）
 
 请求与响应示例（基于测试与实现）
-- 登录成功示例：响应包含 code=200、data.accessToken、data.refreshToken、data.expires、data.userInfo、data.roles、data.permissions
+- 登录成功示例：响应包含 code=0、data.accessToken、data.refreshToken、data.expires、data.userInfo、data.roles、data.permissions
 - 登录失败示例：响应 code=401，message 说明用户名或密码错误
-- 注册成功示例：响应 code=200，data 包含新建用户基本信息
-- 登出成功示例：响应 code=200，message 为“登出成功”
-- 刷新成功示例：响应 code=200，data.accessToken、data.refreshToken 更新
+- 注册成功示例：响应 code=0，data 包含新建用户基本信息
+- 登出成功示例：响应 code=0，message 为"登出成功"
+- 刷新成功示例：响应 code=0，data.accessToken、data.refreshToken 更新
 
-章节来源
-- [service/src/api/v1/auth_routes.py:19-86](file://service/src/api/v1/auth_routes.py#L19-L86)
+**章节来源**
+- [service/src/api/v1/auth_routes.py:23-86](file://service/src/api/v1/auth_routes.py#L23-L86)
 - [service/src/application/dto/auth_dto.py:7-54](file://service/src/application/dto/auth_dto.py#L7-L54)
 - [service/src/application/services/auth_service.py:26-154](file://service/src/application/services/auth_service.py#L26-L154)
-- [service/tests/integration/test_api.py:28-161](file://service/tests/integration/test_api.py#L28-L161)
+- [service/tests/integration/test_api.py:44-124](file://service/tests/integration/test_api.py#L44-L124)
 
 ### 用户管理接口
 - 获取用户列表（分页+筛选）
-  - 方法与路径：POST /api/system/user/list
+  - 方法与路径：POST /api/system/user
   - 权限：user:view
   - 请求体：pageNum、pageSize、username、phone、email、status、deptId
   - 成功响应：分页数据 rows、total、pageNum、pageSize、totalPage
 - 创建用户
-  - 方法与路径：POST /api/system/user
+  - 方法与路径：POST /api/system/user/create
   - 权限：user:add
   - 请求体：username、password、nickname、email、phone、sex、avatar、status、deptId、remark
   - 成功响应：code=201，data 为创建用户信息
@@ -192,25 +194,30 @@ API-->>Client : "JSON 响应"
   - 认证：需要有效 access_token
   - 请求体：oldPassword、newPassword
   - 成功响应：密码修改成功
+- 为用户分配角色
+  - 方法与路径：POST /api/system/user/assign-role
+  - 权限：user:edit
+  - 请求体：userId、roleIds
+  - 成功响应：角色分配成功
 
 请求与响应示例（基于测试与实现）
-- 获取当前用户信息示例：需携带 Authorization: Bearer <access_token>，响应 code=200，data 为用户信息
-- 修改密码示例：携带 access_token，响应 code=200，message 为“密码修改成功”
+- 获取当前用户信息示例：需携带 Authorization: Bearer <access_token>，响应 code=0，data 为用户信息
+- 修改密码示例：携带 access_token，响应 code=0，message 为"密码修改成功"
 
-章节来源
-- [service/src/api/v1/user_routes.py:27-252](file://service/src/api/v1/user_routes.py#L27-L252)
+**章节来源**
+- [service/src/api/v1/user_routes.py:17-228](file://service/src/api/v1/user_routes.py#L17-L228)
 - [service/src/application/dto/user_dto.py:8-86](file://service/src/application/dto/user_dto.py#L8-L86)
-- [service/tests/integration/test_api.py:162-393](file://service/tests/integration/test_api.py#L162-L393)
+- [service/tests/integration/test_api.py:125-263](file://service/tests/integration/test_api.py#L125-L263)
 
 ### RBAC 接口
 - 角色管理
   - 获取角色列表（分页+筛选）
-    - 方法与路径：GET /api/system/role/list
+    - 方法与路径：POST /api/system/role
     - 权限：role:view
-    - 查询参数：pageNum、pageSize、roleName、status
+    - 请求体：pageNum、pageSize、roleName、status
     - 成功响应：分页数据
   - 创建角色
-    - 方法与路径：POST /api/system/role
+    - 方法与路径：POST /api/system/role/create
     - 权限：role:manage
     - 请求体：name、code、description、status、permissionIds
     - 成功响应：code=201
@@ -232,6 +239,11 @@ API-->>Client : "JSON 响应"
     - 权限：role:manage
     - 请求体：permissionIds
     - 成功响应：权限分配成功
+  - 为角色分配菜单权限
+    - 方法与路径：POST /api/system/role/{role_id}/menu
+    - 权限：role:manage
+    - 请求体：menuIds（菜单ID列表）
+    - 成功响应：菜单权限分配成功
 - 权限管理
   - 获取权限列表（分页+筛选）
     - 方法与路径：GET /api/system/permission/list
@@ -249,14 +261,18 @@ API-->>Client : "JSON 响应"
     - 成功响应：权限删除成功
 
 请求与响应示例（基于测试与实现）
-- 获取角色列表示例：携带 role:view 权限，响应 code=200，data 为分页数据
-- 为角色分配权限示例：携带 role:manage 权限，响应 code=200，message 为“权限分配成功”
+- 获取角色列表示例：携带 role:view 权限，响应 code=0，data 为分页数据
+- 为角色分配权限示例：携带 role:manage 权限，响应 code=0，message 为"权限分配成功"
 
-章节来源
-- [service/src/api/v1/rbac_routes.py:33-257](file://service/src/api/v1/rbac_routes.py#L33-L257)
+**章节来源**
+- [service/src/api/v1/rbac_routes.py:25-227](file://service/src/api/v1/rbac_routes.py#L25-L227)
 - [service/src/application/dto/rbac_dto.py:8-88](file://service/src/application/dto/rbac_dto.py#L8-L88)
 
 ### 菜单管理接口
+- 获取菜单列表（扁平结构）
+  - 方法与路径：POST /api/system/menu
+  - 权限：menu:view
+  - 成功响应：data 为扁平菜单列表
 - 获取完整菜单树
   - 方法与路径：GET /api/system/menu/tree
   - 权限：menu:view
@@ -266,7 +282,7 @@ API-->>Client : "JSON 响应"
   - 认证：需要有效 access_token
   - 成功响应：data 为用户可访问菜单列表
 - 创建菜单
-  - 方法与路径：POST /api/system/menu
+  - 方法与路径：POST /api/system/menu/create
   - 权限：menu:add
   - 请求体：菜单字段（具体字段以 DTO 定义为准）
   - 成功响应：code=201
@@ -280,8 +296,96 @@ API-->>Client : "JSON 响应"
   - 权限：menu:delete
   - 成功响应：删除成功
 
-章节来源
-- [service/src/api/v1/menu_routes.py:19-71](file://service/src/api/v1/menu_routes.py#L19-L71)
+**章节来源**
+- [service/src/api/v1/menu_routes.py:19-72](file://service/src/api/v1/menu_routes.py#L19-L72)
+
+### 系统管理接口
+- 部门管理
+  - 获取部门列表（扁平结构）
+    - 方法与路径：POST /api/system/dept
+    - 权限：dept:view
+    - 请求体：name、status
+    - 成功响应：data 为扁平部门列表
+  - 创建部门
+    - 方法与路径：POST /api/system/dept/create
+    - 权限：dept:add
+    - 请求体：部门字段
+    - 成功响应：code=201
+  - 更新部门
+    - 方法与路径：PUT /api/system/dept/{dept_id}
+    - 权限：dept:edit
+    - 请求体：部门字段
+    - 成功响应：更新后的部门
+  - 删除部门
+    - 方法与路径：DELETE /api/system/dept/{dept_id}
+    - 权限：dept:delete
+    - 成功响应：删除成功
+- 在线用户（模拟数据）
+  - 方法与路径：POST /api/system/online-logs
+  - 权限：admin
+  - 请求体：username（可选）
+  - 成功响应：data 为在线用户列表
+- 登录日志管理
+  - 获取登录日志列表
+    - 方法与路径：POST /api/system/login-logs
+    - 权限：login-log:view
+    - 请求体：pageNum、pageSize、username、startTime、endTime
+    - 成功响应：分页数据
+  - 批量删除登录日志
+    - 方法与路径：POST /api/system/login-logs/batch-delete
+    - 权限：login-log:delete
+    - 请求体：ids（日志ID列表）
+    - 成功响应：已删除数量
+  - 清空所有登录日志
+    - 方法与路径：POST /api/system/login-logs/clear
+    - 权限：login-log:delete
+    - 成功响应：已清空数量
+- 操作日志管理
+  - 获取操作日志列表
+    - 方法与路径：POST /api/system/operation-logs
+    - 权限：operation-log:view
+    - 请求体：pageNum、pageSize、username、startTime、endTime
+    - 成功响应：分页数据
+  - 批量删除操作日志
+    - 方法与路径：POST /api/system/operation-logs/batch-delete
+    - 权限：operation-log:delete
+    - 请求体：ids（日志ID列表）
+    - 成功响应：已删除数量
+  - 清空所有操作日志
+    - 方法与路径：POST /api/system/operation-logs/clear
+    - 权限：operation-log:delete
+    - 成功响应：已清空数量
+- 系统日志管理
+  - 获取系统日志列表
+    - 方法与路径：POST /api/system/system-logs
+    - 权限：system-log:view
+    - 请求体：pageNum、pageSize、level、module、startTime、endTime
+    - 成功响应：分页数据
+  - 获取系统日志详情
+    - 方法与路径：POST /api/system/system-logs-detail
+    - 权限：system-log:view
+    - 请求体：id（日志ID）
+    - 成功响应：data 为日志详情
+  - 批量删除系统日志
+    - 方法与路径：POST /api/system/system-logs/batch-delete
+    - 权限：system-log:delete
+    - 请求体：ids（日志ID列表）
+    - 成功响应：已删除数量
+  - 清空所有系统日志
+    - 方法与路径：POST /api/system/system-logs/clear
+    - 权限：system-log:delete
+    - 成功响应：已清空数量
+- 地图数据接口（模拟数据）
+  - 方法与路径：GET /api/system/get-map-info
+  - 权限：admin
+  - 成功响应：data 为模拟车辆位置数据
+- 卡片列表接口（模拟数据）
+  - 方法与路径：POST /api/system/get-card-list
+  - 权限：admin
+  - 成功响应：data 为模拟卡片数据
+
+**章节来源**
+- [service/src/api/v1/system_routes.py:25-335](file://service/src/api/v1/system_routes.py#L25-L335)
 
 ### JWT 认证与权限校验
 - 认证方式
@@ -309,11 +413,11 @@ PermRepo-->>Auth : "权限列表"
 Auth-->>Client : "登录响应(含令牌与权限)"
 ```
 
-图表来源
+**图表来源**
 - [service/src/application/services/auth_service.py:26-74](file://service/src/application/services/auth_service.py#L26-L74)
 - [service/src/domain/auth/token_service.py:14-45](file://service/src/domain/auth/token_service.py#L14-L45)
 
-章节来源
+**章节来源**
 - [service/src/api/dependencies.py:16-72](file://service/src/api/dependencies.py#L16-L72)
 - [service/src/domain/auth/token_service.py:14-45](file://service/src/domain/auth/token_service.py#L14-L45)
 
@@ -329,6 +433,7 @@ R1["认证路由<br/>auth_routes.py"] --> S1["认证服务<br/>auth_service.py"]
 R2["用户路由<br/>user_routes.py"] --> S2["用户服务"]
 R3["RBAC 路由<br/>rbac_routes.py"] --> S3["RBAC 服务"]
 R4["菜单路由<br/>menu_routes.py"] --> S4["菜单服务"]
+R5["系统路由<br/>system_routes.py"] --> S5["部门服务/日志服务"]
 S1 --> T1["令牌服务<br/>token_service.py"]
 S1 --> P1["密码服务"]
 S1 --> URepo["用户仓储"]
@@ -336,14 +441,15 @@ S1 --> RRepo["角色仓储"]
 S1 --> PerRepo["权限仓储"]
 ```
 
-图表来源
-- [service/src/api/v1/auth_routes.py:19-86](file://service/src/api/v1/auth_routes.py#L19-L86)
-- [service/src/api/v1/user_routes.py:27-252](file://service/src/api/v1/user_routes.py#L27-L252)
-- [service/src/api/v1/rbac_routes.py:33-257](file://service/src/api/v1/rbac_routes.py#L33-L257)
-- [service/src/api/v1/menu_routes.py:19-71](file://service/src/api/v1/menu_routes.py#L19-L71)
+**图表来源**
+- [service/src/api/v1/auth_routes.py:23-86](file://service/src/api/v1/auth_routes.py#L23-L86)
+- [service/src/api/v1/user_routes.py:17-228](file://service/src/api/v1/user_routes.py#L17-L228)
+- [service/src/api/v1/rbac_routes.py:25-227](file://service/src/api/v1/rbac_routes.py#L25-L227)
+- [service/src/api/v1/menu_routes.py:19-72](file://service/src/api/v1/menu_routes.py#L19-L72)
+- [service/src/api/v1/system_routes.py:25-335](file://service/src/api/v1/system_routes.py#L25-L335)
 - [service/src/application/services/auth_service.py:18-25](file://service/src/application/services/auth_service.py#L18-L25)
 
-章节来源
+**章节来源**
 - [service/src/api/common.py:45-65](file://service/src/api/common.py#L45-L65)
 - [service/src/main.py:60-83](file://service/src/main.py#L60-L83)
 
@@ -358,7 +464,7 @@ S1 --> PerRepo["权限仓储"]
   - 对高频接口增加缓存（如菜单树、权限列表），结合缓存失效策略。
   - 对复杂查询增加索引与筛选条件，避免全表扫描。
 
-章节来源
+**章节来源**
 - [service/src/core/constants.py:7-9](file://service/src/core/constants.py#L7-L9)
 - [service/src/config/settings.py:77-80](file://service/src/config/settings.py#L77-L80)
 
@@ -375,12 +481,12 @@ S1 --> PerRepo["权限仓储"]
 - 健康检查
   - 访问 /health 确认服务可用与版本信息。
 
-章节来源
+**章节来源**
 - [service/src/main.py:60-83](file://service/src/main.py#L60-L83)
 - [service/tests/integration/test_api.py:12-22](file://service/tests/integration/test_api.py#L12-L22)
 
 ## 结论
-本 API 文档覆盖了认证、用户管理、RBAC 与菜单管理的核心接口，明确了统一响应格式、JWT 认证与权限校验机制，并提供了测试与调试建议。建议在生产环境中完善缓存、限流与监控策略，确保高可用与高性能。
+本 API 文档覆盖了认证、用户管理、RBAC、菜单管理与系统管理的核心接口，明确了统一响应格式、JWT 认证与权限校验机制，并提供了测试与调试建议。建议在生产环境中完善缓存、限流与监控策略，确保高可用与高性能。
 
 ## 附录
 
@@ -389,7 +495,7 @@ S1 --> PerRepo["权限仓储"]
 - 分页响应：{ total: number, pageNum: number, pageSize: number, totalPage: number, rows: any[] }
 - 错误响应：{ code: number, message: string }
 
-章节来源
+**章节来源**
 - [service/src/api/common.py:29-65](file://service/src/api/common.py#L29-L65)
 
 ### 版本管理与兼容性
@@ -397,7 +503,7 @@ S1 --> PerRepo["权限仓储"]
 - 版本号：通过配置项 API_VERSION 控制
 - 兼容性建议：新增字段向后兼容；变更字段时提供迁移策略与过渡期
 
-章节来源
+**章节来源**
 - [service/src/config/settings.py:47-51](file://service/src/config/settings.py#L47-L51)
 - [service/src/main.py:36-43](file://service/src/main.py#L36-L43)
 
@@ -406,15 +512,17 @@ S1 --> PerRepo["权限仓储"]
 - 角色相关：role:view、role:manage
 - 权限相关：permission:view、permission:manage
 - 菜单相关：menu:view、menu:add、menu:edit、menu:delete
+- 部门相关：dept:view、dept:add、dept:edit、dept:delete
+- 日志相关：login-log:view、login-log:delete、operation-log:view、operation-log:delete、system-log:view、system-log:delete
 
-章节来源
-- [service/src/core/constants.py:18-36](file://service/src/core/constants.py#L18-L36)
+**章节来源**
+- [service/src/core/constants.py:18-44](file://service/src/core/constants.py#L18-L44)
 
 ### API 测试与调试实用技巧
 - 使用集成测试验证端到端流程（登录、受保护资源访问、权限控制）。
 - 使用验证脚本快速检查健康检查、登录、受保护端点与 RBAC 端点。
 - 前端集成时优先使用 /api/system/docs 与 /api/system/redoc 查看接口定义与示例。
 
-章节来源
-- [service/tests/integration/test_api.py:12-393](file://service/tests/integration/test_api.py#L12-L393)
-- [service/scripts/verify_api.py:137-176](file://service/scripts/verify_api.py#L137-L176)
+**章节来源**
+- [service/tests/integration/test_api.py:12-263](file://service/tests/integration/test_api.py#L12-L263)
+- [service/scripts/verify_api.py:27-156](file://service/scripts/verify_api.py#L27-L156)
