@@ -33,7 +33,7 @@ class DepartmentService:
         Returns:
             部门列表
         """
-        all_depts = await self.dept_repo.get_all(self.session)
+        all_depts = await self.dept_repo.get_all()
 
         # 前端筛选
         filtered_depts = all_depts
@@ -57,7 +57,7 @@ class DepartmentService:
             ConflictError: 部门名称已存在
         """
         # 检查名称唯一性
-        existing = await self.dept_repo.get_by_name(dto.name, self.session)
+        existing = await self.dept_repo.get_by_name(dto.name)
         if existing:
             raise ConflictError("部门名称已存在")
 
@@ -65,7 +65,7 @@ class DepartmentService:
         parent_id = None
         if dto.parentId and dto.parentId != 0:
             # 验证父部门是否存在
-            parent = await self.dept_repo.get_by_id(str(dto.parentId), self.session)
+            parent = await self.dept_repo.get_by_id(str(dto.parentId))
             if not parent:
                 raise BusinessError("父部门不存在")
             parent_id = str(dto.parentId)
@@ -73,10 +73,10 @@ class DepartmentService:
         # 创建部门
         department = Department(name=dto.name, parent_id=parent_id, sort=dto.sort, principal=dto.principal, phone=dto.phone, email=dto.email, status=dto.status, remark=dto.remark)
 
-        await self.dept_repo.create(department, self.session)
+        await self.dept_repo.create(department)
         await self.session.flush()
         # 重新获取以确保返回完整模型
-        created = await self.dept_repo.get_by_name(dto.name, self.session)
+        created = await self.dept_repo.get_by_name(dto.name)
         if created is None:
             raise BusinessError("部门创建后无法加载")
         return created
@@ -95,7 +95,7 @@ class DepartmentService:
             NotFoundError: 部门不存在
             BusinessError: 不能将部门设为自己的子部门
         """
-        department = await self.dept_repo.get_by_id(dept_id, self.session)
+        department = await self.dept_repo.get_by_id(dept_id)
         if not department:
             raise NotFoundError("部门不存在")
 
@@ -111,7 +111,7 @@ class DepartmentService:
                 if str(dto.parentId) == dept_id:
                     raise BusinessError("不能将部门设为自己的子部门")
 
-                parent = await self.dept_repo.get_by_id(str(dto.parentId), self.session)
+                parent = await self.dept_repo.get_by_id(str(dto.parentId))
                 if not parent:
                     raise BusinessError("父部门不存在")
                 department.parent_id = str(dto.parentId)
@@ -119,10 +119,10 @@ class DepartmentService:
         for key, value in update_data.items():
             setattr(department, key, value)
 
-        await self.dept_repo.update(department, self.session)
+        await self.dept_repo.update(department)
         await self.session.flush()
         # 重新获取以确保返回完整模型
-        updated = await self.dept_repo.get_by_id(dept_id, self.session)
+        updated = await self.dept_repo.get_by_id(dept_id)
         if updated is None:
             raise NotFoundError("部门不存在")
         return updated
@@ -140,17 +140,17 @@ class DepartmentService:
             NotFoundError: 部门不存在
             BusinessError: 部门下存在子部门
         """
-        department = await self.dept_repo.get_by_id(dept_id, self.session)
+        department = await self.dept_repo.get_by_id(dept_id)
         if not department:
             raise NotFoundError("部门不存在")
 
         # 检查是否有子部门
-        children = await self.dept_repo.get_by_parent_id(dept_id, self.session)
+        children = await self.dept_repo.get_by_parent_id(dept_id)
         if children:
             raise BusinessError("部门下存在子部门，不能删除")
 
         # 检查是否有关联用户（需要查询用户表，暂时跳过，前端已做限制）
 
-        success = await self.dept_repo.delete(dept_id, self.session)
+        success = await self.dept_repo.delete(dept_id)
         await self.session.flush()
         return success
