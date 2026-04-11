@@ -31,7 +31,7 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
     from src.application.dto.user_dto import UserCreateDTO
     from src.application.services.user_service import UserService
     from src.domain.services.password_service import PasswordService
-    from src.infrastructure.database import async_session_factory, init_db
+    from src.infrastructure.database import get_async_session_factory, init_db
     from src.infrastructure.repositories.role_repository import RoleRepository
     from src.infrastructure.repositories.user_repository import UserRepository
 
@@ -39,7 +39,8 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
 
     dto = UserCreateDTO(username=username, email=email, password=password, nickname=nickname)
 
-    async with async_session_factory() as session:
+    session_factory = get_async_session_factory()
+    async with session_factory() as session:
         # 使用新的依赖注入模式创建 UserService
         user_repo = UserRepository(session)
         role_repo = RoleRepository(session)
@@ -61,14 +62,15 @@ async def init_database() -> None:
 async def seed_rbac() -> None:
     """初始化默认角色和权限。"""
     from src.domain.rbac_defaults import DEFAULT_PERMISSIONS, DEFAULT_ROLES
-    from src.infrastructure.database import async_session_factory, init_db
+    from src.infrastructure.database import get_async_session_factory, init_db
     from src.infrastructure.database.models import Permission, Role
     from src.infrastructure.repositories.permission_repository import PermissionRepository
     from src.infrastructure.repositories.role_repository import RoleRepository
 
     await init_db()
 
-    async with async_session_factory() as session:
+    session_factory = get_async_session_factory()
+    async with session_factory() as session:
         role_repo = RoleRepository(session)
         perm_repo = PermissionRepository(session)
 
@@ -99,12 +101,13 @@ async def seed_data() -> None:
 
     from sqlmodel import select
 
-    from src.infrastructure.database import async_session_factory, init_db
+    from src.infrastructure.database import get_async_session_factory, init_db
     from src.infrastructure.database.models import LoginLog, Menu, OperationLog, SystemLog
 
     await init_db()
 
-    async with async_session_factory() as session:
+    session_factory = get_async_session_factory()
+    async with session_factory() as session:
         # ========== 1. 初始化菜单数据 ==========
         print("正在检查菜单数据...")
         result = await session.exec(select(Menu))

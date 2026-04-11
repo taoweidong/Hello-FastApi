@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { getKeyList } from "@pureadmin/utils";
-import { getOperationLogsList } from "@/api/system";
+import { getOperationLogsList, batchDeleteOperationLogs, clearOperationLogs } from "@/api/system";
 import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
@@ -115,21 +115,24 @@ export function useRole(tableRef: Ref) {
   function onbatchDel() {
     // 返回当前选中的行
     const curSelected = tableRef.value.getTableRef().getSelectionRows();
-    // 接下来根据实际业务，通过选中行的某项数据，比如下面的id，调用接口进行批量删除
-    message(`已删除序号为 ${getKeyList(curSelected, "id")} 的数据`, {
-      type: "success"
+    const ids = getKeyList(curSelected, "id");
+    batchDeleteOperationLogs({ ids }).then(res => {
+      if (res.code === 0) {
+        message(`已删除序号为 ${ids} 的数据`, { type: "success" });
+        tableRef.value.getTableRef().clearSelection();
+        onSearch();
+      }
     });
-    tableRef.value.getTableRef().clearSelection();
-    onSearch();
   }
 
   /** 清空日志 */
   function clearAll() {
-    // 根据实际业务，调用接口删除所有日志数据
-    message("已删除所有日志数据", {
-      type: "success"
+    clearOperationLogs().then(res => {
+      if (res.code === 0) {
+        message("已删除所有日志数据", { type: "success" });
+        onSearch();
+      }
     });
-    onSearch();
   }
 
   async function onSearch() {

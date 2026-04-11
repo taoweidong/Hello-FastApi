@@ -80,6 +80,22 @@ class RoleRouter(Routable):
         await service.delete_role(role_id)
         return success_response(message="角色删除成功")
 
+    @put("/{role_id}/status")
+    async def update_role_status(
+        self,
+        role_id: str,
+        data: dict,
+        service: RoleService = Depends(get_role_service),
+        _: dict = Depends(require_permission("role:manage")),
+    ) -> dict:
+        """更新角色状态接口。"""
+        status = data.get("status")
+        if status is None:
+            return success_response(message="状态值不能为空")
+        dto = RoleUpdateDTO(status=int(status))
+        await service.update_role(role_id, dto)
+        return success_response(message="状态更新成功")
+
     @post("/{role_id}/permissions")
     async def assign_permissions(
         self,

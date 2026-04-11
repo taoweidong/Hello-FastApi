@@ -34,6 +34,15 @@ class MonitorRouter(Routable):
             list_data = [item for item in list_data if username in item["username"]]
         return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
 
+    @post("/online-logs/force-offline")
+    async def force_offline(
+        self,
+        data: dict = Body(default={}),
+        current_user: dict = Depends(get_current_active_user),
+    ) -> dict:
+        """强制下线用户（stub 实现，仅返回成功响应）。"""
+        return success_response(message="强制下线成功")
+
     @get("/get-map-info")
     async def get_map_info(
         self,

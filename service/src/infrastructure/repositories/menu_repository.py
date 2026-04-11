@@ -61,10 +61,43 @@ class MenuRepository(MenuRepositoryInterface):
         Returns:
             更新后的菜单对象
         """
-        return await self._crud.update(self.session, menu)
+        from sqlalchemy import update as sa_update
+
+        stmt = (
+            sa_update(Menu)
+            .where(Menu.id == menu.id)
+            .values(
+                name=menu.name,
+                path=menu.path,
+                component=menu.component,
+                icon=menu.icon,
+                title=menu.title,
+                show_link=menu.show_link,
+                parent_id=menu.parent_id,
+                order_num=menu.order_num,
+                permissions=menu.permissions,
+                status=menu.status,
+                menu_type=menu.menu_type,
+                redirect=menu.redirect,
+                extra_icon=menu.extra_icon,
+                enter_transition=menu.enter_transition,
+                leave_transition=menu.leave_transition,
+                active_path=menu.active_path,
+                frame_src=menu.frame_src,
+                frame_loading=menu.frame_loading,
+                keep_alive=menu.keep_alive,
+                hidden_tag=menu.hidden_tag,
+                fixed_tag=menu.fixed_tag,
+                show_parent=menu.show_parent,
+            )
+        )
+        await self.session.exec(stmt)  # type: ignore[arg-type]
+        await self.session.flush()
+        updated = await self.get_by_id(menu.id)
+        return updated  # type: ignore[return-value]
 
     async def delete(self, menu_id: str) -> bool:
-        """根据 ID 删除菜单。
+        """根据 ID 删除菜单（先清除关联的 RoleMenuLink，并将子菜单的 parent_id 置空）。
 
         Args:
             menu_id: 菜单ID
@@ -72,8 +105,25 @@ class MenuRepository(MenuRepositoryInterface):
         Returns:
             是否删除成功
         """
-        deleted_count = await self._crud.delete(self.session, id=menu_id)
-        return deleted_count > 0
+        from sqlalchemy import delete as sa_delete, update as sa_update
+
+        from src.infrastructure.database.models import RoleMenuLink
+
+        # 先清除菜单的角色关联
+        stmt = sa_delete(RoleMenuLink).where(RoleMenuLink.menu_id == menu_id)
+        await self.session.execute(stmt)
+        await self.session.flush()
+
+        # 将子菜单的 parent_id 置空（解除自引用外键约束）
+        child_update = sa_update(Menu).where(Menu.parent_id == menu_id).values(parent_id=None)
+        await self.session.execute(child_update)
+        await self.session.flush()
+
+        # 使用 SQLAlchemy delete 语句替代 FastCRUD delete，避免 detached 对象问题
+        stmt = sa_delete(Menu).where(Menu.id == menu_id)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount > 0  # type: ignore[union-attr]
 
     async def get_by_parent_id(self, parent_id: str | None) -> list[Menu]:
         """根据父菜单 ID 获取子菜单，按排序号排序。

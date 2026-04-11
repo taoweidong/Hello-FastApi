@@ -88,7 +88,26 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             更新后的部门对象
         """
-        return await self._crud.update(self.session, department)
+        from sqlalchemy import update as sa_update
+
+        stmt = (
+            sa_update(Department)
+            .where(Department.id == department.id)
+            .values(
+                name=department.name,
+                parent_id=department.parent_id,
+                sort=department.sort,
+                principal=department.principal,
+                phone=department.phone,
+                email=department.email,
+                status=department.status,
+                remark=department.remark,
+            )
+        )
+        await self.session.exec(stmt)  # type: ignore[arg-type]
+        await self.session.flush()
+        updated = await self.get_by_id(department.id)
+        return updated  # type: ignore[return-value]
 
     async def delete(self, dept_id: str) -> bool:
         """根据 ID 删除部门。
@@ -99,8 +118,19 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             是否删除成功
         """
-        deleted_count = await self._crud.delete(self.session, id=dept_id)
-        return deleted_count > 0
+        from sqlalchemy import delete as sa_delete, update as sa_update
+
+        from src.infrastructure.database.models import User
+
+        # 先将引用该部门的用户 dept_id 设为 NULL
+        user_update = sa_update(User).where(User.dept_id == dept_id).values(dept_id=None)
+        await self.session.execute(user_update)
+        await self.session.flush()
+
+        stmt = sa_delete(Department).where(Department.id == dept_id)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount > 0  # type: ignore[union-attr]
 
     async def count(self, name: str | None = None, status: int | None = None) -> int:
         """获取部门总数（支持筛选）。

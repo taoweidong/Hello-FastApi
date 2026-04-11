@@ -118,10 +118,27 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             更新后的角色对象
         """
-        return await self._crud.update(self.session, role)
+        # 使用 SQL UPDATE 语句直接更新，避免 ORM detached 对象问题
+        from sqlalchemy import update as sa_update
+
+        stmt = (
+            sa_update(Role)
+            .where(Role.id == role.id)
+            .values(
+                name=role.name,
+                code=role.code,
+                description=role.description,
+                status=role.status,
+            )
+        )
+        await self.session.exec(stmt)  # type: ignore[arg-type]
+        await self.session.flush()
+        # 重新获取更新后的对象
+        updated = await self.get_by_id(role.id)
+        return updated  # type: ignore[return-value]
 
     async def delete(self, role_id: str) -> bool:
-        """删除角色。
+        """删除角色（先清除关联表数据）。
 
         Args:
             role_id: 角色ID
@@ -129,8 +146,22 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             是否删除成功
         """
-        deleted_count = await self._crud.delete(self.session, id=role_id)
-        return deleted_count > 0
+        from sqlalchemy import delete as sa_delete
+
+        # 先清除角色的所有关联关系
+        stmt1 = sa_delete(RolePermissionLink).where(RolePermissionLink.role_id == role_id)
+        await self.session.execute(stmt1)
+        stmt2 = sa_delete(RoleMenuLink).where(RoleMenuLink.role_id == role_id)
+        await self.session.execute(stmt2)
+        stmt3 = sa_delete(UserRole).where(UserRole.role_id == role_id)
+        await self.session.execute(stmt3)
+        await self.session.flush()
+
+        # 使用 SQLAlchemy delete 语句替代 FastCRUD delete，避免 detached 对象问题
+        stmt = sa_delete(Role).where(Role.id == role_id)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount > 0  # type: ignore[union-attr]
 
     async def assign_permissions_to_role(self, role_id: str, permission_ids: list[str]) -> bool:
         """为角色分配权限（先清除旧权限再分配新的）。
