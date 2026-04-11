@@ -1,21 +1,18 @@
 services:
-  app:
+  web:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    container_name: hello-fastapi
+    container_name: hello-fastapi-web
     ports:
-      - "8000:8000"
+      - "80:80"
     environment:
-      - APP_ENV=production
       - TZ=Asia/Shanghai
-    volumes:
-      - ../logs:/app/logs
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
       start_period: 10s
     networks:
@@ -23,4 +20,5 @@ services:
 
 networks:
   hello-fastapi-net:
+    external: true
     name: hello-fastapi-net
