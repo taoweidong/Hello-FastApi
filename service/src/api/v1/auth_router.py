@@ -4,17 +4,12 @@
 所有路由直接挂在 /api/system 路径下。
 """
 
+from classy_fastapi import Routable, get, post
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import success_response
-from src.api.dependencies import (
-    get_auth_service,
-    get_current_active_user,
-    get_menu_repository,
-    get_role_repository,
-    get_user_repository,
-)
+from src.api.dependencies import get_auth_service, get_current_active_user, get_menu_repository, get_role_repository, get_user_repository
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
 from src.domain.exceptions import UnauthorizedError
@@ -22,8 +17,6 @@ from src.infrastructure.database import get_db
 from src.infrastructure.repositories.menu_repository import MenuRepository
 from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
-
-from classy_fastapi import Routable, get, post
 
 
 class AuthRouter(Routable):
@@ -53,25 +46,12 @@ class AuthRouter(Routable):
         return success_response(data=result, message="刷新成功")
 
     @get("/mine")
-    async def get_mine(
-        self,
-        current_user: dict = Depends(get_current_active_user),
-        user_repo: UserRepository = Depends(get_user_repository),
-    ) -> dict:
+    async def get_mine(self, current_user: dict = Depends(get_current_active_user), user_repo: UserRepository = Depends(get_user_repository)) -> dict:
         """获取当前登录用户的个人信息。"""
         user = await user_repo.get_by_id(current_user["id"])
         if user is None:
             raise UnauthorizedError("用户不存在")
-        return success_response(
-            data={
-                "avatar": user.avatar or "",
-                "username": user.username,
-                "nickname": user.nickname or user.username,
-                "email": user.email or "",
-                "phone": user.phone or "",
-                "description": "",
-            }
-        )
+        return success_response(data={"avatar": user.avatar or "", "username": user.username, "nickname": user.nickname or user.username, "email": user.email or "", "phone": user.phone or "", "description": ""})
 
     @get("/mine-logs")
     async def get_mine_logs(self, current_user: dict = Depends(get_current_active_user)) -> dict:
@@ -122,22 +102,13 @@ class AuthRouter(Routable):
         return success_response(data=[system_management_router, system_monitor_router, permission_router])
 
     @get("/list-all-role")
-    async def list_all_roles(
-        self,
-        role_repo: RoleRepository = Depends(get_role_repository),
-        current_user: dict = Depends(get_current_active_user),
-    ) -> dict:
+    async def list_all_roles(self, role_repo: RoleRepository = Depends(get_role_repository), current_user: dict = Depends(get_current_active_user)) -> dict:
         """获取所有角色简单列表。"""
         roles = await role_repo.get_all(page_num=1, page_size=1000)
         return success_response(data=[{"id": r.id, "name": r.name} for r in roles])
 
     @post("/list-role-ids")
-    async def list_role_ids(
-        self,
-        data: dict,
-        role_repo: RoleRepository = Depends(get_role_repository),
-        current_user: dict = Depends(get_current_active_user),
-    ) -> dict:
+    async def list_role_ids(self, data: dict, role_repo: RoleRepository = Depends(get_role_repository), current_user: dict = Depends(get_current_active_user)) -> dict:
         """根据用户ID获取对应角色ID列表。"""
         user_id = data.get("userId")
         if not user_id:
@@ -146,34 +117,17 @@ class AuthRouter(Routable):
         return success_response(data=[r.id for r in roles])
 
     @post("/role-menu")
-    async def get_role_menu(
-        self,
-        current_user: dict = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db),
-        menu_repo: MenuRepository = Depends(get_menu_repository),
-    ) -> dict:
+    async def get_role_menu(self, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
         """获取角色菜单权限树。"""
         all_menus = await menu_repo.get_all()
         menu_list = []
         for menu in all_menus:
-            menu_dict = {
-                "parentId": int(menu.parent_id) if menu.parent_id else 0,
-                "id": int(menu.id) if menu.id.isdigit() else menu.id,
-                "menuType": 0,
-                "title": menu.title or menu.name,
-            }
+            menu_dict = {"parentId": int(menu.parent_id) if menu.parent_id else 0, "id": int(menu.id) if menu.id.isdigit() else menu.id, "menuType": 0, "title": menu.title or menu.name}
             menu_list.append(menu_dict)
         return success_response(data=menu_list)
 
     @post("/role-menu-ids")
-    async def get_role_menu_ids(
-        self,
-        data: dict,
-        current_user: dict = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db),
-        menu_repo: MenuRepository = Depends(get_menu_repository),
-        role_repo: RoleRepository = Depends(get_role_repository),
-    ) -> dict:
+    async def get_role_menu_ids(self, data: dict, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository)) -> dict:
         """根据角色ID获取菜单ID列表。"""
         role_id = data.get("id")
         if not role_id:

@@ -7,8 +7,8 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, DateTime, String, func
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy import Column, DateTime, func
+from sqlmodel import Field, SQLModel
 
 if TYPE_CHECKING:
     from src.domain.entities.menu import MenuEntity

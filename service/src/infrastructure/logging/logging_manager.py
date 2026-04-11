@@ -37,53 +37,16 @@ class LoggingManager:
         self._logger.remove()
 
         # 控制台处理器
-        self._logger.add(
-            sys.stdout,
-            level=self._log_level,
-            format=("<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"),
-            colorize=True,
-            enqueue=True,
-        )
+        self._logger.add(sys.stdout, level=self._log_level, format=("<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>"), colorize=True, enqueue=True)
 
         # 应用程序日志（所有级别）
-        self._logger.add(
-            f"{self._logs_dir}/app.log",
-            level="DEBUG",
-            rotation="10 MB",
-            retention="30 days",
-            compression="zip",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-            encoding="utf-8",
-            enqueue=True,
-            filter=lambda record: record["level"].name != "ERROR",
-        )
+        self._logger.add(f"{self._logs_dir}/app.log", level="DEBUG", rotation="10 MB", retention="30 days", compression="zip", format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}", encoding="utf-8", enqueue=True, filter=lambda record: record["level"].name != "ERROR")
 
         # 错误日志（仅错误级别）
-        self._logger.add(
-            f"{self._logs_dir}/error.log",
-            level="ERROR",
-            rotation="10 MB",
-            retention="60 days",
-            compression="zip",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-            encoding="utf-8",
-            enqueue=True,
-            backtrace=True,
-            diagnose=True,
-        )
+        self._logger.add(f"{self._logs_dir}/error.log", level="ERROR", rotation="10 MB", retention="60 days", compression="zip", format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}", encoding="utf-8", enqueue=True, backtrace=True, diagnose=True)
 
         # 访问日志（HTTP 请求）
-        self._logger.add(
-            f"{self._logs_dir}/access.log",
-            level="INFO",
-            rotation="10 MB",
-            retention="30 days",
-            compression="zip",
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}",
-            encoding="utf-8",
-            enqueue=True,
-            filter=lambda record: record["extra"].get("type") == "access",
-        )
+        self._logger.add(f"{self._logs_dir}/access.log", level="INFO", rotation="10 MB", retention="30 days", compression="zip", format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {message}", encoding="utf-8", enqueue=True, filter=lambda record: record["extra"].get("type") == "access")
 
     @property
     def logger(self):

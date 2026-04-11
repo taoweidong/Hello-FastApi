@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, DateTime, String, func
+from sqlalchemy import Column, DateTime, func
 from sqlmodel import Field, Relationship, SQLModel
 
 # 在模块级别导入关联模型（RolePermissionLink 不依赖 Role，所以无循环）

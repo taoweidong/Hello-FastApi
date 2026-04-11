@@ -7,23 +7,18 @@
 import random
 from typing import Any
 
+from classy_fastapi import Routable, get, post
 from fastapi import Body, Depends
 
 from src.api.common import success_response
 from src.api.dependencies import get_current_active_user
-
-from classy_fastapi import Routable, get, post
 
 
 class MonitorRouter(Routable):
     """系统监控路由类，提供在线用户、地图数据、卡片列表等 stub 接口。"""
 
     @post("/online-logs")
-    async def get_online_logs(
-        self,
-        data: dict = Body(default={}),
-        current_user: dict = Depends(get_current_active_user),
-    ) -> dict:
+    async def get_online_logs(self, data: dict = Body(default={}), current_user: dict = Depends(get_current_active_user)) -> dict:
         """获取在线用户列表（stub 数据）。"""
         list_data: list[dict[str, Any]] = [
             {"id": 1, "username": "admin", "ip": "192.168.1.1", "address": "中国河南省信阳市", "system": "macOS", "browser": "Chrome", "loginTime": "2026-03-29T10:00:00"},
@@ -35,19 +30,12 @@ class MonitorRouter(Routable):
         return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
 
     @post("/online-logs/force-offline")
-    async def force_offline(
-        self,
-        data: dict = Body(default={}),
-        current_user: dict = Depends(get_current_active_user),
-    ) -> dict:
+    async def force_offline(self, data: dict = Body(default={}), current_user: dict = Depends(get_current_active_user)) -> dict:
         """强制下线用户（stub 实现，仅返回成功响应）。"""
         return success_response(message="强制下线成功")
 
     @get("/get-map-info")
-    async def get_map_info(
-        self,
-        current_user: dict = Depends(get_current_active_user),
-    ) -> dict:
+    async def get_map_info(self, current_user: dict = Depends(get_current_active_user)) -> dict:
         """获取地图数据（stub 数据）。"""
         map_list = []
         drivers = ["张三", "李四", "王五", "赵六", "孙七", "周八", "吴九", "郑十"]
@@ -59,11 +47,7 @@ class MonitorRouter(Routable):
         return success_response(data=map_list)
 
     @post("/get-card-list")
-    async def get_card_list(
-        self,
-        data: dict = Body(default={}),
-        current_user: dict = Depends(get_current_active_user),
-    ) -> dict:
+    async def get_card_list(self, data: dict = Body(default={}), current_user: dict = Depends(get_current_active_user)) -> dict:
         """获取卡片列表（stub 数据）。"""
         card_names = ["SSL证书", "人脸识别", "CVM", "云数据库", "T-Sec 云防火墙"]
         banners = ["https://tdesign.gtimg.com/tdesign-pro/cloud-server.jpg", "https://tdesign.gtimg.com/tdesign-pro/t-sec.jpg", "https://tdesign.gtimg.com/tdesign-pro/ssl.jpg", "https://tdesign.gtimg.com/tdesign-pro/cloud-db.jpg", "https://tdesign.gtimg.com/tdesign-pro/face-recognition.jpg"]

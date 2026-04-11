@@ -105,7 +105,8 @@ class MenuRepository(MenuRepositoryInterface):
         Returns:
             是否删除成功
         """
-        from sqlalchemy import delete as sa_delete, update as sa_update
+        from sqlalchemy import delete as sa_delete
+        from sqlalchemy import update as sa_update
 
         from src.infrastructure.database.models import RoleMenuLink
 

@@ -121,16 +121,7 @@ class RoleRepository(RoleRepositoryInterface):
         # 使用 SQL UPDATE 语句直接更新，避免 ORM detached 对象问题
         from sqlalchemy import update as sa_update
 
-        stmt = (
-            sa_update(Role)
-            .where(Role.id == role.id)
-            .values(
-                name=role.name,
-                code=role.code,
-                description=role.description,
-                status=role.status,
-            )
-        )
+        stmt = sa_update(Role).where(Role.id == role.id).values(name=role.name, code=role.code, description=role.description, status=role.status)
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         # 重新获取更新后的对象

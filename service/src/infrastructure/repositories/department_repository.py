@@ -90,20 +90,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         """
         from sqlalchemy import update as sa_update
 
-        stmt = (
-            sa_update(Department)
-            .where(Department.id == department.id)
-            .values(
-                name=department.name,
-                parent_id=department.parent_id,
-                sort=department.sort,
-                principal=department.principal,
-                phone=department.phone,
-                email=department.email,
-                status=department.status,
-                remark=department.remark,
-            )
-        )
+        stmt = sa_update(Department).where(Department.id == department.id).values(name=department.name, parent_id=department.parent_id, sort=department.sort, principal=department.principal, phone=department.phone, email=department.email, status=department.status, remark=department.remark)
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(department.id)
@@ -118,7 +105,8 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             是否删除成功
         """
-        from sqlalchemy import delete as sa_delete, update as sa_update
+        from sqlalchemy import delete as sa_delete
+        from sqlalchemy import update as sa_update
 
         from src.infrastructure.database.models import User
 

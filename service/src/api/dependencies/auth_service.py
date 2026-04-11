@@ -13,11 +13,7 @@ from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
 
-async def get_auth_service(
-    db: AsyncSession = Depends(get_db),
-    token_service: TokenService = Depends(get_token_service),
-    password_service: PasswordService = Depends(get_password_service),
-) -> AuthService:
+async def get_auth_service(db: AsyncSession = Depends(get_db), token_service: TokenService = Depends(get_token_service), password_service: PasswordService = Depends(get_password_service)) -> AuthService:
     """获取认证服务实例。
 
     注入所有必需的仓储和领域服务依赖。

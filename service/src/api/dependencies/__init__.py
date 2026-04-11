@@ -4,13 +4,7 @@
 所有服务通过工厂函数创建，路由层通过 Depends() 注入。
 """
 
-from src.api.dependencies.auth import (
-    get_current_active_user,
-    get_current_user_id,
-    require_permission,
-    require_superuser,
-    security_scheme,
-)
+from src.api.dependencies.auth import get_current_active_user, get_current_user_id, require_permission, require_superuser, security_scheme
 from src.api.dependencies.auth_service import get_auth_service
 from src.api.dependencies.department_service import get_department_service
 from src.api.dependencies.domain_services import get_password_service, get_token_service
