@@ -24,7 +24,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             部门列表
         """
-        result = await self._crud.get_multi(session, return_total_count=False)
+        result = await self._crud.get_multi(session, schema_to_select=Department, return_as_model=True, return_total_count=False)
         departments = result.get("data", [])
         # 按 sort 排序
         return sorted(departments, key=lambda d: d.sort)
@@ -39,7 +39,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             部门对象或 None
         """
-        return await self._crud.get(session, id=dept_id)
+        return await self._crud.get(session, id=dept_id, schema_to_select=Department, return_as_model=True)
 
     async def get_by_name(self, name: str, session: AsyncSession) -> Department | None:
         """根据名称获取部门。
@@ -51,7 +51,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             部门对象或 None
         """
-        return await self._crud.get(session, name=name)
+        return await self._crud.get(session, name=name, schema_to_select=Department, return_as_model=True)
 
     async def get_by_parent_id(self, parent_id: str | None, session: AsyncSession) -> list[Department]:
         """根据父部门 ID 获取子部门，按排序号排序。
@@ -66,6 +66,8 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         result = await self._crud.get_multi(
             session,
             parent_id=parent_id,
+            schema_to_select=Department,
+            return_as_model=True,
             return_total_count=False,
         )
         departments = result.get("data", [])

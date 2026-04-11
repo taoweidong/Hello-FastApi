@@ -68,7 +68,8 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        logger.error(f"未处理的异常: {exc}")
+        import traceback
+        logger.error(f"未处理的异常: {exc}\n{traceback.format_exc()}")
         return JSONResponse(status_code=500, content={"code": 500, "message": "服务器内部错误"})
 
     # 健康检查

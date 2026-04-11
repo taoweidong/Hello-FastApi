@@ -276,7 +276,7 @@ class LogRepository:
         Returns:
             系统日志对象或 None
         """
-        return await self._system_log_crud.get(session, id=log_id)
+        return await self._system_log_crud.get(session, id=log_id, schema_to_select=SystemLog, return_as_model=True)
 
     async def delete_system_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
         """批量删除系统日志。

@@ -24,7 +24,7 @@ class MenuRepository(MenuRepositoryInterface):
         Returns:
             菜单列表
         """
-        result = await self._crud.get_multi(session, return_total_count=False)
+        result = await self._crud.get_multi(session, schema_to_select=Menu, return_as_model=True, return_total_count=False)
         menus = result.get("data", [])
         # 按 order_num 排序
         return sorted(menus, key=lambda m: m.order_num)
@@ -39,7 +39,7 @@ class MenuRepository(MenuRepositoryInterface):
         Returns:
             菜单对象或 None
         """
-        return await self._crud.get(session, id=menu_id)
+        return await self._crud.get(session, id=menu_id, schema_to_select=Menu, return_as_model=True)
 
     async def create(self, menu: Menu, session: AsyncSession) -> Menu:
         """创建新菜单。
@@ -91,6 +91,8 @@ class MenuRepository(MenuRepositoryInterface):
         result = await self._crud.get_multi(
             session,
             parent_id=parent_id,
+            schema_to_select=Menu,
+            return_as_model=True,
             return_total_count=False,
         )
         menus = result.get("data", [])

@@ -91,8 +91,11 @@ class MenuService:
             fixed_tag=dto.fixedTag,
             show_parent=dto.showParent,
         )
-        menu = await self.menu_repo.create(menu, session)
-        return self._to_response(menu)
+        await self.menu_repo.create(menu, session)
+        await session.flush()
+        # 重新获取以确保返回完整模型
+        created = await self.menu_repo.get_by_id(menu.id, session)
+        return self._to_response(created)
 
     async def update_menu(self, menu_id: str, dto: MenuUpdateDTO, session: AsyncSession) -> dict:
         """更新菜单。"""
@@ -163,8 +166,11 @@ class MenuService:
         if dto.showParent is not None:
             menu.show_parent = dto.showParent
 
-        menu = await self.menu_repo.update(menu, session)
-        return self._to_response(menu)
+        await self.menu_repo.update(menu, session)
+        await session.flush()
+        # 重新获取以确保返回完整模型
+        updated = await self.menu_repo.get_by_id(menu_id, session)
+        return self._to_response(updated)
 
     async def delete_menu(self, menu_id: str, session: AsyncSession) -> bool:
         """删除菜单。"""

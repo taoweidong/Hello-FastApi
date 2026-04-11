@@ -47,8 +47,11 @@ class UserService:
 
         # 创建用户实体，映射所有新字段
         user = User(username=dto.username, email=dto.email, hashed_password=self.password_service.hash_password(dto.password), nickname=dto.nickname, phone=dto.phone, sex=dto.sex, avatar=dto.avatar, status=dto.status, dept_id=dto.dept_id, remark=dto.remark)
-        user = await self.repo.create(user)
-        return await self._to_response(user)
+        await self.repo.create(user)
+        await self.session.flush()
+        # 重新从数据库获取以加载 roles 关系
+        created_user = await self.repo.get_by_id(user.id)
+        return await self._to_response(created_user)
 
     async def get_user(self, user_id: str) -> UserResponseDTO:
         """根据 ID 获取用户。
@@ -131,7 +134,10 @@ class UserService:
             user.remark = dto.remark
 
         user = await self.repo.update(user)
-        return await self._to_response(user)
+        await self.session.flush()
+        # 重新从数据库获取以加载 roles 关系
+        updated_user = await self.repo.get_by_id(user_id)
+        return await self._to_response(updated_user)
 
     async def delete_user(self, user_id: str) -> bool:
         """删除用户。

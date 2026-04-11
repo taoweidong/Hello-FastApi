@@ -42,13 +42,18 @@ class RoleService:
             description=dto.remark,  # 映射 remark 到 description
             status=dto.status,
         )
-        role = await self.role_repo.create(role)
+        await self.role_repo.create(role)
+        await self.session.flush()
+        # 重新获取以获得完整数据
+        created_role = await self.role_repo.get_by_code(dto.code)
+        if created_role is None:
+            raise NotFoundError(f"角色 '{dto.name}' 创建失败")
 
         # 如果提供了权限ID列表，则分配权限
         if dto.permissionIds:
-            await self.role_repo.assign_permissions_to_role(role.id, dto.permissionIds)
+            await self.role_repo.assign_permissions_to_role(created_role.id, dto.permissionIds)
 
-        return await self._role_to_response(role)
+        return await self._role_to_response(created_role)
 
     async def get_role(self, role_id: str) -> RoleResponseDTO:
         """根据 ID 获取角色详情（含权限列表）。"""
@@ -106,13 +111,16 @@ class RoleService:
         if dto.status is not None:
             role.status = dto.status
 
-        role = await self.role_repo.update(role)
+        await self.role_repo.update(role)
+        await self.session.flush()
 
         # 如果提供了权限ID列表，则重新分配权限
         if dto.permissionIds is not None:
             await self.role_repo.assign_permissions_to_role(role_id, dto.permissionIds)
 
-        return await self._role_to_response(role)
+        # 重新获取以加载关系
+        updated_role = await self.role_repo.get_by_id(role_id)
+        return await self._role_to_response(updated_role)
 
     async def delete_role(self, role_id: str) -> bool:
         """删除角色。"""

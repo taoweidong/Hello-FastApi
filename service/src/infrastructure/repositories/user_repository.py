@@ -28,7 +28,7 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户对象或 None
         """
-        return await self._crud.get(self.session, id=user_id)
+        return await self._crud.get(self.session, id=user_id, schema_to_select=User, return_as_model=True)
 
     async def get_by_username(self, username: str) -> User | None:
         """根据用户名获取用户。
@@ -39,7 +39,7 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户对象或 None
         """
-        return await self._crud.get(self.session, username=username)
+        return await self._crud.get(self.session, username=username, schema_to_select=User, return_as_model=True)
 
     async def get_by_email(self, email: str) -> User | None:
         """根据邮箱获取用户。
@@ -50,7 +50,7 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户对象或 None
         """
-        return await self._crud.get(self.session, email=email)
+        return await self._crud.get(self.session, email=email, schema_to_select=User, return_as_model=True)
 
     async def get_all(
         self,
@@ -94,6 +94,8 @@ class UserRepository(UserRepositoryInterface):
             self.session,
             offset=(page_num - 1) * page_size,
             limit=page_size,
+            schema_to_select=User,
+            return_as_model=True,
             **filters,
         )
         return list(result.get("data", []))

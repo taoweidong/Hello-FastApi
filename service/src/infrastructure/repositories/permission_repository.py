@@ -32,7 +32,7 @@ class PermissionRepository(PermissionRepositoryInterface):
         Returns:
             权限对象或 None
         """
-        return await self._crud.get(self.session, id=permission_id)
+        return await self._crud.get(self.session, id=permission_id, schema_to_select=Permission, return_as_model=True)
 
     async def get_by_code(self, code: str) -> Permission | None:
         """根据编码获取权限。
@@ -43,7 +43,7 @@ class PermissionRepository(PermissionRepositoryInterface):
         Returns:
             权限对象或 None
         """
-        return await self._crud.get(self.session, code=code)
+        return await self._crud.get(self.session, code=code, schema_to_select=Permission, return_as_model=True)
 
     async def get_all(
         self,
@@ -69,6 +69,8 @@ class PermissionRepository(PermissionRepositoryInterface):
             self.session,
             offset=(page_num - 1) * page_size,
             limit=page_size,
+            schema_to_select=Permission,
+            return_as_model=True,
             **filters,
         )
         return list(result.get("data", []))

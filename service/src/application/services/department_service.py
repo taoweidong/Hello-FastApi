@@ -73,7 +73,10 @@ class DepartmentService:
         # 创建部门
         department = Department(name=dto.name, parent_id=parent_id, sort=dto.sort, principal=dto.principal, phone=dto.phone, email=dto.email, status=dto.status, remark=dto.remark)
 
-        created = await self.dept_repo.create(department, self.session)
+        await self.dept_repo.create(department, self.session)
+        await self.session.flush()
+        # 重新获取以确保返回完整模型
+        created = await self.dept_repo.get_by_name(dto.name, self.session)
         await self.session.commit()
         return created
 
@@ -115,7 +118,10 @@ class DepartmentService:
         for key, value in update_data.items():
             setattr(department, key, value)
 
-        updated = await self.dept_repo.update(department, self.session)
+        await self.dept_repo.update(department, self.session)
+        await self.session.flush()
+        # 重新获取以确保返回完整模型
+        updated = await self.dept_repo.get_by_id(dept_id, self.session)
         await self.session.commit()
         return updated
 

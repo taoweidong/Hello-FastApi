@@ -33,7 +33,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             角色对象或 None
         """
-        return await self._crud.get(self.session, id=role_id)
+        return await self._crud.get(self.session, id=role_id, schema_to_select=Role, return_as_model=True)
 
     async def get_by_name(self, name: str) -> Role | None:
         """根据名称获取角色。
@@ -44,7 +44,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             角色对象或 None
         """
-        return await self._crud.get(self.session, name=name)
+        return await self._crud.get(self.session, name=name, schema_to_select=Role, return_as_model=True)
 
     async def get_by_code(self, code: str) -> Role | None:
         """根据编码获取角色。
@@ -55,7 +55,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             角色对象或 None
         """
-        return await self._crud.get(self.session, code=code)
+        return await self._crud.get(self.session, code=code, schema_to_select=Role, return_as_model=True)
 
     async def get_all(
         self,
@@ -85,6 +85,8 @@ class RoleRepository(RoleRepositoryInterface):
             self.session,
             offset=(page_num - 1) * page_size,
             limit=page_size,
+            schema_to_select=Role,
+            return_as_model=True,
             **filters,
         )
         return list(result.get("data", []))

@@ -203,7 +203,7 @@ export const batchDeleteLoginLogs = (data?: object) => {
 
 /** 清空登录日志 */
 export const clearLoginLogs = () => {
-  return http.request<Result>("delete", "/login-logs/clear");
+  return http.request<Result>("post", "/login-logs/clear");
 };
 
 /** 批量删除操作日志 */
@@ -213,7 +213,7 @@ export const batchDeleteOperationLogs = (data?: object) => {
 
 /** 清空操作日志 */
 export const clearOperationLogs = () => {
-  return http.request<Result>("delete", "/operation-logs/clear");
+  return http.request<Result>("post", "/operation-logs/clear");
 };
 
 /** 批量删除系统日志 */
@@ -223,7 +223,7 @@ export const batchDeleteSystemLogs = (data?: object) => {
 
 /** 清空系统日志 */
 export const clearSystemLogs = () => {
-  return http.request<Result>("delete", "/system-logs/clear");
+  return http.request<Result>("post", "/system-logs/clear");
 };
 
 // =============================================================================
