@@ -33,12 +33,12 @@ class MenuService:
         self.menu_repo = menu_repo
         self.perm_repo = perm_repo
 
-    async def get_menu_tree(self, session: AsyncSession) -> list[dict]:
+    async def get_menu_tree(self) -> list[dict]:
         """获取完整菜单树。"""
         all_menus = await self.menu_repo.get_all()
         return self._build_tree(all_menus, None)
 
-    async def get_user_menus(self, user_id: str, session: AsyncSession) -> list[dict]:
+    async def get_user_menus(self, user_id: str) -> list[dict]:
         """获取用户可访问的菜单（根据用户权限过滤）。
 
         超级用户返回所有菜单，普通用户根据权限过滤。
@@ -63,7 +63,7 @@ class MenuService:
 
         return self._build_tree(filtered_menus, None)
 
-    async def create_menu(self, dto: MenuCreateDTO, session: AsyncSession) -> dict:
+    async def create_menu(self, dto: MenuCreateDTO) -> dict:
         """创建菜单。"""
         # 如果有父菜单，验证父菜单是否存在
         pid = _norm_menu_parent_id(dto.parentId)
@@ -99,14 +99,14 @@ class MenuService:
             show_parent=dto.showParent,
         )
         await self.menu_repo.create(menu)
-        await session.flush()
+        await self.session.flush()
         # 重新获取以确保返回完整模型
         created = await self.menu_repo.get_by_id(menu.id)
         if created is None:
             raise NotFoundError("菜单创建后无法加载")
         return self._to_response(created)
 
-    async def update_menu(self, menu_id: str, dto: MenuUpdateDTO, session: AsyncSession) -> dict:
+    async def update_menu(self, menu_id: str, dto: MenuUpdateDTO) -> dict:
         """更新菜单。"""
         menu = await self.menu_repo.get_by_id(menu_id)
         if not menu:
@@ -122,7 +122,7 @@ class MenuService:
                 parent = await self.menu_repo.get_by_id(pid)
                 if not parent:
                     raise NotFoundError("父菜单不存在")
-                if await self._is_descendant(menu_id, pid, session):
+                if await self._is_descendant(menu_id, pid):
                     raise ConflictError("不能将菜单设置为其子菜单的子菜单")
                 menu.parent_id = pid
             else:
@@ -175,14 +175,14 @@ class MenuService:
             menu.show_parent = dto.showParent
 
         await self.menu_repo.update(menu)
-        await session.flush()
+        await self.session.flush()
         # 重新获取以确保返回完整模型
         updated = await self.menu_repo.get_by_id(menu_id)
         if updated is None:
             raise NotFoundError("菜单不存在")
         return self._to_response(updated)
 
-    async def delete_menu(self, menu_id: str, session: AsyncSession) -> bool:
+    async def delete_menu(self, menu_id: str) -> bool:
         """删除菜单。"""
         # 检查菜单是否存在
         menu = await self.menu_repo.get_by_id(menu_id)
@@ -196,13 +196,13 @@ class MenuService:
 
         return await self.menu_repo.delete(menu_id)
 
-    async def _is_descendant(self, ancestor_id: str, descendant_id: str, session: AsyncSession) -> bool:
+    async def _is_descendant(self, ancestor_id: str, descendant_id: str) -> bool:
         """检查 descendant_id 是否是 ancestor_id 的后代（用于防止循环引用）。"""
         children = await self.menu_repo.get_by_parent_id(descendant_id)
         for child in children:
             if child.id == ancestor_id:
                 return True
-            if await self._is_descendant(ancestor_id, child.id, session):
+            if await self._is_descendant(ancestor_id, child.id):
                 return True
         return False
 

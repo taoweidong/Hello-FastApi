@@ -29,11 +29,10 @@ class LogRepository:
 
     # ============ 登录日志 ============
 
-    async def get_login_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, username: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLog], int]:
+    async def get_login_logs(self, page_num: int = 1, page_size: int = 10, username: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLog], int]:
         """获取登录日志列表（支持筛选和分页）。
 
         Args:
-            session: 数据库会话
             page_num: 页码，从1开始
             page_size: 每页数量
             username: 用户名模糊查询
@@ -68,20 +67,19 @@ class LogRepository:
         offset = (page_num - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
-        result = await session.exec(query)
+        result = await self.session.exec(query)
         logs = list(result.all())
 
         # 获取总数
-        total_result = await session.execute(count_query)
+        total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
         return logs, total
 
-    async def delete_login_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
+    async def delete_login_logs(self, log_ids: list[str]) -> int:
         """批量删除登录日志。
 
         Args:
-            session: 数据库会话
             log_ids: 日志ID列表
 
         Returns:
@@ -89,37 +87,33 @@ class LogRepository:
         """
         count = 0
         for log_id in log_ids:
-            log = await session.get(LoginLog, log_id)
+            log = await self.session.get(LoginLog, log_id)
             if log:
-                await session.delete(log)
+                await self.session.delete(log)
                 count += 1
-        await session.flush()
+        await self.session.flush()
         return count
 
-    async def clear_login_logs(self, session: AsyncSession) -> int:
+    async def clear_login_logs(self) -> int:
         """清空所有登录日志。
-
-        Args:
-            session: 数据库会话
 
         Returns:
             删除的数量
         """
-        result = await session.exec(select(LoginLog))
+        result = await self.session.exec(select(LoginLog))
         logs = result.all()
         count = len(logs)
         for log in logs:
-            await session.delete(log)
-        await session.flush()
+            await self.session.delete(log)
+        await self.session.flush()
         return count
 
     # ============ 操作日志 ============
 
-    async def get_operation_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLog], int]:
+    async def get_operation_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLog], int]:
         """获取操作日志列表（支持筛选和分页）。
 
         Args:
-            session: 数据库会话
             page_num: 页码，从1开始
             page_size: 每页数量
             module: 模块名称模糊查询
@@ -154,20 +148,19 @@ class LogRepository:
         offset = (page_num - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
-        result = await session.exec(query)
+        result = await self.session.exec(query)
         logs = list(result.all())
 
         # 获取总数
-        total_result = await session.execute(count_query)
+        total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
         return logs, total
 
-    async def delete_operation_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
+    async def delete_operation_logs(self, log_ids: list[str]) -> int:
         """批量删除操作日志。
 
         Args:
-            session: 数据库会话
             log_ids: 日志ID列表
 
         Returns:
@@ -175,37 +168,33 @@ class LogRepository:
         """
         count = 0
         for log_id in log_ids:
-            log = await session.get(OperationLog, log_id)
+            log = await self.session.get(OperationLog, log_id)
             if log:
-                await session.delete(log)
+                await self.session.delete(log)
                 count += 1
-        await session.flush()
+        await self.session.flush()
         return count
 
-    async def clear_operation_logs(self, session: AsyncSession) -> int:
+    async def clear_operation_logs(self) -> int:
         """清空所有操作日志。
-
-        Args:
-            session: 数据库会话
 
         Returns:
             删除的数量
         """
-        result = await session.exec(select(OperationLog))
+        result = await self.session.exec(select(OperationLog))
         logs = result.all()
         count = len(logs)
         for log in logs:
-            await session.delete(log)
-        await session.flush()
+            await self.session.delete(log)
+        await self.session.flush()
         return count
 
     # ============ 系统日志 ============
 
-    async def get_system_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[SystemLog], int]:
+    async def get_system_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[SystemLog], int]:
         """获取系统日志列表（支持筛选和分页）。
 
         Args:
-            session: 数据库会话
             page_num: 页码，从1开始
             page_size: 每页数量
             module: 模块名称模糊查询
@@ -236,32 +225,30 @@ class LogRepository:
         offset = (page_num - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
-        result = await session.exec(query)
+        result = await self.session.exec(query)
         logs = list(result.all())
 
         # 获取总数
-        total_result = await session.execute(count_query)
+        total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
         return logs, total
 
-    async def get_system_log_detail(self, session: AsyncSession, log_id: str) -> SystemLog | None:
+    async def get_system_log_detail(self, log_id: str) -> SystemLog | None:
         """获取系统日志详情。
 
         Args:
-            session: 数据库会话
             log_id: 日志ID
 
         Returns:
             系统日志对象或 None
         """
-        return await self._system_log_crud.get(session, id=log_id, schema_to_select=SystemLog, return_as_model=True)
+        return await self._system_log_crud.get(self.session, id=log_id, schema_to_select=SystemLog, return_as_model=True)
 
-    async def delete_system_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
+    async def delete_system_logs(self, log_ids: list[str]) -> int:
         """批量删除系统日志。
 
         Args:
-            session: 数据库会话
             log_ids: 日志ID列表
 
         Returns:
@@ -269,26 +256,23 @@ class LogRepository:
         """
         count = 0
         for log_id in log_ids:
-            log = await session.get(SystemLog, log_id)
+            log = await self.session.get(SystemLog, log_id)
             if log:
-                await session.delete(log)
+                await self.session.delete(log)
                 count += 1
-        await session.flush()
+        await self.session.flush()
         return count
 
-    async def clear_system_logs(self, session: AsyncSession) -> int:
+    async def clear_system_logs(self) -> int:
         """清空所有系统日志。
-
-        Args:
-            session: 数据库会话
 
         Returns:
             删除的数量
         """
-        result = await session.exec(select(SystemLog))
+        result = await self.session.exec(select(SystemLog))
         logs = result.all()
         count = len(logs)
         for log in logs:
-            await session.delete(log)
-        await session.flush()
+            await self.session.delete(log)
+        await self.session.flush()
         return count

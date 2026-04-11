@@ -1,0 +1,28 @@
+"""认证应用服务工厂。"""
+
+from fastapi import Depends
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.api.dependencies.domain_services import get_password_service, get_token_service
+from src.application.services.auth_service import AuthService
+from src.domain.services.password_service import PasswordService
+from src.domain.services.token_service import TokenService
+from src.infrastructure.database import get_db
+from src.infrastructure.repositories.permission_repository import PermissionRepository
+from src.infrastructure.repositories.role_repository import RoleRepository
+from src.infrastructure.repositories.user_repository import UserRepository
+
+
+async def get_auth_service(
+    db: AsyncSession = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+    password_service: PasswordService = Depends(get_password_service),
+) -> AuthService:
+    """获取认证服务实例。
+
+    注入所有必需的仓储和领域服务依赖。
+    """
+    user_repo = UserRepository(db)
+    role_repo = RoleRepository(db)
+    perm_repo = PermissionRepository(db)
+    return AuthService(session=db, user_repo=user_repo, role_repo=role_repo, perm_repo=perm_repo, token_service=token_service, password_service=password_service)

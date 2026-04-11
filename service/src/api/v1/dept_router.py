@@ -1,0 +1,79 @@
+"""部门管理路由模块。
+
+提供部门的增删改查功能。
+路由直接挂在 /api/system 路径下（无额外前缀）。
+"""
+
+from fastapi import Body, Depends
+
+from src.api.common import success_response
+from src.api.dependencies import get_current_active_user, get_department_service
+from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
+from src.application.services.department_service import DepartmentService
+
+from classy_fastapi import Routable, delete, get, post, put
+
+
+class DeptRouter(Routable):
+    """部门管理路由类，提供部门增删改查功能。"""
+
+    @post("/dept")
+    async def get_dept_list(
+        self,
+        data: dict = Body(default={}),
+        service: DepartmentService = Depends(get_department_service),
+        current_user: dict = Depends(get_current_active_user),
+    ) -> dict:
+        """获取部门列表（扁平结构）。"""
+        query = DepartmentListQueryDTO(name=data.get("name"), status=data.get("status"))
+        departments = await service.get_departments(query)
+        dept_list = []
+        for dept in departments:
+            dept_dict = {
+                "id": dept.id,
+                "parentId": 0 if not dept.parent_id else dept.parent_id,
+                "name": dept.name,
+                "sort": dept.sort,
+                "principal": dept.principal or "",
+                "phone": dept.phone or "",
+                "email": dept.email or "",
+                "status": dept.status,
+                "remark": dept.remark or "",
+                "createTime": int(dept.created_at.timestamp() * 1000) if dept.created_at else None,
+            }
+            dept_list.append(dept_dict)
+        return success_response(data=dept_list)
+
+    @post("/dept/create")
+    async def create_department(
+        self,
+        dto: DepartmentCreateDTO,
+        service: DepartmentService = Depends(get_department_service),
+        current_user: dict = Depends(get_current_active_user),
+    ) -> dict:
+        """创建部门。"""
+        department = await service.create_department(dto)
+        return success_response(data={"id": department.id, "name": department.name}, message="创建成功", code=201)
+
+    @put("/dept/{dept_id}")
+    async def update_department(
+        self,
+        dept_id: str,
+        dto: DepartmentUpdateDTO,
+        service: DepartmentService = Depends(get_department_service),
+        current_user: dict = Depends(get_current_active_user),
+    ) -> dict:
+        """更新部门。"""
+        department = await service.update_department(dept_id, dto)
+        return success_response(data={"id": department.id, "name": department.name}, message="更新成功")
+
+    @delete("/dept/{dept_id}")
+    async def delete_department(
+        self,
+        dept_id: str,
+        service: DepartmentService = Depends(get_department_service),
+        current_user: dict = Depends(get_current_active_user),
+    ) -> dict:
+        """删除部门。"""
+        await service.delete_department(dept_id)
+        return success_response(message="删除成功")

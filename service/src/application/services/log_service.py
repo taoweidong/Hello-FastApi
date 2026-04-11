@@ -65,7 +65,7 @@ class LogService:
         if query.status:
             status = int(query.status)
 
-        logs, total = await self.log_repo.get_login_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, username=query.username, status=status, start_time=start_time, end_time=end_time)
+        logs, total = await self.log_repo.get_login_logs(page_num=query.pageNum, page_size=query.pageSize, username=query.username, status=status, start_time=start_time, end_time=end_time)
 
         return logs, total
 
@@ -78,7 +78,7 @@ class LogService:
         Returns:
             删除的数量
         """
-        count = await self.log_repo.delete_login_logs(self.session, dto.ids)
+        count = await self.log_repo.delete_login_logs(dto.ids)
         await self.session.flush()
         return count
 
@@ -88,7 +88,7 @@ class LogService:
         Returns:
             删除的数量
         """
-        count = await self.log_repo.clear_login_logs(self.session)
+        count = await self.log_repo.clear_login_logs()
         await self.session.flush()
         return count
 
@@ -114,7 +114,7 @@ class LogService:
         if query.status:
             status = int(query.status)
 
-        logs, total = await self.log_repo.get_operation_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, module=query.module, status=status, start_time=start_time, end_time=end_time)
+        logs, total = await self.log_repo.get_operation_logs(page_num=query.pageNum, page_size=query.pageSize, module=query.module, status=status, start_time=start_time, end_time=end_time)
 
         return logs, total
 
@@ -127,7 +127,7 @@ class LogService:
         Returns:
             删除的数量
         """
-        count = await self.log_repo.delete_operation_logs(self.session, dto.ids)
+        count = await self.log_repo.delete_operation_logs(dto.ids)
         await self.session.flush()
         return count
 
@@ -137,7 +137,7 @@ class LogService:
         Returns:
             删除的数量
         """
-        count = await self.log_repo.clear_operation_logs(self.session)
+        count = await self.log_repo.clear_operation_logs()
         await self.session.flush()
         return count
 
@@ -158,7 +158,7 @@ class LogService:
             start_time = _parse_log_time_bound(query.requestTime[0])
             end_time = _parse_log_time_bound(query.requestTime[1])
 
-        logs, total = await self.log_repo.get_system_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, module=query.module, start_time=start_time, end_time=end_time)
+        logs, total = await self.log_repo.get_system_logs(page_num=query.pageNum, page_size=query.pageSize, module=query.module, start_time=start_time, end_time=end_time)
 
         return logs, total
 
@@ -174,7 +174,7 @@ class LogService:
         Raises:
             NotFoundError: 日志不存在
         """
-        log = await self.log_repo.get_system_log_detail(self.session, log_id)
+        log = await self.log_repo.get_system_log_detail(log_id)
         if not log:
             raise NotFoundError("日志不存在")
 
@@ -203,7 +203,7 @@ class LogService:
         Returns:
             删除的数量
         """
-        count = await self.log_repo.delete_system_logs(self.session, dto.ids)
+        count = await self.log_repo.delete_system_logs(dto.ids)
         await self.session.flush()
         return count
 
@@ -213,6 +213,6 @@ class LogService:
         Returns:
             删除的数量
         """
-        count = await self.log_repo.clear_system_logs(self.session)
+        count = await self.log_repo.clear_system_logs()
         await self.session.flush()
         return count

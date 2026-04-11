@@ -299,6 +299,19 @@ wheels = [
 ]
 
 [[package]]
+name = "classy-fastapi"
+version = "0.7.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/3e/4c/268db3506fcd169091ba3507c92238fe1cf9a5984c5d562d046915b8031b/classy_fastapi-0.7.0.tar.gz", hash = "sha256:4ab934fc309b134cd8dde5f7d6f98e1303a111cf1341ebd5bf900a630d20b084" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/4e/4b/61cd3e75d6667fb7a6382bae4112995b0a2d5a4a35f2799f5594a7127329/classy_fastapi-0.7.0-py3-none-any.whl", hash = "sha256:eea211181d065fecb543d68b75a6a6ab93393bb7ca48551887fa898ba7d40ec3" },
+]
+
+[[package]]
 name = "click"
 version = "8.3.1"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -838,6 +851,7 @@ dependencies = [
     { name = "aiosqlite" },
     { name = "asyncpg" },
     { name = "bcrypt" },
+    { name = "classy-fastapi" },
     { name = "fastapi", extra = ["standard"] },
     { name = "fastcrud" },
     { name = "httpx" },
@@ -869,6 +883,7 @@ requires-dist = [
     { name = "aiosqlite", specifier = ">=0.20.0" },
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "bcrypt", specifier = ">=4.0.0" },
+    { name = "classy-fastapi", specifier = ">=0.7.0" },
     { name = "factory-boy", marker = "extra == 'dev'", specifier = ">=3.3.0" },
     { name = "faker", marker = "extra == 'dev'", specifier = ">=28.0.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.0" },
