@@ -11,7 +11,7 @@ from src.api.common import success_response
 from src.api.dependencies import get_auth_service, get_current_active_user, get_menu_repository, get_role_repository, get_user_repository
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
-from src.core.exceptions import UnauthorizedError
+from src.domain.exceptions import UnauthorizedError
 from src.infrastructure.database import get_db
 from src.infrastructure.repositories.menu_repository import MenuRepository
 from src.infrastructure.repositories.role_repository import RoleRepository

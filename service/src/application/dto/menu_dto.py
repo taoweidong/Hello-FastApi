@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.core.validators import empty_str_to_none, normalize_optional_id
+from src.application.validators import empty_str_to_none, normalize_optional_id
 
 
 class MenuCreateDTO(BaseModel):

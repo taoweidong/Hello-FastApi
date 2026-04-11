@@ -6,7 +6,7 @@ import pytest
 
 from src.application.dto.user_dto import UserCreateDTO
 from src.application.services.user_service import UserService
-from src.core.exceptions import ConflictError, NotFoundError
+from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.services.password_service import PasswordService
 from src.infrastructure.database.models import User
 

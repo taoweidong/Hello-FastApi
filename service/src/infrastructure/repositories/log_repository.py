@@ -24,16 +24,7 @@ class LogRepository:
 
     # ============ 登录日志 ============
 
-    async def get_login_logs(
-        self,
-        session: AsyncSession,
-        page_num: int = 1,
-        page_size: int = 10,
-        username: str | None = None,
-        status: int | None = None,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-    ) -> tuple[list[LoginLog], int]:
+    async def get_login_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, username: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLog], int]:
         """获取登录日志列表（支持筛选和分页）。
 
         Args:
@@ -119,16 +110,7 @@ class LogRepository:
 
     # ============ 操作日志 ============
 
-    async def get_operation_logs(
-        self,
-        session: AsyncSession,
-        page_num: int = 1,
-        page_size: int = 10,
-        module: str | None = None,
-        status: int | None = None,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-    ) -> tuple[list[OperationLog], int]:
+    async def get_operation_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLog], int]:
         """获取操作日志列表（支持筛选和分页）。
 
         Args:
@@ -214,15 +196,7 @@ class LogRepository:
 
     # ============ 系统日志 ============
 
-    async def get_system_logs(
-        self,
-        session: AsyncSession,
-        page_num: int = 1,
-        page_size: int = 10,
-        module: str | None = None,
-        start_time: datetime | None = None,
-        end_time: datetime | None = None,
-    ) -> tuple[list[SystemLog], int]:
+    async def get_system_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[SystemLog], int]:
         """获取系统日志列表（支持筛选和分页）。
 
         Args:

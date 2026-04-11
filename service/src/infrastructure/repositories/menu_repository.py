@@ -1,7 +1,6 @@
 """使用 SQLModel 和 FastCRUD 实现的菜单仓库。"""
 
 from fastcrud import FastCRUD
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
@@ -88,13 +87,7 @@ class MenuRepository(MenuRepositoryInterface):
         Returns:
             子菜单列表
         """
-        result = await self._crud.get_multi(
-            session,
-            parent_id=parent_id,
-            schema_to_select=Menu,
-            return_as_model=True,
-            return_total_count=False,
-        )
+        result = await self._crud.get_multi(session, parent_id=parent_id, schema_to_select=Menu, return_as_model=True, return_total_count=False)
         menus = result.get("data", [])
         # 按 order_num 排序
         return sorted(menus, key=lambda m: m.order_num)

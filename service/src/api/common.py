@@ -209,9 +209,7 @@ def safe_int(value: str | int | float | None, default: int | None = None) -> int
     if value is None:
         return default
     try:
-        if isinstance(value, str):
-            return int(value)
-        elif isinstance(value, (int, float)):
+        if isinstance(value, (str, int, float)):
             return int(value)
         else:
             return default

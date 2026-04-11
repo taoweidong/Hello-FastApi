@@ -3,11 +3,22 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserListQueryDTO, UserResponseDTO, UserUpdateDTO
-from src.core.exceptions import ConflictError, NotFoundError, UnauthorizedError
+from src.domain.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.password_service import PasswordService
 from src.infrastructure.database.models import User
+
+
+def _dept_id_filter_int(dept_id: str | int | None) -> int | None:
+    if dept_id is None or dept_id == "" or dept_id == 0 or dept_id == "0":
+        return None
+    if isinstance(dept_id, int):
+        return dept_id
+    try:
+        return int(dept_id)
+    except ValueError:
+        return None
 
 
 class UserService:
@@ -51,6 +62,8 @@ class UserService:
         await self.session.flush()
         # 重新从数据库获取以加载 roles 关系
         created_user = await self.repo.get_by_id(user.id)
+        if created_user is None:
+            raise NotFoundError("用户创建后无法加载")
         return await self._to_response(created_user)
 
     async def get_user(self, user_id: str) -> UserResponseDTO:
@@ -84,10 +97,11 @@ class UserService:
             (用户响应列表, 总数) 元组
         """
         # 获取筛选后的用户列表
-        users = await self.repo.get_all(page_num=query.pageNum, page_size=query.pageSize, username=query.username, phone=query.phone, email=query.email, status=query.status, dept_id=query.deptId)
+        dept_id = _dept_id_filter_int(query.deptId)
+        users = await self.repo.get_all(page_num=query.pageNum, page_size=query.pageSize, username=query.username, phone=query.phone, email=query.email, status=query.status, dept_id=dept_id)
 
         # 获取总数
-        total = await self.repo.count(username=query.username, phone=query.phone, email=query.email, status=query.status, dept_id=query.deptId)
+        total = await self.repo.count(username=query.username, phone=query.phone, email=query.email, status=query.status, dept_id=dept_id)
 
         # 转换为响应DTO
         user_responses = [await self._to_response(u) for u in users]
@@ -137,6 +151,8 @@ class UserService:
         await self.session.flush()
         # 重新从数据库获取以加载 roles 关系
         updated_user = await self.repo.get_by_id(user_id)
+        if updated_user is None:
+            raise NotFoundError(f"用户 ID '{user_id}' 不存在")
         return await self._to_response(updated_user)
 
     async def delete_user(self, user_id: str) -> bool:

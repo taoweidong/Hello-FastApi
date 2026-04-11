@@ -34,10 +34,7 @@ class TestAuthRealFlow:
         assert r.json()["data"]["accessToken"]
 
     async def test_register_then_login(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
-        r = await flow_client.post(
-            "/api/system/register",
-            json={"username": "flow_registered", "password": "RegPass123!", "nickname": "注册用户", "email": "reg@flow.test"},
-        )
+        r = await flow_client.post("/api/system/register", json={"username": "flow_registered", "password": "RegPass123!", "nickname": "注册用户", "email": "reg@flow.test"})
         assert r.status_code == 200
         assert r.json()["data"]["username"] == "flow_registered"
 
@@ -49,11 +46,7 @@ class TestAuthRealFlow:
 class TestRbacRealFlow:
     async def test_operator_can_list_and_create_user_cannot_delete(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h_super = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
-        r = await flow_client.post(
-            "/api/system/user/create",
-            headers=h_super,
-            json={"username": "victim_user", "password": "VictimPass123!", "nickname": "待删", "email": "victim@flow.test", "status": 1},
-        )
+        r = await flow_client.post("/api/system/user/create", headers=h_super, json={"username": "victim_user", "password": "VictimPass123!", "nickname": "待删", "email": "victim@flow.test", "status": 1})
         assert r.status_code == 201
         victim_id = r.json()["data"]["id"]
 
@@ -74,11 +67,7 @@ class TestUserManagementRealFlow:
     async def test_user_crud_and_change_password(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
-        r = await flow_client.post(
-            "/api/system/user/create",
-            headers=h,
-            json={"username": "crud_user", "password": "CrudPass123!", "nickname": "CRUD", "email": "crud@flow.test", "status": 1},
-        )
+        r = await flow_client.post("/api/system/user/create", headers=h, json={"username": "crud_user", "password": "CrudPass123!", "nickname": "CRUD", "email": "crud@flow.test", "status": 1})
         assert r.status_code == 201
         uid = r.json()["data"]["id"]
 
@@ -180,13 +169,7 @@ class TestSystemLogsRealFlow:
 class TestStubRoutesRealFlow:
     async def test_stub_routes_with_auth(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
-        for method, path, kw in (
-            ("GET", "/api/system/get-async-routes", {}),
-            ("GET", "/api/system/mine-logs", {}),
-            ("GET", "/api/system/get-map-info", {}),
-            ("POST", "/api/system/online-logs", {"json": {}}),
-            ("POST", "/api/system/get-card-list", {"json": {}}),
-        ):
+        for method, path, kw in (("GET", "/api/system/get-async-routes", {}), ("GET", "/api/system/mine-logs", {}), ("GET", "/api/system/get-map-info", {}), ("POST", "/api/system/online-logs", {"json": {}}), ("POST", "/api/system/get-card-list", {"json": {}})):
             if method == "GET":
                 r = await flow_client.get(path, headers=h)
             else:

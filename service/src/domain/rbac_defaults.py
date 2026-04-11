@@ -1,12 +1,4 @@
-"""应用程序常量。"""
-
-# API
-API_PREFIX = "/api"
-API_SYSTEM_PREFIX = "/api/system"
-
-# 分页
-DEFAULT_PAGE_SIZE = 20
-MAX_PAGE_SIZE = 100
+"""RBAC 种子数据（角色与权限默认值）。"""
 
 # RBAC 默认角色
 DEFAULT_ROLES = {"admin": "System administrator with full access", "user": "Regular user with basic access", "moderator": "Moderator with elevated permissions"}

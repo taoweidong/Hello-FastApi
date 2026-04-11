@@ -4,6 +4,7 @@
 """
 
 import random
+from typing import Any
 
 from fastapi import APIRouter, Body, Depends
 
@@ -96,7 +97,7 @@ async def get_online_logs(data: dict = Body(default={}), current_user: dict = De
     注意：在线用户管理需要会话管理机制（如 Redis），
     目前返回 stub 数据，后续可实现真实的会话管理。
     """
-    list_data = [
+    list_data: list[dict[str, Any]] = [
         {"id": 1, "username": "admin", "ip": "192.168.1.1", "address": "中国河南省信阳市", "system": "macOS", "browser": "Chrome", "loginTime": "2026-03-29T10:00:00"},
         {"id": 2, "username": "common", "ip": "192.168.1.2", "address": "中国广东省深圳市", "system": "Windows", "browser": "Firefox", "loginTime": "2026-03-29T09:30:00"},
     ]
@@ -292,7 +293,7 @@ async def get_map_info(current_user: dict = Depends(get_current_active_user)):
     map_list = []
     drivers = ["张三", "李四", "王五", "赵六", "孙七", "周八", "吴九", "郑十"]
 
-    for i in range(50):
+    for _ in range(50):
         # 生成河南省范围内的随机坐标
         lng = round(random.uniform(113.0, 114.1), 4)
         lat = round(random.uniform(34.0, 35.1), 4)

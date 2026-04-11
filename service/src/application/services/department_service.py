@@ -6,7 +6,7 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
-from src.core.exceptions import BusinessError, ConflictError, NotFoundError
+from src.domain.exceptions import BusinessError, ConflictError, NotFoundError
 from src.domain.repositories.department_repository import DepartmentRepositoryInterface
 from src.infrastructure.database.models import Department
 
@@ -78,6 +78,8 @@ class DepartmentService:
         # 重新获取以确保返回完整模型
         created = await self.dept_repo.get_by_name(dto.name, self.session)
         await self.session.commit()
+        if created is None:
+            raise BusinessError("部门创建后无法加载")
         return created
 
     async def update_department(self, dept_id: str, dto: DepartmentUpdateDTO) -> Department:
@@ -123,6 +125,8 @@ class DepartmentService:
         # 重新获取以确保返回完整模型
         updated = await self.dept_repo.get_by_id(dept_id, self.session)
         await self.session.commit()
+        if updated is None:
+            raise NotFoundError("部门不存在")
         return updated
 
     async def delete_department(self, dept_id: str) -> bool:

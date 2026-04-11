@@ -3,7 +3,7 @@
 import functools
 from collections.abc import Callable
 
-from src.core.logger import logger
+from src.infrastructure.logging.logger import logger
 
 
 def log_execution(func: Callable) -> Callable:

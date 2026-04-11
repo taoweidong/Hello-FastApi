@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
 from src.config.settings import settings
-from src.core.exceptions import BusinessError, NotFoundError, UnauthorizedError
+from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.repositories.permission_repository import PermissionRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface

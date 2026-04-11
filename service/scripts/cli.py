@@ -60,7 +60,7 @@ async def init_database() -> None:
 
 async def seed_rbac() -> None:
     """初始化默认角色和权限。"""
-    from src.core.constants import DEFAULT_PERMISSIONS, DEFAULT_ROLES
+    from src.domain.rbac_defaults import DEFAULT_PERMISSIONS, DEFAULT_ROLES
     from src.infrastructure.database import async_session_factory, init_db
     from src.infrastructure.database.models import Permission, Role
     from src.infrastructure.repositories.permission_repository import PermissionRepository
@@ -151,7 +151,7 @@ async def seed_data() -> None:
             addresses = ["中国广东省深圳市", "中国北京市", "中国上海市", "中国浙江省杭州市"]
             behaviors = ["账户登录", "验证码登录", "扫码登录"]
 
-            for i in range(20):
+            for _ in range(20):
                 log = LoginLog(
                     username=random.choice(usernames),
                     ip=f"192.168.1.{random.randint(1, 254)}",
@@ -177,7 +177,7 @@ async def seed_data() -> None:
             modules = ["用户管理", "角色管理", "菜单管理", "部门管理", "系统设置"]
             summaries = ["新增用户", "修改角色权限", "删除菜单", "更新部门信息", "修改系统配置"]
 
-            for i in range(20):
+            for _ in range(20):
                 log = OperationLog(
                     username="admin",
                     ip=f"192.168.1.{random.randint(1, 254)}",
@@ -205,7 +205,7 @@ async def seed_data() -> None:
             urls = ["/api/system/user", "/api/system/role", "/api/system/menu", "/api/system/dept", "/api/system/login"]
             methods = ["GET", "POST", "PUT", "DELETE"]
 
-            for i in range(30):
+            for _ in range(30):
                 log = SystemLog(
                     level=random.choice(levels),
                     module=random.choice(modules),

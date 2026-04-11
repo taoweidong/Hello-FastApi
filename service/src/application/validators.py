@@ -3,7 +3,7 @@
 import re
 from typing import TypeVar
 
-from src.core.exceptions import ValidationError
+from src.domain.exceptions import ValidationError
 
 T = TypeVar("T")
 

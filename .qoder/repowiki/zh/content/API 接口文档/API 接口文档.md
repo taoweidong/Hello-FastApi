@@ -7,12 +7,14 @@
 - [service/src/api/dependencies.py](file://service/src/api/dependencies.py)
 - [service/src/api/v1/auth_routes.py](file://service/src/api/v1/auth_routes.py)
 - [service/src/api/v1/user_routes.py](file://service/src/api/v1/user_routes.py)
-- [service/src/api/v1/rbac_routes.py](file://service/src/api/v1/rbac_routes.py)
+- [service/src/api/v1/role_routes.py](file://service/src/api/v1/role_routes.py)
+- [service/src/api/v1/permission_routes.py](file://service/src/api/v1/permission_routes.py)
 - [service/src/api/v1/menu_routes.py](file://service/src/api/v1/menu_routes.py)
 - [service/src/api/v1/system_routes.py](file://service/src/api/v1/system_routes.py)
 - [service/src/application/dto/auth_dto.py](file://service/src/application/dto/auth_dto.py)
 - [service/src/application/dto/user_dto.py](file://service/src/application/dto/user_dto.py)
-- [service/src/application/dto/rbac_dto.py](file://service/src/application/dto/rbac_dto.py)
+- [service/src/application/dto/role_dto.py](file://service/src/application/dto/role_dto.py)
+- [service/src/application/dto/permission_dto.py](file://service/src/application/dto/permission_dto.py)
 - [service/src/domain/auth/token_service.py](file://service/src/domain/auth/token_service.py)
 - [service/src/application/services/auth_service.py](file://service/src/application/services/auth_service.py)
 - [service/src/config/settings.py](file://service/src/config/settings.py)
@@ -20,6 +22,12 @@
 - [service/tests/integration/test_api.py](file://service/tests/integration/test_api.py)
 - [service/scripts/verify_api.py](file://service/scripts/verify_api.py)
 </cite>
+
+## 更新摘要
+**所做更改**
+- 新增用户列表格式化函数的详细说明，确保前端兼容性和数据一致性
+- 更新用户管理接口部分，反映数据格式化改进对API响应的影响
+- 增强API数据呈现的一致性说明，涵盖用户和角色API的数据格式优化
 
 ## 目录
 1. [简介](#简介)
@@ -35,6 +43,8 @@
 
 ## 简介
 本文件为 Hello-FastApi 的 API 接口文档，覆盖认证接口、用户管理接口、RBAC 接口、菜单管理接口与系统管理接口。文档提供每个接口的 HTTP 方法、URL 模式、请求参数、响应格式与状态码说明，并解释 JWT 认证与权限校验机制。同时给出统一响应格式、版本管理策略、兼容性考虑以及测试与调试建议，帮助前后端与第三方集成快速上手。
+
+**更新** 本次更新重点关注API数据格式化改进，新增了用户列表格式化函数，确保前端兼容性和数据一致性，特别优化了用户和角色API的数据呈现格式。
 
 ## 项目结构
 - 后端采用 FastAPI + DDD 分层架构，API 路由位于 v1 版本命名空间，统一前缀为 /api/system。
@@ -69,11 +79,14 @@ A --> I["认证与权限依赖<br/>service/src/api/dependencies.py"]
   - 通过 HTTP Bearer 令牌进行鉴权；从令牌中解析用户 ID 并校验令牌类型；校验用户是否激活；支持基于权限码的细粒度授权。
 - JWT 令牌服务
   - 支持创建访问令牌与刷新令牌，设定过期时间；解码并验证令牌有效性；校验令牌类型。
+- **数据格式化组件**（新增）
+  - 用户列表格式化函数确保前端兼容性，自动处理空值占位和部门信息格式化。
 
 **章节来源**
 - [service/src/api/common.py:29-65](file://service/src/api/common.py#L29-L65)
 - [service/src/api/dependencies.py:16-72](file://service/src/api/dependencies.py#L16-L72)
 - [service/src/domain/auth/token_service.py:14-45](file://service/src/domain/auth/token_service.py#L14-L45)
+- [service/src/api/common.py:95-104](file://service/src/api/common.py#L95-L104)
 
 ## 架构总览
 - API 前缀：/api/system
@@ -96,7 +109,6 @@ Router->>Handler : "调用处理器"
 Handler->>Service : "执行业务逻辑"
 Service->>Repo : "数据访问"
 Repo-->>Service : "返回数据"
-Service-->>Handler : "业务结果"
 Handler-->>API : "统一响应"
 API-->>Client : "JSON 响应"
 ```
@@ -152,6 +164,7 @@ API-->>Client : "JSON 响应"
   - 权限：user:view
   - 请求体：pageNum、pageSize、username、phone、email、status、deptId
   - 成功响应：分页数据 rows、total、pageNum、pageSize、totalPage
+  - **响应格式优化**：新增用户列表格式化函数，确保前端兼容性
 - 创建用户
   - 方法与路径：POST /api/system/user/create
   - 权限：user:add
@@ -200,6 +213,13 @@ API-->>Client : "JSON 响应"
   - 请求体：userId、roleIds
   - 成功响应：角色分配成功
 
+**数据格式化改进说明**（新增）
+用户列表接口现已集成格式化函数，确保响应数据与前端期望格式完全一致：
+
+- 自动添加部门信息：`{"id": dept_id 或 "", "name": ""}`
+- 空值处理：phone、email、nickname、avatar、remark 字段为空时自动替换为空字符串
+- 字段清理：移除 dept_id 字段，避免前端兼容性问题
+
 请求与响应示例（基于测试与实现）
 - 获取当前用户信息示例：需携带 Authorization: Bearer <access_token>，响应 code=0，data 为用户信息
 - 修改密码示例：携带 access_token，响应 code=0，message 为"密码修改成功"
@@ -207,6 +227,7 @@ API-->>Client : "JSON 响应"
 **章节来源**
 - [service/src/api/v1/user_routes.py:17-228](file://service/src/api/v1/user_routes.py#L17-L228)
 - [service/src/application/dto/user_dto.py:8-86](file://service/src/application/dto/user_dto.py#L8-L86)
+- [service/src/api/common.py:95-104](file://service/src/api/common.py#L95-L104)
 - [service/tests/integration/test_api.py:125-263](file://service/tests/integration/test_api.py#L125-L263)
 
 ### RBAC 接口
@@ -216,6 +237,7 @@ API-->>Client : "JSON 响应"
     - 权限：role:view
     - 请求体：pageNum、pageSize、roleName、status
     - 成功响应：分页数据
+    - **响应格式优化**：角色列表已优化字段格式，确保与前端期望一致
   - 创建角色
     - 方法与路径：POST /api/system/role/create
     - 权限：role:manage
@@ -260,13 +282,22 @@ API-->>Client : "JSON 响应"
     - 权限：permission:manage
     - 成功响应：权限删除成功
 
+**数据格式化改进说明**（新增）
+角色列表接口已优化响应格式，确保与前端期望保持一致：
+
+- 标准化字段格式：包含 id、name、code、status、remark、createTime
+- 时间格式处理：使用 `datetime_to_timestamp` 函数转换时间格式
+- 空值处理：remark 字段为空时自动替换为空字符串
+
 请求与响应示例（基于测试与实现）
 - 获取角色列表示例：携带 role:view 权限，响应 code=0，data 为分页数据
 - 为角色分配权限示例：携带 role:manage 权限，响应 code=0，message 为"权限分配成功"
 
 **章节来源**
-- [service/src/api/v1/rbac_routes.py:25-227](file://service/src/api/v1/rbac_routes.py#L25-L227)
-- [service/src/application/dto/rbac_dto.py:8-88](file://service/src/application/dto/rbac_dto.py#L8-L88)
+- [service/src/api/v1/role_routes.py:25-227](file://service/src/api/v1/role_routes.py#L25-L227)
+- [service/src/api/v1/permission_routes.py:25-227](file://service/src/api/v1/permission_routes.py#L25-L227)
+- [service/src/application/dto/role_dto.py:8-88](file://service/src/application/dto/role_dto.py#L8-L88)
+- [service/src/application/dto/permission_dto.py:8-88](file://service/src/application/dto/permission_dto.py#L8-L88)
 
 ### 菜单管理接口
 - 获取菜单列表（扁平结构）
@@ -431,9 +462,10 @@ Auth-->>Client : "登录响应(含令牌与权限)"
 graph TB
 R1["认证路由<br/>auth_routes.py"] --> S1["认证服务<br/>auth_service.py"]
 R2["用户路由<br/>user_routes.py"] --> S2["用户服务"]
-R3["RBAC 路由<br/>rbac_routes.py"] --> S3["RBAC 服务"]
-R4["菜单路由<br/>menu_routes.py"] --> S4["菜单服务"]
-R5["系统路由<br/>system_routes.py"] --> S5["部门服务/日志服务"]
+R3["RBAC 路由<br/>role_routes.py"] --> S3["RBAC 服务"]
+R4["权限路由<br/>permission_routes.py"] --> S3
+R5["菜单路由<br/>menu_routes.py"] --> S4["菜单服务"]
+R6["系统路由<br/>system_routes.py"] --> S5["部门服务/日志服务"]
 S1 --> T1["令牌服务<br/>token_service.py"]
 S1 --> P1["密码服务"]
 S1 --> URepo["用户仓储"]
@@ -444,7 +476,8 @@ S1 --> PerRepo["权限仓储"]
 **图表来源**
 - [service/src/api/v1/auth_routes.py:23-86](file://service/src/api/v1/auth_routes.py#L23-L86)
 - [service/src/api/v1/user_routes.py:17-228](file://service/src/api/v1/user_routes.py#L17-L228)
-- [service/src/api/v1/rbac_routes.py:25-227](file://service/src/api/v1/rbac_routes.py#L25-L227)
+- [service/src/api/v1/role_routes.py:25-227](file://service/src/api/v1/role_routes.py#L25-L227)
+- [service/src/api/v1/permission_routes.py:25-227](file://service/src/api/v1/permission_routes.py#L25-L227)
 - [service/src/api/v1/menu_routes.py:19-72](file://service/src/api/v1/menu_routes.py#L19-L72)
 - [service/src/api/v1/system_routes.py:25-335](file://service/src/api/v1/system_routes.py#L25-L335)
 - [service/src/application/services/auth_service.py:18-25](file://service/src/application/services/auth_service.py#L18-L25)
@@ -460,6 +493,9 @@ S1 --> PerRepo["权限仓储"]
   - 配置中包含限流参数，可在网关或中间件层实施速率限制。
 - 异步数据库访问
   - 使用异步 SQLModel 会话，提升并发处理能力。
+- **数据格式化优化**（新增）
+  - 用户列表格式化函数减少前端数据处理负担，提升渲染性能
+  - 统一的空值处理机制避免重复的前端判断逻辑
 - 建议
   - 对高频接口增加缓存（如菜单树、权限列表），结合缓存失效策略。
   - 对复杂查询增加索引与筛选条件，避免全表扫描。
@@ -467,6 +503,7 @@ S1 --> PerRepo["权限仓储"]
 **章节来源**
 - [service/src/core/constants.py:7-9](file://service/src/core/constants.py#L7-L9)
 - [service/src/config/settings.py:77-80](file://service/src/config/settings.py#L77-L80)
+- [service/src/api/common.py:95-104](file://service/src/api/common.py#L95-L104)
 
 ## 故障排查指南
 - 常见错误与处理
@@ -486,7 +523,7 @@ S1 --> PerRepo["权限仓储"]
 - [service/tests/integration/test_api.py:12-22](file://service/tests/integration/test_api.py#L12-L22)
 
 ## 结论
-本 API 文档覆盖了认证、用户管理、RBAC、菜单管理与系统管理的核心接口，明确了统一响应格式、JWT 认证与权限校验机制，并提供了测试与调试建议。建议在生产环境中完善缓存、限流与监控策略，确保高可用与高性能。
+本 API 文档覆盖了认证、用户管理、RBAC、菜单管理与系统管理的核心接口，明确了统一响应格式、JWT 认证与权限校验机制，并提供了测试与调试建议。**更新** 本次改进重点加强了API数据格式化，新增用户列表格式化函数确保前端兼容性和数据一致性，特别优化了用户和角色API的数据呈现格式。建议在生产环境中完善缓存、限流与监控策略，确保高可用与高性能。
 
 ## 附录
 
@@ -526,3 +563,21 @@ S1 --> PerRepo["权限仓储"]
 **章节来源**
 - [service/tests/integration/test_api.py:12-263](file://service/tests/integration/test_api.py#L12-L263)
 - [service/scripts/verify_api.py:27-156](file://service/scripts/verify_api.py#L27-L156)
+
+### 数据格式化改进详情（新增）
+**用户列表格式化函数**
+- 功能：确保前端兼容性和数据一致性
+- 处理逻辑：
+  - 自动添加部门信息：`{"id": dept_id 或 "", "name": ""}`
+  - 空值处理：phone、email、nickname、avatar、remark 字段为空时自动替换为空字符串
+  - 字段清理：移除 dept_id 字段，避免前端兼容性问题
+
+**角色列表格式化**
+- 标准化字段格式：包含 id、name、code、status、remark、createTime
+- 时间格式处理：使用 `datetime_to_timestamp` 函数转换时间格式
+- 空值处理：remark 字段为空时自动替换为空字符串
+
+**章节来源**
+- [service/src/api/common.py:95-104](file://service/src/api/common.py#L95-L104)
+- [service/src/api/v1/user_routes.py:32-35](file://service/src/api/v1/user_routes.py#L32-L35)
+- [service/src/api/v1/role_routes.py:37-43](file://service/src/api/v1/role_routes.py#L37-L43)

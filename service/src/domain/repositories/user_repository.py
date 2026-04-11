@@ -50,16 +50,8 @@ class UserRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(self, skip: int = 0, limit: int = 100) -> list["User"]:
-        """获取所有用户（分页）。
-
-        Args:
-            skip: 跳过的记录数
-            limit: 返回的最大记录数
-
-        Returns:
-            用户列表
-        """
+    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> list["User"]:
+        """获取用户列表（分页与筛选）。"""
         ...
 
     @abstractmethod
@@ -99,10 +91,21 @@ class UserRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def count(self) -> int:
-        """统计用户总数。
+    async def count(self, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> int:
+        """统计用户数（支持筛选）。"""
+        ...
 
-        Returns:
-            用户总数
-        """
+    @abstractmethod
+    async def batch_delete(self, user_ids: list[str]) -> int:
+        """批量删除用户。"""
+        ...
+
+    @abstractmethod
+    async def update_status(self, user_id: str, status: int) -> bool:
+        """更新用户状态。"""
+        ...
+
+    @abstractmethod
+    async def reset_password(self, user_id: str, hashed_password: str) -> bool:
+        """重置用户密码（已哈希）。"""
         ...

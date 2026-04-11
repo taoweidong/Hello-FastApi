@@ -141,11 +141,7 @@ class TestUserManagementEndpoints:
 
     async def test_create_user(self, client: AsyncClient, db_session: AsyncSession):
         auth = await _superuser_bearer(db_session, "su_create_user")
-        response = await client.post(
-            "/api/system/user/create",
-            headers={"Authorization": auth},
-            json={"username": "createduser", "password": "TestPass123", "nickname": "创建的用户", "email": "created@example.com", "phone": "13800138001", "sex": 0, "status": 1},
-        )
+        response = await client.post("/api/system/user/create", headers={"Authorization": auth}, json={"username": "createduser", "password": "TestPass123", "nickname": "创建的用户", "email": "created@example.com", "phone": "13800138001", "sex": 0, "status": 1})
         assert response.status_code == 201
         result = response.json()
         assert result["code"] == 201

@@ -2,14 +2,8 @@
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.role_dto import (
-    AssignPermissionsDTO,
-    RoleCreateDTO,
-    RoleListQueryDTO,
-    RoleResponseDTO,
-    RoleUpdateDTO,
-)
-from src.core.exceptions import ConflictError, NotFoundError
+from src.application.dto.role_dto import RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
+from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.infrastructure.database.models import Role
 
@@ -120,6 +114,8 @@ class RoleService:
 
         # 重新获取以加载关系
         updated_role = await self.role_repo.get_by_id(role_id)
+        if updated_role is None:
+            raise NotFoundError(f"角色ID '{role_id}' 不存在")
         return await self._role_to_response(updated_role)
 
     async def delete_role(self, role_id: str) -> bool:

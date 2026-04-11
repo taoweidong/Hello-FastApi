@@ -1,4 +1,4 @@
-"""工具函数。"""
+"""通用工具函数。"""
 
 import re
 from datetime import datetime, timezone

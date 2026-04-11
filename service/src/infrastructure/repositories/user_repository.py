@@ -53,16 +53,7 @@ class UserRepository(UserRepositoryInterface):
         """
         return await self._crud.get(self.session, email=email, schema_to_select=User, return_as_model=True)
 
-    async def get_all(
-        self,
-        page_num: int = 1,
-        page_size: int = 10,
-        username: str | None = None,
-        phone: str | None = None,
-        email: str | None = None,
-        status: int | None = None,
-        dept_id: int | None = None,
-    ) -> list[User]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> list[User]:
         """获取用户列表（支持筛选和分页）。
 
         Args:
@@ -91,24 +82,10 @@ class UserRepository(UserRepositoryInterface):
             filters["dept_id"] = dept_id
 
         # 使用 FastCRUD 的 get_multi 方法，支持分页和筛选
-        result = await self._crud.get_multi(
-            self.session,
-            offset=(page_num - 1) * page_size,
-            limit=page_size,
-            schema_to_select=User,
-            return_as_model=True,
-            **filters,
-        )
+        result = await self._crud.get_multi(self.session, offset=(page_num - 1) * page_size, limit=page_size, schema_to_select=User, return_as_model=True, **filters)
         return list(result.get("data", []))
 
-    async def count(
-        self,
-        username: str | None = None,
-        phone: str | None = None,
-        email: str | None = None,
-        status: int | None = None,
-        dept_id: int | None = None,
-    ) -> int:
+    async def count(self, username: str | None = None, phone: str | None = None, email: str | None = None, status: int | None = None, dept_id: int | None = None) -> int:
         """获取用户总数（支持筛选）。
 
         Args:

@@ -24,9 +24,7 @@ class PermissionRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(
-        self, page_num: int = 1, page_size: int = 10, permission_name: str = None
-    ) -> list["Permission"]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, permission_name: str | None = None) -> list["Permission"]:
         """获取所有权限（分页）。
 
         Args:
@@ -40,7 +38,7 @@ class PermissionRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def count(self, permission_name: str = None) -> int:
+    async def count(self, permission_name: str | None = None) -> int:
         """统计权限总数。
 
         Args:

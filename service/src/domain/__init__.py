@@ -7,6 +7,8 @@
 - entities/: 领域实体定义
 - repositories/: 仓储接口定义
 - services/: 领域服务
+- exceptions.py: 应用与领域共享的异常类型
+- rbac_defaults.py: RBAC 种子数据默认值
 """
 
 # 导出实体

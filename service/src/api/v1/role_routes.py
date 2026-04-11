@@ -18,8 +18,7 @@ role_router = APIRouter()
 
 
 @role_router.post("")
-async def get_role_list(query: RoleListQueryDTO, service: RoleService = Depends(get_role_service),
-                        _: dict = Depends(require_permission("role:view"))):
+async def get_role_list(query: RoleListQueryDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:view"))):
     """获取角色列表接口（分页）。
 
     需要 role:view 权限。
@@ -45,8 +44,7 @@ async def get_role_list(query: RoleListQueryDTO, service: RoleService = Depends(
 
 
 @role_router.post("/create")
-async def create_role(dto: RoleCreateDTO, service: RoleService = Depends(get_role_service),
-                      _: dict = Depends(require_permission("role:manage"))):
+async def create_role(dto: RoleCreateDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:manage"))):
     """创建角色接口。
 
     需要 role:manage 权限。
@@ -64,8 +62,7 @@ async def create_role(dto: RoleCreateDTO, service: RoleService = Depends(get_rol
 
 
 @role_router.get("/{role_id}")
-async def get_role(role_id: str, service: RoleService = Depends(get_role_service),
-                   _: dict = Depends(require_permission("role:view"))):
+async def get_role(role_id: str, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:view"))):
     """获取角色详情接口。
 
     需要 role:view 权限。
@@ -82,8 +79,7 @@ async def get_role(role_id: str, service: RoleService = Depends(get_role_service
 
 
 @role_router.put("/{role_id}")
-async def update_role(role_id: str, dto: RoleUpdateDTO, service: RoleService = Depends(get_role_service),
-                      _: dict = Depends(require_permission("role:manage"))):
+async def update_role(role_id: str, dto: RoleUpdateDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:manage"))):
     """更新角色接口。
 
     需要 role:manage 权限。
@@ -101,8 +97,7 @@ async def update_role(role_id: str, dto: RoleUpdateDTO, service: RoleService = D
 
 
 @role_router.delete("/{role_id}")
-async def delete_role(role_id: str, service: RoleService = Depends(get_role_service),
-                      _: dict = Depends(require_permission("role:manage"))):
+async def delete_role(role_id: str, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:manage"))):
     """删除角色接口。
 
     需要 role:manage 权限。
@@ -119,8 +114,7 @@ async def delete_role(role_id: str, service: RoleService = Depends(get_role_serv
 
 
 @role_router.post("/{role_id}/permissions")
-async def assign_permissions(role_id: str, dto: AssignPermissionsDTO, service: RoleService = Depends(get_role_service),
-                             _: dict = Depends(require_permission("role:manage"))):
+async def assign_permissions(role_id: str, dto: AssignPermissionsDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:manage"))):
     """为角色分配权限接口。
 
     需要 role:manage 权限。
@@ -139,9 +133,7 @@ async def assign_permissions(role_id: str, dto: AssignPermissionsDTO, service: R
 
 
 @role_router.post("/{role_id}/menu")
-async def assign_role_menu(role_id: str, data: dict, db: AsyncSession = Depends(get_db),
-                           role_repo: RoleRepository = Depends(get_role_repository),
-                           _: dict = Depends(require_permission("role:manage"))):
+async def assign_role_menu(role_id: str, data: dict, db: AsyncSession = Depends(get_db), role_repo: RoleRepository = Depends(get_role_repository), _: dict = Depends(require_permission("role:manage"))):
     """为角色分配菜单权限接口。
 
     需要 role:manage 权限。

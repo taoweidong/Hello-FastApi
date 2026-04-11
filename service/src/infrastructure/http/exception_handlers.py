@@ -6,15 +6,15 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from src.core.exceptions import AppException
-from src.core.logger import logger
+from src.domain.exceptions import AppError
+from src.infrastructure.logging.logger import logger
 
 
 def register_exception_handlers(app: FastAPI) -> None:
     """注册业务异常、校验异常与兜底异常处理器。"""
 
-    @app.exception_handler(AppException)
-    async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:
+    @app.exception_handler(AppError)
+    async def app_exception_handler(request: Request, exc: AppError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"code": exc.status_code, "message": str(exc.detail)})
 
     @app.exception_handler(RequestValidationError)

@@ -14,8 +14,8 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.core.lifespan import empty_lifespan
 from src.infrastructure.database import get_db
+from src.infrastructure.lifecycle import empty_lifespan
 from src.main import create_app
 
 # 测试数据库 URL - 使用共享内存 SQLite (支持多连接共享同一数据库)

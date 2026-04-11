@@ -31,7 +31,7 @@ class TokenService:
         self._access_expire_minutes = access_expire_minutes
         self._refresh_expire_days = refresh_expire_days
 
-    def create_access_token(self, data: dict, expires_delta: timedelta | None = None) -> str:
+    def create_access_token(self, data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
         """创建 JWT 访问令牌。
 
         Args:
@@ -47,7 +47,7 @@ class TokenService:
         encoded: str = jwt.encode(to_encode, self._secret_key, algorithm=self._algorithm)
         return encoded
 
-    def create_refresh_token(self, data: dict, expires_delta: timedelta | None = None) -> str:
+    def create_refresh_token(self, data: dict[str, Any], expires_delta: timedelta | None = None) -> str:
         """创建 JWT 刷新令牌。
 
         Args:
@@ -79,7 +79,7 @@ class TokenService:
             return None
 
     @staticmethod
-    def verify_token_type(payload: dict, expected_type: str) -> bool:
+    def verify_token_type(payload: dict[str, Any], expected_type: str) -> bool:
         """验证令牌类型是否匹配预期类型。
 
         Args:

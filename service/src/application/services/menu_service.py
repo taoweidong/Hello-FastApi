@@ -6,10 +6,16 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
-from src.core.exceptions import ConflictError, NotFoundError
+from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.permission_repository import PermissionRepositoryInterface
 from src.infrastructure.database.models import Menu
+
+
+def _norm_menu_parent_id(v: str | int | None) -> str | None:
+    if v is None or v == "" or v == 0 or v == "0":
+        return None
+    return str(v)
 
 
 class MenuService:
@@ -60,8 +66,9 @@ class MenuService:
     async def create_menu(self, dto: MenuCreateDTO, session: AsyncSession) -> dict:
         """创建菜单。"""
         # 如果有父菜单，验证父菜单是否存在
-        if dto.parentId:
-            parent = await self.menu_repo.get_by_id(dto.parentId, session)
+        pid = _norm_menu_parent_id(dto.parentId)
+        if pid:
+            parent = await self.menu_repo.get_by_id(pid, session)
             if not parent:
                 raise NotFoundError("父菜单不存在")
 
@@ -73,7 +80,7 @@ class MenuService:
             icon=dto.icon,
             title=dto.title,
             show_link=1 if dto.showLink else 0,  # bool 转 int
-            parent_id=dto.parentId if dto.parentId else None,
+            parent_id=pid,
             order_num=dto.rank,
             permissions=dto.auths,
             status=1,
@@ -95,6 +102,8 @@ class MenuService:
         await session.flush()
         # 重新获取以确保返回完整模型
         created = await self.menu_repo.get_by_id(menu.id, session)
+        if created is None:
+            raise NotFoundError("菜单创建后无法加载")
         return self._to_response(created)
 
     async def update_menu(self, menu_id: str, dto: MenuUpdateDTO, session: AsyncSession) -> dict:
@@ -104,20 +113,19 @@ class MenuService:
             raise NotFoundError("菜单不存在")
 
         # 检查是否将菜单设置为自己的子菜单（循环引用）
-        if dto.parentId == menu_id:
-            raise ConflictError("不能将菜单设置为自己的子菜单")
-
         # 处理父菜单ID更新
         if dto.parentId is not None:
-            if dto.parentId:  # 非空字符串，验证父菜单是否存在
-                parent = await self.menu_repo.get_by_id(dto.parentId, session)
+            pid = _norm_menu_parent_id(dto.parentId)
+            if pid == menu_id:
+                raise ConflictError("不能将菜单设置为自己的子菜单")
+            if pid:
+                parent = await self.menu_repo.get_by_id(pid, session)
                 if not parent:
                     raise NotFoundError("父菜单不存在")
-                # 检查是否将菜单设置为其子菜单的子菜单（避免循环）
-                if await self._is_descendant(menu_id, dto.parentId, session):
+                if await self._is_descendant(menu_id, pid, session):
                     raise ConflictError("不能将菜单设置为其子菜单的子菜单")
-                menu.parent_id = dto.parentId
-            else:  # 空字符串表示设置为顶级菜单
+                menu.parent_id = pid
+            else:
                 menu.parent_id = None
 
         # 选择性更新基本字段
@@ -170,6 +178,8 @@ class MenuService:
         await session.flush()
         # 重新获取以确保返回完整模型
         updated = await self.menu_repo.get_by_id(menu_id, session)
+        if updated is None:
+            raise NotFoundError("菜单不存在")
         return self._to_response(updated)
 
     async def delete_menu(self, menu_id: str, session: AsyncSession) -> bool:

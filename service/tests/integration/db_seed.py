@@ -7,41 +7,16 @@ from dataclasses import dataclass, field
 from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.core.constants import DEFAULT_PERMISSIONS
+from src.domain.rbac_defaults import DEFAULT_PERMISSIONS
 from src.domain.services.password_service import PasswordService
-from src.infrastructure.database.models import (
-    Department,
-    LoginLog,
-    Menu,
-    OperationLog,
-    Permission,
-    Role,
-    RoleMenuLink,
-    RolePermissionLink,
-    SystemLog,
-    User,
-    UserRole,
-)
+from src.infrastructure.database.models import Department, LoginLog, Menu, OperationLog, Permission, Role, RoleMenuLink, RolePermissionLink, SystemLog, User, UserRole
 
 
 # 测试库为 SQLite，关闭外键检查后清空，避免自引用表顺序问题
 async def clear_all_test_data(session: AsyncSession) -> None:
     """删除当前库中所有业务数据（测试库专用）。"""
     await session.execute(text("PRAGMA foreign_keys=OFF"))
-    for table in (
-        "sys_role_menus",
-        "sys_role_permissions",
-        "sys_user_roles",
-        "sys_login_logs",
-        "sys_operation_logs",
-        "sys_system_logs",
-        "sys_menus",
-        "sys_users",
-        "sys_roles",
-        "sys_permissions",
-        "sys_departments",
-        "sys_ip_rules",
-    ):
+    for table in ("sys_role_menus", "sys_role_permissions", "sys_user_roles", "sys_login_logs", "sys_operation_logs", "sys_system_logs", "sys_menus", "sys_users", "sys_roles", "sys_permissions", "sys_departments", "sys_ip_rules"):
         await session.execute(text(f"DELETE FROM {table}"))
     await session.execute(text("PRAGMA foreign_keys=ON"))
     await session.commit()
@@ -95,22 +70,8 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
         session.add(RolePermissionLink(role_id=role_ops.id, permission_id=out.perm_by_code[code]))
     await session.flush()
 
-    user_super = User(
-        username=out.super_username,
-        email="flow_super@seed.test",
-        hashed_password=pwd(out.super_password),
-        nickname="流程超级管理员",
-        status=1,
-        is_superuser=True,
-    )
-    user_op = User(
-        username=out.operator_username,
-        email="flow_operator@seed.test",
-        hashed_password=pwd(out.operator_password),
-        nickname="流程受限用户",
-        status=1,
-        is_superuser=False,
-    )
+    user_super = User(username=out.super_username, email="flow_super@seed.test", hashed_password=pwd(out.super_password), nickname="流程超级管理员", status=1, is_superuser=True)
+    user_op = User(username=out.operator_username, email="flow_operator@seed.test", hashed_password=pwd(out.operator_password), nickname="流程受限用户", status=1, is_superuser=False)
     session.add(user_super)
     session.add(user_op)
     await session.flush()

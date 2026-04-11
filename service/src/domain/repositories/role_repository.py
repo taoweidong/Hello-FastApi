@@ -29,9 +29,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(
-        self, page_num: int = 1, page_size: int = 10, role_name: str = None, status: int = None
-    ) -> list["Role"]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, status: int | None = None) -> list["Role"]:
         """获取所有角色（分页）。
 
         Args:
@@ -46,7 +44,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def count(self, role_name: str = None, status: int = None) -> int:
+    async def count(self, role_name: str | None = None, status: int | None = None) -> int:
         """统计角色总数。
 
         Args:

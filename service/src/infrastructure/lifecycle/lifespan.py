@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from src.config.settings import settings
-from src.core.logger import log_shutdown, log_startup, logger
 from src.infrastructure.database import close_db, init_db
+from src.infrastructure.logging.logger import log_shutdown, log_startup, logger
 
 
 @asynccontextmanager

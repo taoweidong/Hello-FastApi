@@ -57,17 +57,15 @@ skip-magic-trailing-comma = true
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
 ignore = ["B008"]
 
+# 前端约定驼峰 JSON / Query 参数，与 PEP8 命名 intentionally 不一致
+[tool.ruff.lint.per-file-ignores]
+"src/api/**/*.py" = ["N803", "N815"]
+"src/application/dto/**/*.py" = ["N815"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
 # 与 format.skip-magic-trailing-comma 保持一致，不因尾随逗号拆分导入
 split-on-trailing-comma = false
-
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-ignore_missing_imports = true
-check_untyped_defs = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

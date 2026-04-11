@@ -2,12 +2,8 @@
 
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.application.dto.permission_dto import (
-    PermissionCreateDTO,
-    PermissionListQueryDTO,
-    PermissionResponseDTO,
-)
-from src.core.exceptions import ConflictError, NotFoundError
+from src.application.dto.permission_dto import PermissionCreateDTO, PermissionListQueryDTO, PermissionResponseDTO
+from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.permission_repository import PermissionRepositoryInterface
 from src.infrastructure.database.models import Permission
 
@@ -31,9 +27,7 @@ class PermissionService:
         if await self.perm_repo.get_by_code(dto.code):
             raise ConflictError(f"权限编码 '{dto.code}' 已存在")
 
-        permission = Permission(
-            name=dto.name, code=dto.code, category=dto.category, description=dto.description, status=dto.status
-        )
+        permission = Permission(name=dto.name, code=dto.code, category=dto.category, description=dto.description, status=dto.status)
         permission = await self.perm_repo.create(permission)
         return self._perm_to_response(permission)
 
@@ -42,9 +36,7 @@ class PermissionService:
         # 获取总数
         total = await self.perm_repo.count(permission_name=query.permissionName)
         # 获取列表
-        perms = await self.perm_repo.get_all(
-            page_num=query.pageNum, page_size=query.pageSize, permission_name=query.permissionName
-        )
+        perms = await self.perm_repo.get_all(page_num=query.pageNum, page_size=query.pageSize, permission_name=query.permissionName)
         return [self._perm_to_response(p) for p in perms], total
 
     async def delete_permission(self, permission_id: str) -> bool:
@@ -66,12 +58,4 @@ class PermissionService:
     @staticmethod
     def _perm_to_response(perm: Permission) -> PermissionResponseDTO:
         """将Permission模型转换为响应DTO。"""
-        return PermissionResponseDTO(
-            id=perm.id,
-            name=perm.name,
-            code=perm.code,
-            category=perm.category,
-            description=perm.description,
-            status=perm.status,
-            createTime=perm.created_at,
-        )
+        return PermissionResponseDTO(id=perm.id, name=perm.name, code=perm.code, category=perm.category, description=perm.description, status=perm.status, createTime=perm.created_at)

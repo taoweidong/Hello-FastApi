@@ -1,7 +1,6 @@
 """使用 SQLModel 和 FastCRUD 实现的部门仓库。"""
 
 from fastcrud import FastCRUD
-from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.repositories.department_repository import DepartmentRepositoryInterface
@@ -63,13 +62,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             子部门列表
         """
-        result = await self._crud.get_multi(
-            session,
-            parent_id=parent_id,
-            schema_to_select=Department,
-            return_as_model=True,
-            return_total_count=False,
-        )
+        result = await self._crud.get_multi(session, parent_id=parent_id, schema_to_select=Department, return_as_model=True, return_total_count=False)
         departments = result.get("data", [])
         # 按 sort 排序
         return sorted(departments, key=lambda d: d.sort)
@@ -111,12 +104,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         deleted_count = await self._crud.delete(session, id=dept_id)
         return deleted_count > 0
 
-    async def count(
-        self,
-        name: str | None = None,
-        status: int | None = None,
-        session: AsyncSession | None = None,
-    ) -> int:
+    async def count(self, name: str | None = None, status: int | None = None, session: AsyncSession | None = None) -> int:
         """获取部门总数（支持筛选）。
 
         Args:

@@ -16,7 +16,7 @@ from src.application.services.permission_service import PermissionService
 from src.application.services.role_service import RoleService
 from src.application.services.user_service import UserService
 from src.config.settings import get_settings
-from src.core.exceptions import ForbiddenError, UnauthorizedError
+from src.domain.exceptions import ForbiddenError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
 from src.infrastructure.database import get_db

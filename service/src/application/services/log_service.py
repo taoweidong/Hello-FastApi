@@ -3,11 +3,31 @@
 提供日志相关的业务逻辑，包括登录日志、操作日志、系统日志的查询和管理。
 """
 
+from datetime import datetime
+
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.log_dto import BatchDeleteLogDTO, LoginLogListQueryDTO, OperationLogListQueryDTO, SystemLogListQueryDTO
-from src.core.exceptions import NotFoundError
+from src.domain.exceptions import NotFoundError
 from src.infrastructure.repositories.log_repository import LogRepository
+
+
+def _parse_log_time_bound(value: object) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        s = value.strip()
+        if not s:
+            return None
+        try:
+            if s.endswith("Z"):
+                s = s[:-1] + "+00:00"
+            return datetime.fromisoformat(s)
+        except ValueError:
+            return None
+    return None
 
 
 class LogService:
@@ -34,12 +54,11 @@ class LogService:
         Returns:
             (日志列表, 总数)
         """
-        # 处理时间范围
         start_time = None
         end_time = None
         if query.loginTime and len(query.loginTime) == 2:
-            start_time = query.loginTime[0]
-            end_time = query.loginTime[1]
+            start_time = _parse_log_time_bound(query.loginTime[0])
+            end_time = _parse_log_time_bound(query.loginTime[1])
 
         # 处理状态（前端传递的是字符串）
         status = None
@@ -84,12 +103,11 @@ class LogService:
         Returns:
             (日志列表, 总数)
         """
-        # 处理时间范围
         start_time = None
         end_time = None
         if query.operatingTime and len(query.operatingTime) == 2:
-            start_time = query.operatingTime[0]
-            end_time = query.operatingTime[1]
+            start_time = _parse_log_time_bound(query.operatingTime[0])
+            end_time = _parse_log_time_bound(query.operatingTime[1])
 
         # 处理状态
         status = None
@@ -134,12 +152,11 @@ class LogService:
         Returns:
             (日志列表, 总数)
         """
-        # 处理时间范围
         start_time = None
         end_time = None
         if query.requestTime and len(query.requestTime) == 2:
-            start_time = query.requestTime[0]
-            end_time = query.requestTime[1]
+            start_time = _parse_log_time_bound(query.requestTime[0])
+            end_time = _parse_log_time_bound(query.requestTime[1])
 
         logs, total = await self.log_repo.get_system_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, module=query.module, start_time=start_time, end_time=end_time)
 

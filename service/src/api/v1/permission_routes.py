@@ -16,11 +16,7 @@ permission_router = APIRouter()
 
 @permission_router.get("/list")
 async def get_permission_list(
-    pageNum: int = Query(1, ge=1, description="页码"),
-    pageSize: int = Query(10, ge=1, le=100, description="每页条数"),
-    permissionName: str = Query(None, description="权限名称"),
-    service: PermissionService = Depends(get_permission_service),
-    _: dict = Depends(require_permission("permission:view")),
+    pageNum: int = Query(1, ge=1, description="页码"), pageSize: int = Query(10, ge=1, le=100, description="每页条数"), permissionName: str = Query(None, description="权限名称"), service: PermissionService = Depends(get_permission_service), _: dict = Depends(require_permission("permission:view"))
 ):
     """获取权限列表接口（分页）。
 
@@ -43,11 +39,7 @@ async def get_permission_list(
 
 
 @permission_router.post("/")
-async def create_permission(
-    dto: PermissionCreateDTO,
-    service: PermissionService = Depends(get_permission_service),
-    _: dict = Depends(require_permission("permission:manage")),
-):
+async def create_permission(dto: PermissionCreateDTO, service: PermissionService = Depends(get_permission_service), _: dict = Depends(require_permission("permission:manage"))):
     """创建权限接口。
 
     需要 permission:manage 权限。
@@ -64,11 +56,7 @@ async def create_permission(
 
 
 @permission_router.delete("/{permission_id}")
-async def delete_permission(
-    permission_id: str,
-    service: PermissionService = Depends(get_permission_service),
-    _: dict = Depends(require_permission("permission:manage")),
-):
+async def delete_permission(permission_id: str, service: PermissionService = Depends(get_permission_service), _: dict = Depends(require_permission("permission:manage"))):
     """删除权限接口。
 
     需要 permission:manage 权限。

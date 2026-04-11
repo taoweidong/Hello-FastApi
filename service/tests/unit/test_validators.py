@@ -1,6 +1,6 @@
 """公共验证器的单元测试。"""
 
-from src.core.validators import empty_str_or_zero_to_none, empty_str_to_none, parse_status, parse_time_range
+from src.application.validators import empty_str_or_zero_to_none, empty_str_to_none, parse_status, parse_time_range
 
 
 class TestEmptyStrToNone:

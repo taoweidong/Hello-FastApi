@@ -1,6 +1,6 @@
 """核心工具和验证器的单元测试。"""
 
-from src.core.utils import is_strong_password, is_valid_email
+from src.infrastructure.common.utils import is_strong_password, is_valid_email
 
 
 class TestEmailValidation:

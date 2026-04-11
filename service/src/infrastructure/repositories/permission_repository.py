@@ -45,12 +45,7 @@ class PermissionRepository(PermissionRepositoryInterface):
         """
         return await self._crud.get(self.session, code=code, schema_to_select=Permission, return_as_model=True)
 
-    async def get_all(
-        self,
-        page_num: int = 1,
-        page_size: int = 10,
-        permission_name: str | None = None,
-    ) -> list[Permission]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, permission_name: str | None = None) -> list[Permission]:
         """获取权限列表，支持分页和筛选。
 
         Args:
@@ -65,14 +60,7 @@ class PermissionRepository(PermissionRepositoryInterface):
         if permission_name:
             filters["name"] = permission_name
 
-        result = await self._crud.get_multi(
-            self.session,
-            offset=(page_num - 1) * page_size,
-            limit=page_size,
-            schema_to_select=Permission,
-            return_as_model=True,
-            **filters,
-        )
+        result = await self._crud.get_multi(self.session, offset=(page_num - 1) * page_size, limit=page_size, schema_to_select=Permission, return_as_model=True, **filters)
         return list(result.get("data", []))
 
     async def count(self, permission_name: str | None = None) -> int:
@@ -122,11 +110,7 @@ class PermissionRepository(PermissionRepositoryInterface):
         Returns:
             权限列表
         """
-        result = await self.session.exec(
-            select(Permission)
-            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
-            .where(RolePermissionLink.role_id == role_id)
-        )
+        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).where(RolePermissionLink.role_id == role_id))
         return list(result.all())
 
     async def get_user_permissions(self, user_id: str) -> list[Permission]:
@@ -138,11 +122,5 @@ class PermissionRepository(PermissionRepositoryInterface):
         Returns:
             权限列表
         """
-        result = await self.session.exec(
-            select(Permission)
-            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
-            .join(UserRole, UserRole.role_id == RolePermissionLink.role_id)
-            .where(UserRole.user_id == user_id)
-            .distinct()
-        )
+        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).join(UserRole, UserRole.role_id == RolePermissionLink.role_id).where(UserRole.user_id == user_id).distinct())
         return list(result.all())

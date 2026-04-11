@@ -3,8 +3,8 @@
 使用 SQLModel 和 FastCRUD 实现角色仓储。
 """
 
-from sqlalchemy import delete
 from fastcrud import FastCRUD
+from sqlalchemy import delete
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -57,13 +57,7 @@ class RoleRepository(RoleRepositoryInterface):
         """
         return await self._crud.get(self.session, code=code, schema_to_select=Role, return_as_model=True)
 
-    async def get_all(
-        self,
-        page_num: int = 1,
-        page_size: int = 10,
-        role_name: str | None = None,
-        status: int | None = None,
-    ) -> list[Role]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, status: int | None = None) -> list[Role]:
         """获取角色列表，支持分页和筛选。
 
         Args:
@@ -81,21 +75,10 @@ class RoleRepository(RoleRepositoryInterface):
         if status is not None:
             filters["status"] = status
 
-        result = await self._crud.get_multi(
-            self.session,
-            offset=(page_num - 1) * page_size,
-            limit=page_size,
-            schema_to_select=Role,
-            return_as_model=True,
-            **filters,
-        )
+        result = await self._crud.get_multi(self.session, offset=(page_num - 1) * page_size, limit=page_size, schema_to_select=Role, return_as_model=True, **filters)
         return list(result.get("data", []))
 
-    async def count(
-        self,
-        role_name: str | None = None,
-        status: int | None = None,
-    ) -> int:
+    async def count(self, role_name: str | None = None, status: int | None = None) -> int:
         """获取角色总数，支持筛选。
 
         Args:
@@ -178,11 +161,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             权限列表
         """
-        result = await self.session.exec(
-            select(Permission)
-            .join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id)
-            .where(RolePermissionLink.role_id == role_id)
-        )
+        result = await self.session.exec(select(Permission).join(RolePermissionLink, RolePermissionLink.permission_id == Permission.id).where(RolePermissionLink.role_id == role_id))
         return list(result.all())
 
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
@@ -196,9 +175,7 @@ class RoleRepository(RoleRepositoryInterface):
             是否分配成功
         """
         # 检查是否已分配
-        result = await self.session.exec(
-            select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id)
-        )
+        result = await self.session.exec(select(UserRole).where(UserRole.user_id == user_id, UserRole.role_id == role_id))
         if result.one_or_none() is not None:
             return False
 
@@ -230,9 +207,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             角色列表
         """
-        result = await self.session.exec(
-            select(Role).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id)
-        )
+        result = await self.session.exec(select(Role).join(UserRole, UserRole.role_id == Role.id).where(UserRole.user_id == user_id))
         return list(result.all())
 
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
@@ -288,9 +263,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             菜单列表
         """
-        result = await self.session.exec(
-            select(Menu).join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id).where(RoleMenuLink.role_id == role_id)
-        )
+        result = await self.session.exec(select(Menu).join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id).where(RoleMenuLink.role_id == role_id))
         return list(result.all())
 
     async def get_role_menu_ids(self, role_id: str) -> list[str]:
