@@ -139,7 +139,7 @@ async def get_menu_service(db: AsyncSession = Depends(get_db)) -> MenuService:
 
     注入菜单仓储和权限仓储依赖。
     """
-    menu_repo = MenuRepository()
+    menu_repo = MenuRepository(db)
     perm_repo = PermissionRepository(db)
     return MenuService(session=db, menu_repo=menu_repo, perm_repo=perm_repo)
 
@@ -167,7 +167,7 @@ async def get_department_service(db: AsyncSession = Depends(get_db)) -> Departme
 
     注入部门仓储依赖。
     """
-    dept_repo = DepartmentRepository()
+    dept_repo = DepartmentRepository(db)
     return DepartmentService(session=db, dept_repo=dept_repo)
 
 
@@ -176,7 +176,7 @@ async def get_log_service(db: AsyncSession = Depends(get_db)) -> LogService:
 
     注入日志仓储依赖。
     """
-    log_repo = LogRepository()
+    log_repo = LogRepository(db)
     return LogService(session=db, log_repo=log_repo)
 
 
@@ -185,9 +185,9 @@ async def get_log_service(db: AsyncSession = Depends(get_db)) -> LogService:
 # =============================================================================
 
 
-def get_menu_repository() -> MenuRepository:
+def get_menu_repository(db: AsyncSession = Depends(get_db)) -> MenuRepository:
     """获取菜单仓储实例。"""
-    return MenuRepository()
+    return MenuRepository(db)
 
 
 async def get_user_repository(db: AsyncSession = Depends(get_db)) -> UserRepository:

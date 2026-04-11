@@ -3,6 +3,8 @@
 使用 SQLModel 和 FastCRUD 实现角色仓储。
 """
 
+from typing import Any
+
 from fastcrud import FastCRUD
 from sqlalchemy import delete
 from sqlmodel import select
@@ -69,7 +71,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             角色列表
         """
-        filters: dict[str, any] = {}
+        filters: dict[str, Any] = {}
         if role_name:
             filters["name"] = role_name
         if status is not None:
@@ -88,7 +90,7 @@ class RoleRepository(RoleRepositoryInterface):
         Returns:
             角色数量
         """
-        filters: dict[str, any] = {}
+        filters: dict[str, Any] = {}
         if role_name:
             filters["name"] = role_name
         if status is not None:

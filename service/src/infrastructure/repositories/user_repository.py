@@ -1,5 +1,7 @@
 """使用 SQLModel 和 FastCRUD 实现的用户仓库。"""
 
+from typing import Any
+
 from fastcrud import FastCRUD
 from sqlalchemy import delete as sa_delete
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -69,7 +71,7 @@ class UserRepository(UserRepositoryInterface):
             用户列表
         """
         # 构建筛选条件
-        filters: dict[str, any] = {}
+        filters: dict[str, Any] = {}
         if username:
             filters["username"] = username
         if phone:
@@ -98,7 +100,7 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             用户数量
         """
-        filters: dict[str, any] = {}
+        filters: dict[str, Any] = {}
         if username:
             filters["username"] = username
         if phone:

@@ -79,7 +79,7 @@ class LogService:
             删除的数量
         """
         count = await self.log_repo.delete_login_logs(self.session, dto.ids)
-        await self.session.commit()
+        await self.session.flush()
         return count
 
     async def clear_login_logs(self) -> int:
@@ -89,7 +89,7 @@ class LogService:
             删除的数量
         """
         count = await self.log_repo.clear_login_logs(self.session)
-        await self.session.commit()
+        await self.session.flush()
         return count
 
     # ============ 操作日志 ============
@@ -128,7 +128,7 @@ class LogService:
             删除的数量
         """
         count = await self.log_repo.delete_operation_logs(self.session, dto.ids)
-        await self.session.commit()
+        await self.session.flush()
         return count
 
     async def clear_operation_logs(self) -> int:
@@ -138,7 +138,7 @@ class LogService:
             删除的数量
         """
         count = await self.log_repo.clear_operation_logs(self.session)
-        await self.session.commit()
+        await self.session.flush()
         return count
 
     # ============ 系统日志 ============
@@ -204,7 +204,7 @@ class LogService:
             删除的数量
         """
         count = await self.log_repo.delete_system_logs(self.session, dto.ids)
-        await self.session.commit()
+        await self.session.flush()
         return count
 
     async def clear_system_logs(self) -> int:
@@ -214,5 +214,5 @@ class LogService:
             删除的数量
         """
         count = await self.log_repo.clear_system_logs(self.session)
-        await self.session.commit()
+        await self.session.flush()
         return count

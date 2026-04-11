@@ -1,5 +1,7 @@
 """使用 SQLModel 和 FastCRUD 实现的部门仓库。"""
 
+from typing import Any
+
 from fastcrud import FastCRUD
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -10,20 +12,22 @@ from src.infrastructure.database.models import Department
 class DepartmentRepository(DepartmentRepositoryInterface):
     """部门仓储的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
-    def __init__(self) -> None:
-        """初始化部门仓储。"""
-        self._crud = FastCRUD(Department)
-
-    async def get_all(self, session: AsyncSession) -> list[Department]:
-        """获取所有部门，按排序号排序。
+    def __init__(self, session: AsyncSession) -> None:
+        """初始化部门仓储。
 
         Args:
             session: 数据库会话
+        """
+        self.session = session
+        self._crud = FastCRUD(Department)
+
+    async def get_all(self) -> list[Department]:
+        """获取所有部门，按排序号排序。
 
         Returns:
             部门列表
         """
-        result = await self._crud.get_multi(session, schema_to_select=Department, return_as_model=True, return_total_count=False)
+        result = await self._crud.get_multi(self.session, schema_to_select=Department, return_as_model=True, return_total_count=False)
         departments = result.get("data", [])
         # 按 sort 排序
         return sorted(departments, key=lambda d: d.sort)
@@ -115,7 +119,7 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         Returns:
             部门数量
         """
-        filters: dict[str, any] = {}
+        filters: dict[str, Any] = {}
         if name:
             filters["name"] = name
         if status is not None:

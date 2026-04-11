@@ -10,29 +10,14 @@
 - [user_repository.py](file://service/src/domain/repositories/user_repository.py)
 - [__init__.py](file://service/src/domain/services/__init__.py)
 - [password_service.py](file://service/src/domain/services/password_service.py)
-- [base.py](file://service/src/infrastructure/repositories/base.py)
 - [user_repository.py](file://service/src/infrastructure/repositories/user_repository.py)
 - [auth_service.py](file://service/src/application/services/auth_service.py)
-- [user_service.py](file://service/src/application/services/user_service.py)
-- [menu_service.py](file://service/src/application/services/menu_service.py)
-- [rbac_service.py](file://service/src/application/services/rbac_service.py)
-- [department_service.py](file://service/src/application/services/department_service.py)
-- [log_service.py](file://service/src/application/services/log_service.py)
 - [auth_dto.py](file://service/src/application/dto/auth_dto.py)
-- [user_dto.py](file://service/src/application/dto/user_dto.py)
-- [menu_dto.py](file://service/src/application/dto/menu_dto.py)
-- [rbac_dto.py](file://service/src/application/dto/rbac_dto.py)
-- [department_dto.py](file://service/src/application/dto/department_dto.py)
-- [log_dto.py](file://service/src/application/dto/log_dto.py)
 - [models.py](file://service/src/infrastructure/database/models.py)
-- [connection.py](file://service/src/infrastructure/database/connection.py)
 - [settings.py](file://service/src/config/settings.py)
-- [exceptions.py](file://service/src/core/exceptions.py)
-- [middlewares.py](file://service/src/core/middlewares.py)
-- [logger.py](file://service/src/core/logger.py)
-- [constants.py](file://service/src/core/constants.py)
-- [utils.py](file://service/src/core/utils.py)
-- [validators.py](file://service/src/core/validators.py)
+- [constants.py](file://service/src/api/constants.py)
+- [utils.py](file://service/src/api/common.py)
+- [validators.py](file://service/src/application/validators.py)
 - [pyproject.toml](file://service/pyproject.toml)
 </cite>
 
@@ -40,7 +25,7 @@
 **所做更改**
 - 新增了完整的依赖注入系统架构分析，包括服务工厂和依赖项管理
 - 重构了领域层结构，新增 domain/entities、domain/repositories、domain/services 三个子模块
-- 完善了基础设施层的仓储基类设计，提供通用 CRUD 功能
+- 完善了基础设施层的仓储实现，提供基于 FastCRUD 的通用 CRUD 功能
 - 更新了应用层服务的依赖注入模式，实现更清晰的职责分离
 - 增强了权限验证和认证流程的架构设计
 
@@ -60,7 +45,7 @@
 ## 引言
 本文件面向 Hello-FastApi 的 DDD 分层架构，系统化阐述表现层（API）、应用层（Services）、领域层（Business Logic）、基础设施层（Data Access）四层的设计原则、职责边界、依赖关系与交互模式。通过具体代码路径与序列图、类图、流程图，帮助开发者建立清晰的分层理解与扩展路径，确保关注点分离、可测试性与可维护性。
 
-**更新** 本次更新反映了全新的依赖注入系统和分层架构重构，包括新的 domain/entities、domain/repositories、domain/services 结构，以及基于工厂模式的服务创建机制。
+**更新** 本次更新反映了全新的依赖注入系统和分层架构重构，包括新的 domain/entities、domain/repositories、domain/services 结构，以及基于工厂模式的服务创建机制。领域层现在完全独立于基础设施层，使用 dataclass 实现纯数据载体，仓储接口定义了数据持久化的抽象契约。
 
 ## 项目结构
 服务端采用 FastAPI 应用工厂与模块化路由聚合，按 DDD 层次划分：
@@ -75,24 +60,27 @@ subgraph "表现层(API)"
 A1["auth_routes.py"]
 A2["user_routes.py"]
 A3["menu_routes.py"]
-A4["rbac_routes.py"]
-A5["system_routes.py"]
-A6["common.py"]
-A7["dependencies.py"]
+A4["role_routes.py"]
+A5["permission_routes.py"]
+A6["system_routes.py"]
+A7["common.py"]
+A8["dependencies.py"]
 end
 subgraph "应用层(Services)"
 S1["auth_service.py"]
 S2["user_service.py"]
 S3["menu_service.py"]
-S4["rbac_service.py"]
-S5["department_service.py"]
-S6["log_service.py"]
-S7["user_dto.py"]
+S4["role_service.py"]
+S5["permission_service.py"]
+S6["department_service.py"]
+S7["log_service.py"]
 S8["auth_dto.py"]
-S9["menu_dto.py"]
-S10["rbac_dto.py"]
-S11["department_dto.py"]
-S12["log_dto.py"]
+S9["user_dto.py"]
+S10["menu_dto.py"]
+S11["role_dto.py"]
+S12["permission_dto.py"]
+S13["department_dto.py"]
+S14["log_dto.py"]
 end
 subgraph "领域层(Business Logic)"
 D1["entities/*"]
@@ -105,11 +93,15 @@ D7["TokenService"]
 end
 subgraph "基础设施层(Data Access)"
 I1["infrastructure/repositories/*"]
-I2["BaseRepository"]
-I3["UserRepository"]
-I4["models.py"]
-I5["connection.py"]
-I6["redis_client.py"]
+I2["UserRepository"]
+I3["RoleRepository"]
+I4["PermissionRepository"]
+I5["MenuRepository"]
+I6["DepartmentRepository"]
+I7["LogRepository"]
+I8["models.py"]
+I9["connection.py"]
+I10["redis_client.py"]
 end
 A1 --> S1
 A2 --> S2
@@ -117,31 +109,36 @@ A3 --> S3
 A4 --> S4
 A5 --> S5
 A6 --> S6
+A7 --> S7
 S1 --> D6
 S1 --> D7
-S1 --> I3
-S2 --> I3
-S3 --> I1
-S4 --> I1
-S5 --> I1
-S6 --> I1
-I3 --> I4
-I1 --> I4
-I5 --> I4
+S1 --> I2
+S2 --> I2
+S3 --> I5
+S4 --> I3
+S5 --> I4
+S6 --> I6
+S7 --> I7
+I2 --> I8
+I3 --> I8
+I4 --> I8
+I5 --> I8
+I6 --> I8
+I7 --> I8
+I8 --> I9
 ```
 
 **图表来源**
 - [main.py:1-73](file://service/src/main.py#L1-L73)
-- [dependencies.py:1-191](file://service/src/api/dependencies.py#L1-L191)
+- [dependencies.py:1-201](file://service/src/api/dependencies.py#L1-L201)
 - [__init__.py:1-15](file://service/src/domain/entities/__init__.py#L1-L15)
-- [user_repository.py:1-107](file://service/src/domain/repositories/user_repository.py#L1-L107)
+- [user_repository.py:1-112](file://service/src/domain/repositories/user_repository.py#L1-L112)
 - [password_service.py:1-43](file://service/src/domain/services/password_service.py#L1-L43)
-- [base.py:1-205](file://service/src/infrastructure/repositories/base.py#L1-L205)
-- [user_repository.py:1-169](file://service/src/infrastructure/repositories/user_repository.py#L1-L169)
+- [user_repository.py:1-198](file://service/src/infrastructure/repositories/user_repository.py#L1-L198)
 
 **章节来源**
 - [main.py:1-73](file://service/src/main.py#L1-L73)
-- [dependencies.py:1-191](file://service/src/api/dependencies.py#L1-L191)
+- [dependencies.py:1-201](file://service/src/api/dependencies.py#L1-L201)
 - [settings.py:1-198](file://service/src/config/settings.py#L1-L198)
 
 ## 核心组件
@@ -157,8 +154,7 @@ I5 --> I4
 - [main.py:19-73](file://service/src/main.py#L19-L73)
 - [dependencies.py:36-48](file://service/src/api/dependencies.py#L36-L48)
 - [settings.py:144-198](file://service/src/config/settings.py#L144-L198)
-- [middlewares.py:1-150](file://service/src/core/middlewares.py#L1-L150)
-- [logger.py:1-120](file://service/src/core/logger.py#L1-L120)
+- [dependencies.py:1-201](file://service/src/api/dependencies.py#L1-L201)
 
 ## 架构总览
 分层架构遵循"依赖倒置"原则：上层仅依赖抽象（接口/DTO），下层实现具体逻辑。表现层只感知应用服务；应用层编排业务用例并协调仓储；领域层封装核心业务规则；基础设施层提供数据持久化与外部集成能力。
@@ -182,9 +178,8 @@ API --> Logger["日志(Loguru)"]
 **图表来源**
 - [main.py:34-73](file://service/src/main.py#L34-L73)
 - [dependencies.py:114-171](file://service/src/api/dependencies.py#L114-L171)
-- [auth_service.py:1-159](file://service/src/application/services/auth_service.py#L1-159)
-- [user_service.py:1-322](file://service/src/application/services/user_service.py#L1-322)
-- [user_repository.py:11-169](file://service/src/infrastructure/repositories/user_repository.py#L11-L169)
+- [auth_service.py:1-151](file://service/src/application/services/auth_service.py#L1-151)
+- [user_repository.py:11-198](file://service/src/infrastructure/repositories/user_repository.py#L11-L198)
 - [models.py:31-193](file://service/src/infrastructure/database/models.py#L31-L193)
 
 ## 详细组件分析
@@ -240,10 +235,11 @@ end
 - [auth_routes.py:1-86](file://service/src/api/v1/auth_routes.py#L1-L86)
 - [user_routes.py:1-252](file://service/src/api/v1/user_routes.py#L1-L252)
 - [menu_routes.py:1-200](file://service/src/api/v1/menu_routes.py#L1-L200)
-- [rbac_routes.py:1-150](file://service/src/api/v1/rbac_routes.py#L1-L150)
+- [role_routes.py:1-150](file://service/src/api/v1/role_routes.py#L1-L150)
+- [permission_routes.py:1-150](file://service/src/api/v1/permission_routes.py#L1-L150)
 - [system_routes.py:1-180](file://service/src/api/v1/system_routes.py#L1-L180)
 - [common.py:29-65](file://service/src/api/common.py#L29-L65)
-- [dependencies.py:1-191](file://service/src/api/dependencies.py#L1-L191)
+- [dependencies.py:1-201](file://service/src/api/dependencies.py#L1-L201)
 
 ### 应用层（Services）
 - 职责边界
@@ -327,26 +323,17 @@ LogService --> LogRepository : "依赖"
 ```
 
 **图表来源**
-- [user_service.py:18-322](file://service/src/application/services/user_service.py#L18-L322)
-- [auth_service.py:15-159](file://service/src/application/services/auth_service.py#L15-L159)
-- [rbac_service.py:1-200](file://service/src/application/services/rbac_service.py#L1-L200)
-- [menu_service.py:1-250](file://service/src/application/services/menu_service.py#L1-L250)
-- [department_service.py:1-200](file://service/src/application/services/department_service.py#L1-L200)
-- [log_service.py:1-150](file://service/src/application/services/log_service.py#L1-L150)
+- [auth_service.py:18-151](file://service/src/application/services/auth_service.py#L18-L151)
 - [password_service.py:6-43](file://service/src/domain/services/password_service.py#L6-L43)
 - [token_service.py:11-45](file://service/src/domain/services/token_service.py#L11-L45)
 
 **章节来源**
-- [user_service.py:1-322](file://service/src/application/services/user_service.py#L1-L322)
-- [auth_service.py:1-159](file://service/src/application/services/auth_service.py#L1-L159)
-- [rbac_service.py:1-200](file://service/src/application/services/rbac_service.py#L1-L200)
-- [menu_service.py:1-250](file://service/src/application/services/menu_service.py#L1-L250)
-- [department_service.py:1-200](file://service/src/application/services/department_service.py#L1-L200)
-- [log_service.py:1-150](file://service/src/application/services/log_service.py#L1-L150)
-- [user_dto.py:1-86](file://service/src/application/dto/user_dto.py#L1-L86)
+- [auth_service.py:1-151](file://service/src/application/services/auth_service.py#L1-L151)
 - [auth_dto.py:1-100](file://service/src/application/dto/auth_dto.py#L1-L100)
-- [rbac_dto.py:1-150](file://service/src/application/dto/rbac_dto.py#L1-L150)
+- [user_dto.py:1-86](file://service/src/application/dto/user_dto.py#L1-L86)
 - [menu_dto.py:1-120](file://service/src/application/dto/menu_dto.py#L1-L120)
+- [role_dto.py:1-100](file://service/src/application/dto/role_dto.py#L1-L100)
+- [permission_dto.py:1-150](file://service/src/application/dto/permission_dto.py#L1-L150)
 - [department_dto.py:1-100](file://service/src/application/dto/department_dto.py#L1-L100)
 - [log_dto.py:1-80](file://service/src/application/dto/log_dto.py#L1-L80)
 
@@ -389,7 +376,7 @@ ErrAuth --> End
 
 **章节来源**
 - [user.py:1-51](file://service/src/domain/entities/user.py#L1-L51)
-- [user_repository.py:1-107](file://service/src/domain/repositories/user_repository.py#L1-L107)
+- [user_repository.py:1-112](file://service/src/domain/repositories/user_repository.py#L1-L112)
 - [password_service.py:1-43](file://service/src/domain/services/password_service.py#L1-L43)
 - [token_service.py:1-45](file://service/src/domain/services/token_service.py#L1-L45)
 
@@ -399,7 +386,7 @@ ErrAuth --> End
   - 实现领域接口，提供具体的数据访问实现。
   - 管理数据库连接、缓存、外部服务集成。
 - 关键实现
-  - **新增** 仓储基类：提供通用的 CRUD 和分页功能，减少仓储层的重复代码。
+  - **新增** 仓储实现：基于 FastCRUD 的异步查询、分页、计数、批量删除、状态更新、密码重置等。
   - SQLModel 模型：定义用户、角色、权限、菜单、IP 规则等实体及关系。
   - 仓储实现：基于 SQLModel 的异步查询、分页、计数、批量删除、状态更新、密码重置等。
   - 数据库连接：异步引擎、会话管理、初始化与关闭。
@@ -486,9 +473,8 @@ PERMISSION ||--o{ ROLE_PERMISSIONS : "授权"
 - [models.py:31-193](file://service/src/infrastructure/database/models.py#L31-L193)
 
 **章节来源**
-- [base.py:1-205](file://service/src/infrastructure/repositories/base.py#L1-L205)
 - [models.py:1-193](file://service/src/infrastructure/database/models.py#L1-L193)
-- [user_repository.py:1-169](file://service/src/infrastructure/repositories/user_repository.py#L1-L169)
+- [user_repository.py:1-198](file://service/src/infrastructure/repositories/user_repository.py#L1-L198)
 - [connection.py:1-35](file://service/src/infrastructure/database/connection.py#L1-L35)
 
 ## 依赖注入系统
@@ -528,7 +514,7 @@ DI-->>Route : 注入 UserService
 - [dependencies.py:178-185](file://service/src/api/dependencies.py#L178-L185)
 
 **章节来源**
-- [dependencies.py:1-191](file://service/src/api/dependencies.py#L1-L191)
+- [dependencies.py:1-201](file://service/src/api/dependencies.py#L1-L201)
 
 ## 依赖分析
 - 层内依赖
@@ -578,7 +564,7 @@ FACTORIES --> SERVICES["应用服务实例"]
 - 查询优化
   - 分页与条件过滤在仓储层实现，避免一次性加载大结果集。
   - 复合索引设计，优化常用查询条件（用户名、邮箱、状态等）。
-  - **新增** 仓储基类提供通用的分页和筛选功能，减少重复代码。
+  - **新增** 基于 FastCRUD 的通用 CRUD 实现，提供高性能的数据访问。
 - 缓存策略
   - JWT 令牌缓存，减少重复计算。
   - RBAC 权限缓存，提升权限验证性能。
@@ -592,9 +578,9 @@ FACTORIES --> SERVICES["应用服务实例"]
 
 **章节来源**
 - [redis_client.py:1-100](file://service/src/infrastructure/cache/redis_client.py#L1-L100)
-- [middlewares.py:1-150](file://service/src/core/middlewares.py#L1-L150)
-- [logger.py:1-120](file://service/src/core/logger.py#L1-L120)
-- [base.py:62-98](file://service/src/infrastructure/repositories/base.py#L62-L98)
+- [middlewares.py:1-150](file://service/src/api/middlewares.py#L1-L150)
+- [logger.py:1-120](file://service/src/infrastructure/logging/logger.py#L1-L120)
+- [user_repository.py:58-88](file://service/src/infrastructure/repositories/user_repository.py#L58-L88)
 
 ## 故障排查指南
 - 常见异常
@@ -614,15 +600,15 @@ FACTORIES --> SERVICES["应用服务实例"]
   - **新增** 验证领域实体和仓储接口的实现一致性。
 
 **章节来源**
-- [exceptions.py:6-60](file://service/src/core/exceptions.py#L6-L60)
+- [exceptions.py:6-60](file://service/src/domain/exceptions.py#L6-L60)
 - [main.py:46-59](file://service/src/main.py#L46-L59)
-- [middlewares.py:1-150](file://service/src/core/middlewares.py#L1-L150)
-- [logger.py:1-120](file://service/src/core/logger.py#L1-L120)
+- [middlewares.py:1-150](file://service/src/api/middlewares.py#L1-L150)
+- [logger.py:1-120](file://service/src/infrastructure/logging/logger.py#L1-L120)
 
 ## 结论
 本项目以 DDD 分层架构为核心，通过明确的职责边界与依赖方向，实现了关注点分离、可测试性与可维护性。表现层专注协议与响应，应用层编排业务，领域层封装不变式，基础设施层屏蔽存储细节。配合统一异常处理、配置中心、中间件集成与日志系统，形成高内聚、低耦合的工程化体系。
 
-**更新** 新增的依赖注入系统和分层架构重构进一步提升了架构的灵活性和可维护性。全新的 domain/entities、domain/repositories、domain/services 结构使领域层更加清晰，仓储基类提供了通用功能，服务工厂模式简化了依赖管理。建议在扩展新功能时严格遵循分层边界，优先在应用层组合用例，在领域层沉淀规则，并通过仓储接口与 DTO 保持上下层解耦。
+**更新** 新增的依赖注入系统和分层架构重构进一步提升了架构的灵活性和可维护性。全新的 domain/entities、domain/repositories、domain/services 结构使领域层更加清晰，基于 FastCRUD 的仓储实现提供了高性能的数据访问能力，服务工厂模式简化了依赖管理。建议在扩展新功能时严格遵循分层边界，优先在应用层组合用例，在领域层沉淀规则，并通过仓储接口与 DTO 保持上下层解耦。
 
 ## 附录
 - 扩展建议

@@ -104,7 +104,7 @@ class AuthService:
         # 3. 创建用户（status=1 表示启用）
         new_user = User(username=dto.username, hashed_password=hashed_password, nickname=dto.nickname, email=dto.email or "", phone=dto.phone, status=1)
         await self.user_repo.create(new_user)
-        await self.session.commit()
+        await self.session.flush()
         created_user = await self.user_repo.get_by_username(dto.username)
         if created_user is None:
             raise NotFoundError("注册成功但无法加载用户")

@@ -77,7 +77,6 @@ class DepartmentService:
         await self.session.flush()
         # 重新获取以确保返回完整模型
         created = await self.dept_repo.get_by_name(dto.name, self.session)
-        await self.session.commit()
         if created is None:
             raise BusinessError("部门创建后无法加载")
         return created
@@ -124,7 +123,6 @@ class DepartmentService:
         await self.session.flush()
         # 重新获取以确保返回完整模型
         updated = await self.dept_repo.get_by_id(dept_id, self.session)
-        await self.session.commit()
         if updated is None:
             raise NotFoundError("部门不存在")
         return updated
@@ -154,5 +152,5 @@ class DepartmentService:
         # 检查是否有关联用户（需要查询用户表，暂时跳过，前端已做限制）
 
         success = await self.dept_repo.delete(dept_id, self.session)
-        await self.session.commit()
+        await self.session.flush()
         return success

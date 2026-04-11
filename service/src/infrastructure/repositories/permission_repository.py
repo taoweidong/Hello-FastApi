@@ -3,6 +3,8 @@
 使用 SQLModel 和 FastCRUD 实现权限仓储。
 """
 
+from typing import Any
+
 from fastcrud import FastCRUD
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -56,7 +58,7 @@ class PermissionRepository(PermissionRepositoryInterface):
         Returns:
             权限列表
         """
-        filters: dict[str, any] = {}
+        filters: dict[str, Any] = {}
         if permission_name:
             filters["name"] = permission_name
 
@@ -72,7 +74,7 @@ class PermissionRepository(PermissionRepositoryInterface):
         Returns:
             权限数量
         """
-        filters: dict[str, any] = {}
+        filters: dict[str, Any] = {}
         if permission_name:
             filters["name"] = permission_name
 

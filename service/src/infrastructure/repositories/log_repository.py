@@ -16,8 +16,13 @@ from src.infrastructure.database.models import LoginLog, OperationLog, SystemLog
 class LogRepository:
     """日志仓储的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
-    def __init__(self) -> None:
-        """初始化日志仓储。"""
+    def __init__(self, session: AsyncSession) -> None:
+        """初始化日志仓储。
+
+        Args:
+            session: 数据库会话
+        """
+        self.session = session
         self._login_log_crud = FastCRUD(LoginLog)
         self._operation_log_crud = FastCRUD(OperationLog)
         self._system_log_crud = FastCRUD(SystemLog)
