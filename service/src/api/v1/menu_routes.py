@@ -11,7 +11,7 @@ from src.api.common import success_response
 from src.api.dependencies import get_current_active_user, get_menu_service, require_permission
 from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
 from src.application.services.menu_service import MenuService
-from src.infrastructure.database.connection import get_db
+from src.infrastructure.database import get_db
 
 menu_router = APIRouter()
 

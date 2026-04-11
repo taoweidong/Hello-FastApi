@@ -246,8 +246,12 @@ class UserService:
             raise ConflictError(f"邮箱 '{dto.email}' 已存在")
 
         user = User(username=dto.username, email=dto.email, hashed_password=self.password_service.hash_password(dto.password), nickname=dto.nickname, phone=dto.phone, sex=dto.sex, avatar=dto.avatar, status=dto.status, dept_id=dto.dept_id, remark=dto.remark, is_superuser=True)
-        user = await self.repo.create(user)
-        return await self._to_response(user)
+        await self.repo.create(user)
+        await self.session.flush()
+        created = await self.repo.get_by_id(user.id)
+        if created is None:
+            raise NotFoundError("超级用户创建后无法加载")
+        return await self._to_response(created)
 
     async def assign_roles(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户分配角色。

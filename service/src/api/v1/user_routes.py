@@ -6,7 +6,7 @@
 
 from fastapi import APIRouter, Depends
 
-from src.api.common import list_response, success_response
+from src.api.common import format_user_list_row, list_response, success_response
 from src.api.dependencies import get_current_user_id, get_user_service, require_permission
 from src.application.dto.user_dto import AssignRoleDTO, BatchDeleteDTO, ChangePasswordDTO, ResetPasswordDTO, UpdateStatusDTO, UserCreateDTO, UserListQueryDTO, UserUpdateDTO
 from src.application.services.user_service import UserService
@@ -30,27 +30,7 @@ async def get_user_list(query: UserListQueryDTO, service: UserService = Depends(
         Pure Admin 标准分页响应格式的用户列表
     """
     users, total = await service.get_users(query)
-
-    # 转换为前端期望的字段格式
-    user_list = []
-    for user in users:
-        user_dict = user.model_dump()
-        # 添加 dept 字段（前端期望的部门格式）
-        user_dict["dept"] = {"id": user_dict.get("dept_id") or "", "name": ""}
-        # 处理可能为 null 的字段，转换为空字符串
-        if user_dict.get("phone") is None:
-            user_dict["phone"] = ""
-        if user_dict.get("email") is None:
-            user_dict["email"] = ""
-        if user_dict.get("nickname") is None:
-            user_dict["nickname"] = ""
-        if user_dict.get("avatar") is None:
-            user_dict["avatar"] = ""
-        if user_dict.get("remark") is None:
-            user_dict["remark"] = ""
-        # 移除不需要的字段
-        user_dict.pop("dept_id", None)
-        user_list.append(user_dict)
+    user_list = [format_user_list_row(user.model_dump()) for user in users]
 
     return list_response(list_data=user_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 

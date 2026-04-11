@@ -59,6 +59,7 @@ class TestUserService:
         # 创建测试用户
         test_user = User(id="test-id", username="testuser", email="test@example.com", hashed_password="hashed", nickname="测试用户", status=1)
         mock_user_repo.create = AsyncMock(return_value=test_user)
+        mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
 
         # 使用 patch 替换仓储
         with patch.object(user_service, "repo", mock_user_repo):

@@ -6,7 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
 from src.config.settings import settings
-from src.core.exceptions import BusinessError, UnauthorizedError
+from src.core.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.repositories.permission_repository import PermissionRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
@@ -103,8 +103,11 @@ class AuthService:
 
         # 3. 创建用户（status=1 表示启用）
         new_user = User(username=dto.username, hashed_password=hashed_password, nickname=dto.nickname, email=dto.email or "", phone=dto.phone, status=1)
-        created_user = await self.user_repo.create(new_user)
+        await self.user_repo.create(new_user)
         await self.session.commit()
+        created_user = await self.user_repo.get_by_username(dto.username)
+        if created_user is None:
+            raise NotFoundError("注册成功但无法加载用户")
 
         # 4. 返回用户基本信息
         return {"id": created_user.id, "username": created_user.username, "nickname": created_user.nickname, "email": created_user.email, "phone": created_user.phone, "status": created_user.status}

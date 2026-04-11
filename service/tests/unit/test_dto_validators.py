@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.application.dto.rbac_dto import RoleCreateDTO, RoleUpdateDTO
+from src.application.dto.role_dto import RoleCreateDTO, RoleUpdateDTO
 from src.application.dto.user_dto import UserCreateDTO, UserListQueryDTO, UserUpdateDTO
 
 

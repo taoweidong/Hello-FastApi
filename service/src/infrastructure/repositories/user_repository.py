@@ -1,6 +1,7 @@
 """使用 SQLModel 和 FastCRUD 实现的用户仓库。"""
 
 from fastcrud import FastCRUD
+from sqlalchemy import delete as sa_delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.repositories.user_repository import UserRepositoryInterface
@@ -143,30 +144,29 @@ class UserRepository(UserRepositoryInterface):
         Returns:
             创建后的用户对象
         """
-        return await self._crud.create(self.session, user)
+        result = await self._crud.create(self.session, user)
+        if isinstance(result, User):
+            return result
+        await self.session.flush()
+        loaded = await self.get_by_id(user.id)
+        if loaded is not None:
+            return loaded
+        loaded = await self.get_by_username(user.username)
+        if loaded is not None:
+            return loaded
+        raise RuntimeError("用户写入后无法按主键或用户名加载")
 
     async def update(self, user: User) -> User:
-        """更新用户。
-
-        Args:
-            user: 用户对象
-
-        Returns:
-            更新后的用户对象
-        """
-        return await self._crud.update(self.session, user)
+        """将变更合并进当前会话并写入数据库（兼容 FastCRUD get 返回的游离实例）。"""
+        merged = await self.session.merge(user)
+        await self.session.flush()
+        return merged
 
     async def delete(self, user_id: str) -> bool:
-        """删除用户。
-
-        Args:
-            user_id: 用户ID
-
-        Returns:
-            是否删除成功
-        """
-        deleted_count = await self._crud.delete(self.session, id=user_id)
-        return deleted_count > 0
+        """按主键删除用户（避免 FastCRUD / get 返回的实例未附着会话导致 delete 失败）。"""
+        result = await self.session.execute(sa_delete(User).where(User.id == user_id))
+        await self.session.flush()
+        return (result.rowcount or 0) > 0
 
     async def batch_delete(self, user_ids: list[str]) -> int:
         """批量删除用户。

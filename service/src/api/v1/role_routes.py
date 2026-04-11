@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.api.common import list_response, success_response
+from src.api.common import datetime_to_timestamp, list_response, success_response
 from src.api.dependencies import get_role_repository, get_role_service, require_permission
 from src.application.dto.role_dto import AssignPermissionsDTO, RoleCreateDTO, RoleListQueryDTO, RoleUpdateDTO
 from src.application.services.role_service import RoleService
@@ -38,9 +38,7 @@ async def get_role_list(query: RoleListQueryDTO, service: RoleService = Depends(
     # 转换为前端期望的字段格式
     role_list = []
     for role in roles:
-        role_dict = {"id": role.id, "name": role.name, "code": role.code, "status": role.status,
-                     "remark": role.remark or "",
-                     "createTime": int(role.createTime.timestamp() * 1000) if role.createTime else None}
+        role_dict = {"id": role.id, "name": role.name, "code": role.code, "status": role.status, "remark": role.remark or "", "createTime": datetime_to_timestamp(role.createTime)}
         role_list.append(role_dict)
 
     return list_response(list_data=role_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
