@@ -15,16 +15,4 @@ from src.infrastructure.database.models.system_log import SystemLog
 from src.infrastructure.database.models.user import User
 from src.infrastructure.database.models.user_role import UserRole
 
-__all__ = [
-    "Department",
-    "IPRule",
-    "LoginLog",
-    "Menu",
-    "MenuMeta",
-    "Role",
-    "RoleMenuLink",
-    "SystemConfig",
-    "SystemLog",
-    "User",
-    "UserRole",
-]
+__all__ = ["Department", "IPRule", "LoginLog", "Menu", "MenuMeta", "Role", "RoleMenuLink", "SystemConfig", "SystemLog", "User", "UserRole"]

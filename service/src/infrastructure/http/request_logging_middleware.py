@@ -109,24 +109,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         # 非 GET 请求写入 SystemLog 审计表
         if request.method != "GET":
-            await self._write_system_log(
-                request=request,
-                response=response,
-                client_ip=client_ip,
-                body=body_str,
-                duration_ms=duration_ms,
-            )
+            await self._write_system_log(request=request, response=response, client_ip=client_ip, body=body_str, duration_ms=duration_ms)
 
         return response
 
-    async def _write_system_log(
-        self,
-        request: Request,
-        response: Response,
-        client_ip: str,
-        body: str | None,
-        duration_ms: float,
-    ) -> None:
+    async def _write_system_log(self, request: Request, response: Response, client_ip: str, body: str | None, duration_ms: float) -> None:
         """将非 GET 请求写入 SystemLog 审计表。"""
         from sqlmodel.ext.asyncio.session import AsyncSession
 

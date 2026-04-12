@@ -22,12 +22,7 @@ class RoleService:
         if await self.role_repo.get_by_code(dto.code):
             raise ConflictError(f"角色编码 '{dto.code}' 已存在")
 
-        role = Role(
-            name=dto.name,
-            code=dto.code,
-            description=dto.description,
-            is_active=dto.isActive if dto.isActive is not None else 1,
-        )
+        role = Role(name=dto.name, code=dto.code, description=dto.description, is_active=dto.isActive if dto.isActive is not None else 1)
         await self.role_repo.create(role)
         await self.session.flush()
         created_role = await self.role_repo.get_by_code(dto.code)
@@ -49,16 +44,8 @@ class RoleService:
 
     async def get_roles(self, query: RoleListQueryDTO) -> tuple[list[RoleResponseDTO], int]:
         """获取角色列表（分页）。"""
-        total = await self.role_repo.count(
-            role_name=query.name,
-            is_active=query.isActive,
-        )
-        roles = await self.role_repo.get_all(
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            role_name=query.name,
-            is_active=query.isActive,
-        )
+        total = await self.role_repo.count(role_name=query.name, is_active=query.isActive)
+        roles = await self.role_repo.get_all(page_num=query.pageNum, page_size=query.pageSize, role_name=query.name, is_active=query.isActive)
         role_responses = [await self._role_to_response(r) for r in roles]
         return role_responses, total
 
@@ -140,15 +127,4 @@ class RoleService:
         menu_ids = await self.role_repo.get_role_menu_ids(role.id)
         menu_list = [{"id": mid} for mid in menu_ids] if menu_ids else []
 
-        return RoleResponseDTO(
-            id=role.id,
-            name=role.name,
-            code=role.code,
-            isActive=role.is_active,
-            menus=menu_list,
-            creatorId=role.creator_id,
-            modifierId=role.modifier_id,
-            createdTime=role.created_time,
-            updatedTime=role.updated_time,
-            description=role.description,
-        )
+        return RoleResponseDTO(id=role.id, name=role.name, code=role.code, isActive=role.is_active, menus=menu_list, creatorId=role.creator_id, modifierId=role.modifier_id, createdTime=role.created_time, updatedTime=role.updated_time, description=role.description)

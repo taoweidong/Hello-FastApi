@@ -58,16 +58,7 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
         """更新配置。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(SystemConfig).where(SystemConfig.id == config.id).values(
-            value=config.value,
-            is_active=config.is_active,
-            access=config.access,
-            key=config.key,
-            inherit=config.inherit,
-            creator_id=config.creator_id,
-            modifier_id=config.modifier_id,
-            description=config.description,
-        )
+        stmt = sa_update(SystemConfig).where(SystemConfig.id == config.id).values(value=config.value, is_active=config.is_active, access=config.access, key=config.key, inherit=config.inherit, creator_id=config.creator_id, modifier_id=config.modifier_id, description=config.description)
         await session.exec(stmt)  # type: ignore[arg-type]
         await session.flush()
         updated = await self.get_by_id(config.id, session)

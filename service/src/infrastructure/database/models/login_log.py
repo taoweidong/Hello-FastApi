@@ -37,18 +37,7 @@ class LoginLog(SQLModel, table=True):
         from src.domain.entities.log import LoginLogEntity
 
         return LoginLogEntity(
-            id=self.id,
-            status=self.status,
-            ipaddress=self.ipaddress,
-            browser=self.browser,
-            system=self.system,
-            agent=self.agent,
-            login_type=self.login_type,
-            creator_id=self.creator_id,
-            modifier_id=self.modifier_id,
-            created_time=self.created_time,
-            updated_time=self.updated_time,
-            description=self.description,
+            id=self.id, status=self.status, ipaddress=self.ipaddress, browser=self.browser, system=self.system, agent=self.agent, login_type=self.login_type, creator_id=self.creator_id, modifier_id=self.modifier_id, created_time=self.created_time, updated_time=self.updated_time, description=self.description
         )
 
     @classmethod

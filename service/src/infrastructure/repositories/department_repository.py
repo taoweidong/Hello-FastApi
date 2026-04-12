@@ -44,17 +44,10 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         """更新现有部门。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(Department).where(Department.id == department.id).values(
-            mode_type=department.mode_type,
-            name=department.name,
-            code=department.code,
-            rank=department.rank,
-            auto_bind=department.auto_bind,
-            is_active=department.is_active,
-            creator_id=department.creator_id,
-            modifier_id=department.modifier_id,
-            parent_id=department.parent_id,
-            description=department.description,
+        stmt = (
+            sa_update(Department)
+            .where(Department.id == department.id)
+            .values(mode_type=department.mode_type, name=department.name, code=department.code, rank=department.rank, auto_bind=department.auto_bind, is_active=department.is_active, creator_id=department.creator_id, modifier_id=department.modifier_id, parent_id=department.parent_id, description=department.description)
         )
         await session.exec(stmt)  # type: ignore[arg-type]
         await session.flush()

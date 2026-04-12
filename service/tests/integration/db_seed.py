@@ -2,42 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.services.password_service import PasswordService
-from src.infrastructure.database.models import (
-    Department,
-    LoginLog,
-    Menu,
-    MenuMeta,
-    Role,
-    RoleMenuLink,
-    SystemLog,
-    User,
-    UserRole,
-)
+from src.infrastructure.database.models import Department, LoginLog, Menu, MenuMeta, Role, RoleMenuLink, SystemLog, User, UserRole
 
 
 # 测试库为 SQLite，关闭外键检查后清空，避免自引用表顺序问题
 async def clear_all_test_data(session: AsyncSession) -> None:
     """删除当前库中所有业务数据（测试库专用）。"""
     await session.execute(text("PRAGMA foreign_keys=OFF"))
-    for table in (
-        "sys_userrole_menu",
-        "sys_userinfo_roles",
-        "sys_userloginlog",
-        "sys_logs",
-        "sys_menus",
-        "sys_menumeta",
-        "sys_users",
-        "sys_roles",
-        "sys_departments",
-        "sys_ip_rules",
-        "sys_systemconfig",
-    ):
+    for table in ("sys_userrole_menu", "sys_userinfo_roles", "sys_userloginlog", "sys_logs", "sys_menus", "sys_menumeta", "sys_users", "sys_roles", "sys_departments", "sys_ip_rules", "sys_systemconfig"):
         await session.execute(text(f"DELETE FROM {table}"))
     await session.execute(text("PRAGMA foreign_keys=ON"))
     await session.commit()
@@ -77,22 +55,8 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     out.role_ops_id = role_ops.id
 
     # 2. 用户
-    user_super = User(
-        username=out.super_username,
-        email="flow_super@seed.test",
-        password=pwd(out.super_password),
-        nickname="流程超级管理员",
-        is_active=True,
-        is_superuser=True,
-    )
-    user_op = User(
-        username=out.operator_username,
-        email="flow_operator@seed.test",
-        password=pwd(out.operator_password),
-        nickname="流程受限用户",
-        is_active=True,
-        is_superuser=False,
-    )
+    user_super = User(username=out.super_username, email="flow_super@seed.test", password=pwd(out.super_password), nickname="流程超级管理员", is_active=True, is_superuser=True)
+    user_op = User(username=out.operator_username, email="flow_operator@seed.test", password=pwd(out.operator_password), nickname="流程受限用户", is_active=True, is_superuser=False)
     session.add(user_super)
     session.add(user_op)
     await session.flush()
@@ -108,14 +72,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     session.add(menu_meta)
     await session.flush()
 
-    menu = Menu(
-        name="flow_root",
-        menu_type=0,
-        path="/flow-root",
-        rank=0,
-        is_active=True,
-        meta_id=menu_meta.id,
-    )
+    menu = Menu(name="flow_root", menu_type=0, path="/flow-root", rank=0, is_active=True, meta_id=menu_meta.id)
     session.add(menu)
     await session.flush()
     out.menu_root_id = menu.id
@@ -125,15 +82,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     session.add(perm_meta)
     await session.flush()
 
-    menu_perm = Menu(
-        name="user:view",
-        menu_type=2,
-        method="GET",
-        path="/api/system/user",
-        is_active=True,
-        parent_id=menu.id,
-        meta_id=perm_meta.id,
-    )
+    menu_perm = Menu(name="user:view", menu_type=2, method="GET", path="/api/system/user", is_active=True, parent_id=menu.id, meta_id=perm_meta.id)
     session.add(menu_perm)
     await session.flush()
     out.menu_perm_id = menu_perm.id

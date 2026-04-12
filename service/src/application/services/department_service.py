@@ -63,7 +63,7 @@ class DepartmentService:
 
         # 检查编码唯一性
         if dto.code:
-            existing_code = await self.dept_repo.get_by_code(dto.code, session=self.session) if hasattr(self.dept_repo, 'get_by_code') else None
+            existing_code = await self.dept_repo.get_by_code(dto.code, session=self.session) if hasattr(self.dept_repo, "get_by_code") else None
             if existing_code:
                 raise ConflictError("部门编码已存在")
 
@@ -76,16 +76,7 @@ class DepartmentService:
                 raise BusinessError("父部门不存在")
 
         # 创建部门（新字段：mode_type/code/rank/auto_bind/is_active/description）
-        department = Department(
-            name=dto.name,
-            parent_id=parent_id,
-            mode_type=dto.modeType,
-            code=dto.code,
-            rank=dto.rank,
-            auto_bind=dto.autoBind,
-            is_active=dto.isActive,
-            description=dto.description,
-        )
+        department = Department(name=dto.name, parent_id=parent_id, mode_type=dto.modeType, code=dto.code, rank=dto.rank, auto_bind=dto.autoBind, is_active=dto.isActive, description=dto.description)
 
         await self.dept_repo.create(department, session=self.session)
         await self.session.flush()
@@ -177,17 +168,5 @@ class DepartmentService:
     def _to_response(dept: Department) -> DepartmentResponseDTO:
         """将 Department 模型转换为响应 DTO。"""
         return DepartmentResponseDTO(
-            id=dept.id,
-            parentId=dept.parent_id,
-            name=dept.name,
-            modeType=dept.mode_type,
-            code=dept.code,
-            rank=dept.rank,
-            autoBind=dept.auto_bind,
-            isActive=dept.is_active,
-            creatorId=dept.creator_id,
-            modifierId=dept.modifier_id,
-            createdTime=dept.created_time,
-            updatedTime=dept.updated_time,
-            description=dept.description,
+            id=dept.id, parentId=dept.parent_id, name=dept.name, modeType=dept.mode_type, code=dept.code, rank=dept.rank, autoBind=dept.auto_bind, isActive=dept.is_active, creatorId=dept.creator_id, modifierId=dept.modifier_id, createdTime=dept.created_time, updatedTime=dept.updated_time, description=dept.description
         )

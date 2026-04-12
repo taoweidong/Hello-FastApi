@@ -58,14 +58,7 @@ class RoleRepository(RoleRepositoryInterface):
         """更新角色。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(Role).where(Role.id == role.id).values(
-            name=role.name,
-            code=role.code,
-            is_active=role.is_active,
-            creator_id=role.creator_id,
-            modifier_id=role.modifier_id,
-            description=role.description,
-        )
+        stmt = sa_update(Role).where(Role.id == role.id).values(name=role.name, code=role.code, is_active=role.is_active, creator_id=role.creator_id, modifier_id=role.modifier_id, description=role.description)
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(role.id)

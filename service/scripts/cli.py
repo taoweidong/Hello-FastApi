@@ -1,4 +1,4 @@
-﻿"""FastAPI 管理命令行工具。
+"""FastAPI 管理命令行工具。
 
 使用方式:
     python -m scripts.cli runserver
@@ -88,7 +88,6 @@ async def seed_data() -> None:
     """初始化测试数据（菜单、日志等）。"""
     import random
     import uuid
-    from datetime import datetime, timedelta
 
     from sqlmodel import select
 
@@ -131,28 +130,12 @@ async def seed_data() -> None:
 
             for menu_id, name, path, component, icon, title, rank, parent_id, menu_type, description in menus_def:
                 # 创建 MenuMeta
-                meta = MenuMeta(
-                    id=uuid.uuid4().hex,
-                    title=title,
-                    icon=icon,
-                    is_show_menu=1,
-                    is_show_parent=0,
-                )
+                meta = MenuMeta(id=uuid.uuid4().hex, title=title, icon=icon, is_show_menu=1, is_show_parent=0)
                 session.add(meta)
                 await session.flush()  # 确保 meta.id 可用
 
                 # 创建 Menu
-                menu = Menu(
-                    id=menu_id,
-                    name=name,
-                    path=path,
-                    component=component or None,
-                    rank=rank,
-                    parent_id=parent_id,
-                    menu_type=menu_type,
-                    meta_id=meta.id,
-                    description=description,
-                )
+                menu = Menu(id=menu_id, name=name, path=path, component=component or None, rank=rank, parent_id=parent_id, menu_type=menu_type, meta_id=meta.id, description=description)
                 session.add(menu)
 
             print(f"    创建 {len(menus_def)} 个菜单（含元数据）")
@@ -173,14 +156,7 @@ async def seed_data() -> None:
             behaviors = ["账户登录", "验证码登录", "扫码登录"]
 
             for _ in range(20):
-                log = LoginLog(
-                    ipaddress=f"192.168.1.{random.randint(1, 254)}",
-                    system=random.choice(systems),
-                    browser=random.choice(browsers),
-                    status=1 if random.random() > 0.1 else 0,
-                    login_type=0,
-                    creator_id="seed",
-                )
+                log = LoginLog(ipaddress=f"192.168.1.{random.randint(1, 254)}", system=random.choice(systems), browser=random.choice(browsers), status=1 if random.random() > 0.1 else 0, login_type=0, creator_id="seed")
                 session.add(log)
             print("    创建 20 条登录日志")
         else:

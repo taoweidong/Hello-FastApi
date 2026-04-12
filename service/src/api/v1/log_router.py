@@ -25,17 +25,9 @@ class LogRouter(Routable):
         logs, total = await service.get_login_logs(query)
         log_list = []
         for log in logs:
-            log_list.append({
-                "id": log.id,
-                "status": log.status,
-                "ipaddress": log.ipaddress or "",
-                "browser": log.browser or "",
-                "system": log.system or "",
-                "agent": log.agent or "",
-                "loginType": log.login_type,
-                "creatorId": log.creator_id or "",
-                "createdTime": log.created_time.isoformat() if log.created_time else None,
-            })
+            log_list.append(
+                {"id": log.id, "status": log.status, "ipaddress": log.ipaddress or "", "browser": log.browser or "", "system": log.system or "", "agent": log.agent or "", "loginType": log.login_type, "creatorId": log.creator_id or "", "createdTime": log.created_time.isoformat() if log.created_time else None}
+            )
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/login-logs/batch-delete")
@@ -58,21 +50,23 @@ class LogRouter(Routable):
         logs, total = await service.get_operation_logs(query)
         log_list = []
         for log in logs:
-            log_list.append({
-                "id": log.id,
-                "module": log.module or "",
-                "path": log.path or "",
-                "body": log.body or "",
-                "method": log.method or "",
-                "ipaddress": log.ipaddress or "",
-                "browser": log.browser or "",
-                "system": log.system or "",
-                "responseCode": log.response_code,
-                "responseResult": log.response_result or "",
-                "statusCode": log.status_code,
-                "creatorId": log.creator_id or "",
-                "createdTime": log.created_time.isoformat() if log.created_time else None,
-            })
+            log_list.append(
+                {
+                    "id": log.id,
+                    "module": log.module or "",
+                    "path": log.path or "",
+                    "body": log.body or "",
+                    "method": log.method or "",
+                    "ipaddress": log.ipaddress or "",
+                    "browser": log.browser or "",
+                    "system": log.system or "",
+                    "responseCode": log.response_code,
+                    "responseResult": log.response_result or "",
+                    "statusCode": log.status_code,
+                    "creatorId": log.creator_id or "",
+                    "createdTime": log.created_time.isoformat() if log.created_time else None,
+                }
+            )
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/operation-logs/batch-delete")
@@ -95,7 +89,36 @@ class LogRouter(Routable):
         logs, total = await service.get_system_logs(query)
         log_list = []
         for log in logs:
-            log_list.append({
+            log_list.append(
+                {
+                    "id": log.id,
+                    "module": log.module or "",
+                    "path": log.path or "",
+                    "body": log.body or "",
+                    "method": log.method or "",
+                    "ipaddress": log.ipaddress or "",
+                    "browser": log.browser or "",
+                    "system": log.system or "",
+                    "responseCode": log.response_code,
+                    "responseResult": log.response_result or "",
+                    "statusCode": log.status_code,
+                    "creatorId": log.creator_id or "",
+                    "createdTime": log.created_time.isoformat() if log.created_time else None,
+                }
+            )
+        return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
+
+    @post("/system-logs-detail")
+    async def get_system_log_detail(self, data: dict = Body(default={}), service: LogService = Depends(get_log_service), _: dict = Depends(require_permission("log:view"))) -> dict:
+        """获取系统日志详情。"""
+        log_id = data.get("id")
+        if not log_id:
+            return success_response(data=None, message="缺少日志ID")
+        log = await service.get_system_log_detail(log_id)
+        if log is None:
+            return success_response(data=None, message="日志不存在")
+        return success_response(
+            data={
                 "id": log.id,
                 "module": log.module or "",
                 "path": log.path or "",
@@ -109,32 +132,5 @@ class LogRouter(Routable):
                 "statusCode": log.status_code,
                 "creatorId": log.creator_id or "",
                 "createdTime": log.created_time.isoformat() if log.created_time else None,
-            })
-        return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
-
-    @post("/system-logs-detail")
-    async def get_system_log_detail(self, data: dict = Body(default={}), service: LogService = Depends(get_log_service), _: dict = Depends(require_permission("log:view"))) -> dict:
-        """获取系统日志详情。"""
-        log_id = data.get("id")
-        if not log_id:
-            return success_response(data=None, message="缺少日志ID")
-        log = await service.get_system_log_detail(log_id)
-        if log is None:
-            return success_response(data=None, message="日志不存在")
-        return success_response(data={
-            "id": log.id,
-            "module": log.module or "",
-            "path": log.path or "",
-            "body": log.body or "",
-            "method": log.method or "",
-            "ipaddress": log.ipaddress or "",
-            "browser": log.browser or "",
-            "system": log.system or "",
-            "responseCode": log.response_code,
-            "responseResult": log.response_result or "",
-            "statusCode": log.status_code,
-            "creatorId": log.creator_id or "",
-            "createdTime": log.created_time.isoformat() if log.created_time else None,
-        })
-
-
+            }
+        )

@@ -74,20 +74,7 @@ async def client(db_session: AsyncSession, test_app) -> AsyncGenerator[AsyncClie
 @pytest_asyncio.fixture
 async def test_user_data() -> dict:
     """提供测试用户数据（使用新字段格式）。"""
-    return {
-        "username": "testuser",
-        "password": "TestPass123",
-        "nickname": "测试用户",
-        "email": "test@example.com",
-        "phone": "13800138000",
-        "gender": 0,
-        "isActive": 1,
-        "isStaff": 0,
-        "modeType": 0,
-        "avatar": None,
-        "deptId": None,
-        "description": "测试备注",
-    }
+    return {"username": "testuser", "password": "TestPass123", "nickname": "测试用户", "email": "test@example.com", "phone": "13800138000", "gender": 0, "isActive": 1, "isStaff": 0, "modeType": 0, "avatar": None, "deptId": None, "description": "测试备注"}
 
 
 @pytest_asyncio.fixture

@@ -22,14 +22,7 @@ class SystemConfigService:
         if existing:
             raise ConflictError(f"配置键 '{dto.key}' 已存在")
 
-        config = SystemConfig(
-            key=dto.key,
-            value=dto.value,
-            is_active=dto.isActive if dto.isActive is not None else 1,
-            access=dto.access if dto.access is not None else 0,
-            inherit=dto.inherit if dto.inherit is not None else 0,
-            description=dto.description,
-        )
+        config = SystemConfig(key=dto.key, value=dto.value, is_active=dto.isActive if dto.isActive is not None else 1, access=dto.access if dto.access is not None else 0, inherit=dto.inherit if dto.inherit is not None else 0, description=dto.description)
         config = await self.config_repo.create(config, session=self.session)
         await self.session.flush()
         return self._to_response(config)
@@ -44,13 +37,7 @@ class SystemConfigService:
     async def get_configs(self, query: SystemConfigListQueryDTO) -> tuple[list[SystemConfigResponseDTO], int]:
         """获取配置列表。"""
         total = await self.config_repo.count(key=query.key, is_active=query.isActive, session=self.session)
-        configs = await self.config_repo.get_all(
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            key=query.key,
-            is_active=query.isActive,
-            session=self.session,
-        )
+        configs = await self.config_repo.get_all(page_num=query.pageNum, page_size=query.pageSize, key=query.key, is_active=query.isActive, session=self.session)
         return [self._to_response(c) for c in configs], total
 
     async def update_config(self, config_id: str, dto: SystemConfigUpdateDTO) -> SystemConfigResponseDTO:
@@ -89,16 +76,4 @@ class SystemConfigService:
     @staticmethod
     def _to_response(config: SystemConfig) -> SystemConfigResponseDTO:
         """将 SystemConfig 模型转换为响应 DTO。"""
-        return SystemConfigResponseDTO(
-            id=config.id,
-            key=config.key,
-            value=config.value,
-            isActive=config.is_active,
-            access=config.access,
-            inherit=config.inherit,
-            creatorId=config.creator_id,
-            modifierId=config.modifier_id,
-            createdTime=config.created_time,
-            updatedTime=config.updated_time,
-            description=config.description,
-        )
+        return SystemConfigResponseDTO(id=config.id, key=config.key, value=config.value, isActive=config.is_active, access=config.access, inherit=config.inherit, creatorId=config.creator_id, modifierId=config.modifier_id, createdTime=config.created_time, updatedTime=config.updated_time, description=config.description)

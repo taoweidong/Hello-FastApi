@@ -66,23 +66,9 @@ class UserService:
         if dept_id == "" or dept_id == "0":
             dept_id = None
 
-        users = await self.repo.get_all(
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            username=query.username,
-            phone=query.phone,
-            email=query.email,
-            is_active=query.isActive,
-            dept_id=dept_id,
-        )
+        users = await self.repo.get_all(page_num=query.pageNum, page_size=query.pageSize, username=query.username, phone=query.phone, email=query.email, is_active=query.isActive, dept_id=dept_id)
 
-        total = await self.repo.count(
-            username=query.username,
-            phone=query.phone,
-            email=query.email,
-            is_active=query.isActive,
-            dept_id=dept_id,
-        )
+        total = await self.repo.count(username=query.username, phone=query.phone, email=query.email, is_active=query.isActive, dept_id=dept_id)
 
         user_responses = [await self._to_response(u) for u in users]
         return user_responses, total

@@ -1,6 +1,4 @@
-﻿"""使用 SQLModel 和 FastCRUD 实现的菜单仓库。"""
-
-import uuid
+"""使用 SQLModel 和 FastCRUD 实现的菜单仓库。"""
 
 from fastcrud import FastCRUD
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -44,19 +42,10 @@ class MenuRepository(MenuRepositoryInterface):
         """更新现有菜单。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(Menu).where(Menu.id == menu.id).values(
-            menu_type=menu.menu_type,
-            name=menu.name,
-            rank=menu.rank,
-            path=menu.path,
-            component=menu.component,
-            is_active=menu.is_active,
-            method=menu.method,
-            creator_id=menu.creator_id,
-            modifier_id=menu.modifier_id,
-            parent_id=menu.parent_id,
-            meta_id=menu.meta_id,
-            description=menu.description,
+        stmt = (
+            sa_update(Menu)
+            .where(Menu.id == menu.id)
+            .values(menu_type=menu.menu_type, name=menu.name, rank=menu.rank, path=menu.path, component=menu.component, is_active=menu.is_active, method=menu.method, creator_id=menu.creator_id, modifier_id=menu.modifier_id, parent_id=menu.parent_id, meta_id=menu.meta_id, description=menu.description)
         )
         await session.exec(stmt)  # type: ignore[arg-type]
         await session.flush()
@@ -115,23 +104,27 @@ class MenuRepository(MenuRepositoryInterface):
         """更新菜单元数据。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(MenuMeta).where(MenuMeta.id == meta.id).values(
-            title=meta.title,
-            icon=meta.icon,
-            r_svg_name=meta.r_svg_name,
-            is_show_menu=meta.is_show_menu,
-            is_show_parent=meta.is_show_parent,
-            is_keepalive=meta.is_keepalive,
-            frame_url=meta.frame_url,
-            frame_loading=meta.frame_loading,
-            transition_enter=meta.transition_enter,
-            transition_leave=meta.transition_leave,
-            is_hidden_tag=meta.is_hidden_tag,
-            fixed_tag=meta.fixed_tag,
-            dynamic_level=meta.dynamic_level,
-            creator_id=meta.creator_id,
-            modifier_id=meta.modifier_id,
-            description=meta.description,
+        stmt = (
+            sa_update(MenuMeta)
+            .where(MenuMeta.id == meta.id)
+            .values(
+                title=meta.title,
+                icon=meta.icon,
+                r_svg_name=meta.r_svg_name,
+                is_show_menu=meta.is_show_menu,
+                is_show_parent=meta.is_show_parent,
+                is_keepalive=meta.is_keepalive,
+                frame_url=meta.frame_url,
+                frame_loading=meta.frame_loading,
+                transition_enter=meta.transition_enter,
+                transition_leave=meta.transition_leave,
+                is_hidden_tag=meta.is_hidden_tag,
+                fixed_tag=meta.fixed_tag,
+                dynamic_level=meta.dynamic_level,
+                creator_id=meta.creator_id,
+                modifier_id=meta.modifier_id,
+                description=meta.description,
+            )
         )
         await session.exec(stmt)  # type: ignore[arg-type]
         await session.flush()

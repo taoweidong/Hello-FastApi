@@ -8,7 +8,6 @@ from datetime import datetime
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.log_dto import BatchDeleteLogDTO, LoginLogListQueryDTO, OperationLogListQueryDTO, SystemLogListQueryDTO
-from src.domain.exceptions import NotFoundError
 from src.domain.repositories.log_repository import LogRepositoryInterface
 
 
@@ -56,14 +55,7 @@ class LogService:
         if query.loginType:
             login_type = int(query.loginType)
 
-        logs, total = await self.log_repo.get_login_logs(
-            session=self.session,
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            status=status,
-            start_time=start_time,
-            end_time=end_time,
-        )
+        logs, total = await self.log_repo.get_login_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, status=status, start_time=start_time, end_time=end_time)
         return logs, total
 
     async def delete_login_logs(self, dto: BatchDeleteLogDTO) -> int:
@@ -92,15 +84,7 @@ class LogService:
         if query.status:
             status_code = int(query.status)
 
-        logs, total = await self.log_repo.get_operation_logs(
-            session=self.session,
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            module=query.module,
-            status_code=status_code,
-            start_time=start_time,
-            end_time=end_time,
-        )
+        logs, total = await self.log_repo.get_operation_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, module=query.module, status_code=status_code, start_time=start_time, end_time=end_time)
         return logs, total
 
     async def delete_operation_logs(self, dto: BatchDeleteLogDTO) -> int:
@@ -129,19 +113,9 @@ class LogService:
         if query.status:
             status_code = int(query.status)
 
-        logs, total = await self.log_repo.get_system_logs(
-            session=self.session,
-            page_num=query.pageNum,
-            page_size=query.pageSize,
-            module=query.module,
-            status_code=status_code,
-            start_time=start_time,
-            end_time=end_time,
-        )
+        logs, total = await self.log_repo.get_system_logs(session=self.session, page_num=query.pageNum, page_size=query.pageSize, module=query.module, status_code=status_code, start_time=start_time, end_time=end_time)
         return logs, total
 
     async def get_system_log_detail(self, log_id: str):
         """获取系统日志详情。"""
         return await self.log_repo.get_system_log_detail(session=self.session, log_id=log_id)
-
-

@@ -75,10 +75,7 @@ class TestSystemConfigService:
     @pytest.mark.asyncio
     async def test_get_configs_with_pagination(self, config_service, mock_config_repo):
         """测试获取配置列表（分页+筛选）。"""
-        configs = [
-            SystemConfig(id="1", key="site_name", value="站点A", is_active=1),
-            SystemConfig(id="2", key="site_desc", value="描述", is_active=1),
-        ]
+        configs = [SystemConfig(id="1", key="site_name", value="站点A", is_active=1), SystemConfig(id="2", key="site_desc", value="描述", is_active=1)]
         mock_config_repo.count = AsyncMock(return_value=2)
         mock_config_repo.get_all = AsyncMock(return_value=configs)
 

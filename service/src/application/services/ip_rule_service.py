@@ -46,15 +46,7 @@ class IPRuleService:
             start_time = _parse_time_bound(created_time[0])
             end_time = _parse_time_bound(created_time[1])
 
-        return await self.ip_rule_repo.get_ip_rules(
-            session=self.session,
-            page_num=page_num,
-            page_size=page_size,
-            rule_type=rule_type,
-            is_active=is_active,
-            start_time=start_time,
-            end_time=end_time,
-        )
+        return await self.ip_rule_repo.get_ip_rules(session=self.session, page_num=page_num, page_size=page_size, rule_type=rule_type, is_active=is_active, start_time=start_time, end_time=end_time)
 
     async def get_ip_rule(self, rule_id: str) -> IPRule:
         """获取单个 IP 规则。"""
@@ -65,13 +57,7 @@ class IPRuleService:
 
     async def create_ip_rule(self, ip_address: str, rule_type: str, reason: str | None = None, is_active: int = 1, expires_at: datetime | None = None) -> IPRule:
         """创建 IP 规则。"""
-        rule = IPRule(
-            ip_address=ip_address,
-            rule_type=rule_type,
-            reason=reason,
-            is_active=is_active,
-            expires_at=expires_at,
-        )
+        rule = IPRule(ip_address=ip_address, rule_type=rule_type, reason=reason, is_active=is_active, expires_at=expires_at)
         result = await self.ip_rule_repo.create_ip_rule(session=self.session, rule=rule)
         await self.session.flush()
         return result

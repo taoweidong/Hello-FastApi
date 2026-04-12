@@ -117,10 +117,7 @@ class TestRoleUpdateDTO:
 
     def test_valid_role_update(self):
         """测试有效的角色更新数据。"""
-        dto = RoleUpdateDTO(
-            name="新名称",
-            isActive=1,
-        )
+        dto = RoleUpdateDTO(name="新名称", isActive=1)
         assert dto.name == "新名称"
         assert dto.isActive == 1
 

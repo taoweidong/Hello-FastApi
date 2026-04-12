@@ -88,28 +88,14 @@ class AuthService:
 
         hashed_password = self.password_service.hash_password(dto.password)
 
-        new_user = User(
-            username=dto.username,
-            password=hashed_password,
-            nickname=dto.nickname,
-            email=dto.email or "",
-            phone=dto.phone or "",
-            is_active=1,
-        )
+        new_user = User(username=dto.username, password=hashed_password, nickname=dto.nickname, email=dto.email or "", phone=dto.phone or "", is_active=1)
         await self.user_repo.create(new_user)
         await self.session.flush()
         created_user = await self.user_repo.get_by_username(dto.username)
         if created_user is None:
             raise NotFoundError("注册成功但无法加载用户")
 
-        return {
-            "id": created_user.id,
-            "username": created_user.username,
-            "nickname": created_user.nickname,
-            "email": created_user.email,
-            "phone": created_user.phone,
-            "is_active": created_user.is_active,
-        }
+        return {"id": created_user.id, "username": created_user.username, "nickname": created_user.nickname, "email": created_user.email, "phone": created_user.phone, "is_active": created_user.is_active}
 
     async def refresh_token(self, refresh_token: str) -> dict:
         """使用刷新令牌刷新访问令牌。"""
@@ -175,13 +161,7 @@ class AuthService:
         routes = []
         for menu in menus:
             if menu.parent_id == parent_id:
-                route = {
-                    "path": menu.path,
-                    "name": menu.name,
-                    "rank": menu.rank,
-                    "component": menu.component,
-                    "meta": self._build_meta(menu),
-                }
+                route = {"path": menu.path, "name": menu.name, "rank": menu.rank, "component": menu.component, "meta": self._build_meta(menu)}
                 children = self._build_route_tree(menus, menu.id)
                 if children:
                     route["children"] = children
@@ -202,10 +182,7 @@ class AuthService:
                 "keepAlive": bool(meta.is_keepalive),
                 "frameUrl": meta.frame_url or "",
                 "frameLoading": bool(meta.frame_loading),
-                "transition": {
-                    "enter": meta.transition_enter or "",
-                    "leave": meta.transition_leave or "",
-                } if meta.transition_enter or meta.transition_leave else {},
+                "transition": {"enter": meta.transition_enter or "", "leave": meta.transition_leave or ""} if meta.transition_enter or meta.transition_leave else {},
                 "hiddenTag": bool(meta.is_hidden_tag),
                 "fixedTag": bool(meta.fixed_tag),
                 "dynamicLevel": meta.dynamic_level,

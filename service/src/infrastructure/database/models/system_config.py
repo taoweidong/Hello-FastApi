@@ -35,36 +35,12 @@ class SystemConfig(SQLModel, table=True):
         """将 ORM 模型转换为领域实体。"""
         from src.domain.entities.system_config import SystemConfigEntity
 
-        return SystemConfigEntity(
-            id=self.id,
-            value=self.value,
-            is_active=self.is_active,
-            access=self.access,
-            key=self.key,
-            inherit=self.inherit,
-            creator_id=self.creator_id,
-            modifier_id=self.modifier_id,
-            created_time=self.created_time,
-            updated_time=self.updated_time,
-            description=self.description,
-        )
+        return SystemConfigEntity(id=self.id, value=self.value, is_active=self.is_active, access=self.access, key=self.key, inherit=self.inherit, creator_id=self.creator_id, modifier_id=self.modifier_id, created_time=self.created_time, updated_time=self.updated_time, description=self.description)
 
     @classmethod
     def from_domain(cls, entity: "SystemConfigEntity") -> "SystemConfig":
         """从领域实体创建 ORM 模型实例。"""
-        return cls(
-            id=entity.id,
-            value=entity.value,
-            is_active=entity.is_active,
-            access=entity.access,
-            key=entity.key,
-            inherit=entity.inherit,
-            creator_id=entity.creator_id,
-            modifier_id=entity.modifier_id,
-            created_time=entity.created_time,
-            updated_time=entity.updated_time,
-            description=entity.description,
-        )
+        return cls(id=entity.id, value=entity.value, is_active=entity.is_active, access=entity.access, key=entity.key, inherit=entity.inherit, creator_id=entity.creator_id, modifier_id=entity.modifier_id, created_time=entity.created_time, updated_time=entity.updated_time, description=entity.description)
 
     def __repr__(self) -> str:
         return f"<SystemConfig(id={self.id}, key={self.key})>"

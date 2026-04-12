@@ -28,16 +28,32 @@ class IPRuleRouter(Routable):
         if is_active is not None:
             is_active = int(is_active)
 
-        rules, total = await service.get_ip_rules(
-            page_num=page_num,
-            page_size=page_size,
-            rule_type=rule_type,
-            is_active=is_active,
-            created_time=created_time,
-        )
+        rules, total = await service.get_ip_rules(page_num=page_num, page_size=page_size, rule_type=rule_type, is_active=is_active, created_time=created_time)
         rule_list = []
         for rule in rules:
-            rule_list.append({
+            rule_list.append(
+                {
+                    "id": rule.id,
+                    "ipAddress": rule.ip_address,
+                    "ruleType": rule.rule_type,
+                    "reason": rule.reason or "",
+                    "isActive": rule.is_active,
+                    "creatorId": rule.creator_id,
+                    "modifierId": rule.modifier_id,
+                    "createdTime": rule.created_time.isoformat() if rule.created_time else None,
+                    "updatedTime": rule.updated_time.isoformat() if rule.updated_time else None,
+                    "expiresAt": rule.expires_at.isoformat() if rule.expires_at else None,
+                    "description": rule.description or "",
+                }
+            )
+        return list_response(list_data=rule_list, total=total, page_size=page_size, current_page=page_num)
+
+    @get("/{rule_id}")
+    async def get_ip_rule(self, rule_id: str, service: IPRuleService = Depends(get_ip_rule_service), _: dict = Depends(require_permission("ip-rule:view"))) -> dict:
+        """获取 IP 规则详情。"""
+        rule = await service.get_ip_rule(rule_id)
+        return success_response(
+            data={
                 "id": rule.id,
                 "ipAddress": rule.ip_address,
                 "ruleType": rule.rule_type,
@@ -49,26 +65,8 @@ class IPRuleRouter(Routable):
                 "updatedTime": rule.updated_time.isoformat() if rule.updated_time else None,
                 "expiresAt": rule.expires_at.isoformat() if rule.expires_at else None,
                 "description": rule.description or "",
-            })
-        return list_response(list_data=rule_list, total=total, page_size=page_size, current_page=page_num)
-
-    @get("/{rule_id}")
-    async def get_ip_rule(self, rule_id: str, service: IPRuleService = Depends(get_ip_rule_service), _: dict = Depends(require_permission("ip-rule:view"))) -> dict:
-        """获取 IP 规则详情。"""
-        rule = await service.get_ip_rule(rule_id)
-        return success_response(data={
-            "id": rule.id,
-            "ipAddress": rule.ip_address,
-            "ruleType": rule.rule_type,
-            "reason": rule.reason or "",
-            "isActive": rule.is_active,
-            "creatorId": rule.creator_id,
-            "modifierId": rule.modifier_id,
-            "createdTime": rule.created_time.isoformat() if rule.created_time else None,
-            "updatedTime": rule.updated_time.isoformat() if rule.updated_time else None,
-            "expiresAt": rule.expires_at.isoformat() if rule.expires_at else None,
-            "description": rule.description or "",
-        })
+            }
+        )
 
     @post("/create")
     async def create_ip_rule(self, data: dict = Body(default={}), service: IPRuleService = Depends(get_ip_rule_service), _: dict = Depends(require_permission("ip-rule:add"))) -> dict:
@@ -82,13 +80,7 @@ class IPRuleRouter(Routable):
             except ValueError:
                 expires_at = None
 
-        rule = await service.create_ip_rule(
-            ip_address=data.get("ipAddress", ""),
-            rule_type=data.get("ruleType", "blacklist"),
-            reason=data.get("reason"),
-            is_active=int(data.get("isActive", 1)),
-            expires_at=expires_at,
-        )
+        rule = await service.create_ip_rule(ip_address=data.get("ipAddress", ""), rule_type=data.get("ruleType", "blacklist"), reason=data.get("reason"), is_active=int(data.get("isActive", 1)), expires_at=expires_at)
         return success_response(data={"id": rule.id, "ipAddress": rule.ip_address}, message="创建成功", code=201)
 
     @put("/{rule_id}")
@@ -103,15 +95,7 @@ class IPRuleRouter(Routable):
             except ValueError:
                 expires_at = None
 
-        rule = await service.update_ip_rule(
-            rule_id=rule_id,
-            ip_address=data.get("ipAddress"),
-            rule_type=data.get("ruleType"),
-            reason=data.get("reason"),
-            is_active=int(data["isActive"]) if data.get("isActive") is not None else None,
-            expires_at=expires_at,
-            description=data.get("description"),
-        )
+        rule = await service.update_ip_rule(rule_id=rule_id, ip_address=data.get("ipAddress"), rule_type=data.get("ruleType"), reason=data.get("reason"), is_active=int(data["isActive"]) if data.get("isActive") is not None else None, expires_at=expires_at, description=data.get("description"))
         return success_response(data={"id": rule.id, "ipAddress": rule.ip_address}, message="更新成功")
 
     @delete("/{rule_id}")

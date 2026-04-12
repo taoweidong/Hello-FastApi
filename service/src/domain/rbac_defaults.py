@@ -1,11 +1,7 @@
 """RBAC 种子数据（角色与菜单默认值）。"""
 
 # RBAC 默认角色
-DEFAULT_ROLES = {
-    "admin": "System administrator with full access",
-    "user": "Regular user with basic access",
-    "moderator": "Moderator with elevated permissions",
-}
+DEFAULT_ROLES = {"admin": "System administrator with full access", "user": "Regular user with basic access", "moderator": "Moderator with elevated permissions"}
 
 # RBAC 默认菜单权限（新方案：使用Menu替代Permission）
 # menu_type: 0=DIRECTORY, 1=MENU, 2=PERMISSION
@@ -53,13 +49,4 @@ DEFAULT_MENUS = [
 ADMIN_MENU_NAMES = [m["name"] for m in DEFAULT_MENUS]
 
 # user角色默认拥有的菜单name列表（只读权限）
-USER_MENU_NAMES = [
-    "system",
-    "system:user", "system:user:view",
-    "system:role", "system:role:view",
-    "system:menu", "system:menu:view",
-    "system:dept", "system:dept:view",
-    "system:log",
-    "system:login-log",
-    "system:operation-log",
-]
+USER_MENU_NAMES = ["system", "system:user", "system:user:view", "system:role", "system:role:view", "system:menu", "system:menu:view", "system:dept", "system:dept:view", "system:log", "system:login-log", "system:operation-log"]

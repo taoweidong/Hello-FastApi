@@ -1,4 +1,4 @@
-﻿"""System API - 认证路由模块。
+"""System API - 认证路由模块。
 
 提供用户认证相关的接口，包括登录、注册、登出、令牌刷新、动态路由等功能。
 所有路由直接挂在 /api/system 路径下。
@@ -51,14 +51,7 @@ class AuthRouter(Routable):
         user = await user_repo.get_by_id(current_user["id"])
         if user is None:
             raise UnauthorizedError("用户不存在")
-        return success_response(data={
-            "avatar": user.avatar or "",
-            "username": user.username,
-            "nickname": user.nickname or user.username,
-            "email": user.email or "",
-            "phone": user.phone or "",
-            "description": user.description or "",
-        })
+        return success_response(data={"avatar": user.avatar or "", "username": user.username, "nickname": user.nickname or user.username, "email": user.email or "", "phone": user.phone or "", "description": user.description or ""})
 
     @get("/mine-logs")
     async def get_mine_logs(self, current_user: dict = Depends(get_current_active_user)) -> dict:
@@ -99,12 +92,7 @@ class AuthRouter(Routable):
         all_menus = await menu_repo.get_all(db)
         menu_list = []
         for menu in all_menus:
-            menu_dict = {
-                "parentId": int(menu.parent_id) if menu.parent_id else 0,
-                "id": int(menu.id) if menu.id.isdigit() else menu.id,
-                "menuType": menu.menu_type,
-                "title": menu.meta.title if hasattr(menu, 'meta') and menu.meta else (menu.name or ""),
-            }
+            menu_dict = {"parentId": int(menu.parent_id) if menu.parent_id else 0, "id": int(menu.id) if menu.id.isdigit() else menu.id, "menuType": menu.menu_type, "title": menu.meta.title if hasattr(menu, "meta") and menu.meta else (menu.name or "")}
             menu_list.append(menu_dict)
         return success_response(data=menu_list)
 
@@ -131,12 +119,7 @@ class AuthRouter(Routable):
         tree = []
         for menu in menus:
             if menu.parent_id == parent_id:
-                node = {
-                    "path": menu.path or "",
-                    "name": menu.name or "",
-                    "rank": menu.rank,
-                    "meta": self._build_meta(menu),
-                }
+                node = {"path": menu.path or "", "name": menu.name or "", "rank": menu.rank, "meta": self._build_meta(menu)}
                 if menu.component:
                     node["component"] = menu.component
                 children = self._build_route_tree(menus, menu.id)
@@ -147,11 +130,9 @@ class AuthRouter(Routable):
 
     def _build_meta(self, menu) -> dict:
         """从 Menu 的 meta 关系构建 meta 字典。"""
-        meta = {
-            "title": menu.name or "",
-        }
+        meta = {"title": menu.name or ""}
         # 如果有 MenuMeta 关联数据
-        if hasattr(menu, 'meta') and menu.meta:
+        if hasattr(menu, "meta") and menu.meta:
             m = menu.meta
             if m.title:
                 meta["title"] = m.title

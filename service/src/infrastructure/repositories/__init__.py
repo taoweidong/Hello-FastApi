@@ -10,11 +10,4 @@ from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.system_config_repository import SystemConfigRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
-__all__ = [
-    "DepartmentRepository",
-    "LogRepository",
-    "MenuRepository",
-    "RoleRepository",
-    "SystemConfigRepository",
-    "UserRepository",
-]
+__all__ = ["DepartmentRepository", "LogRepository", "MenuRepository", "RoleRepository", "SystemConfigRepository", "UserRepository"]

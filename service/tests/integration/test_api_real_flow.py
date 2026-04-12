@@ -166,11 +166,7 @@ class TestSystemLogsRealFlow:
 class TestStubRoutesRealFlow:
     async def test_stub_routes_with_auth(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
-        for method, path, kw in (
-            ("GET", "/api/system/get-async-routes", {}),
-            ("GET", "/api/system/mine-logs", {}),
-            ("POST", "/api/system/online-logs", {"json": {}}),
-        ):
+        for method, path, kw in (("GET", "/api/system/get-async-routes", {}), ("GET", "/api/system/mine-logs", {}), ("POST", "/api/system/online-logs", {"json": {}})):
             if method == "GET":
                 r = await flow_client.get(path, headers=h)
             else:

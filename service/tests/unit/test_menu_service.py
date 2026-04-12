@@ -1,6 +1,6 @@
 """菜单服务的单元测试。"""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -154,10 +154,7 @@ class TestMenuService:
         """测试获取菜单树。"""
         meta1 = MenuMeta(id="m1", title="根菜单")
         meta2 = MenuMeta(id="m2", title="子菜单")
-        menus = [
-            Menu(id="1", name="root", menu_type=0, parent_id=None, rank=0, meta=meta1),
-            Menu(id="2", name="child", menu_type=1, parent_id="1", rank=0, meta=meta2),
-        ]
+        menus = [Menu(id="1", name="root", menu_type=0, parent_id=None, rank=0, meta=meta1), Menu(id="2", name="child", menu_type=1, parent_id="1", rank=0, meta=meta2)]
         mock_menu_repo.get_all = AsyncMock(return_value=menus)
 
         tree = await menu_service.get_menu_tree()
