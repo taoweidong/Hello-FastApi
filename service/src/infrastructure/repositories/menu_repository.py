@@ -1,4 +1,4 @@
-"""使用 SQLModel 和 FastCRUD 实现的菜单仓库。"""
+﻿"""使用 SQLModel 和 FastCRUD 实现的菜单仓库。"""
 
 import uuid
 
@@ -21,13 +21,20 @@ class MenuRepository(MenuRepositoryInterface):
 
     async def get_all(self, session: AsyncSession) -> list[Menu]:
         """获取所有菜单，按排序号排序。"""
-        result = await self._crud.get_multi(session, schema_to_select=Menu, return_as_model=True, return_total_count=False)
-        menus = result.get("data", [])
+        from sqlalchemy.orm import selectinload
+        from sqlmodel import select
+
+        result = await session.exec(select(Menu).options(selectinload(Menu.meta)))
+        menus = result.all()
         return sorted(menus, key=lambda m: m.rank)
 
     async def get_by_id(self, menu_id: str, session: AsyncSession) -> Menu | None:
         """根据 ID 获取菜单。"""
-        return await self._crud.get(session, id=menu_id, schema_to_select=Menu, return_as_model=True)
+        from sqlalchemy.orm import selectinload
+        from sqlmodel import select
+
+        result = await session.exec(select(Menu).where(Menu.id == menu_id).options(selectinload(Menu.meta)))
+        return result.first()
 
     async def create(self, menu: Menu, session: AsyncSession) -> Menu:
         """创建新菜单。"""

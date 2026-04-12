@@ -1,4 +1,4 @@
-"""菜单管理路由模块。
+﻿"""菜单管理路由模块。
 
 提供菜单的增删改查、菜单树获取、用户菜单获取等功能。
 菜单结构: Menu + MenuMeta（一对一关联）。
@@ -22,7 +22,7 @@ class MenuRouter(Routable):
     @post("")
     async def get_menu_list(self, menu_service: MenuService = Depends(get_menu_service), current_user: dict = Depends(require_permission("menu:view"))) -> dict:
         """获取菜单列表（扁平结构）。"""
-        all_menus = await menu_service.menu_repo.get_all()
+        all_menus = await menu_service.menu_repo.get_all(menu_service.session)
         menu_list = [menu_service._to_response(menu) for menu in all_menus]
         return success_response(data=menu_list)
 

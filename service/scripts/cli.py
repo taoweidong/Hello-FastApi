@@ -1,4 +1,4 @@
-"""FastAPI 管理命令行工具。
+﻿"""FastAPI 管理命令行工具。
 
 使用方式:
     python -m scripts.cli runserver
@@ -60,11 +60,10 @@ async def init_database() -> None:
 
 
 async def seed_rbac() -> None:
-    """初始化默认角色和权限。"""
-    from src.domain.rbac_defaults import DEFAULT_PERMISSIONS, DEFAULT_ROLES
+    """初始化默认角色。"""
+    from src.domain.rbac_defaults import DEFAULT_ROLES
     from src.infrastructure.database import get_async_session_factory, init_db
-    from src.infrastructure.database.models import Permission, Role
-    from src.infrastructure.repositories.permission_repository import PermissionRepository
+    from src.infrastructure.database.models import Role
     from src.infrastructure.repositories.role_repository import RoleRepository
 
     await init_db()
@@ -72,21 +71,12 @@ async def seed_rbac() -> None:
     session_factory = get_async_session_factory()
     async with session_factory() as session:
         role_repo = RoleRepository(session)
-        perm_repo = PermissionRepository(session)
-
-        # 创建默认权限
-        for perm_data in DEFAULT_PERMISSIONS:
-            existing = await perm_repo.get_by_code(perm_data["code"])
-            if existing is None:
-                perm = Permission(**perm_data)
-                await perm_repo.create(perm)
-                print(f"  创建权限: {perm_data['code']}")
 
         # 创建默认角色
         for name, description in DEFAULT_ROLES.items():
             existing = await role_repo.get_by_name(name)
             if existing is None:
-                role = Role(name=name, code=name, description=description, status=1)
+                role = Role(name=name, code=name, description=description, is_active=1)
                 await role_repo.create(role)
                 print(f"  创建角色: {name}")
 
@@ -103,7 +93,7 @@ async def seed_data() -> None:
     from sqlmodel import select
 
     from src.infrastructure.database import get_async_session_factory, init_db
-    from src.infrastructure.database.models import LoginLog, Menu, MenuMeta, OperationLog, SystemLog
+    from src.infrastructure.database.models import LoginLog, Menu, MenuMeta, SystemLog
 
     await init_db()
 
@@ -116,30 +106,30 @@ async def seed_data() -> None:
 
         if not existing_menus:
             print("  添加系统菜单...")
-            # 菜单定义：(id, name, path, component, icon, title, rank, parent_id, menu_type)
+            # 菜单定义：(id, name, path, component, icon, title, rank, parent_id, menu_type, description)
             menus_def = [
                 # 系统管理（顶级菜单）
-                ("1", "System", "/system", "", "ri:settings-3-line", "系统管理", 1, None, 0),
-                ("11", "User", "/system/user/index", "system/user/index", "ri:admin-line", "用户管理", 1, "1", 0),
-                ("12", "Role", "/system/role/index", "system/role/index", "ri:admin-fill", "角色管理", 2, "1", 0),
-                ("13", "Dept", "/system/dept/index", "system/dept/index", "ri:git-branch-line", "部门管理", 3, "1", 0),
-                ("14", "Menu", "/system/menu/index", "system/menu/index", "ep:menu", "菜单管理", 4, "1", 0),
-                ("15", "IpRule", "/system/ip-rule/index", "system/ip-rule/index", "ri:shield-keyhole-line", "IP规则", 5, "1", 0),
-                ("16", "SystemConfig", "/system/config/index", "system/config/index", "ri:settings-4-line", "系统配置", 6, "1", 0),
-                ("17", "RolePermission", "/system/permission/index", "system/permission/index", "ri:key-2-line", "角色权限", 7, "1", 0),
+                ("1", "System", "/system", "", "ri:settings-3-line", "系统管理", 1, None, 0, "系统管理功能模块入口，包含用户、角色、部门等管理功能"),
+                ("11", "User", "/system/user/index", "system/user/index", "ri:admin-line", "用户管理", 1, "1", 0, "管理系统用户账号，支持新增、编辑、删除及角色分配"),
+                ("12", "Role", "/system/role/index", "system/role/index", "ri:admin-fill", "角色管理", 2, "1", 0, "管理系统角色定义及菜单权限分配"),
+                ("13", "Dept", "/system/dept/index", "system/dept/index", "ri:git-branch-line", "部门管理", 3, "1", 0, "管理组织架构部门层级及人员归属"),
+                ("14", "Menu", "/system/menu/index", "system/menu/index", "ep:menu", "菜单管理", 4, "1", 0, "管理系统导航菜单及路由配置"),
+                ("15", "IpRule", "/system/ip-rule/index", "system/ip-rule/index", "ri:shield-keyhole-line", "IP规则", 5, "1", 0, "配置 IP 白名单或黑名单访问控制规则"),
+                ("16", "SystemConfig", "/system/config/index", "system/config/index", "ri:settings-4-line", "系统配置", 6, "1", 0, "管理系统全局参数及运行配置"),
+                ("17", "RolePermission", "/system/permission/index", "system/permission/index", "ri:key-2-line", "角色权限", 7, "1", 0, "为角色分配细粒度的页面及按钮操作权限"),
                 # 系统监控（顶级菜单）
-                ("2", "Monitor", "/monitor", "", "ep:monitor", "系统监控", 2, None, 0),
-                ("21", "OnlineUser", "/monitor/online-user", "monitor/online/index", "ri:user-voice-line", "在线用户", 1, "2", 0),
-                ("22", "LoginLog", "/monitor/login-logs", "monitor/logs/login/index", "ri:window-line", "登录日志", 2, "2", 0),
-                ("23", "OperationLog", "/monitor/operation-logs", "monitor/logs/operation/index", "ri:history-fill", "操作日志", 3, "2", 0),
-                ("24", "SystemLog", "/monitor/system-logs", "monitor/logs/system/index", "ri:file-list-2-line", "系统日志", 4, "2", 0),
+                ("2", "Monitor", "/monitor", "", "ep:monitor", "系统监控", 2, None, 0, "系统运行状态监控功能模块入口"),
+                ("21", "OnlineUser", "/monitor/online-user", "monitor/online/index", "ri:user-voice-line", "在线用户", 1, "2", 0, "查看当前在线用户列表，支持强制下线操作"),
+                ("22", "LoginLog", "/monitor/login-logs", "monitor/logs/login/index", "ri:window-line", "登录日志", 2, "2", 0, "查询用户登录历史记录及登录状态统计"),
+                ("23", "OperationLog", "/monitor/operation-logs", "monitor/logs/operation/index", "ri:history-fill", "操作日志", 3, "2", 0, "查询用户操作行为日志及接口调用记录"),
+                ("24", "SystemLog", "/monitor/system-logs", "monitor/logs/system/index", "ri:file-list-2-line", "系统日志", 4, "2", 0, "查看系统运行日志及异常错误信息"),
                 # 权限管理（顶级菜单）
-                ("3", "Permission", "/permission", "", "ep:lollipop", "权限管理", 3, None, 0),
-                ("31", "PermissionPage", "/permission/page/index", "permission/page/index", "ep:document", "页面权限", 1, "3", 0),
-                ("32", "PermissionButton", "/permission/button/router", "permission/button/index", "ep:mouse", "按钮权限", 2, "3", 0),
+                ("3", "Permission", "/permission", "", "ep:lollipop", "权限管理", 3, None, 0, "权限演示功能模块，展示页面级和按钮级权限控制"),
+                ("31", "PermissionPage", "/permission/page/index", "permission/page/index", "ep:document", "页面权限", 1, "3", 0, "演示基于角色的页面访问权限控制"),
+                ("32", "PermissionButton", "/permission/button/router", "permission/button/index", "ep:mouse", "按钮权限", 2, "3", 0, "演示基于角色的按钮操作权限控制"),
             ]
 
-            for menu_id, name, path, component, icon, title, rank, parent_id, menu_type in menus_def:
+            for menu_id, name, path, component, icon, title, rank, parent_id, menu_type, description in menus_def:
                 # 创建 MenuMeta
                 meta = MenuMeta(
                     id=uuid.uuid4().hex,
@@ -161,6 +151,7 @@ async def seed_data() -> None:
                     parent_id=parent_id,
                     menu_type=menu_type,
                     meta_id=meta.id,
+                    description=description,
                 )
                 session.add(menu)
 
@@ -183,48 +174,19 @@ async def seed_data() -> None:
 
             for _ in range(20):
                 log = LoginLog(
-                    username=random.choice(usernames),
-                    ip=f"192.168.1.{random.randint(1, 254)}",
-                    address=random.choice(addresses),
+                    ipaddress=f"192.168.1.{random.randint(1, 254)}",
                     system=random.choice(systems),
                     browser=random.choice(browsers),
                     status=1 if random.random() > 0.1 else 0,
-                    behavior=random.choice(behaviors),
-                    login_time=datetime.now() - timedelta(hours=random.randint(1, 720)),
+                    login_type=0,
+                    creator_id="seed",
                 )
                 session.add(log)
             print("    创建 20 条登录日志")
         else:
             print(f"  登录日志已存在 ({len(existing_logs)} 条)")
 
-        # ========== 3. 初始化操作日志 ==========
-        print("正在检查操作日志...")
-        result = await session.exec(select(OperationLog))
-        existing_logs = result.all()
-
-        if not existing_logs:
-            print("  添加操作日志测试数据...")
-            modules = ["用户管理", "角色管理", "菜单管理", "部门管理", "系统设置"]
-            summaries = ["新增用户", "修改角色权限", "删除菜单", "更新部门信息", "修改系统配置"]
-
-            for _ in range(20):
-                log = OperationLog(
-                    username="admin",
-                    ip=f"192.168.1.{random.randint(1, 254)}",
-                    address=random.choice(addresses),
-                    system=random.choice(systems),
-                    browser=random.choice(browsers),
-                    status=1 if random.random() > 0.05 else 0,
-                    module=random.choice(modules),
-                    summary=random.choice(summaries),
-                    operating_time=datetime.now() - timedelta(hours=random.randint(1, 720)),
-                )
-                session.add(log)
-            print("    创建 20 条操作日志")
-        else:
-            print(f"  操作日志已存在 ({len(existing_logs)} 条)")
-
-        # ========== 4. 初始化系统日志（sys_logs 表） ==========
+        # ========== 3. 初始化系统日志（sys_logs 表） ==========
         print("正在检查系统日志...")
         result = await session.exec(select(SystemLog))
         existing_logs = result.all()

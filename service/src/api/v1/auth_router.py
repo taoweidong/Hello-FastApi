@@ -1,4 +1,4 @@
-"""System API - 认证路由模块。
+﻿"""System API - 认证路由模块。
 
 提供用户认证相关的接口，包括登录、注册、登出、令牌刷新、动态路由等功能。
 所有路由直接挂在 /api/system 路径下。
@@ -66,13 +66,13 @@ class AuthRouter(Routable):
         return success_response(data={"list": [], "total": 0, "pageSize": 10, "currentPage": 1})
 
     @get("/get-async-routes")
-    async def get_async_routes(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
+    async def get_async_routes(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), db: AsyncSession = Depends(get_db)) -> dict:
         """获取当前用户可访问的动态路由配置。
 
         从数据库读取菜单数据，构建前端路由结构。
         menu_type: 0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限
         """
-        all_menus = await menu_repo.get_all()
+        all_menus = await menu_repo.get_all(db)
         # 过滤掉 PERMISSION 类型（menu_type=2），仅返回目录和页面路由
         route_menus = [m for m in all_menus if m.menu_type != 2]
         tree = self._build_route_tree(route_menus, None)
@@ -94,9 +94,9 @@ class AuthRouter(Routable):
         return success_response(data=[r.id for r in roles])
 
     @post("/role-menu")
-    async def get_role_menu(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
+    async def get_role_menu(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), db: AsyncSession = Depends(get_db)) -> dict:
         """获取角色菜单权限树。"""
-        all_menus = await menu_repo.get_all()
+        all_menus = await menu_repo.get_all(db)
         menu_list = []
         for menu in all_menus:
             menu_dict = {
@@ -109,14 +109,14 @@ class AuthRouter(Routable):
         return success_response(data=menu_list)
 
     @post("/role-menu-ids")
-    async def get_role_menu_ids(self, data: dict, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository)) -> dict:
+    async def get_role_menu_ids(self, data: dict, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository), db: AsyncSession = Depends(get_db)) -> dict:
         """根据角色ID获取菜单ID列表。"""
         role_id = data.get("id")
         if not role_id:
             return success_response(data=[])
         role = await role_repo.get_by_id(str(role_id))
         if role and role.code == "admin":
-            all_menus = await menu_repo.get_all()
+            all_menus = await menu_repo.get_all(db)
             menu_ids = [m.id for m in all_menus]
             return success_response(data=menu_ids)
         menu_ids = await role_repo.get_role_menu_ids(str(role_id))

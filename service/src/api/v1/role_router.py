@@ -1,4 +1,4 @@
-"""System API - 角色管理路由模块。
+﻿"""System API - 角色管理路由模块。
 
 提供角色管理相关的接口，包括角色增删改查、菜单分配等功能。
 路由前缀: /api/system/role
@@ -32,7 +32,7 @@ class RoleRouter(Routable):
                 "isActive": role.isActive,
                 "description": role.description or "",
                 "menus": role.menus if role.menus else [],
-                "createdTime": role.created_time.isoformat() if role.created_time else None,
+                "createdTime": role.createdTime.isoformat() if role.createdTime else None,
             }
             role_list.append(role_dict)
         return list_response(list_data=role_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
