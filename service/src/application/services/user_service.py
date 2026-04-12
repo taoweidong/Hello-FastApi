@@ -155,7 +155,7 @@ class UserService:
         return True
 
     async def create_superuser(self, dto: UserCreateDTO) -> UserResponseDTO:
-        """创建超级用户。"""
+        """创建超级用户，自动分配 admin 角色（拥有所有菜单权限）。"""
         if await self.repo.get_by_username(dto.username):
             raise ConflictError(f"用户名 '{dto.username}' 已存在")
         if dto.email and await self.repo.get_by_email(dto.email):
@@ -180,6 +180,12 @@ class UserService:
         )
         await self.repo.create(user)
         await self.session.flush()
+
+        # 自动分配 admin 角色，确保拥有所有菜单权限
+        admin_role = await self.role_repo.get_by_name("admin")
+        if admin_role:
+            await self.role_repo.assign_role_to_user(user.id, admin_role.id)
+
         created = await self.repo.get_by_id(user.id)
         if created is None:
             raise NotFoundError("超级用户创建后无法加载")

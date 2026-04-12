@@ -104,10 +104,13 @@ uv pip install -e ".[dev]"
 # 1. 创建数据库表
 python -m scripts.cli initdb
 
-# 2. 初始化 RBAC 数据
+# 2. 初始化测试数据（菜单、日志等）
+python -m scripts.cli seeddata
+
+# 3. 初始化 RBAC 数据（角色、菜单权限分配）
 python -m scripts.cli seedrbac
 
-# 3. 创建超级管理员
+# 4. 创建超级管理员（自动分配 admin 角色，拥有所有菜单权限）
 python -m scripts.cli createsuperuser -u admin -e admin@example.com -p admin123
 ```
 

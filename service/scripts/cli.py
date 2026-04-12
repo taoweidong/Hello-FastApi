@@ -49,6 +49,7 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
         user = await service.create_superuser(dto)
         await session.commit()
         print(f"超级管理员 '{user.username}' 创建成功 (id: {user.id})")
+        print("  已自动分配 admin 角色，拥有所有菜单权限")
 
 
 async def init_database() -> None:
@@ -60,10 +61,13 @@ async def init_database() -> None:
 
 
 async def seed_rbac() -> None:
-    """初始化默认角色。"""
+    """初始化默认角色，并为 admin 角色分配所有菜单权限。"""
+    from sqlmodel import select
+
     from src.domain.rbac_defaults import DEFAULT_ROLES
     from src.infrastructure.database import get_async_session_factory, init_db
-    from src.infrastructure.database.models import Role
+    from src.infrastructure.database.models import Menu, Role
+    from src.infrastructure.repositories.menu_repository import MenuRepository
     from src.infrastructure.repositories.role_repository import RoleRepository
 
     await init_db()
@@ -71,6 +75,7 @@ async def seed_rbac() -> None:
     session_factory = get_async_session_factory()
     async with session_factory() as session:
         role_repo = RoleRepository(session)
+        menu_repo = MenuRepository(session)
 
         # 创建默认角色
         for name, description in DEFAULT_ROLES.items():
@@ -79,6 +84,15 @@ async def seed_rbac() -> None:
                 role = Role(name=name, code=name, description=description, is_active=1)
                 await role_repo.create(role)
                 print(f"  创建角色: {name}")
+
+        # 为 admin 角色分配所有菜单权限
+        admin_role = await role_repo.get_by_name("admin")
+        if admin_role:
+            all_menus = await menu_repo.get_all(session)
+            menu_ids = [m.id for m in all_menus]
+            if menu_ids:
+                await role_repo.assign_menus_to_role(admin_role.id, menu_ids)
+                print(f"  admin 角色已分配 {len(menu_ids)} 个菜单权限")
 
         await session.commit()
         print("RBAC 初始数据创建成功")

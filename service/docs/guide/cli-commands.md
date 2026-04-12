@@ -48,15 +48,14 @@ python -m scripts.cli initdb
 
 初始化 RBAC（基于角色的访问控制）基础数据，包括：
 
-- 默认角色（超级管理员、普通用户等）
-- 默认权限定义
-- 角色-权限关联关系
+- 默认角色（admin、user、moderator）
+- 为 admin 角色分配所有菜单权限（确保超级管理员拥有完整权限）
 
 ```bash
 python -m scripts.cli seedrbac
 ```
 
-> **注意**：必须在 `initdb` 之后执行。
+> **注意**：必须在 `initdb` 和 `seeddata` 之后执行，因为菜单权限分配依赖菜单数据。
 
 ---
 
@@ -79,7 +78,11 @@ python -m scripts.cli seeddata
 
 ## createsuperuser
 
-创建超级管理员账户，超级用户拥有所有权限，无需逐一分配。
+创建超级管理员账户。超级用户拥有以下权限：
+
+- `is_superuser=1`：自动绕过所有权限检查
+- 自动分配 **admin 角色**：拥有所有菜单权限
+- 登录时自动获取全部菜单和路由
 
 ### 完整参数
 
@@ -122,12 +125,12 @@ python -m scripts.cli createsuperuser -u admin -e admin@example.com -p admin123 
 # 1. 创建数据库表
 python -m scripts.cli initdb
 
-# 2. 初始化 RBAC 数据（角色、权限）
-python -m scripts.cli seedrbac
-
-# 3. 初始化测试数据（菜单、日志等）
+# 2. 初始化测试数据（菜单、日志等）
 python -m scripts.cli seeddata
 
-# 4. 创建超级管理员
+# 3. 初始化 RBAC 数据（角色、菜单权限分配）
+python -m scripts.cli seedrbac
+
+# 4. 创建超级管理员（自动分配 admin 角色）
 python -m scripts.cli createsuperuser -u admin -e admin@example.com -p admin123
 ```
