@@ -1,13 +1,14 @@
 import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
-import { getMenuList, createMenu, updateMenu, deleteMenu } from "@/api/system";
+import { menuApi } from "@/api/system/menu";
 import { ElMessageBox } from "element-plus";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h } from "vue";
 import type { FormItemProps } from "../utils/types";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { cloneDeep, isAllEmpty, deviceDetection } from "@pureadmin/utils";
+import { formatHigherMenuOptions, getMenuType } from "../../hooks";
 
 export function useMenu() {
   const form = reactive({
@@ -17,18 +18,6 @@ export function useMenu() {
   const formRef = ref();
   const dataList = ref([]);
   const loading = ref(true);
-
-  /** 菜单类型：0-DIRECTORY(目录) 1-MENU(页面) 2-PERMISSION(按钮/权限) */
-  const getMenuType = (type, text = false) => {
-    switch (type) {
-      case 0:
-        return text ? "目录" : "primary";
-      case 1:
-        return text ? "页面" : "warning";
-      case 2:
-        return text ? "权限" : "info";
-    }
-  };
 
   const columns: TableColumnList = [
     {
@@ -106,7 +95,7 @@ export function useMenu() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await getMenuList();
+    const { code, data } = await menuApi.list();
     if (code === 0) {
       let newData = data;
       if (!isAllEmpty(form.title)) {
@@ -120,17 +109,6 @@ export function useMenu() {
     setTimeout(() => {
       loading.value = false;
     }, 500);
-  }
-
-  function formatHigherMenuOptions(treeList) {
-    if (!treeList || !treeList.length) return;
-    const newTreeList = [];
-    for (let i = 0; i < treeList.length; i++) {
-      treeList[i].title = treeList[i].meta?.title ?? treeList[i].name;
-      formatHigherMenuOptions(treeList[i].children);
-      newTreeList.push(treeList[i]);
-    }
-    return newTreeList;
   }
 
   function openDialog(title = "新增", row?: FormItemProps) {
@@ -173,14 +151,6 @@ export function useMenu() {
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
-        function chores() {
-          message(
-            `您${title}了菜单名称为${curData.meta?.title ?? curData.name}的这条数据`,
-            { type: "success" }
-          );
-          done();
-          onSearch();
-        }
         FormRef.validate(async valid => {
           if (valid) {
             try {
@@ -211,14 +181,14 @@ export function useMenu() {
               };
               
               if (title === "新增") {
-                const { code } = await createMenu(payload);
+                const { code } = await menuApi.create(payload);
                 if (code === 0 || code === 201) {
                   message(`成功创建菜单 ${curData.meta?.title ?? curData.name}`, { type: "success" });
                   done();
                   onSearch();
                 }
               } else {
-                const { code } = await updateMenu(row.id, payload);
+                const { code } = await menuApi.partialUpdate(row.id, payload);
                 if (code === 0) {
                   message(`成功更新菜单 ${curData.meta?.title ?? curData.name}`, { type: "success" });
                   done();
@@ -247,7 +217,7 @@ export function useMenu() {
       }
     )
       .then(async () => {
-        const { code } = await deleteMenu(row.id);
+        const { code } = await menuApi.destroy(row.id);
         if (code === 0) {
           message(`已成功删除菜单 ${row.meta?.title ?? row.name}`, { type: "success" });
           onSearch();

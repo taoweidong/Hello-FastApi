@@ -68,6 +68,19 @@ class OperationLogResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ============ 系统日志 DTO ============
+
+
+class SystemLogListQueryDTO(BaseModel):
+    """系统日志列表查询请求"""
+
+    pageNum: int = Field(default=1, ge=1)
+    pageSize: int = Field(default=10, ge=1, le=100)
+    module: str | None = None
+    status: str | None = None
+    createdTime: str | list | None = None
+
+
 # ============ 批量操作 DTO ============
 
 

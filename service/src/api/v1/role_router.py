@@ -32,7 +32,7 @@ class RoleRouter(Routable):
                 "isActive": role.isActive,
                 "description": role.description or "",
                 "menus": role.menus if role.menus else [],
-                "createdTime": role.createdTime.isoformat() if role.createdTime else None,
+                "createdTime": role.created_time.isoformat() if role.created_time else None,
             }
             role_list.append(role_dict)
         return list_response(list_data=role_list, total=total, page_size=query.pageSize, current_page=query.pageNum)

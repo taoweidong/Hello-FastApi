@@ -16,8 +16,13 @@ class SystemConfigRepositoryInterface(ABC):
     """系统配置的抽象仓储接口。"""
 
     @abstractmethod
-    async def get_all(self, session: AsyncSession) -> list["SystemConfig"]:
-        """获取所有配置。"""
+    async def get_all(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, key: str | None = None, is_active: int | None = None) -> list["SystemConfig"]:
+        """获取配置列表（支持分页和筛选）。"""
+        ...
+
+    @abstractmethod
+    async def count(self, session: AsyncSession, key: str | None = None, is_active: int | None = None) -> int:
+        """统计配置数量（支持筛选）。"""
         ...
 
     @abstractmethod

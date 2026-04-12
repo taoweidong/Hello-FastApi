@@ -1,4 +1,31 @@
+/**
+ * 系统管理 API - 兼容层
+ *
+ * 所有方法已迁移到 api/system/ 子模块，
+ * 此文件保留为兼容层，重新导出全部方法。
+ */
 import { http } from "@/utils/http";
+import { userApi } from "./system/user";
+import { roleApi } from "./system/role";
+import { menuApi } from "./system/menu";
+import { deptApi } from "./system/dept";
+import {
+  getOnlineLogsList,
+  forceOffline,
+  getLoginLogsList,
+  batchDeleteLoginLogs,
+  clearLoginLogs,
+  getOperationLogsList,
+  batchDeleteOperationLogs,
+  clearOperationLogs,
+  getSystemLogsList,
+  getSystemLogsDetail
+} from "./system/log";
+import { systemConfigApi } from "./system/system_config";
+
+// =============================================================================
+// 类型导出（向后兼容）
+// =============================================================================
 
 type Result = {
   code: number;
@@ -10,227 +37,183 @@ type ResultTable = {
   code: number;
   message: string;
   data?: {
-    /** 列表数据 */
     list: Array<any>;
-    /** 总条目数 */
     total?: number;
-    /** 每页显示条目个数 */
     pageSize?: number;
-    /** 当前页数 */
     currentPage?: number;
   };
 };
 
+// =============================================================================
+// 用户管理 — 委托给 UserApi
+// =============================================================================
+
 /** 获取系统管理-用户管理列表 */
-export const getUserList = (data?: object) => {
-  return http.request<ResultTable>("post", "/user", { data });
-};
+export const getUserList = (data?: object) => userApi.list(data);
 
 /** 系统管理-用户管理-获取所有角色列表 */
-export const getAllRoleList = () => {
-  return http.request<Result>("get", "/list-all-role");
-};
+export const getAllRoleList = () => userApi.getAllRoleList();
 
-/** 系统管理-用户管理-根据userId，获取对应角色id列表（userId：用户id） */
-export const getRoleIds = (data?: object) => {
-  return http.request<Result>("post", "/list-role-ids", { data });
-};
-
-/** 获取系统管理-角色管理列表 */
-export const getRoleList = (data?: object) => {
-  return http.request<ResultTable>("post", "/role", { data });
-};
-
-/** 获取系统管理-菜单管理列表 */
-export const getMenuList = (data?: object) => {
-  return http.request<Result>("post", "/menu", { data });
-};
-
-/** 获取系统管理-部门管理列表 */
-export const getDeptList = (data?: object) => {
-  return http.request<Result>("post", "/dept", { data });
-};
-
-/** 获取系统监控-在线用户列表 */
-export const getOnlineLogsList = (data?: object) => {
-  return http.request<ResultTable>("post", "/online-logs", { data });
-};
-
-/** 获取系统监控-登录日志列表 */
-export const getLoginLogsList = (data?: object) => {
-  return http.request<ResultTable>("post", "/login-logs", { data });
-};
-
-/** 获取系统监控-操作日志列表 */
-export const getOperationLogsList = (data?: object) => {
-  return http.request<ResultTable>("post", "/operation-logs", { data });
-};
-
-/** 获取系统监控-系统日志列表 */
-export const getSystemLogsList = (data?: object) => {
-  return http.request<ResultTable>("post", "/system-logs", { data });
-};
-
-/** 获取系统监控-系统日志-根据 id 查日志详情 */
-export const getSystemLogsDetail = (data?: object) => {
-  return http.request<Result>("post", "/system-logs-detail", { data });
-};
-
-/** 获取角色管理-权限-菜单权限 */
-export const getRoleMenu = (data?: object) => {
-  return http.request<Result>("post", "/role-menu", { data });
-};
-
-/** 获取角色管理-权限-菜单权限-根据角色 id 查对应菜单 */
-export const getRoleMenuIds = (data?: object) => {
-  return http.request<Result>("post", "/role-menu-ids", { data });
-};
-
-// =============================================================================
-// 用户管理 - 增删改操作
-// =============================================================================
+/** 系统管理-用户管理-根据userId，获取对应角色id列表 */
+export const getRoleIds = (data?: object) => userApi.getRoleIds(data);
 
 /** 创建用户 */
-export const createUser = (data?: object) => {
-  return http.request<Result>("post", "/user/create", { data });
-};
+export const createUser = (data?: object) => userApi.create(data);
 
 /** 更新用户 */
-export const updateUser = (id: string, data?: object) => {
-  return http.request<Result>("put", `/user/${id}`, { data });
-};
+export const updateUser = (id: string, data?: object) =>
+  userApi.partialUpdate(id, data);
 
 /** 删除用户 */
-export const deleteUser = (id: string) => {
-  return http.request<Result>("delete", `/user/${id}`);
-};
+export const deleteUser = (id: string) => userApi.destroy(id);
 
 /** 批量删除用户 */
-export const batchDeleteUser = (data?: object) => {
-  return http.request<Result>("post", "/user/batch-delete", { data });
-};
+export const batchDeleteUser = (data?: object) =>
+  userApi.batchDelete(data?.["ids"] ?? []);
 
 /** 重置密码 */
-export const resetPassword = (id: string, data?: object) => {
-  return http.request<Result>("put", `/user/${id}/reset-password`, { data });
-};
+export const resetPassword = (id: string, data?: object) =>
+  userApi.resetPassword(id, data);
 
 /** 修改用户状态 */
-export const updateUserStatus = (id: string, data?: object) => {
-  return http.request<Result>("put", `/user/${id}/status`, { data });
-};
+export const updateUserStatus = (id: string, data?: object) =>
+  userApi.updateStatus(id, data);
 
 /** 分配角色 */
-export const assignUserRole = (data?: object) => {
-  return http.request<Result>("post", "/user/assign-role", { data });
-};
+export const assignUserRole = (data?: object) => userApi.assignUserRole(data);
 
 // =============================================================================
-// 角色管理 - 增删改操作
+// 角色管理 — 委托给 RoleApi
 // =============================================================================
+
+/** 获取系统管理-角色管理列表 */
+export const getRoleList = (data?: object) => roleApi.list(data);
 
 /** 创建角色 */
-export const createRole = (data?: object) => {
-  return http.request<Result>("post", "/role/create", { data });
-};
+export const createRole = (data?: object) => roleApi.create(data);
 
 /** 更新角色 */
-export const updateRole = (id: string, data?: object) => {
-  return http.request<Result>("put", `/role/${id}`, { data });
-};
+export const updateRole = (id: string, data?: object) =>
+  roleApi.partialUpdate(id, data);
 
 /** 删除角色 */
-export const deleteRole = (id: string) => {
-  return http.request<Result>("delete", `/role/${id}`);
-};
+export const deleteRole = (id: string) => roleApi.destroy(id);
 
 /** 修改角色状态 */
-export const updateRoleStatus = (id: string, data?: object) => {
-  return http.request<Result>("put", `/role/${id}/status`, { data });
-};
+export const updateRoleStatus = (id: string, data?: object) =>
+  roleApi.updateStatus(id, data);
+
+/** 获取角色管理-权限-菜单权限 */
+export const getRoleMenu = (data?: object) => roleApi.getRoleMenu(data);
+
+/** 获取角色管理-权限-菜单权限-根据角色id查对应菜单 */
+export const getRoleMenuIds = (data?: object) => roleApi.getRoleMenuIds(data);
 
 /** 保存角色菜单权限 */
-export const saveRoleMenu = (roleId: string, menuIds: string[]) => {
-  return http.request<Result>("post", `/role/${roleId}/menu`, { data: { menuIds } });
-};
+export const saveRoleMenu = (roleId: string, menuIds: string[]) =>
+  roleApi.saveRoleMenu(roleId, menuIds);
 
 // =============================================================================
-// 部门管理 - 增删改操作
+// 菜单管理 — 委托给 MenuApi
 // =============================================================================
 
-/** 创建部门 */
-export const createDept = (data?: object) => {
-  return http.request<Result>("post", "/dept/create", { data });
-};
-
-/** 更新部门 */
-export const updateDept = (id: string, data?: object) => {
-  return http.request<Result>("put", `/dept/${id}`, { data });
-};
-
-/** 删除部门 */
-export const deleteDept = (id: string) => {
-  return http.request<Result>("delete", `/dept/${id}`);
-};
-
-// =============================================================================
-// 菜单管理 - 增删改操作
-// =============================================================================
+/** 获取系统管理-菜单管理列表 */
+export const getMenuList = (data?: object) => menuApi.list(data);
 
 /** 创建菜单 */
-export const createMenu = (data?: object) => {
-  return http.request<Result>("post", "/menu/create", { data });
-};
+export const createMenu = (data?: object) => menuApi.create(data);
 
 /** 更新菜单 */
-export const updateMenu = (id: string, data?: object) => {
-  return http.request<Result>("put", `/menu/${id}`, { data });
-};
+export const updateMenu = (id: string, data?: object) =>
+  menuApi.partialUpdate(id, data);
 
 /** 删除菜单 */
-export const deleteMenu = (id: string) => {
-  return http.request<Result>("delete", `/menu/${id}`);
+export const deleteMenu = (id: string) => menuApi.destroy(id);
+
+// =============================================================================
+// 部门管理 — 委托给 DeptApi
+// =============================================================================
+
+/** 获取系统管理-部门管理列表 */
+export const getDeptList = (data?: object) => deptApi.list(data);
+
+/** 创建部门 */
+export const createDept = (data?: object) => deptApi.create(data);
+
+/** 更新部门 */
+export const updateDept = (id: string, data?: object) =>
+  deptApi.partialUpdate(id, data);
+
+/** 删除部门 */
+export const deleteDept = (id: string) => deptApi.destroy(id);
+
+// =============================================================================
+// 日志管理 — 直接从 log 模块导出
+// =============================================================================
+
+export {
+  getOnlineLogsList,
+  forceOffline,
+  getLoginLogsList,
+  batchDeleteLoginLogs,
+  clearLoginLogs,
+  getOperationLogsList,
+  batchDeleteOperationLogs,
+  clearOperationLogs,
+  getSystemLogsList,
+  getSystemLogsDetail
 };
 
 // =============================================================================
-// 日志管理 - 删除/清空操作
+// IP 规则管理 — 暂保留内联
 // =============================================================================
 
-/** 批量删除登录日志 */
-export const batchDeleteLoginLogs = (data?: object) => {
-  return http.request<Result>("post", "/login-logs/batch-delete", { data });
+/** 获取 IP 规则列表 */
+export const getIpRuleList = (data?: object) => {
+  return http.request<ResultTable>("post", "/ip-rule", { data });
 };
 
-/** 清空登录日志 */
-export const clearLoginLogs = () => {
-  return http.request<Result>("post", "/login-logs/clear");
+/** 创建 IP 规则 */
+export const createIpRule = (data?: object) => {
+  return http.request<Result>("post", "/ip-rule/create", { data });
 };
 
-/** 批量删除操作日志 */
-export const batchDeleteOperationLogs = (data?: object) => {
-  return http.request<Result>("post", "/operation-logs/batch-delete", { data });
+/** 更新 IP 规则 */
+export const updateIpRule = (id: string, data?: object) => {
+  return http.request<Result>("put", `/ip-rule/${id}`, { data });
 };
 
-/** 清空操作日志 */
-export const clearOperationLogs = () => {
-  return http.request<Result>("post", "/operation-logs/clear");
+/** 删除 IP 规则 */
+export const deleteIpRule = (id: string) => {
+  return http.request<Result>("delete", `/ip-rule/${id}`);
 };
 
-/** 批量删除系统日志 */
-export const batchDeleteSystemLogs = (data?: object) => {
-  return http.request<Result>("post", "/system-logs/batch-delete", { data });
+/** 批量删除 IP 规则 */
+export const batchDeleteIpRule = (data?: object) => {
+  return http.request<Result>("post", "/ip-rule/batch-delete", { data });
 };
 
-/** 清空系统日志 */
-export const clearSystemLogs = () => {
-  return http.request<Result>("post", "/system-logs/clear");
+/** 清空 IP 规则 */
+export const clearIpRule = () => {
+  return http.request<Result>("post", "/ip-rule/clear");
 };
 
 // =============================================================================
-// 在线用户 - 强制下线
+// 系统配置管理 — 委托给 SystemConfigApi
 // =============================================================================
 
-/** 强制下线 */
-export const forceOffline = (data?: object) => {
-  return http.request<Result>("post", "/online-logs/force-offline", { data });
-};
+/** 获取系统配置列表 */
+export const getConfigList = (data?: object) => systemConfigApi.list(data);
+
+/** 创建系统配置 */
+export const createConfig = (data?: object) => systemConfigApi.create(data);
+
+/** 获取系统配置详情 */
+export const getConfig = (id: string) => systemConfigApi.retrieve(id);
+
+/** 更新系统配置 */
+export const updateConfig = (id: string, data?: object) =>
+  systemConfigApi.partialUpdate(id, data);
+
+/** 删除系统配置 */
+export const deleteConfig = (id: string) => systemConfigApi.destroy(id);

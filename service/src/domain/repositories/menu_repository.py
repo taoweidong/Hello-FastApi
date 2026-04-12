@@ -41,6 +41,11 @@ class MenuRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def get_by_name(self, name: str, session: AsyncSession) -> "Menu | None":
+        """根据名称获取菜单。"""
+        ...
+
+    @abstractmethod
     async def get_by_parent_id(self, parent_id: str | None, session: AsyncSession) -> list["Menu"]:
         """根据父菜单 ID 获取子菜单。"""
         ...

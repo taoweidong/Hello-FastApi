@@ -9,7 +9,7 @@ from classy_fastapi import Routable, delete, post, put
 from fastapi import Body, Depends
 
 from src.api.common import success_response
-from src.api.dependencies import get_current_active_user, get_department_service
+from src.api.dependencies import get_current_active_user, get_department_service, require_permission
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
 from src.application.services.department_service import DepartmentService
 
@@ -18,7 +18,7 @@ class DeptRouter(Routable):
     """部门管理路由类，提供部门增删改查功能。"""
 
     @post("/dept")
-    async def get_dept_list(self, data: dict = Body(default={}), service: DepartmentService = Depends(get_department_service), current_user: dict = Depends(get_current_active_user)) -> dict:
+    async def get_dept_list(self, data: dict = Body(default={}), service: DepartmentService = Depends(get_department_service), _: dict = Depends(require_permission("dept:view"))) -> dict:
         """获取部门列表（扁平结构）。"""
         query = DepartmentListQueryDTO(name=data.get("name"), isActive=data.get("isActive"))
         departments = await service.get_departments(query)
@@ -34,25 +34,25 @@ class DeptRouter(Routable):
                 "autoBind": dept.autoBind,
                 "isActive": dept.isActive,
                 "description": dept.description or "",
-                "createdTime": dept.createdTime.isoformat() if dept.createdTime else None,
+                "createdTime": dept.created_time.isoformat() if dept.created_time else None,
             }
             dept_list.append(dept_dict)
         return success_response(data=dept_list)
 
     @post("/dept/create")
-    async def create_department(self, dto: DepartmentCreateDTO, service: DepartmentService = Depends(get_department_service), current_user: dict = Depends(get_current_active_user)) -> dict:
+    async def create_department(self, dto: DepartmentCreateDTO, service: DepartmentService = Depends(get_department_service), _: dict = Depends(require_permission("dept:add"))) -> dict:
         """创建部门。"""
         department = await service.create_department(dto)
         return success_response(data={"id": department.id, "name": department.name}, message="创建成功", code=201)
 
     @put("/dept/{dept_id}")
-    async def update_department(self, dept_id: str, dto: DepartmentUpdateDTO, service: DepartmentService = Depends(get_department_service), current_user: dict = Depends(get_current_active_user)) -> dict:
+    async def update_department(self, dept_id: str, dto: DepartmentUpdateDTO, service: DepartmentService = Depends(get_department_service), _: dict = Depends(require_permission("dept:edit"))) -> dict:
         """更新部门。"""
         department = await service.update_department(dept_id, dto)
         return success_response(data={"id": department.id, "name": department.name}, message="更新成功")
 
     @delete("/dept/{dept_id}")
-    async def delete_department(self, dept_id: str, service: DepartmentService = Depends(get_department_service), current_user: dict = Depends(get_current_active_user)) -> dict:
+    async def delete_department(self, dept_id: str, service: DepartmentService = Depends(get_department_service), _: dict = Depends(require_permission("dept:delete"))) -> dict:
         """删除部门。"""
         await service.delete_department(dept_id)
         return success_response(message="删除成功")

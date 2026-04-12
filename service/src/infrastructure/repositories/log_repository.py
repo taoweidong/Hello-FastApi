@@ -135,3 +135,39 @@ class LogRepository:
             await session.delete(log)
         await session.flush()
         return count
+
+    # ============ 系统日志（与操作日志共享 sys_logs 表） ============
+
+    async def get_system_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[SystemLog], int]:
+        """获取系统日志列表（支持筛选和分页）。与操作日志共享同一张表。"""
+        query = select(SystemLog)
+        count_query = select(sa_func.count()).select_from(SystemLog)
+
+        if module:
+            query = query.where(SystemLog.module.contains(module))
+            count_query = count_query.where(SystemLog.module.contains(module))
+        if status_code is not None:
+            query = query.where(SystemLog.status_code == status_code)
+            count_query = count_query.where(SystemLog.status_code == status_code)
+        if start_time:
+            query = query.where(SystemLog.created_time >= start_time)
+            count_query = count_query.where(SystemLog.created_time >= start_time)
+        if end_time:
+            query = query.where(SystemLog.created_time <= end_time)
+            count_query = count_query.where(SystemLog.created_time <= end_time)
+
+        query = query.order_by(SystemLog.created_time.desc())
+        offset = (page_num - 1) * page_size
+        query = query.offset(offset).limit(page_size)
+
+        result = await session.exec(query)
+        logs = list(result.all())
+
+        total_result = await session.execute(count_query)
+        total = total_result.scalar_one()
+
+        return logs, total
+
+    async def get_system_log_detail(self, session: AsyncSession, log_id: str) -> SystemLog | None:
+        """获取系统日志详情。"""
+        return await session.get(SystemLog, log_id)

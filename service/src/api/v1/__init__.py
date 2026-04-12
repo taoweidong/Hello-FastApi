@@ -7,6 +7,7 @@ from fastapi import APIRouter
 
 from src.api.v1.auth_router import AuthRouter
 from src.api.v1.dept_router import DeptRouter
+from src.api.v1.ip_rule_router import IPRuleRouter
 from src.api.v1.log_router import LogRouter
 from src.api.v1.menu_router import MenuRouter
 from src.api.v1.monitor_router import MonitorRouter
@@ -40,5 +41,8 @@ system_router.include_router(SystemConfigRouter().router, prefix="/config", tags
 
 # 系统监控路由（stub 接口）
 system_router.include_router(MonitorRouter().router, tags=["系统监控"])
+
+# IP规则管理路由
+system_router.include_router(IPRuleRouter().router, prefix="/ip-rule", tags=["IP规则管理"])
 
 __all__ = ["system_router"]

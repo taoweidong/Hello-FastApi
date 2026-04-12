@@ -9,7 +9,8 @@ import { addDialog } from "@/components/ReDialog";
 import type { FormItemProps } from "../utils/types";
 import type { PaginationProps } from "@pureadmin/table";
 import { getKeyList, deviceDetection } from "@pureadmin/utils";
-import { getRoleList, getRoleMenu, getRoleMenuIds, createRole, updateRole, deleteRole, updateRoleStatus, saveRoleMenu } from "@/api/system";
+import { roleApi } from "@/api/system/role";
+import { menuApi } from "@/api/system/menu";
 import { type Ref, reactive, ref, onMounted, h, toRaw, watch } from "vue";
 
 export function useRole(treeRef: Ref) {
@@ -78,10 +79,10 @@ export function useRole(treeRef: Ref) {
     },
     {
       label: "创建时间",
-      prop: "createTime",
+      prop: "createdTime",
       minWidth: 160,
-      formatter: ({ createTime }) =>
-        dayjs(createTime).format("YYYY-MM-DD HH:mm:ss")
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "操作",
@@ -90,15 +91,6 @@ export function useRole(treeRef: Ref) {
       slot: "operation"
     }
   ];
-  // const buttonClass = computed(() => {
-  //   return [
-  //     "h-5!",
-  //     "reset-margin",
-  //     "text-gray-500!",
-  //     "dark:text-white!",
-  //     "dark:hover:text-primary!"
-  //   ];
-  // });
 
   function onChange({ row, index }) {
     ElMessageBox.confirm(
@@ -125,7 +117,7 @@ export function useRole(treeRef: Ref) {
           }
         );
         try {
-          const { code } = await updateRoleStatus(row.id, { isActive: row.isActive });
+          const { code } = await roleApi.updateStatus(row.id, { isActive: row.isActive });
           if (code === 0) {
             message(`已${row.isActive ? "启用" : "停用"}${row.name}`, { type: "success" });
           }
@@ -160,7 +152,7 @@ export function useRole(treeRef: Ref) {
       }
     )
       .then(async () => {
-        const { code } = await deleteRole(row.id);
+        const { code } = await roleApi.destroy(row.id);
         if (code === 0) {
           message(`已成功删除角色 ${row.name}`, { type: "success" });
           onSearch();
@@ -183,7 +175,7 @@ export function useRole(treeRef: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await getRoleList(toRaw(form));
+    const { code, data } = await roleApi.list(toRaw(form));
     if (code === 0) {
       dataList.value = data.list;
       pagination.total = data.total;
@@ -232,14 +224,14 @@ export function useRole(treeRef: Ref) {
               };
               
               if (title === "新增") {
-                const { code } = await createRole(payload);
+                const { code } = await roleApi.create(payload);
                 if (code === 0 || code === 201) {
                   message(`成功创建角色 ${curData.name}`, { type: "success" });
                   done();
                   onSearch();
                 }
               } else {
-                const { code } = await updateRole(row.id, payload);
+                const { code } = await roleApi.partialUpdate(row.id, payload);
                 if (code === 0) {
                   message(`成功更新角色 ${curData.name}`, { type: "success" });
                   done();
@@ -261,7 +253,7 @@ export function useRole(treeRef: Ref) {
     if (id) {
       curRow.value = row;
       isShow.value = true;
-      const { code, data } = await getRoleMenuIds({ id });
+      const { code, data } = await roleApi.getRoleMenuIds({ id });
       if (code === 0) {
         treeRef.value.setCheckedKeys(data);
       }
@@ -285,7 +277,7 @@ export function useRole(treeRef: Ref) {
     const menuIds = treeRef.value.getCheckedKeys();
     
     try {
-      const { code } = await saveRoleMenu(id, menuIds);
+      const { code } = await roleApi.saveRoleMenu(id, menuIds);
       if (code === 0) {
         message(`角色 ${name} 的菜单权限修改成功`, { type: "success" });
       }
@@ -293,9 +285,6 @@ export function useRole(treeRef: Ref) {
       message("保存菜单权限失败", { type: "error" });
     }
   }
-
-  /** 数据权限 可自行开发 */
-  // function handleDatabase() {}
 
   const onQueryChanged = (query: string) => {
     treeRef.value!.filter(query);
@@ -307,7 +296,7 @@ export function useRole(treeRef: Ref) {
 
   onMounted(async () => {
     onSearch();
-    const { code, data } = await getRoleMenu();
+    const { code, data } = await roleApi.getRoleMenu();
     if (code === 0) {
       treeIds.value = getKeyList(data, "id");
       treeData.value = handleTree(data);
@@ -341,7 +330,6 @@ export function useRole(treeRef: Ref) {
     isExpandAll,
     isSelectAll,
     treeSearchValue,
-    // buttonClass,
     onSearch,
     resetForm,
     openDialog,
@@ -351,7 +339,6 @@ export function useRole(treeRef: Ref) {
     filterMethod,
     transformI18n,
     onQueryChanged,
-    // handleDatabase,
     handleSizeChange,
     handleCurrentChange,
     handleSelectionChange

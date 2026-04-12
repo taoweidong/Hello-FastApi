@@ -88,6 +88,10 @@ class MenuRepository(MenuRepositoryInterface):
 
         return result.rowcount > 0  # type: ignore[union-attr]
 
+    async def get_by_name(self, name: str, session: AsyncSession) -> Menu | None:
+        """根据名称获取菜单。"""
+        return await self._crud.get(session, name=name, schema_to_select=Menu, return_as_model=True)
+
     async def get_by_parent_id(self, parent_id: str | None, session: AsyncSession) -> list[Menu]:
         """根据父菜单 ID 获取子菜单，按排序号排序。"""
         result = await self._crud.get_multi(session, parent_id=parent_id, schema_to_select=Menu, return_as_model=True, return_total_count=False)

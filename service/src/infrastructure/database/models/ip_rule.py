@@ -20,8 +20,12 @@ class IPRule(SQLModel, table=True):
     rule_type: str = Field(max_length=10)  # "whitelist" 或 "blacklist"
     reason: str | None = Field(default=None, max_length=255)
     is_active: int = Field(default=1)  # 是否启用
-    created_at: datetime | None = Field(default=None, sa_column=Column(DateTime, server_default=func.now()))
+    creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
+    modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
+    created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
+    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
     expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime, nullable=True))
+    description: str | None = Field(default=None, max_length=256)
 
     def __repr__(self) -> str:
         return f"<IPRule(ip={self.ip_address}, type={self.rule_type})>"

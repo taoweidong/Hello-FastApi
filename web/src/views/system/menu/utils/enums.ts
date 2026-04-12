@@ -1,21 +1,18 @@
 import type { OptionsType } from "@/components/ReSegmented";
 
+/** 菜单类型：0-DIRECTORY(目录) 1-MENU(页面) 2-PERMISSION(按钮/权限) */
 const menuTypeOptions: Array<OptionsType> = [
   {
-    label: "菜单",
+    label: "目录",
     value: 0
   },
   {
-    label: "iframe",
+    label: "页面",
     value: 1
   },
   {
-    label: "外链",
+    label: "权限",
     value: 2
-  },
-  {
-    label: "按钮",
-    value: 3
   }
 ];
 
@@ -97,6 +94,15 @@ const frameLoadingOptions: Array<OptionsType> = [
   }
 ];
 
+/** HTTP 方法选项（PERMISSION 类型使用） */
+const methodOptions: Array<OptionsType> = [
+  { label: "GET", value: "GET" },
+  { label: "POST", value: "POST" },
+  { label: "PUT", value: "PUT" },
+  { label: "PATCH", value: "PATCH" },
+  { label: "DELETE", value: "DELETE" }
+];
+
 export {
   menuTypeOptions,
   showLinkOptions,
@@ -104,5 +110,6 @@ export {
   keepAliveOptions,
   hiddenTagOptions,
   showParentOptions,
-  frameLoadingOptions
+  frameLoadingOptions,
+  methodOptions
 };

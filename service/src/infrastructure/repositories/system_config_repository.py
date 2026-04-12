@@ -1,6 +1,8 @@
 """使用 SQLModel 和 FastCRUD 实现的系统配置仓库。"""
 
 from fastcrud import FastCRUD
+from sqlalchemy import func as sa_func
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.repositories.system_config_repository import SystemConfigRepositoryInterface
@@ -14,10 +16,31 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
         self.session = session
         self._crud = FastCRUD(SystemConfig)
 
-    async def get_all(self, session: AsyncSession) -> list[SystemConfig]:
-        """获取所有配置。"""
-        result = await self._crud.get_multi(session, schema_to_select=SystemConfig, return_as_model=True, return_total_count=False)
-        return list(result.get("data", []))
+    async def get_all(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, key: str | None = None, is_active: int | None = None) -> list[SystemConfig]:
+        """获取配置列表（支持分页和筛选）。"""
+        offset = (page_num - 1) * page_size
+        query = select(SystemConfig)
+
+        if key:
+            query = query.where(SystemConfig.key.contains(key))
+        if is_active is not None:
+            query = query.where(SystemConfig.is_active == is_active)
+
+        query = query.offset(offset).limit(page_size)
+        result = await session.exec(query)
+        return list(result.all())
+
+    async def count(self, session: AsyncSession, key: str | None = None, is_active: int | None = None) -> int:
+        """统计配置数量（支持筛选）。"""
+        count_query = select(sa_func.count()).select_from(SystemConfig)
+
+        if key:
+            count_query = count_query.where(SystemConfig.key.contains(key))
+        if is_active is not None:
+            count_query = count_query.where(SystemConfig.is_active == is_active)
+
+        result = await session.execute(count_query)
+        return result.scalar_one()
 
     async def get_by_id(self, config_id: str, session: AsyncSession) -> SystemConfig | None:
         """根据 ID 获取配置。"""

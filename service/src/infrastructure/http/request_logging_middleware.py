@@ -1,16 +1,80 @@
-"""请求日志中间件。"""
+"""请求日志中间件。
+
+记录所有 HTTP 请求，并对非 GET 请求自动写入 SystemLog 表作为审计日志。
+"""
 
 import time
+import uuid
 from collections.abc import Callable
+from datetime import datetime, timezone
 
 from fastapi import Request, Response
+from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from src.config.settings import settings
 from src.infrastructure.logging.logger import log_request, logger
 
 
+def _extract_user_agent_info(user_agent: str) -> tuple[str, str]:
+    """从 User-Agent 字符串中粗略提取浏览器和操作系统信息。
+
+    Returns:
+        (browser, system) 元组
+    """
+    browser = "unknown"
+    system = "unknown"
+
+    if not user_agent:
+        return browser, system
+
+    ua_lower = user_agent.lower()
+    if "windows" in ua_lower:
+        system = "Windows"
+    elif "mac os" in ua_lower:
+        system = "Mac OS"
+    elif "linux" in ua_lower:
+        system = "Linux"
+    elif "android" in ua_lower:
+        system = "Android"
+    elif "iphone" in ua_lower or "ipad" in ua_lower:
+        system = "iOS"
+
+    if "edg/" in ua_lower:
+        browser = "Edge"
+    elif "chrome/" in ua_lower:
+        browser = "Chrome"
+    elif "firefox/" in ua_lower:
+        browser = "Firefox"
+    elif "safari/" in ua_lower and "chrome/" not in ua_lower:
+        browser = "Safari"
+
+    return browser, system
+
+
+def _try_decode_user_id(authorization: str | None) -> str | None:
+    """尝试从 Authorization header 解码 JWT 获取用户 ID。
+
+    解码失败时静默返回 None，不抛出异常。
+    """
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization[7:]
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        if payload.get("type") == "access":
+            return str(payload.get("sub", ""))
+    except JWTError:
+        pass
+    return None
+
+
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
-    """记录所有 HTTP 请求的中间件。"""
+    """记录所有 HTTP 请求的中间件。
+
+    - 所有请求：打印日志 + 记录处理时间
+    - 非 GET 请求：额外写入 SystemLog 表作为审计日志
+    """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         start_time = time.time()
@@ -18,6 +82,18 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         # 记录请求开始
         logger.debug(f"请求开始: {request.method} {request.url.path} 来自 {client_ip}")
+
+        # 读取请求体（仅非 GET 请求需要）
+        body_str: str | None = None
+        if request.method != "GET":
+            try:
+                body_bytes = await request.body()
+                if body_bytes:
+                    body_str = body_bytes.decode("utf-8", errors="replace")
+                    if len(body_str) > 4000:
+                        body_str = body_str[:4000] + "...(truncated)"
+            except Exception:
+                body_str = None
 
         response: Response = await call_next(request)
 
@@ -30,4 +106,71 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         # 添加处理时间到响应头
         response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
+
+        # 非 GET 请求写入 SystemLog 审计表
+        if request.method != "GET":
+            await self._write_system_log(
+                request=request,
+                response=response,
+                client_ip=client_ip,
+                body=body_str,
+                duration_ms=duration_ms,
+            )
+
         return response
+
+    async def _write_system_log(
+        self,
+        request: Request,
+        response: Response,
+        client_ip: str,
+        body: str | None,
+        duration_ms: float,
+    ) -> None:
+        """将非 GET 请求写入 SystemLog 审计表。"""
+        from sqlmodel.ext.asyncio.session import AsyncSession
+
+        from src.infrastructure.database import get_async_session_factory
+        from src.infrastructure.database.models import SystemLog
+
+        try:
+            user_agent = request.headers.get("user-agent", "")
+            browser, system = _extract_user_agent_info(user_agent)
+            creator_id = _try_decode_user_id(request.headers.get("authorization"))
+
+            log_entry = SystemLog(
+                id=uuid.uuid4().hex,
+                module=self._extract_module(request.url.path),
+                path=request.url.path,
+                body=body,
+                method=request.method,
+                ipaddress=client_ip,
+                browser=browser,
+                system=system,
+                response_code=response.status_code,
+                response_result=None,
+                status_code=response.status_code,
+                creator_id=creator_id,
+                created_time=datetime.now(timezone.utc),
+                updated_time=datetime.now(timezone.utc),
+                description=f"{request.method} {request.url.path} - {duration_ms:.0f}ms",
+            )
+
+            session_factory = get_async_session_factory()
+            async with AsyncSession(session_factory.kw["bind"], expire_on_commit=False) as session:
+                session.add(log_entry)
+                await session.commit()
+        except Exception:
+            logger.warning(f"写入 SystemLog 审计日志失败: {request.method} {request.url.path}", exc_info=True)
+
+    @staticmethod
+    def _extract_module(path: str) -> str:
+        """从请求路径提取模块名称。
+
+        例如: /api/system/user -> user, /api/system/role/create -> role
+        """
+        parts = path.strip("/").split("/")
+        # 路径格式通常为 /api/system/{module}/...
+        if len(parts) >= 3:
+            return parts[2]
+        return path

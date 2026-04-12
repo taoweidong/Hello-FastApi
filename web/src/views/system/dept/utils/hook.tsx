@@ -2,9 +2,9 @@ import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
-import { getDeptList, createDept, updateDept, deleteDept } from "@/api/system";
+import { deptApi } from "@/api/system/dept";
 import { ElMessageBox } from "element-plus";
-import { usePublicHooks } from "../../hooks";
+import { usePublicHooks, formatHigherDeptOptions } from "../../hooks";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h } from "vue";
 import type { FormItemProps } from "../utils/types";
@@ -46,9 +46,9 @@ export function useDept() {
     {
       label: "创建时间",
       minWidth: 200,
-      prop: "createTime",
-      formatter: ({ createTime }) =>
-        dayjs(createTime).format("YYYY-MM-DD HH:mm:ss")
+      prop: "createdTime",
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "描述",
@@ -75,35 +75,21 @@ export function useDept() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await getDeptList(); // 这里是返回一维数组结构，前端自行处理成树结构，返回格式要求：唯一id加父节点parentId，parentId取父节点id
+    const { code, data } = await deptApi.list();
     if (code === 0) {
       let newData = data;
       if (!isAllEmpty(form.name)) {
-        // 前端搜索部门名称
         newData = newData.filter(item => item.name.includes(form.name));
       }
       if (!isAllEmpty(form.isActive)) {
-        // 前端搜索状态
         newData = newData.filter(item => item.isActive === form.isActive);
       }
-      dataList.value = handleTree(newData); // 处理成树结构
+      dataList.value = handleTree(newData);
     }
 
     setTimeout(() => {
       loading.value = false;
     }, 500);
-  }
-
-  function formatHigherDeptOptions(treeList) {
-    // 根据返回数据的status字段值判断追加是否禁用disabled字段，返回处理后的树结构，用于上级部门级联选择器的展示（实际开发中也是如此，不可能前端需要的每个字段后端都会返回，这时需要前端自行根据后端返回的某些字段做逻辑处理）
-    if (!treeList || !treeList.length) return;
-    const newTreeList = [];
-    for (let i = 0; i < treeList.length; i++) {
-      treeList[i].disabled = !treeList[i].isActive;
-      formatHigherDeptOptions(treeList[i].children);
-      newTreeList.push(treeList[i]);
-    }
-    return newTreeList;
   }
 
   function openDialog(title = "新增", row?: FormItemProps) {
@@ -114,6 +100,7 @@ export function useDept() {
           higherDeptOptions: formatHigherDeptOptions(cloneDeep(dataList.value)),
           parentId: row?.parentId ?? 0,
           name: row?.name ?? "",
+          code: row?.code ?? "",
           principal: row?.principal ?? "",
           phone: row?.phone ?? "",
           email: row?.email ?? "",
@@ -137,6 +124,7 @@ export function useDept() {
             try {
               const payload = {
                 name: curData.name,
+                code: curData.code || null,
                 parentId: curData.parentId || 0,
                 rank: curData.rank,
                 principal: curData.principal || null,
@@ -147,14 +135,14 @@ export function useDept() {
               };
               
               if (title === "新增") {
-                const { code } = await createDept(payload);
+                const { code } = await deptApi.create(payload);
                 if (code === 0 || code === 201) {
                   message(`成功创建部门 ${curData.name}`, { type: "success" });
                   done();
                   onSearch();
                 }
               } else {
-                const { code } = await updateDept(row.id, payload);
+                const { code } = await deptApi.partialUpdate(row.id, payload);
                 if (code === 0) {
                   message(`成功更新部门 ${curData.name}`, { type: "success" });
                   done();
@@ -183,7 +171,7 @@ export function useDept() {
       }
     )
       .then(async () => {
-        const { code } = await deleteDept(row.id);
+        const { code } = await deptApi.destroy(row.id);
         if (code === 0) {
           message(`已成功删除部门 ${row.name}`, { type: "success" });
           onSearch();
@@ -201,13 +189,9 @@ export function useDept() {
     loading,
     columns,
     dataList,
-    /** 搜索 */
     onSearch,
-    /** 重置 */
     resetForm,
-    /** 新增、修改部门 */
     openDialog,
-    /** 删除部门 */
     handleDelete,
     handleSelectionChange
   };

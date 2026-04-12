@@ -8,6 +8,7 @@ from src.api.dependencies.auth import get_current_active_user, get_current_user_
 from src.api.dependencies.auth_service import get_auth_service
 from src.api.dependencies.department_service import get_department_service
 from src.api.dependencies.domain_services import get_password_service, get_token_service
+from src.api.dependencies.ip_rule_service import get_ip_rule_service
 from src.api.dependencies.log_service import get_log_service
 from src.api.dependencies.menu_service import get_menu_repository, get_menu_service
 from src.api.dependencies.role_service import get_role_repository, get_role_service
@@ -28,6 +29,7 @@ __all__ = [
     # 应用服务工厂
     "get_auth_service",
     "get_department_service",
+    "get_ip_rule_service",
     "get_log_service",
     "get_menu_service",
     "get_role_service",

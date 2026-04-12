@@ -18,7 +18,7 @@ export interface DataInfo<T> {
   /** 当前登录用户的角色 */
   roles?: Array<string>;
   /** 当前登录用户的按钮级别权限（基于菜单name） */
-  menus?: Array<string>;
+  permissions?: Array<string>;
 }
 
 export const userKey = "user-info";
@@ -68,12 +68,12 @@ export function setToken(data: DataInfo<Date>) {
       : {}
   );
 
-  function setUserKey({ avatar, username, nickname, roles, menus }) {
+  function setUserKey({ avatar, username, nickname, roles, permissions }) {
     useUserStoreHook().SET_AVATAR(avatar);
     useUserStoreHook().SET_USERNAME(username);
     useUserStoreHook().SET_NICKNAME(nickname);
     useUserStoreHook().SET_ROLES(roles);
-    useUserStoreHook().SET_MENUS(menus);
+    useUserStoreHook().SET_PERMISSIONS(permissions);
     storageLocal().setItem(userKey, {
       refreshToken,
       expires,
@@ -81,7 +81,7 @@ export function setToken(data: DataInfo<Date>) {
       username,
       nickname,
       roles,
-      menus
+      permissions
     });
   }
 
@@ -92,7 +92,7 @@ export function setToken(data: DataInfo<Date>) {
       username,
       nickname: data?.nickname ?? "",
       roles,
-      menus: data?.menus ?? []
+      permissions: data?.permissions ?? []
     });
   } else {
     const avatar =
@@ -103,14 +103,14 @@ export function setToken(data: DataInfo<Date>) {
       storageLocal().getItem<DataInfo<number>>(userKey)?.nickname ?? "";
     const roles =
       storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [];
-    const menus =
-      storageLocal().getItem<DataInfo<number>>(userKey)?.menus ?? [];
+    const permissions =
+      storageLocal().getItem<DataInfo<number>>(userKey)?.permissions ?? [];
     setUserKey({
       avatar,
       username,
       nickname,
       roles,
-      menus
+      permissions
     });
   }
 }
@@ -127,15 +127,15 @@ export const formatToken = (token: string): string => {
   return "Bearer " + token;
 };
 
-/** 是否有按钮级别的权限（根据登录接口返回的`menus`字段进行判断，基于菜单name）*/
+/** 是否有按钮级别的权限（根据登录接口返回的`permissions`字段进行判断，基于菜单name）*/
 export const hasPerms = (value: string | Array<string>): boolean => {
   if (!value) return false;
   const allPerms = "*:*:*";
-  const { menus } = useUserStoreHook();
-  if (!menus) return false;
-  if (menus.length === 1 && menus[0] === allPerms) return true;
+  const { permissions } = useUserStoreHook();
+  if (!permissions) return false;
+  if (permissions.length === 1 && permissions[0] === allPerms) return true;
   const isAuths = isString(value)
-    ? menus.includes(value)
-    : isIncludeAllChildren(value, menus);
+    ? permissions.includes(value)
+    : isIncludeAllChildren(value, permissions);
   return isAuths ? true : false;
 };

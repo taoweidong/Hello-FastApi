@@ -1,7 +1,7 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { getKeyList } from "@pureadmin/utils";
-import { getLoginLogsList, batchDeleteLoginLogs, clearLoginLogs } from "@/api/system";
+import { getLoginLogsList, batchDeleteLoginLogs, clearLoginLogs } from "@/api/system/log";
 import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";

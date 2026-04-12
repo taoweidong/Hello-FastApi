@@ -4,8 +4,8 @@ import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
-import { getKeyList, useCopyToClipboard } from "@pureadmin/utils";
-import { getSystemLogsList, getSystemLogsDetail, batchDeleteSystemLogs, clearSystemLogs } from "@/api/system";
+import { useCopyToClipboard } from "@pureadmin/utils";
+import { getSystemLogsList, getSystemLogsDetail } from "@/api/system";
 import Info from "~icons/ri/question-line";
 
 export function useRole(tableRef: Ref) {
@@ -15,7 +15,6 @@ export function useRole(tableRef: Ref) {
   });
   const dataList = ref([]);
   const loading = ref(true);
-  const selectedNum = ref(0);
   const { copied, update } = useCopyToClipboard();
 
   const pagination = reactive<PaginationProps>({
@@ -25,28 +24,7 @@ export function useRole(tableRef: Ref) {
     background: true
   });
 
-  // const getLevelType = (type, text = false) => {
-  //   switch (type) {
-  //     case 0:
-  //       return text ? "debug" : "primary";
-  //     case 1:
-  //       return text ? "info" : "success";
-  //     case 2:
-  //       return text ? "warn" : "info";
-  //     case 3:
-  //       return text ? "error" : "warning";
-  //     case 4:
-  //       return text ? "fatal" : "danger";
-  //   }
-  // };
-
   const columns: TableColumnList = [
-    {
-      label: "勾选列", // 如果需要表格多选，此处label必须设置
-      type: "selection",
-      fixed: "left",
-      reserveSelection: true // 数据刷新后保留选项
-    },
     {
       label: "ID",
       prop: "id",
@@ -70,23 +48,18 @@ export function useRole(tableRef: Ref) {
           />
         </span>
       ),
-      prop: "url",
+      prop: "path",
       minWidth: 140
     },
     {
       label: "请求方法",
       prop: "method",
-      minWidth: 140
-    },
-    {
-      label: "IP 地址",
-      prop: "ip",
       minWidth: 100
     },
     {
-      label: "地点",
-      prop: "address",
-      minWidth: 140
+      label: "IP 地址",
+      prop: "ipaddress",
+      minWidth: 120
     },
     {
       label: "操作系统",
@@ -98,36 +71,26 @@ export function useRole(tableRef: Ref) {
       prop: "browser",
       minWidth: 100
     },
-    // {
-    //   label: "级别",
-    //   prop: "level",
-    //   minWidth: 90,
-    //   cellRenderer: ({ row, props }) => (
-    //     <el-tag size={props.size} type={getLevelType(row.level)} effect="plain">
-    //       {getLevelType(row.level, true)}
-    //     </el-tag>
-    //   )
-    // },
     {
-      label: "请求耗时",
-      prop: "takesTime",
-      minWidth: 100,
+      label: "响应码",
+      prop: "responseCode",
+      minWidth: 80,
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
-          type={row.takesTime < 1000 ? "success" : "warning"}
+          type={row.responseCode < 400 ? "success" : "danger"}
           effect="plain"
         >
-          {row.takesTime} ms
+          {row.responseCode}
         </el-tag>
       )
     },
     {
       label: "请求时间",
-      prop: "requestTime",
+      prop: "createdTime",
       minWidth: 180,
-      formatter: ({ requestTime }) =>
-        dayjs(requestTime).format("YYYY-MM-DD HH:mm:ss")
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : ""
     },
     {
       label: "操作",
@@ -137,58 +100,22 @@ export function useRole(tableRef: Ref) {
   ];
 
   function handleSizeChange(val: number) {
-    console.log(`${val} items per page`);
+    pagination.pageSize = val;
+    onSearch();
   }
 
   function handleCurrentChange(val: number) {
-    console.log(`current page: ${val}`);
-  }
-
-  /** 当CheckBox选择项发生变化时会触发该事件 */
-  function handleSelectionChange(val) {
-    selectedNum.value = val.length;
-    // 重置表格高度
-    tableRef.value.setAdaptive();
-  }
-
-  /** 取消选择 */
-  function onSelectionCancel() {
-    selectedNum.value = 0;
-    // 用于多选表格，清空用户的选择
-    tableRef.value.getTableRef().clearSelection();
+    pagination.currentPage = val;
+    onSearch();
   }
 
   /** 拷贝请求接口，表格单元格被双击时触发 */
-  function handleCellDblclick({ url }, { property }) {
-    if (property !== "url") return;
-    update(url);
+  function handleCellDblclick(row: any, { property }: { property: string }) {
+    if (property !== "path") return;
+    update(row.path);
     copied.value
-      ? message(`${url} 已拷贝`, { type: "success" })
+      ? message(`${row.path} 已拷贝`, { type: "success" })
       : message("拷贝失败", { type: "warning" });
-  }
-
-  /** 批量删除 */
-  function onbatchDel() {
-    // 返回当前选中的行
-    const curSelected = tableRef.value.getTableRef().getSelectionRows();
-    const ids = getKeyList(curSelected, "id");
-    batchDeleteSystemLogs({ ids }).then(res => {
-      if (res.code === 0) {
-        message(`已删除序号为 ${ids} 的数据`, { type: "success" });
-        tableRef.value.getTableRef().clearSelection();
-        onSearch();
-      }
-    });
-  }
-
-  /** 清空日志 */
-  function clearAll() {
-    clearSystemLogs().then(res => {
-      if (res.code === 0) {
-        message("已删除所有日志数据", { type: "success" });
-        onSearch();
-      }
-    });
   }
 
   function onDetail(row) {
@@ -207,7 +134,15 @@ export function useRole(tableRef: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await getSystemLogsList(toRaw(form));
+    const params: Record<string, any> = {
+      pageNum: pagination.currentPage,
+      pageSize: pagination.pageSize,
+      module: form.module || undefined
+    };
+    if (form.requestTime && form.requestTime.length === 2) {
+      params.createdTime = form.requestTime;
+    }
+    const { code, data } = await getSystemLogsList(params);
     if (code === 0) {
       dataList.value = data.list;
       pagination.total = data.total;
@@ -217,12 +152,13 @@ export function useRole(tableRef: Ref) {
 
     setTimeout(() => {
       loading.value = false;
-    }, 500);
+    }, 300);
   }
 
   const resetForm = formEl => {
     if (!formEl) return;
     formEl.resetFields();
+    pagination.currentPage = 1;
     onSearch();
   };
 
@@ -236,16 +172,11 @@ export function useRole(tableRef: Ref) {
     columns,
     dataList,
     pagination,
-    selectedNum,
     onSearch,
     onDetail,
-    clearAll,
     resetForm,
-    onbatchDel,
     handleSizeChange,
-    onSelectionCancel,
     handleCellDblclick,
-    handleCurrentChange,
-    handleSelectionChange
+    handleCurrentChange
   };
 }
