@@ -84,15 +84,15 @@ const {
             class="w-45!"
           />
         </el-form-item>
-        <el-form-item label="状态：" prop="status">
+        <el-form-item label="状态：" prop="isActive">
           <el-select
-            v-model="form.status"
+            v-model="form.isActive"
             placeholder="请选择"
             clearable
             class="w-45!"
           >
-            <el-option label="已开启" value="1" />
-            <el-option label="已关闭" value="0" />
+            <el-option label="已开启" :value="true" />
+            <el-option label="已关闭" :value="false" />
           </el-select>
         </el-form-item>
         <el-form-item>

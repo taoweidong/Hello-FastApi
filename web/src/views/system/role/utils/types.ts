@@ -5,8 +5,8 @@ interface FormItemProps {
   name: string;
   /** 角色编号 */
   code: string;
-  /** 备注 */
-  remark: string;
+  /** 描述 */
+  description: string;
 }
 interface FormProps {
   formInline: FormItemProps;

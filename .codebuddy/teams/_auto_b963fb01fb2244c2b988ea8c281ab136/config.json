@@ -1,0 +1,23 @@
+{
+  "name": "_auto_b963fb01fb2244c2b988ea8c281ab136",
+  "leadAgentId": "b963fb01fb2244c2b988ea8c281ab136",
+  "workspacePath": "e:\\GitHub\\Hello-FastApi",
+  "createdAt": "2026-04-12T00:46:49.496Z",
+  "options": {
+    "workspacePath": "e:\\GitHub\\Hello-FastApi",
+    "isAutoTeam": true
+  },
+  "members": [
+    {
+      "memberId": "team-lead@_auto_b963fb01fb2244c2b988ea8c281ab136",
+      "name": "team-lead",
+      "role": "Team Lead - coordinates the team and interacts with the user"
+    },
+    {
+      "memberId": "frontend-views@_auto_b963fb01fb2244c2b988ea8c281ab136",
+      "name": "frontend-views",
+      "role": "Refactor frontend views/system"
+    }
+  ],
+  "isAutoTeam": true
+}

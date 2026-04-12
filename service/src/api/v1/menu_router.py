@@ -1,6 +1,9 @@
 """菜单管理路由模块。
 
 提供菜单的增删改查、菜单树获取、用户菜单获取等功能。
+菜单结构: Menu + MenuMeta（一对一关联）。
+menu_type: 0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限
+使用 rank 字段排序（替代旧的 order_num）。
 路由前缀: /api/system/menu
 """
 
@@ -37,13 +40,13 @@ class MenuRouter(Routable):
 
     @post("/create")
     async def create_menu(self, dto: MenuCreateDTO, menu_service: MenuService = Depends(get_menu_service), current_user: dict = Depends(require_permission("menu:add"))) -> dict:
-        """创建菜单。"""
+        """创建菜单（含元数据）。"""
         menu = await menu_service.create_menu(dto)
         return success_response(data=menu, code=201, message="创建成功")
 
     @put("/{menu_id}")
     async def update_menu(self, menu_id: str, dto: MenuUpdateDTO, menu_service: MenuService = Depends(get_menu_service), current_user: dict = Depends(require_permission("menu:edit"))) -> dict:
-        """更新菜单。"""
+        """更新菜单（含元数据）。"""
         menu = await menu_service.update_menu(menu_id, dto)
         return success_response(data=menu, message="更新成功")
 

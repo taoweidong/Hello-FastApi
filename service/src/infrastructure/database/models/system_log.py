@@ -1,4 +1,4 @@
-"""系统日志实体模型。"""
+"""统一操作日志实体模型。"""
 
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
@@ -11,51 +11,74 @@ from sqlalchemy import Column, DateTime, Text, func
 from sqlmodel import Field, SQLModel
 
 if TYPE_CHECKING:
-    from src.domain.entities.log import SystemLogEntity
+    from src.domain.entities.log import OperationLogEntity
 
 
 class SystemLog(SQLModel, table=True):
-    """系统日志实体。"""
+    """统一操作日志实体。"""
 
-    __tablename__ = "sys_system_logs"
+    __tablename__ = "sys_logs"
 
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)
-    level: str | None = Field(default=None, max_length=20)  # 日志级别
-    module: str | None = Field(default=None, max_length=100)  # 所属模块
-    url: str | None = Field(default=None, max_length=500)  # 请求URL
-    method: str | None = Field(default=None, max_length=10)  # 请求方法
-    ip: str | None = Field(default=None, max_length=45)  # IP地址
-    address: str | None = Field(default=None, max_length=200)  # 请求地点
-    system: str | None = Field(default=None, max_length=100)  # 操作系统
-    browser: str | None = Field(default=None, max_length=100)  # 浏览器
-    takes_time: float | None = Field(default=None)  # 耗时(毫秒)
-    request_time: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
-    request_body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 请求体
-    response_body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 响应体
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    module: str | None = Field(default=None, max_length=64)  # 所属模块
+    path: str | None = Field(default=None, max_length=400)  # 请求路径
+    body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 请求体
+    method: str | None = Field(default=None, max_length=8)  # 请求方法
+    ipaddress: str | None = Field(default=None, max_length=39)  # IP地址
+    browser: str | None = Field(default=None, max_length=64)  # 浏览器
+    system: str | None = Field(default=None, max_length=64)  # 操作系统
+    response_code: int | None = Field(default=None)  # HTTP响应码
+    response_result: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 响应结果
+    status_code: int | None = Field(default=None)  # 业务状态码
+    creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
+    modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
+    created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
+    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    description: str | None = Field(default=None, max_length=256)
 
-    def to_domain(self) -> "SystemLogEntity":
+    def to_domain(self) -> "OperationLogEntity":
         """将 ORM 模型转换为领域实体。"""
-        from src.domain.entities.log import SystemLogEntity
+        from src.domain.entities.log import OperationLogEntity
 
-        return SystemLogEntity(id=self.id, level=self.level, module=self.module, url=self.url, method=self.method, ip=self.ip, address=self.address, system=self.system, browser=self.browser, takes_time=self.takes_time, request_time=self.request_time, request_body=self.request_body, response_body=self.response_body)
+        return OperationLogEntity(
+            id=self.id,
+            module=self.module,
+            path=self.path,
+            body=self.body,
+            method=self.method,
+            ipaddress=self.ipaddress,
+            browser=self.browser,
+            system=self.system,
+            response_code=self.response_code,
+            response_result=self.response_result,
+            status_code=self.status_code,
+            creator_id=self.creator_id,
+            modifier_id=self.modifier_id,
+            created_time=self.created_time,
+            updated_time=self.updated_time,
+            description=self.description,
+        )
 
     @classmethod
-    def from_domain(cls, entity: "SystemLogEntity") -> "SystemLog":
+    def from_domain(cls, entity: "OperationLogEntity") -> "SystemLog":
         """从领域实体创建 ORM 模型实例。"""
         return cls(
             id=entity.id,
-            level=entity.level,
             module=entity.module,
-            url=entity.url,
+            path=entity.path,
+            body=entity.body,
             method=entity.method,
-            ip=entity.ip,
-            address=entity.address,
-            system=entity.system,
+            ipaddress=entity.ipaddress,
             browser=entity.browser,
-            takes_time=entity.takes_time,
-            request_time=entity.request_time,
-            request_body=entity.request_body,
-            response_body=entity.response_body,
+            system=entity.system,
+            response_code=entity.response_code,
+            response_result=entity.response_result,
+            status_code=entity.status_code,
+            creator_id=entity.creator_id,
+            modifier_id=entity.modifier_id,
+            created_time=entity.created_time,
+            updated_time=entity.updated_time,
+            description=entity.description,
         )
 
     def __repr__(self) -> str:

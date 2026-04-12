@@ -32,9 +32,13 @@ class UserInfoDTO(BaseModel):
     id: str
     username: str
     nickname: str | None = None
+    firstName: str | None = None
+    lastName: str | None = None
     avatar: str | None = None
     email: str | None = None
     phone: str | None = None
+    gender: int | None = None
+    isActive: int = 1
 
     model_config = {"from_attributes": True}
 
@@ -55,4 +59,3 @@ class LoginResponseDTO(BaseModel):
     refreshToken: str
     userInfo: UserInfoDTO | None = None
     roles: list[str] = []
-    permissions: list[str] = []

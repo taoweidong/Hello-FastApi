@@ -13,98 +13,56 @@ class DepartmentRepository(DepartmentRepositoryInterface):
     """部门仓储的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
     def __init__(self, session: AsyncSession) -> None:
-        """初始化部门仓储。
-
-        Args:
-            session: 数据库会话
-        """
         self.session = session
         self._crud = FastCRUD(Department)
 
-    async def get_all(self) -> list[Department]:
-        """获取所有部门，按排序号排序。
-
-        Returns:
-            部门列表
-        """
-        result = await self._crud.get_multi(self.session, schema_to_select=Department, return_as_model=True, return_total_count=False)
+    async def get_all(self, session: AsyncSession) -> list[Department]:
+        """获取所有部门，按排序号排序。"""
+        result = await self._crud.get_multi(session, schema_to_select=Department, return_as_model=True, return_total_count=False)
         departments = result.get("data", [])
-        # 按 sort 排序
-        return sorted(departments, key=lambda d: d.sort)
+        return sorted(departments, key=lambda d: d.rank)
 
-    async def get_by_id(self, dept_id: str) -> Department | None:
-        """根据 ID 获取部门。
+    async def get_by_id(self, dept_id: str, session: AsyncSession) -> Department | None:
+        """根据 ID 获取部门。"""
+        return await self._crud.get(session, id=dept_id, schema_to_select=Department, return_as_model=True)
 
-        Args:
-            dept_id: 部门ID
+    async def get_by_name(self, name: str, session: AsyncSession) -> Department | None:
+        """根据名称获取部门。"""
+        return await self._crud.get(session, name=name, schema_to_select=Department, return_as_model=True)
 
-        Returns:
-            部门对象或 None
-        """
-        return await self._crud.get(self.session, id=dept_id, schema_to_select=Department, return_as_model=True)
-
-    async def get_by_name(self, name: str) -> Department | None:
-        """根据名称获取部门。
-
-        Args:
-            name: 部门名称
-
-        Returns:
-            部门对象或 None
-        """
-        return await self._crud.get(self.session, name=name, schema_to_select=Department, return_as_model=True)
-
-    async def get_by_parent_id(self, parent_id: str | None) -> list[Department]:
-        """根据父部门 ID 获取子部门，按排序号排序。
-
-        Args:
-            parent_id: 父部门ID
-
-        Returns:
-            子部门列表
-        """
-        result = await self._crud.get_multi(self.session, parent_id=parent_id, schema_to_select=Department, return_as_model=True, return_total_count=False)
+    async def get_by_parent_id(self, parent_id: str | None, session: AsyncSession) -> list[Department]:
+        """根据父部门 ID 获取子部门，按排序号排序。"""
+        result = await self._crud.get_multi(session, parent_id=parent_id, schema_to_select=Department, return_as_model=True, return_total_count=False)
         departments = result.get("data", [])
-        # 按 sort 排序
-        return sorted(departments, key=lambda d: d.sort)
+        return sorted(departments, key=lambda d: d.rank)
 
-    async def create(self, department: Department) -> Department:
-        """创建新部门。
+    async def create(self, department: Department, session: AsyncSession) -> Department:
+        """创建新部门。"""
+        return await self._crud.create(session, department)
 
-        Args:
-            department: 部门对象
-
-        Returns:
-            创建后的部门对象
-        """
-        return await self._crud.create(self.session, department)
-
-    async def update(self, department: Department) -> Department:
-        """更新现有部门。
-
-        Args:
-            department: 部门对象
-
-        Returns:
-            更新后的部门对象
-        """
+    async def update(self, department: Department, session: AsyncSession) -> Department:
+        """更新现有部门。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(Department).where(Department.id == department.id).values(name=department.name, parent_id=department.parent_id, sort=department.sort, principal=department.principal, phone=department.phone, email=department.email, status=department.status, remark=department.remark)
-        await self.session.exec(stmt)  # type: ignore[arg-type]
-        await self.session.flush()
-        updated = await self.get_by_id(department.id)
+        stmt = sa_update(Department).where(Department.id == department.id).values(
+            mode_type=department.mode_type,
+            name=department.name,
+            code=department.code,
+            rank=department.rank,
+            auto_bind=department.auto_bind,
+            is_active=department.is_active,
+            creator_id=department.creator_id,
+            modifier_id=department.modifier_id,
+            parent_id=department.parent_id,
+            description=department.description,
+        )
+        await session.exec(stmt)  # type: ignore[arg-type]
+        await session.flush()
+        updated = await self.get_by_id(department.id, session)
         return updated  # type: ignore[return-value]
 
-    async def delete(self, dept_id: str) -> bool:
-        """根据 ID 删除部门。
-
-        Args:
-            dept_id: 部门ID
-
-        Returns:
-            是否删除成功
-        """
+    async def delete(self, dept_id: str, session: AsyncSession) -> bool:
+        """根据 ID 删除部门。"""
         from sqlalchemy import delete as sa_delete
         from sqlalchemy import update as sa_update
 
@@ -112,28 +70,21 @@ class DepartmentRepository(DepartmentRepositoryInterface):
 
         # 先将引用该部门的用户 dept_id 设为 NULL
         user_update = sa_update(User).where(User.dept_id == dept_id).values(dept_id=None)
-        await self.session.execute(user_update)
-        await self.session.flush()
+        await session.execute(user_update)
+        await session.flush()
 
         stmt = sa_delete(Department).where(Department.id == dept_id)
-        result = await self.session.execute(stmt)
-        await self.session.flush()
+        result = await session.execute(stmt)
+        await session.flush()
         return result.rowcount > 0  # type: ignore[union-attr]
 
-    async def count(self, name: str | None = None, status: int | None = None) -> int:
-        """获取部门总数（支持筛选）。
-
-        Args:
-            name: 部门名称模糊查询
-            status: 部门状态
-
-        Returns:
-            部门数量
-        """
+    async def count(self, name: str | None = None, is_active: int | None = None, session: AsyncSession | None = None) -> int:
+        """获取部门总数（支持筛选）。"""
         filters: dict[str, Any] = {}
         if name:
             filters["name"] = name
-        if status is not None:
-            filters["status"] = status
+        if is_active is not None:
+            filters["is_active"] = is_active
 
-        return await self._crud.count(self.session, **filters)
+        effective_session = session or self.session
+        return await self._crud.count(effective_session, **filters)

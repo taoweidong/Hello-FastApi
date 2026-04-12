@@ -1,6 +1,7 @@
 """部门管理路由模块。
 
 提供部门的增删改查功能。
+新字段: modeType(权限模式), code(编码), rank(排序号), autoBind(自动绑定角色), isActive(是否启用), description(描述)
 路由直接挂在 /api/system 路径下（无额外前缀）。
 """
 
@@ -19,21 +20,21 @@ class DeptRouter(Routable):
     @post("/dept")
     async def get_dept_list(self, data: dict = Body(default={}), service: DepartmentService = Depends(get_department_service), current_user: dict = Depends(get_current_active_user)) -> dict:
         """获取部门列表（扁平结构）。"""
-        query = DepartmentListQueryDTO(name=data.get("name"), status=data.get("status"))
+        query = DepartmentListQueryDTO(name=data.get("name"), isActive=data.get("isActive"))
         departments = await service.get_departments(query)
         dept_list = []
         for dept in departments:
             dept_dict = {
                 "id": dept.id,
-                "parentId": 0 if not dept.parent_id else dept.parent_id,
+                "parentId": dept.parentId or 0,
                 "name": dept.name,
-                "sort": dept.sort,
-                "principal": dept.principal or "",
-                "phone": dept.phone or "",
-                "email": dept.email or "",
-                "status": dept.status,
-                "remark": dept.remark or "",
-                "createTime": int(dept.created_at.timestamp() * 1000) if dept.created_at else None,
+                "modeType": dept.modeType,
+                "code": dept.code,
+                "rank": dept.rank,
+                "autoBind": dept.autoBind,
+                "isActive": dept.isActive,
+                "description": dept.description or "",
+                "createdTime": dept.createdTime.isoformat() if dept.createdTime else None,
             }
             dept_list.append(dept_dict)
         return success_response(data=dept_list)

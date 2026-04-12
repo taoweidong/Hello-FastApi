@@ -5,9 +5,9 @@ interface FormItemProps {
   principal: string;
   phone: string | number;
   email: string;
-  sort: number;
-  status: number;
-  remark: string;
+  rank: number;
+  isActive: boolean;
+  description: string;
 }
 interface FormProps {
   formInline: FormItemProps;

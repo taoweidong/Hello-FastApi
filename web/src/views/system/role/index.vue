@@ -111,15 +111,15 @@ onMounted(() => {
           class="w-45!"
         />
       </el-form-item>
-      <el-form-item label="状态：" prop="status">
+      <el-form-item label="状态：" prop="isActive">
         <el-select
-          v-model="form.status"
+          v-model="form.isActive"
           placeholder="请选择状态"
           clearable
           class="w-45!"
         >
-          <el-option label="已启用" value="1" />
-          <el-option label="已停用" value="0" />
+          <el-option label="已启用" :value="true" />
+          <el-option label="已停用" :value="false" />
         </el-select>
       </el-form-item>
       <el-form-item>

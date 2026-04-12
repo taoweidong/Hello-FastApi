@@ -1,6 +1,6 @@
 """System API - 认证路由模块。
 
-提供用户认证相关的接口，包括登录、注册、登出和令牌刷新等功能。
+提供用户认证相关的接口，包括登录、注册、登出、令牌刷新、动态路由等功能。
 所有路由直接挂在 /api/system 路径下。
 """
 
@@ -20,7 +20,7 @@ from src.infrastructure.repositories.user_repository import UserRepository
 
 
 class AuthRouter(Routable):
-    """认证管理路由类，提供登录、注册、令牌刷新等接口。"""
+    """认证管理路由类，提供登录、注册、令牌刷新、动态路由等接口。"""
 
     @post("/login")
     async def login(self, dto: LoginDTO, service: AuthService = Depends(get_auth_service)) -> dict:
@@ -51,7 +51,14 @@ class AuthRouter(Routable):
         user = await user_repo.get_by_id(current_user["id"])
         if user is None:
             raise UnauthorizedError("用户不存在")
-        return success_response(data={"avatar": user.avatar or "", "username": user.username, "nickname": user.nickname or user.username, "email": user.email or "", "phone": user.phone or "", "description": ""})
+        return success_response(data={
+            "avatar": user.avatar or "",
+            "username": user.username,
+            "nickname": user.nickname or user.username,
+            "email": user.email or "",
+            "phone": user.phone or "",
+            "description": user.description or "",
+        })
 
     @get("/mine-logs")
     async def get_mine_logs(self, current_user: dict = Depends(get_current_active_user)) -> dict:
@@ -59,47 +66,17 @@ class AuthRouter(Routable):
         return success_response(data={"list": [], "total": 0, "pageSize": 10, "currentPage": 1})
 
     @get("/get-async-routes")
-    async def get_async_routes(self, current_user: dict = Depends(get_current_active_user)) -> dict:
-        """获取当前用户可访问的动态路由配置。"""
-        system_management_router = {
-            "path": "/system",
-            "meta": {"icon": "ri:settings-3-line", "title": "menus.pureSysManagement", "rank": 10},
-            "children": [
-                {"path": "/system/user/index", "name": "SystemUser", "meta": {"icon": "ri:admin-line", "title": "menus.pureUser", "roles": ["admin"]}},
-                {"path": "/system/role/index", "name": "SystemRole", "meta": {"icon": "ri:admin-fill", "title": "menus.pureRole", "roles": ["admin"]}},
-                {"path": "/system/menu/index", "name": "SystemMenu", "meta": {"icon": "ep:menu", "title": "menus.pureSystemMenu", "roles": ["admin"]}},
-                {"path": "/system/dept/index", "name": "SystemDept", "meta": {"icon": "ri:git-branch-line", "title": "menus.pureDept", "roles": ["admin"]}},
-            ],
-        }
+    async def get_async_routes(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
+        """获取当前用户可访问的动态路由配置。
 
-        system_monitor_router = {
-            "path": "/monitor",
-            "meta": {"icon": "ep:monitor", "title": "menus.pureSysMonitor", "rank": 11},
-            "children": [
-                {"path": "/monitor/online-user", "component": "monitor/online/index", "name": "OnlineUser", "meta": {"icon": "ri:user-voice-line", "title": "menus.pureOnlineUser", "roles": ["admin"]}},
-                {"path": "/monitor/login-logs", "component": "monitor/logs/login/index", "name": "LoginLog", "meta": {"icon": "ri:window-line", "title": "menus.pureLoginLog", "roles": ["admin"]}},
-                {"path": "/monitor/operation-logs", "component": "monitor/logs/operation/index", "name": "OperationLog", "meta": {"icon": "ri:history-fill", "title": "menus.pureOperationLog", "roles": ["admin"]}},
-                {"path": "/monitor/system-logs", "component": "monitor/logs/system/index", "name": "SystemLog", "meta": {"icon": "ri:file-search-line", "title": "menus.pureSystemLog", "roles": ["admin"]}},
-            ],
-        }
-
-        permission_router = {
-            "path": "/permission",
-            "meta": {"title": "menus.purePermission", "icon": "ep:lollipop", "rank": 9},
-            "children": [
-                {"path": "/permission/page/index", "name": "PermissionPage", "meta": {"title": "menus.purePermissionPage", "roles": ["admin", "common"]}},
-                {
-                    "path": "/permission/button",
-                    "meta": {"title": "menus.purePermissionButton", "roles": ["admin", "common"]},
-                    "children": [
-                        {"path": "/permission/button/router", "component": "permission/button/index", "name": "PermissionButtonRouter", "meta": {"title": "menus.purePermissionButtonRouter", "auths": ["permission:btn:add", "permission:btn:edit", "permission:btn:delete"]}},
-                        {"path": "/permission/button/login", "component": "permission/button/perms", "name": "PermissionButtonLogin", "meta": {"title": "menus.purePermissionButtonLogin"}},
-                    ],
-                },
-            ],
-        }
-
-        return success_response(data=[system_management_router, system_monitor_router, permission_router])
+        从数据库读取菜单数据，构建前端路由结构。
+        menu_type: 0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限
+        """
+        all_menus = await menu_repo.get_all()
+        # 过滤掉 PERMISSION 类型（menu_type=2），仅返回目录和页面路由
+        route_menus = [m for m in all_menus if m.menu_type != 2]
+        tree = self._build_route_tree(route_menus, None)
+        return success_response(data=tree)
 
     @get("/list-all-role")
     async def list_all_roles(self, role_repo: RoleRepository = Depends(get_role_repository), current_user: dict = Depends(get_current_active_user)) -> dict:
@@ -117,17 +94,22 @@ class AuthRouter(Routable):
         return success_response(data=[r.id for r in roles])
 
     @post("/role-menu")
-    async def get_role_menu(self, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
+    async def get_role_menu(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
         """获取角色菜单权限树。"""
         all_menus = await menu_repo.get_all()
         menu_list = []
         for menu in all_menus:
-            menu_dict = {"parentId": int(menu.parent_id) if menu.parent_id else 0, "id": int(menu.id) if menu.id.isdigit() else menu.id, "menuType": 0, "title": menu.title or menu.name}
+            menu_dict = {
+                "parentId": int(menu.parent_id) if menu.parent_id else 0,
+                "id": int(menu.id) if menu.id.isdigit() else menu.id,
+                "menuType": menu.menu_type,
+                "title": menu.meta.title if hasattr(menu, 'meta') and menu.meta else (menu.name or ""),
+            }
             menu_list.append(menu_dict)
         return success_response(data=menu_list)
 
     @post("/role-menu-ids")
-    async def get_role_menu_ids(self, data: dict, current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository)) -> dict:
+    async def get_role_menu_ids(self, data: dict, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository)) -> dict:
         """根据角色ID获取菜单ID列表。"""
         role_id = data.get("id")
         if not role_id:
@@ -139,3 +121,62 @@ class AuthRouter(Routable):
             return success_response(data=menu_ids)
         menu_ids = await role_repo.get_role_menu_ids(str(role_id))
         return success_response(data=menu_ids)
+
+    def _build_route_tree(self, menus: list, parent_id: str | None) -> list[dict]:
+        """根据菜单数据构建前端路由树结构。
+
+        将 Menu+MenuMeta 组合为前端 get-async-routes 需要的格式。
+        menu_type=0 为目录，menu_type=1 为页面。
+        """
+        tree = []
+        for menu in menus:
+            if menu.parent_id == parent_id:
+                node = {
+                    "path": menu.path or "",
+                    "name": menu.name or "",
+                    "rank": menu.rank,
+                    "meta": self._build_meta(menu),
+                }
+                if menu.component:
+                    node["component"] = menu.component
+                children = self._build_route_tree(menus, menu.id)
+                if children:
+                    node["children"] = children
+                tree.append(node)
+        return tree
+
+    def _build_meta(self, menu) -> dict:
+        """从 Menu 的 meta 关系构建 meta 字典。"""
+        meta = {
+            "title": menu.name or "",
+        }
+        # 如果有 MenuMeta 关联数据
+        if hasattr(menu, 'meta') and menu.meta:
+            m = menu.meta
+            if m.title:
+                meta["title"] = m.title
+            if m.icon:
+                meta["icon"] = m.icon
+            if m.r_svg_name:
+                meta["rSvgName"] = m.r_svg_name
+            if m.is_show_menu == 0:
+                meta["showLink"] = False
+            if m.is_show_parent == 1:
+                meta["showParent"] = True
+            if m.is_keepalive == 1:
+                meta["keepAlive"] = True
+            if m.frame_url:
+                meta["frameSrc"] = m.frame_url
+            if m.frame_loading == 0:
+                meta["frameLoading"] = False
+            if m.transition_enter:
+                meta["enterTransition"] = m.transition_enter
+            if m.transition_leave:
+                meta["leaveTransition"] = m.transition_leave
+            if m.is_hidden_tag == 1:
+                meta["hiddenTag"] = True
+            if m.fixed_tag == 1:
+                meta["fixedTag"] = True
+            if m.dynamic_level > 0:
+                meta["dynamicLevel"] = m.dynamic_level
+        return meta

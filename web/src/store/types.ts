@@ -42,7 +42,8 @@ export type userType = {
   username?: string;
   nickname?: string;
   roles?: Array<string>;
-  permissions?: Array<string>;
+  /** 按钮级别权限（基于菜单name） */
+  menus?: Array<string>;
   verifyCode?: string;
   currentPage?: number;
   isRemembered?: boolean;

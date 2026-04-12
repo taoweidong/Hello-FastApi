@@ -27,14 +27,12 @@ class TestUserService:
     @pytest.fixture
     def mock_user_repo(self):
         """创建模拟用户仓储。"""
-        repo = AsyncMock()
-        return repo
+        return AsyncMock()
 
     @pytest.fixture
     def mock_role_repo(self):
         """创建模拟角色仓储。"""
-        repo = AsyncMock()
-        return repo
+        return AsyncMock()
 
     @pytest.fixture
     def mock_password_service(self):
@@ -46,24 +44,21 @@ class TestUserService:
 
     @pytest.fixture
     def user_service(self, mock_session, mock_user_repo, mock_password_service, mock_role_repo):
-        """创建用户服务实例（使用依赖注入模式）。"""
+        """创建用户服务实例。"""
         return UserService(session=mock_session, repo=mock_user_repo, password_service=mock_password_service, role_repo=mock_role_repo)
 
     @pytest.mark.asyncio
     async def test_create_user_success(self, user_service, mock_user_repo):
         """测试创建用户成功。"""
-        # 设置模拟返回值
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(return_value=None)
 
-        # 创建测试用户
-        test_user = User(id="test-id", username="testuser", email="test@example.com", hashed_password="hashed", nickname="测试用户", status=1)
+        test_user = User(id="test-id", username="testuser", email="test@example.com", password="hashed", nickname="测试用户", is_active=True)
         mock_user_repo.create = AsyncMock(return_value=test_user)
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
 
-        # 使用 patch 替换仓储
         with patch.object(user_service, "repo", mock_user_repo):
-            dto = UserCreateDTO(username="testuser", password="TestPass123", nickname="测试用户", email="test@example.com", status=1)
+            dto = UserCreateDTO(username="testuser", password="TestPass123", nickname="测试用户", email="test@example.com", isActive=True)
             result = await user_service.create_user(dto)
 
         assert result.username == "testuser"
@@ -76,7 +71,7 @@ class TestUserService:
         mock_user_repo.get_by_username = AsyncMock(return_value=existing_user)
 
         with patch.object(user_service, "repo", mock_user_repo):
-            dto = UserCreateDTO(username="existinguser", password="TestPass123", status=1)
+            dto = UserCreateDTO(username="existinguser", password="TestPass123", isActive=True)
             with pytest.raises(ConflictError) as exc_info:
                 await user_service.create_user(dto)
             assert "已存在" in str(exc_info.value)
@@ -119,21 +114,21 @@ class TestUserService:
             assert result["total_requested"] == 3
 
     @pytest.mark.asyncio
-    async def test_update_status_success(self, user_service, mock_user_repo):
-        """测试更新用户状态成功。"""
+    async def test_update_is_active_success(self, user_service, mock_user_repo):
+        """测试更新用户活跃状态成功。"""
         mock_user_repo.update_status = AsyncMock(return_value=True)
 
         with patch.object(user_service, "repo", mock_user_repo):
-            result = await user_service.update_status("test-id", 0)
+            result = await user_service.update_status("test-id", False)
             assert result is True
 
     @pytest.mark.asyncio
-    async def test_update_status_not_found(self, user_service, mock_user_repo):
+    async def test_update_is_active_not_found(self, user_service, mock_user_repo):
         """测试更新不存在用户的状态。"""
         mock_user_repo.update_status = AsyncMock(return_value=False)
 
         with patch.object(user_service, "repo", mock_user_repo), pytest.raises(NotFoundError):
-            await user_service.update_status("non-existent-id", 0)
+            await user_service.update_status("non-existent-id", False)
 
     @pytest.mark.asyncio
     async def test_reset_password_success(self, user_service, mock_user_repo):

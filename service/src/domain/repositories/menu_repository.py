@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
-    from src.infrastructure.database.models import Menu
+    from src.infrastructure.database.models import Menu, MenuMeta
 
 
 class MenuRepositoryInterface(ABC):
@@ -17,77 +17,50 @@ class MenuRepositoryInterface(ABC):
 
     @abstractmethod
     async def get_all(self, session: AsyncSession) -> list["Menu"]:
-        """获取所有菜单。
-
-        Args:
-            session: 数据库会话
-
-        Returns:
-            菜单列表
-        """
+        """获取所有菜单。"""
         ...
 
     @abstractmethod
     async def get_by_id(self, menu_id: str, session: AsyncSession) -> "Menu | None":
-        """根据 ID 获取菜单。
-
-        Args:
-            menu_id: 菜单ID
-            session: 数据库会话
-
-        Returns:
-            菜单对象或 None
-        """
+        """根据 ID 获取菜单。"""
         ...
 
     @abstractmethod
     async def create(self, menu: "Menu", session: AsyncSession) -> "Menu":
-        """创建新菜单。
-
-        Args:
-            menu: 菜单对象
-            session: 数据库会话
-
-        Returns:
-            创建后的菜单对象
-        """
+        """创建新菜单。"""
         ...
 
     @abstractmethod
     async def update(self, menu: "Menu", session: AsyncSession) -> "Menu":
-        """更新现有菜单。
-
-        Args:
-            menu: 菜单对象
-            session: 数据库会话
-
-        Returns:
-            更新后的菜单对象
-        """
+        """更新现有菜单。"""
         ...
 
     @abstractmethod
     async def delete(self, menu_id: str, session: AsyncSession) -> bool:
-        """根据 ID 删除菜单。
-
-        Args:
-            menu_id: 菜单ID
-            session: 数据库会话
-
-        Returns:
-            是否删除成功
-        """
+        """根据 ID 删除菜单。"""
         ...
 
     @abstractmethod
     async def get_by_parent_id(self, parent_id: str | None, session: AsyncSession) -> list["Menu"]:
-        """根据父菜单 ID 获取子菜单。
+        """根据父菜单 ID 获取子菜单。"""
+        ...
 
-        Args:
-            parent_id: 父菜单ID，None 表示获取顶级菜单
-            session: 数据库会话
+    @abstractmethod
+    async def create_meta(self, meta: "MenuMeta", session: AsyncSession) -> "MenuMeta":
+        """创建菜单元数据。"""
+        ...
 
-        Returns:
-            子菜单列表
-        """
+    @abstractmethod
+    async def update_meta(self, meta: "MenuMeta", session: AsyncSession) -> "MenuMeta":
+        """更新菜单元数据。"""
+        ...
+
+    @abstractmethod
+    async def get_meta_by_id(self, meta_id: str, session: AsyncSession) -> "MenuMeta | None":
+        """根据 ID 获取菜单元数据。"""
+        ...
+
+    @abstractmethod
+    async def delete_meta(self, meta_id: str, session: AsyncSession) -> bool:
+        """根据 ID 删除菜单元数据。"""
         ...

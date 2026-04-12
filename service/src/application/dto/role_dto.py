@@ -12,13 +12,13 @@ class RoleCreateDTO(BaseModel):
 
     name: str = Field(min_length=2, max_length=64)
     code: str = Field(min_length=2, max_length=64)
-    remark: str | None = Field(default=None, max_length=500)
-    status: int = 1
-    permissionIds: list[str] = []
+    isActive: int = Field(default=1, description="是否启用")
+    description: str | None = Field(default=None, max_length=500)
+    menuIds: list[str] = []
 
-    @field_validator("remark", mode="before")
+    @field_validator("description", mode="before")
     @classmethod
-    def validate_remark(cls, v: str | None) -> str | None:
+    def validate_description(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
@@ -28,17 +28,17 @@ class RoleUpdateDTO(BaseModel):
 
     name: str | None = Field(default=None, min_length=2, max_length=64)
     code: str | None = Field(default=None, min_length=2, max_length=64)
-    remark: str | None = Field(default=None, max_length=500)
-    status: int | None = None
-    permissionIds: list[str] | None = None
+    isActive: int | None = Field(default=None, description="是否启用")
+    description: str | None = Field(default=None, max_length=500)
+    menuIds: list[str] | None = None
 
-    @field_validator("name", "code", "remark", mode="before")
+    @field_validator("name", "code", "description", mode="before")
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
-    @field_validator("status", mode="before")
+    @field_validator("isActive", mode="before")
     @classmethod
     def validate_status(cls, v: int | str | None) -> int | None:
         """将空字符串或 0 转换为 None。"""
@@ -51,11 +51,13 @@ class RoleResponseDTO(BaseModel):
     id: str
     name: str
     code: str
-    remark: str | None = None
-    status: int = 1
-    permissions: list[dict] = []
-    createTime: datetime | None = None
-    updateTime: datetime | None = None
+    isActive: int = 1
+    menus: list[dict] = []
+    creatorId: str | None = None
+    modifierId: str | None = None
+    createdTime: datetime | None = None
+    updatedTime: datetime | None = None
+    description: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -65,27 +67,27 @@ class RoleListQueryDTO(BaseModel):
 
     pageNum: int = Field(default=1, ge=1)
     pageSize: int = Field(default=10, ge=1, le=100)
-    name: str | None = None  # 前端使用 name 而不是 roleName
+    name: str | None = None
     code: str | None = None
-    status: int | None = None
+    isActive: int | None = None
 
-    @field_validator("status", mode="before")
+    @field_validator("isActive", mode="before")
     @classmethod
     def validate_status(cls, v):
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
 
-class AssignPermissionsDTO(BaseModel):
-    """分配权限请求"""
+class AssignMenusDTO(BaseModel):
+    """分配菜单请求"""
 
-    permissionIds: list[str]
+    menuIds: list[str]
 
 
 class AssignRoleDTO(BaseModel):
     """分配角色请求"""
 
-    user_id: str = Field(alias="userId")
-    role_id: str = Field(alias="roleId")
+    userId: str = Field(alias="userId")
+    roleId: str = Field(alias="roleId")
 
     model_config = {"populate_by_name": True}

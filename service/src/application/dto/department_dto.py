@@ -12,12 +12,12 @@ class DepartmentCreateDTO(BaseModel):
 
     name: str = Field(max_length=64)
     parentId: str | None = Field(default=None, description="父部门ID，None表示顶级部门")
-    sort: int = Field(default=0)
-    principal: str | None = Field(default=None, max_length=50)
-    phone: str | None = Field(default=None, max_length=20)
-    email: str | None = Field(default=None, max_length=100)
-    status: int = Field(default=1)
-    remark: str | None = Field(default=None, max_length=500)
+    modeType: int = Field(default=0, description="权限模式(0-OR, 1-AND)")
+    code: str = Field(default="", max_length=64, description="部门唯一编码")
+    rank: int = Field(default=0, description="排序号")
+    autoBind: int = Field(default=0, description="是否自动绑定角色")
+    isActive: int = Field(default=1, description="是否启用")
+    description: str | None = Field(default=None, max_length=500)
 
     @field_validator("parentId", mode="before")
     @classmethod
@@ -25,13 +25,13 @@ class DepartmentCreateDTO(BaseModel):
         """将 parentId 统一处理：空字符串、0、'0'、None 转换为 None。"""
         return normalize_optional_id(v)
 
-    @field_validator("principal", "phone", "email", "remark", mode="before")
+    @field_validator("description", mode="before")
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
-    @field_validator("sort", "status", mode="before")
+    @field_validator("modeType", "rank", "autoBind", "isActive", mode="before")
     @classmethod
     def validate_empty_to_zero(cls, v: int | str | None) -> int:
         """将空字符串或 None 转换为 0。"""
@@ -45,12 +45,12 @@ class DepartmentUpdateDTO(BaseModel):
 
     name: str | None = Field(default=None, max_length=64)
     parentId: str | None = Field(default=None, description="父部门ID")
-    sort: int | None = None
-    principal: str | None = Field(default=None, max_length=50)
-    phone: str | None = Field(default=None, max_length=20)
-    email: str | None = Field(default=None, max_length=100)
-    status: int | None = None
-    remark: str | None = Field(default=None, max_length=500)
+    modeType: int | None = Field(default=None, description="权限模式(0-OR, 1-AND)")
+    code: str | None = Field(default=None, max_length=64, description="部门唯一编码")
+    rank: int | None = None
+    autoBind: int | None = None
+    isActive: int | None = None
+    description: str | None = Field(default=None, max_length=500)
 
     @field_validator("parentId", mode="before")
     @classmethod
@@ -58,13 +58,13 @@ class DepartmentUpdateDTO(BaseModel):
         """将 parentId 统一处理：空字符串、0、'0'、None 转换为 None。"""
         return normalize_optional_id(v)
 
-    @field_validator("name", "principal", "phone", "email", "remark", mode="before")
+    @field_validator("name", "description", mode="before")
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
-    @field_validator("sort", "status", mode="before")
+    @field_validator("modeType", "rank", "autoBind", "isActive", mode="before")
     @classmethod
     def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
         """将空字符串或 0 转换为 None。"""
@@ -77,13 +77,16 @@ class DepartmentResponseDTO(BaseModel):
     id: str
     parentId: str | None
     name: str
-    sort: int
-    principal: str | None = None
-    phone: str | None = None
-    email: str | None = None
-    status: int
-    remark: str | None = None
-    createTime: datetime | None = None
+    modeType: int = 0
+    code: str = ""
+    rank: int = 0
+    autoBind: int = 0
+    isActive: int = 1
+    creatorId: str | None = None
+    modifierId: str | None = None
+    createdTime: datetime | None = None
+    updatedTime: datetime | None = None
+    description: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -92,9 +95,9 @@ class DepartmentListQueryDTO(BaseModel):
     """部门列表查询请求"""
 
     name: str | None = None
-    status: int | None = None
+    isActive: int | None = None
 
-    @field_validator("status", mode="before")
+    @field_validator("isActive", mode="before")
     @classmethod
     def validate_status(cls, v):
         """将空字符串转换为 None。"""

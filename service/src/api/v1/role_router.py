@@ -1,6 +1,6 @@
 """System API - 角色管理路由模块。
 
-提供角色管理相关的接口，包括角色增删改查、权限分配等功能。
+提供角色管理相关的接口，包括角色增删改查、菜单分配等功能。
 路由前缀: /api/system/role
 """
 
@@ -8,16 +8,16 @@ from classy_fastapi import Routable, delete, get, post, put
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from src.api.common import datetime_to_timestamp, list_response, success_response
+from src.api.common import list_response, success_response
 from src.api.dependencies import get_role_repository, get_role_service, require_permission
-from src.application.dto.role_dto import AssignPermissionsDTO, RoleCreateDTO, RoleListQueryDTO, RoleUpdateDTO
+from src.application.dto.role_dto import AssignMenusDTO, RoleCreateDTO, RoleListQueryDTO, RoleUpdateDTO
 from src.application.services.role_service import RoleService
 from src.infrastructure.database import get_db
 from src.infrastructure.repositories.role_repository import RoleRepository
 
 
 class RoleRouter(Routable):
-    """角色管理路由类，提供角色增删改查、权限分配等功能。"""
+    """角色管理路由类，提供角色增删改查、菜单分配等功能。"""
 
     @post("")
     async def get_role_list(self, query: RoleListQueryDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:view"))) -> dict:
@@ -25,7 +25,15 @@ class RoleRouter(Routable):
         roles, total = await service.get_roles(query)
         role_list = []
         for role in roles:
-            role_dict = {"id": role.id, "name": role.name, "code": role.code, "status": role.status, "remark": role.remark or "", "createTime": datetime_to_timestamp(role.createTime)}
+            role_dict = {
+                "id": role.id,
+                "name": role.name,
+                "code": role.code,
+                "isActive": role.isActive,
+                "description": role.description or "",
+                "menus": role.menus if role.menus else [],
+                "createdTime": role.createdTime.isoformat() if role.createdTime else None,
+            }
             role_list.append(role_dict)
         return list_response(list_data=role_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
@@ -56,22 +64,22 @@ class RoleRouter(Routable):
     @put("/{role_id}/status")
     async def update_role_status(self, role_id: str, data: dict, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:manage"))) -> dict:
         """更新角色状态接口。"""
-        status = data.get("status")
-        if status is None:
+        is_active = data.get("isActive")
+        if is_active is None:
             return success_response(message="状态值不能为空")
-        dto = RoleUpdateDTO(status=int(status))
+        dto = RoleUpdateDTO(isActive=int(is_active))
         await service.update_role(role_id, dto)
         return success_response(message="状态更新成功")
 
-    @post("/{role_id}/permissions")
-    async def assign_permissions(self, role_id: str, dto: AssignPermissionsDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:manage"))) -> dict:
-        """为角色分配权限接口。"""
-        await service.assign_permissions(role_id, dto.permissionIds)
-        return success_response(message="权限分配成功")
+    @post("/{role_id}/menus")
+    async def assign_menus(self, role_id: str, dto: AssignMenusDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:manage"))) -> dict:
+        """为角色分配菜单权限接口。"""
+        await service.assign_menus(role_id, dto.menuIds)
+        return success_response(message="菜单权限分配成功")
 
     @post("/{role_id}/menu")
     async def assign_role_menu(self, role_id: str, data: dict, db: AsyncSession = Depends(get_db), role_repo: RoleRepository = Depends(get_role_repository), _: dict = Depends(require_permission("role:manage"))) -> dict:
-        """为角色分配菜单权限接口。"""
+        """为角色分配菜单权限接口（兼容旧前端）。"""
         menu_ids = data.get("menuIds", [])
         await role_repo.assign_menus_to_role(role_id, menu_ids)
         await db.commit()

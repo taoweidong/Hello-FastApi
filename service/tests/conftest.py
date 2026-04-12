@@ -18,7 +18,7 @@ from src.infrastructure.database import get_db
 from src.infrastructure.lifecycle import empty_lifespan
 from src.main import create_app
 
-# 测试数据库 URL - 使用共享内存 SQLite (支持多连接共享同一数据库)
+# 测试数据库 URL - 使用共享内存 SQLite
 TEST_DATABASE_URL = "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true"
 
 test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
@@ -74,12 +74,25 @@ async def client(db_session: AsyncSession, test_app) -> AsyncGenerator[AsyncClie
 @pytest_asyncio.fixture
 async def test_user_data() -> dict:
     """提供测试用户数据（使用新字段格式）。"""
-    return {"username": "testuser", "password": "TestPass123", "nickname": "测试用户", "email": "test@example.com", "phone": "13800138000", "sex": 0, "status": 1, "avatar": None, "deptId": None, "remark": "测试备注"}
+    return {
+        "username": "testuser",
+        "password": "TestPass123",
+        "nickname": "测试用户",
+        "email": "test@example.com",
+        "phone": "13800138000",
+        "gender": 0,
+        "isActive": 1,
+        "isStaff": 0,
+        "modeType": 0,
+        "avatar": None,
+        "deptId": None,
+        "description": "测试备注",
+    }
 
 
 @pytest_asyncio.fixture
 async def auth_headers(client: AsyncClient, db_session: AsyncSession) -> AsyncGenerator[dict, None]:
-    """提供认证请求头（超级管理员，便于通过 RBAC 依赖）。"""
+    """提供认证请求头（超级管理员）。"""
     from src.application.dto.user_dto import UserCreateDTO
     from src.application.services.user_service import UserService
     from src.config.settings import get_settings
@@ -92,7 +105,7 @@ async def auth_headers(client: AsyncClient, db_session: AsyncSession) -> AsyncGe
     role_repo = RoleRepository(db_session)
     password_service = PasswordService()
     service = UserService(session=db_session, repo=user_repo, password_service=password_service, role_repo=role_repo)
-    user = await service.create_superuser(UserCreateDTO(username="authtestuser", password="TestPass123", nickname="认证测试用户", email="auth@example.com", status=1))
+    user = await service.create_superuser(UserCreateDTO(username="authtestuser", password="TestPass123", nickname="认证测试用户", email="auth@example.com", isActive=1))
     await db_session.commit()
 
     settings = get_settings()

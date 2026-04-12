@@ -13,7 +13,7 @@ import { cloneDeep, isAllEmpty, deviceDetection } from "@pureadmin/utils";
 export function useDept() {
   const form = reactive({
     name: "",
-    status: null
+    isActive: null
   });
 
   const formRef = ref();
@@ -30,16 +30,16 @@ export function useDept() {
     },
     {
       label: "排序",
-      prop: "sort",
+      prop: "rank",
       minWidth: 70
     },
     {
       label: "状态",
-      prop: "status",
+      prop: "isActive",
       minWidth: 100,
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.status)}>
-          {row.status === 1 ? "启用" : "停用"}
+        <el-tag size={props.size} style={tagStyle.value(row.isActive)}>
+          {row.isActive ? "启用" : "停用"}
         </el-tag>
       )
     },
@@ -51,8 +51,8 @@ export function useDept() {
         dayjs(createTime).format("YYYY-MM-DD HH:mm:ss")
     },
     {
-      label: "备注",
-      prop: "remark",
+      label: "描述",
+      prop: "description",
       minWidth: 320
     },
     {
@@ -82,9 +82,9 @@ export function useDept() {
         // 前端搜索部门名称
         newData = newData.filter(item => item.name.includes(form.name));
       }
-      if (!isAllEmpty(form.status)) {
+      if (!isAllEmpty(form.isActive)) {
         // 前端搜索状态
-        newData = newData.filter(item => item.status === form.status);
+        newData = newData.filter(item => item.isActive === form.isActive);
       }
       dataList.value = handleTree(newData); // 处理成树结构
     }
@@ -99,7 +99,7 @@ export function useDept() {
     if (!treeList || !treeList.length) return;
     const newTreeList = [];
     for (let i = 0; i < treeList.length; i++) {
-      treeList[i].disabled = treeList[i].status === 0 ? true : false;
+      treeList[i].disabled = !treeList[i].isActive;
       formatHigherDeptOptions(treeList[i].children);
       newTreeList.push(treeList[i]);
     }
@@ -117,9 +117,9 @@ export function useDept() {
           principal: row?.principal ?? "",
           phone: row?.phone ?? "",
           email: row?.email ?? "",
-          sort: row?.sort ?? 0,
-          status: row?.status ?? 1,
-          remark: row?.remark ?? ""
+          rank: row?.rank ?? 0,
+          isActive: row?.isActive ?? true,
+          description: row?.description ?? ""
         }
       },
       width: "40%",
@@ -138,12 +138,12 @@ export function useDept() {
               const payload = {
                 name: curData.name,
                 parentId: curData.parentId || 0,
-                sort: curData.sort,
+                rank: curData.rank,
                 principal: curData.principal || null,
                 phone: curData.phone || null,
                 email: curData.email || null,
-                status: curData.status,
-                remark: curData.remark || null
+                isActive: curData.isActive,
+                description: curData.description || null
               };
               
               if (title === "新增") {

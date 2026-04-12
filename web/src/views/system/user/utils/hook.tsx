@@ -54,7 +54,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     deptId: "",
     username: "",
     phone: "",
-    status: ""
+    isActive: ""
   });
   const formRef = ref();
   const ruleFormRef = ref();
@@ -112,15 +112,15 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     },
     {
       label: "性别",
-      prop: "sex",
+      prop: "gender",
       minWidth: 90,
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
-          type={row.sex === 1 ? "danger" : null}
+          type={row.gender === 1 ? "danger" : null}
           effect="plain"
         >
-          {row.sex === 1 ? "女" : "男"}
+          {row.gender === 1 ? "女" : "男"}
         </el-tag>
       )
     },
@@ -137,15 +137,13 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     },
     {
       label: "状态",
-      prop: "status",
+      prop: "isActive",
       minWidth: 90,
       cellRenderer: scope => (
         <el-switch
           size={scope.props.size === "small" ? "small" : "default"}
           loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.status}
-          active-value={1}
-          inactive-value={0}
+          v-model={scope.row.isActive}
           active-text="已启用"
           inactive-text="已停用"
           inline-prompt
@@ -195,7 +193,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
   function onChange({ row, index }) {
     ElMessageBox.confirm(
       `确认要<strong>${
-        row.status === 0 ? "停用" : "启用"
+        !row.isActive ? "停用" : "启用"
       }</strong><strong style='color:var(--el-color-primary)'>${
         row.username
       }</strong>用户吗?`,
@@ -217,13 +215,13 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
           }
         );
         try {
-          const { code } = await updateUserStatus(row.id, { status: row.status });
+          const { code } = await updateUserStatus(row.id, { isActive: row.isActive });
           if (code === 0) {
             message("已成功修改用户状态", { type: "success" });
           }
         } catch (error) {
           // 请求失败，恢复原状态
-          row.status === 0 ? (row.status = 1) : (row.status = 0);
+          row.isActive = !row.isActive;
           message("修改用户状态失败", { type: "error" });
         } finally {
           switchLoadMap.value[index] = Object.assign(
@@ -236,7 +234,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
         }
       })
       .catch(() => {
-        row.status === 0 ? (row.status = 1) : (row.status = 0);
+        row.isActive = !row.isActive;
       });
   }
 
@@ -349,7 +347,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     if (!treeList || !treeList.length) return;
     const newTreeList = [];
     for (let i = 0; i < treeList.length; i++) {
-      treeList[i].disabled = treeList[i].status === 0 ? true : false;
+      treeList[i].disabled = !treeList[i].isActive;
       formatHigherDeptOptions(treeList[i].children);
       newTreeList.push(treeList[i]);
     }
@@ -369,9 +367,9 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
           password: row?.password ?? "",
           phone: row?.phone ?? "",
           email: row?.email ?? "",
-          sex: row?.sex ?? "",
-          status: row?.status ?? 1,
-          remark: row?.remark ?? ""
+          gender: row?.gender ?? "",
+          isActive: row?.isActive ?? true,
+          description: row?.description ?? ""
         }
       },
       width: "46%",
@@ -393,10 +391,10 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
                 nickname: curData.nickname || null,
                 email: curData.email || null,
                 phone: curData.phone || null,
-                sex: curData.sex || null,
-                status: curData.status,
+                gender: curData.gender || null,
+                isActive: curData.isActive,
                 deptId: curData.parentId || null,
-                remark: curData.remark || null
+                description: curData.description || null
               };
               
               if (title === "新增") {

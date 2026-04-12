@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.infrastructure.database.models import Menu, Permission, Role
+    from src.infrastructure.database.models import Menu, Role
 
 
 class RoleRepositoryInterface(ABC):
@@ -29,178 +29,61 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, status: int | None = None) -> list["Role"]:
-        """获取所有角色（分页）。
-
-        Args:
-            page_num: 页码
-            page_size: 每页数量
-            role_name: 角色名称过滤
-            status: 状态过滤
-
-        Returns:
-            角色列表
-        """
+    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list["Role"]:
+        """获取所有角色（分页）。"""
         ...
 
     @abstractmethod
-    async def count(self, role_name: str | None = None, status: int | None = None) -> int:
-        """统计角色总数。
-
-        Args:
-            role_name: 角色名称过滤
-            status: 状态过滤
-
-        Returns:
-            角色总数
-        """
+    async def count(self, role_name: str | None = None, is_active: int | None = None) -> int:
+        """统计角色总数。"""
         ...
 
     @abstractmethod
     async def create(self, role: "Role") -> "Role":
-        """创建角色。
-
-        Args:
-            role: 角色对象
-
-        Returns:
-            创建后的角色对象
-        """
+        """创建角色。"""
         ...
 
     @abstractmethod
     async def update(self, role: "Role") -> "Role":
-        """更新角色。
-
-        Args:
-            role: 角色对象
-
-        Returns:
-            更新后的角色对象
-        """
+        """更新角色。"""
         ...
 
     @abstractmethod
     async def delete(self, role_id: str) -> bool:
-        """删除角色。
-
-        Args:
-            role_id: 角色ID
-
-        Returns:
-            是否删除成功
-        """
-        ...
-
-    @abstractmethod
-    async def assign_permissions_to_role(self, role_id: str, permission_ids: list[str]) -> bool:
-        """为角色分配权限。
-
-        Args:
-            role_id: 角色ID
-            permission_ids: 权限ID列表
-
-        Returns:
-            是否分配成功
-        """
-        ...
-
-    @abstractmethod
-    async def get_role_permissions(self, role_id: str) -> list["Permission"]:
-        """获取角色的权限列表。
-
-        Args:
-            role_id: 角色ID
-
-        Returns:
-            权限列表
-        """
+        """删除角色。"""
         ...
 
     @abstractmethod
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
-        """为用户分配角色。
-
-        Args:
-            user_id: 用户ID
-            role_id: 角色ID
-
-        Returns:
-            是否分配成功
-        """
+        """为用户分配角色。"""
         ...
 
     @abstractmethod
     async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
-        """移除用户的角色。
-
-        Args:
-            user_id: 用户ID
-            role_id: 角色ID
-
-        Returns:
-            是否移除成功
-        """
+        """移除用户的角色。"""
         ...
 
     @abstractmethod
     async def get_user_roles(self, user_id: str) -> list["Role"]:
-        """获取用户的角色列表。
-
-        Args:
-            user_id: 用户ID
-
-        Returns:
-            角色列表
-        """
+        """获取用户的角色列表。"""
         ...
 
     @abstractmethod
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
-        """为用户批量分配角色（先清除旧角色再分配新的）。
-
-        Args:
-            user_id: 用户ID
-            role_ids: 角色ID列表
-
-        Returns:
-            是否分配成功
-        """
+        """为用户批量分配角色（先清除旧角色再分配新的）。"""
         ...
 
     @abstractmethod
     async def assign_menus_to_role(self, role_id: str, menu_ids: list[str]) -> bool:
-        """为角色分配菜单权限（先清除旧菜单再分配新的）。
-
-        Args:
-            role_id: 角色ID
-            menu_ids: 菜单ID列表
-
-        Returns:
-            是否分配成功
-        """
+        """为角色分配菜单权限（先清除旧菜单再分配新的）。"""
         ...
 
     @abstractmethod
     async def get_role_menus(self, role_id: str) -> list["Menu"]:
-        """获取角色的菜单列表。
-
-        Args:
-            role_id: 角色ID
-
-        Returns:
-            菜单列表
-        """
+        """获取角色的菜单列表。"""
         ...
 
     @abstractmethod
     async def get_role_menu_ids(self, role_id: str) -> list[str]:
-        """获取角色的菜单ID列表。
-
-        Args:
-            role_id: 角色ID
-
-        Returns:
-            菜单ID列表
-        """
+        """获取角色的菜单ID列表。"""
         ...

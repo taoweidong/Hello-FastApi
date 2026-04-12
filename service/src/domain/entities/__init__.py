@@ -7,8 +7,19 @@
 from src.domain.entities.department import DepartmentEntity
 from src.domain.entities.log import LoginLogEntity, OperationLogEntity, SystemLogEntity
 from src.domain.entities.menu import MenuEntity
-from src.domain.entities.permission import PermissionEntity
+from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.role import RoleEntity
+from src.domain.entities.system_config import SystemConfigEntity
 from src.domain.entities.user import UserEntity
 
-__all__ = ["UserEntity", "RoleEntity", "PermissionEntity", "MenuEntity", "DepartmentEntity", "LoginLogEntity", "OperationLogEntity", "SystemLogEntity"]
+__all__ = [
+    "DepartmentEntity",
+    "LoginLogEntity",
+    "MenuEntity",
+    "MenuMetaEntity",
+    "OperationLogEntity",
+    "RoleEntity",
+    "SystemConfigEntity",
+    "SystemLogEntity",
+    "UserEntity",
+]

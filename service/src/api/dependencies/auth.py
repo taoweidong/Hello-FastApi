@@ -8,7 +8,7 @@ from src.api.dependencies.domain_services import get_token_service
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
 from src.domain.services.token_service import TokenService
 from src.infrastructure.database import get_db
-from src.infrastructure.repositories.permission_repository import PermissionRepository
+from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
 security_scheme = HTTPBearer()
@@ -42,17 +42,50 @@ async def get_current_active_user(user_id: str = Depends(get_current_user_id), d
 
 
 def require_permission(code: str):
-    """依赖工厂：要求特定权限。"""
+    """依赖工厂：要求特定菜单权限（基于menu.name检查按钮权限）。
+
+    新RBAC方案：权限不再使用独立Permission表，而是通过Menu的menu_type=2(PERMISSION)
+    和name字段来实现按钮级权限控制。code参数现在对应menu.name。
+    """
 
     async def permission_checker(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)) -> dict:
         if current_user["is_superuser"]:
             return current_user
 
-        perm_repo = PermissionRepository(db)
-        perms = await perm_repo.get_user_permissions(current_user["id"])
-        if not any(p.code == code for p in perms):
-            raise ForbiddenError(f"权限 '{code}' 是必需的")
-        return current_user
+        role_repo = RoleRepository(db)
+        user_roles = await role_repo.get_user_roles(current_user["id"])
+
+        for role in user_roles:
+            menus = await role_repo.get_role_menus(role.id)
+            for menu in menus:
+                if menu.menu_type == 2 and menu.name == code:  # PERMISSION type
+                    return current_user
+
+        raise ForbiddenError(f"权限 '{code}' 是必需的")
+
+    return permission_checker
+
+
+def require_menu_permission(path: str, method: str):
+    """依赖工厂：要求特定API路径和方法的菜单权限。
+
+    基于Menu.path和Menu.method检查API级权限。
+    """
+
+    async def permission_checker(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db)) -> dict:
+        if current_user["is_superuser"]:
+            return current_user
+
+        role_repo = RoleRepository(db)
+        user_roles = await role_repo.get_user_roles(current_user["id"])
+
+        for role in user_roles:
+            menus = await role_repo.get_role_menus(role.id)
+            for menu in menus:
+                if menu.menu_type == 2 and menu.path == path and menu.method == method:
+                    return current_user
+
+        raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
 
     return permission_checker
 

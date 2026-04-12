@@ -13,32 +13,31 @@ class DepartmentEntity:
     """部门领域实体。
 
     Attributes:
-        id: 部门唯一标识（36位UUID字符串）
+        id: 部门唯一标识（32位UUID字符串）
+        mode_type: 权限模式(0-OR, 1-AND)
         name: 部门名称
-        parent_id: 父部门ID（可选）
-        sort: 排序号
-        principal: 负责人（可选）
-        phone: 联系电话（可选）
-        email: 邮箱（可选）
-        status: 状态（0-禁用, 1-启用）
-        remark: 备注（可选）
-        created_at: 创建时间
-        updated_at: 更新时间
+        code: 部门唯一编码
+        rank: 排序号
+        auto_bind: 是否自动绑定角色
+        is_active: 是否启用
+        creator_id: 创建人ID
+        modifier_id: 修改人ID
+        parent_id: 父部门ID
+        created_time: 创建时间
+        updated_time: 更新时间
+        description: 描述
     """
 
     id: str
-    name: str
+    mode_type: int = 0
+    name: str = ""
+    code: str = ""
+    rank: int = 0
+    auto_bind: int = 0
+    is_active: int = 1
+    creator_id: str | None = None
+    modifier_id: str | None = None
     parent_id: str | None = None
-    sort: int = 0
-    principal: str | None = None
-    phone: str | None = None
-    email: str | None = None
-    status: int = 1
-    remark: str | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-
-    @property
-    def is_active(self) -> bool:
-        """是否启用（status=1表示启用）。"""
-        return self.status == 1
+    created_time: datetime | None = None
+    updated_time: datetime | None = None
+    description: str | None = None

@@ -13,26 +13,32 @@ class LoginLogEntity:
     """登录日志领域实体。
 
     Attributes:
-        id: 日志唯一标识（36位UUID字符串）
-        username: 用户名
-        ip: IP地址（可选）
-        address: 登录地点（可选）
-        system: 操作系统（可选）
-        browser: 浏览器（可选）
-        status: 登录状态（0-失败, 1-成功）
-        behavior: 行为描述（可选）
-        login_time: 登录时间
+        id: 日志唯一标识（32位UUID字符串）
+        status: 登录状态(0-失败, 1-成功)
+        ipaddress: IP地址
+        browser: 浏览器
+        system: 操作系统
+        agent: User-Agent信息
+        login_type: 登录类型(0-密码, 1-短信, 2-OAuth等)
+        creator_id: 创建人ID
+        modifier_id: 修改人ID
+        created_time: 创建时间
+        updated_time: 更新时间
+        description: 描述
     """
 
     id: str
-    username: str
-    ip: str | None = None
-    address: str | None = None
-    system: str | None = None
-    browser: str | None = None
     status: int = 1
-    behavior: str | None = None
-    login_time: datetime | None = None
+    ipaddress: str | None = None
+    browser: str | None = None
+    system: str | None = None
+    agent: str | None = None
+    login_type: int = 0
+    creator_id: str | None = None
+    modifier_id: str | None = None
+    created_time: datetime | None = None
+    updated_time: datetime | None = None
+    description: str | None = None
 
     @property
     def is_success(self) -> bool:
@@ -42,68 +48,44 @@ class LoginLogEntity:
 
 @dataclass
 class OperationLogEntity:
-    """操作日志领域实体。
+    """统一操作日志领域实体（对应sys_logs表）。
 
     Attributes:
-        id: 日志唯一标识（36位UUID字符串）
-        username: 操作人员
-        ip: IP地址（可选）
-        address: 操作地点（可选）
-        system: 操作系统（可选）
-        browser: 浏览器（可选）
-        status: 操作状态（0-失败, 1-成功）
-        summary: 操作摘要（可选）
-        module: 操作模块（可选）
-        operating_time: 操作时间
+        id: 日志唯一标识（32位UUID字符串）
+        module: 所属模块
+        path: 请求路径
+        body: 请求体
+        method: 请求方法
+        ipaddress: IP地址
+        browser: 浏览器
+        system: 操作系统
+        response_code: HTTP响应码
+        response_result: 响应结果
+        status_code: 业务状态码
+        creator_id: 创建人ID
+        modifier_id: 修改人ID
+        created_time: 创建时间
+        updated_time: 更新时间
+        description: 描述
     """
 
     id: str
-    username: str
-    ip: str | None = None
-    address: str | None = None
-    system: str | None = None
-    browser: str | None = None
-    status: int = 1
-    summary: str | None = None
     module: str | None = None
-    operating_time: datetime | None = None
-
-    @property
-    def is_success(self) -> bool:
-        """操作是否成功（status=1表示成功）。"""
-        return self.status == 1
-
-
-@dataclass
-class SystemLogEntity:
-    """系统日志领域实体。
-
-    Attributes:
-        id: 日志唯一标识（36位UUID字符串）
-        level: 日志级别（可选）
-        module: 所属模块（可选）
-        url: 请求URL（可选）
-        method: 请求方法（可选）
-        ip: IP地址（可选）
-        address: 请求地点（可选）
-        system: 操作系统（可选）
-        browser: 浏览器（可选）
-        takes_time: 耗时毫秒（可选）
-        request_time: 请求时间
-        request_body: 请求体（可选）
-        response_body: 响应体（可选）
-    """
-
-    id: str
-    level: str | None = None
-    module: str | None = None
-    url: str | None = None
+    path: str | None = None
+    body: str | None = None
     method: str | None = None
-    ip: str | None = None
-    address: str | None = None
-    system: str | None = None
+    ipaddress: str | None = None
     browser: str | None = None
-    takes_time: float | None = None
-    request_time: datetime | None = None
-    request_body: str | None = None
-    response_body: str | None = None
+    system: str | None = None
+    response_code: int | None = None
+    response_result: str | None = None
+    status_code: int | None = None
+    creator_id: str | None = None
+    modifier_id: str | None = None
+    created_time: datetime | None = None
+    updated_time: datetime | None = None
+    description: str | None = None
+
+
+# 保留旧名称作为别名，用于向后兼容（后续阶段3会逐步清理）
+SystemLogEntity = OperationLogEntity

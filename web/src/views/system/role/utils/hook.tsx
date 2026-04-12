@@ -16,7 +16,7 @@ export function useRole(treeRef: Ref) {
   const form = reactive({
     name: "",
     code: "",
-    status: ""
+    isActive: ""
   });
   const curRow = ref();
   const formRef = ref();
@@ -61,9 +61,7 @@ export function useRole(treeRef: Ref) {
         <el-switch
           size={scope.props.size === "small" ? "small" : "default"}
           loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.status}
-          active-value={1}
-          inactive-value={0}
+          v-model={scope.row.isActive}
           active-text="已启用"
           inactive-text="已停用"
           inline-prompt
@@ -74,8 +72,8 @@ export function useRole(treeRef: Ref) {
       minWidth: 90
     },
     {
-      label: "备注",
-      prop: "remark",
+      label: "描述",
+      prop: "description",
       minWidth: 160
     },
     {
@@ -105,7 +103,7 @@ export function useRole(treeRef: Ref) {
   function onChange({ row, index }) {
     ElMessageBox.confirm(
       `确认要<strong>${
-        row.status === 0 ? "停用" : "启用"
+        !row.isActive ? "停用" : "启用"
       }</strong><strong style='color:var(--el-color-primary)'>${
         row.name
       }</strong>吗?`,
@@ -127,12 +125,12 @@ export function useRole(treeRef: Ref) {
           }
         );
         try {
-          const { code } = await updateRoleStatus(row.id, { status: row.status });
+          const { code } = await updateRoleStatus(row.id, { isActive: row.isActive });
           if (code === 0) {
-            message(`已${row.status === 0 ? "停用" : "启用"}${row.name}`, { type: "success" });
+            message(`已${row.isActive ? "启用" : "停用"}${row.name}`, { type: "success" });
           }
         } catch (error) {
-          row.status === 0 ? (row.status = 1) : (row.status = 0);
+          row.isActive = !row.isActive;
           message("修改角色状态失败", { type: "error" });
         } finally {
           switchLoadMap.value[index] = Object.assign(
@@ -145,7 +143,7 @@ export function useRole(treeRef: Ref) {
         }
       })
       .catch(() => {
-        row.status === 0 ? (row.status = 1) : (row.status = 0);
+        row.isActive = !row.isActive;
       });
   }
 
@@ -211,7 +209,7 @@ export function useRole(treeRef: Ref) {
         formInline: {
           name: row?.name ?? "",
           code: row?.code ?? "",
-          remark: row?.remark ?? ""
+          description: row?.description ?? ""
         }
       },
       width: "40%",
@@ -230,7 +228,7 @@ export function useRole(treeRef: Ref) {
               const payload = {
                 name: curData.name,
                 code: curData.code,
-                remark: curData.remark || null
+                description: curData.description || null
               };
               
               if (title === "新增") {

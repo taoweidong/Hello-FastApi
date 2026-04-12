@@ -15,13 +15,13 @@ const props = withDefaults(defineProps<FormProps>(), {
     password: "",
     phone: "",
     email: "",
-    sex: "",
-    status: 1,
-    remark: ""
+    gender: "",
+    isActive: true,
+    description: ""
   })
 });
 
-const sexOptions = [
+const genderOptions = [
   {
     value: 0,
     label: "男"
@@ -105,13 +105,13 @@ defineExpose({ getRef });
       <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="用户性别">
           <el-select
-            v-model="newFormInline.sex"
+            v-model="newFormInline.gender"
             placeholder="请选择用户性别"
             class="w-full"
             clearable
           >
             <el-option
-              v-for="(item, index) in sexOptions"
+              v-for="(item, index) in genderOptions"
               :key="index"
               :label="item.label"
               :value="item.value"
@@ -151,10 +151,8 @@ defineExpose({ getRef });
       >
         <el-form-item label="用户状态">
           <el-switch
-            v-model="newFormInline.status"
+            v-model="newFormInline.isActive"
             inline-prompt
-            :active-value="1"
-            :inactive-value="0"
             active-text="启用"
             inactive-text="停用"
             :style="switchStyle"
@@ -163,10 +161,10 @@ defineExpose({ getRef });
       </re-col>
 
       <re-col>
-        <el-form-item label="备注">
+        <el-form-item label="描述">
           <el-input
-            v-model="newFormInline.remark"
-            placeholder="请输入备注信息"
+            v-model="newFormInline.description"
+            placeholder="请输入描述信息"
             type="textarea"
           />
         </el-form-item>

@@ -13,23 +13,27 @@ class UserCreateDTO(BaseModel):
     username: str = Field(min_length=3, max_length=50)
     password: str = Field(min_length=8, max_length=128)
     nickname: str | None = Field(default=None, max_length=64)
+    firstName: str | None = Field(default=None, max_length=64)
+    lastName: str | None = Field(default=None, max_length=64)
     email: str | None = None
     phone: str | None = Field(default=None, max_length=20)
-    sex: int | None = None
+    gender: int | None = Field(default=None, description="性别(0-未知, 1-男, 2-女)")
     avatar: str | None = None
-    status: int = 1
+    isActive: int = Field(default=1, description="是否启用")
+    isStaff: int = Field(default=0, description="是否为职员")
+    modeType: int = Field(default=0, description="权限模式(0-OR, 1-AND)")
     dept_id: str | None = Field(default=None, alias="deptId")
-    remark: str | None = None
+    description: str | None = None
 
     model_config = {"populate_by_name": True}
 
-    @field_validator("nickname", "email", "phone", "avatar", "remark", mode="before")
+    @field_validator("nickname", "firstName", "lastName", "email", "phone", "avatar", "description", mode="before")
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
-    @field_validator("sex", "status", mode="before")
+    @field_validator("gender", "isActive", "isStaff", "modeType", mode="before")
     @classmethod
     def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
         """将空字符串或 0 转换为 None。"""
@@ -46,23 +50,27 @@ class UserUpdateDTO(BaseModel):
     """更新用户请求"""
 
     nickname: str | None = Field(default=None, max_length=64)
+    firstName: str | None = Field(default=None, max_length=64)
+    lastName: str | None = Field(default=None, max_length=64)
     email: str | None = None
     phone: str | None = Field(default=None, max_length=20)
-    sex: int | None = None
+    gender: int | None = Field(default=None, description="性别(0-未知, 1-男, 2-女)")
     avatar: str | None = None
-    status: int | None = None
+    isActive: int | None = Field(default=None, description="是否启用")
+    isStaff: int | None = Field(default=None, description="是否为职员")
+    modeType: int | None = Field(default=None, description="权限模式(0-OR, 1-AND)")
     dept_id: str | None = Field(default=None, alias="deptId")
-    remark: str | None = None
+    description: str | None = None
 
     model_config = {"populate_by_name": True}
 
-    @field_validator("nickname", "email", "phone", "avatar", "remark", mode="before")
+    @field_validator("nickname", "firstName", "lastName", "email", "phone", "avatar", "description", mode="before")
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
-    @field_validator("sex", "status", mode="before")
+    @field_validator("gender", "isActive", "isStaff", "modeType", mode="before")
     @classmethod
     def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
         """将空字符串或 0 转换为 None。"""
@@ -81,15 +89,21 @@ class UserResponseDTO(BaseModel):
     id: str
     username: str
     nickname: str | None = None
+    firstName: str | None = None
+    lastName: str | None = None
     avatar: str | None = None
     email: str | None = None
     phone: str | None = None
-    sex: int | None = None
-    status: int = 1
+    gender: int | None = None
+    isActive: int = 1
+    isStaff: int = 0
+    modeType: int = 0
     roles: list[dict] = []
-    permissions: list[str] = []
-    createTime: datetime | None = None
-    updateTime: datetime | None = None
+    creatorId: str | None = None
+    modifierId: str | None = None
+    createdTime: datetime | None = None
+    updatedTime: datetime | None = None
+    description: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -102,10 +116,10 @@ class UserListQueryDTO(BaseModel):
     username: str | None = None
     phone: str | None = None
     email: str | None = None
-    status: int | None = None
+    isActive: int | None = None
     deptId: str | None = None
 
-    @field_validator("status", mode="before")
+    @field_validator("isActive", mode="before")
     @classmethod
     def validate_empty(cls, v):
         """将空字符串转换为 None。"""
@@ -134,7 +148,7 @@ class ResetPasswordDTO(BaseModel):
 class UpdateStatusDTO(BaseModel):
     """更改用户状态请求"""
 
-    status: int = Field(ge=0, le=1)
+    isActive: int = Field(ge=0, le=1)
 
 
 class BatchDeleteDTO(BaseModel):

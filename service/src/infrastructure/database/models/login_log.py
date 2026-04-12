@@ -17,28 +17,57 @@ if TYPE_CHECKING:
 class LoginLog(SQLModel, table=True):
     """登录日志实体。"""
 
-    __tablename__ = "sys_login_logs"
+    __tablename__ = "sys_userloginlog"
 
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)
-    username: str = Field(max_length=50)  # 用户名
-    ip: str | None = Field(default=None, max_length=45)  # IP地址
-    address: str | None = Field(default=None, max_length=200)  # 登录地点
-    system: str | None = Field(default=None, max_length=100)  # 操作系统
-    browser: str | None = Field(default=None, max_length=100)  # 浏览器
+    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
     status: int = Field(default=1)  # 登录状态(0-失败, 1-成功)
-    behavior: str | None = Field(default=None, max_length=200)  # 行为描述
-    login_time: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), server_default=func.now()))
+    ipaddress: str | None = Field(default=None, max_length=39)  # IP地址
+    browser: str | None = Field(default=None, max_length=64)  # 浏览器
+    system: str | None = Field(default=None, max_length=64)  # 操作系统
+    agent: str | None = Field(default=None, max_length=128)  # User-Agent信息
+    login_type: int = Field(default=0)  # 登录类型(0-密码, 1-短信, 2-OAuth等)
+    creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
+    modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
+    created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
+    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    description: str | None = Field(default=None, max_length=256)
 
     def to_domain(self) -> "LoginLogEntity":
         """将 ORM 模型转换为领域实体。"""
         from src.domain.entities.log import LoginLogEntity
 
-        return LoginLogEntity(id=self.id, username=self.username, ip=self.ip, address=self.address, system=self.system, browser=self.browser, status=self.status, behavior=self.behavior, login_time=self.login_time)
+        return LoginLogEntity(
+            id=self.id,
+            status=self.status,
+            ipaddress=self.ipaddress,
+            browser=self.browser,
+            system=self.system,
+            agent=self.agent,
+            login_type=self.login_type,
+            creator_id=self.creator_id,
+            modifier_id=self.modifier_id,
+            created_time=self.created_time,
+            updated_time=self.updated_time,
+            description=self.description,
+        )
 
     @classmethod
     def from_domain(cls, entity: "LoginLogEntity") -> "LoginLog":
         """从领域实体创建 ORM 模型实例。"""
-        return cls(id=entity.id, username=entity.username, ip=entity.ip, address=entity.address, system=entity.system, browser=entity.browser, status=entity.status, behavior=entity.behavior, login_time=entity.login_time)
+        return cls(
+            id=entity.id,
+            status=entity.status,
+            ipaddress=entity.ipaddress,
+            browser=entity.browser,
+            system=entity.system,
+            agent=entity.agent,
+            login_type=entity.login_type,
+            creator_id=entity.creator_id,
+            modifier_id=entity.modifier_id,
+            created_time=entity.created_time,
+            updated_time=entity.updated_time,
+            description=entity.description,
+        )
 
     def __repr__(self) -> str:
-        return f"<LoginLog(id={self.id}, username={self.username})>"
+        return f"<LoginLog(id={self.id}, status={self.status})>"

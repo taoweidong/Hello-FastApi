@@ -1,8 +1,31 @@
 """应用层 - 菜单领域的数据传输对象。"""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field, field_validator
 
 from src.application.validators import empty_str_to_none, normalize_optional_id
+
+
+class MenuMetaDTO(BaseModel):
+    """菜单元数据响应（嵌套在 MenuResponseDTO 中）"""
+
+    id: str
+    title: str | None = None
+    icon: str | None = None
+    rSvgName: str | None = None
+    isShowMenu: int = 1
+    isShowParent: int = 0
+    isKeepalive: int = 0
+    frameUrl: str | None = None
+    frameLoading: int = 1
+    transitionEnter: str | None = None
+    transitionLeave: str | None = None
+    isHiddenTag: int = 0
+    fixedTag: int = 0
+    dynamicLevel: int = 0
+
+    model_config = {"from_attributes": True}
 
 
 class MenuCreateDTO(BaseModel):
@@ -16,28 +39,31 @@ class MenuCreateDTO(BaseModel):
         """将 parentId 统一处理：int 0、空字符串、None 都转换为 None 表示顶级菜单。"""
         return normalize_optional_id(v)
 
-    menuType: int = 0  # 菜单类型(0-菜单, 1-iframe, 2-外链, 3-按钮)
-    title: str = Field(max_length=64)  # 菜单名称
-    name: str | None = Field(default=None, max_length=64)  # 路由name
-    path: str | None = Field(default=None, max_length=256)  # 路由路径
-    component: str | None = Field(default=None, max_length=256)  # 组件路径
-    rank: int = 99  # 排序号
-    redirect: str | None = Field(default=None, max_length=256)  # 重定向路径
-    icon: str | None = Field(default=None, max_length=64)  # 图标
-    extraIcon: str | None = Field(default=None, max_length=64)  # 菜单名称右侧额外图标
-    enterTransition: str | None = Field(default=None, max_length=64)  # 进场动画
-    leaveTransition: str | None = Field(default=None, max_length=64)  # 离场动画
-    activePath: str | None = Field(default=None, max_length=256)  # 激活菜单路径
-    auths: str | None = Field(default=None, max_length=500)  # 权限标识
-    frameSrc: str | None = Field(default=None, max_length=500)  # iframe链接地址
-    frameLoading: bool = True  # iframe首次加载动画
-    keepAlive: bool = False  # 是否缓存页面
-    hiddenTag: bool = False  # 禁止添加到标签页
-    fixedTag: bool = False  # 固定标签页
-    showLink: bool = True  # 是否显示菜单
-    showParent: bool = False  # 是否显示父级菜单
+    menuType: int = Field(default=0, description="菜单类型(0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限)")
+    name: str = Field(max_length=128, description="菜单名称(唯一)")
+    path: str | None = Field(default=None, max_length=255, description="路由路径")
+    component: str | None = Field(default=None, max_length=255, description="组件路径")
+    rank: int = Field(default=0, description="排序号")
+    isActive: int = Field(default=1, description="是否启用")
+    method: str | None = Field(default=None, max_length=10, description="HTTP方法，用于PERMISSION类型")
+    description: str | None = Field(default=None, max_length=256)
 
-    @field_validator("title", "name", "path", "component", "redirect", "icon", "extraIcon", "enterTransition", "leaveTransition", "activePath", "auths", "frameSrc", mode="before")
+    # 菜单元数据字段（创建时一起提交）
+    title: str | None = Field(default=None, max_length=255, description="菜单显示标题")
+    icon: str | None = Field(default=None, max_length=255, description="菜单图标")
+    rSvgName: str | None = Field(default=None, max_length=255, description="SVG图标名称")
+    isShowMenu: int = Field(default=1, description="是否在菜单中显示")
+    isShowParent: int = Field(default=0, description="是否显示父级菜单")
+    isKeepalive: int = Field(default=0, description="是否缓存页面")
+    frameUrl: str | None = Field(default=None, max_length=255, description="iframe内嵌链接")
+    frameLoading: int = Field(default=1, description="iframe加载动画")
+    transitionEnter: str | None = Field(default=None, max_length=255, description="进场动画名称")
+    transitionLeave: str | None = Field(default=None, max_length=255, description="离场动画名称")
+    isHiddenTag: int = Field(default=0, description="禁止添加到标签页")
+    fixedTag: int = Field(default=0, description="固定标签页")
+    dynamicLevel: int = Field(default=0, description="动态路由层级")
+
+    @field_validator("name", "path", "component", "method", "description", "title", "icon", "rSvgName", "frameUrl", "transitionEnter", "transitionLeave", mode="before")
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
@@ -55,29 +81,31 @@ class MenuUpdateDTO(BaseModel):
         """将 parentId 统一处理：int 0、空字符串、None 都转换为 None 表示顶级菜单。"""
         return normalize_optional_id(v)
 
-    menuType: int | None = None  # 菜单类型(0-菜单, 1-iframe, 2-外链, 3-按钮)
-    title: str | None = Field(default=None, max_length=64)  # 菜单名称
-    name: str | None = Field(default=None, max_length=64)  # 路由name
-    path: str | None = Field(default=None, max_length=256)  # 路由路径
-    component: str | None = Field(default=None, max_length=256)  # 组件路径
-    rank: int | None = None  # 排序号
-    redirect: str | None = Field(default=None, max_length=256)  # 重定向路径
-    icon: str | None = Field(default=None, max_length=64)  # 图标
-    extraIcon: str | None = Field(default=None, max_length=64)  # 菜单名称右侧额外图标
-    enterTransition: str | None = Field(default=None, max_length=64)  # 进场动画
-    leaveTransition: str | None = Field(default=None, max_length=64)  # 离场动画
-    activePath: str | None = Field(default=None, max_length=256)  # 激活菜单路径
-    auths: str | None = Field(default=None, max_length=500)  # 权限标识
-    frameSrc: str | None = Field(default=None, max_length=500)  # iframe链接地址
-    frameLoading: bool | None = None  # iframe首次加载动画
-    keepAlive: bool | None = None  # 是否缓存页面
-    hiddenTag: bool | None = None  # 禁止添加到标签页
-    fixedTag: bool | None = None  # 固定标签页
-    showLink: bool | None = None  # 是否显示菜单
-    showParent: bool | None = None  # 是否显示父级菜单
-    status: int | None = None  # 状态(0-禁用, 1-启用)
+    menuType: int | None = Field(default=None, description="菜单类型(0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限)")
+    name: str | None = Field(default=None, max_length=128, description="菜单名称(唯一)")
+    path: str | None = Field(default=None, max_length=255, description="路由路径")
+    component: str | None = Field(default=None, max_length=255, description="组件路径")
+    rank: int | None = None
+    isActive: int | None = Field(default=None, description="是否启用")
+    method: str | None = Field(default=None, max_length=10, description="HTTP方法，用于PERMISSION类型")
+    description: str | None = Field(default=None, max_length=256)
 
-    @field_validator("title", "name", "path", "component", "redirect", "icon", "extraIcon", "enterTransition", "leaveTransition", "activePath", "auths", "frameSrc", mode="before")
+    # 菜单元数据字段
+    title: str | None = Field(default=None, max_length=255, description="菜单显示标题")
+    icon: str | None = Field(default=None, max_length=255, description="菜单图标")
+    rSvgName: str | None = Field(default=None, max_length=255, description="SVG图标名称")
+    isShowMenu: int | None = Field(default=None, description="是否在菜单中显示")
+    isShowParent: int | None = Field(default=None, description="是否显示父级菜单")
+    isKeepalive: int | None = Field(default=None, description="是否缓存页面")
+    frameUrl: str | None = Field(default=None, max_length=255, description="iframe内嵌链接")
+    frameLoading: int | None = Field(default=None, description="iframe加载动画")
+    transitionEnter: str | None = Field(default=None, max_length=255, description="进场动画名称")
+    transitionLeave: str | None = Field(default=None, max_length=255, description="离场动画名称")
+    isHiddenTag: int | None = Field(default=None, description="禁止添加到标签页")
+    fixedTag: int | None = Field(default=None, description="固定标签页")
+    dynamicLevel: int | None = Field(default=None, description="动态路由层级")
+
+    @field_validator("name", "path", "component", "method", "description", "title", "icon", "rSvgName", "frameUrl", "transitionEnter", "transitionLeave", mode="before")
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
@@ -87,32 +115,23 @@ class MenuUpdateDTO(BaseModel):
 class MenuResponseDTO(BaseModel):
     """菜单响应"""
 
-    id: str  # 菜单ID (UUID格式)
-    parentId: str | None = None  # 父菜单ID，None表示顶级菜单
-    menuType: int = 0  # 菜单类型(0-菜单, 1-iframe, 2-外链, 3-按钮)
-    title: str  # 菜单名称
-    name: str | None = None  # 路由name
-    path: str | None = None  # 路由路径
-    component: str | None = None  # 组件路径
-    rank: int = 99  # 排序号
-    redirect: str | None = None  # 重定向路径
-    icon: str | None = None  # 图标
-    extraIcon: str | None = None  # 菜单名称右侧额外图标
-    enterTransition: str | None = None  # 进场动画
-    leaveTransition: str | None = None  # 离场动画
-    activePath: str | None = None  # 激活菜单路径
-    auths: str | None = None  # 权限标识
-    frameSrc: str | None = None  # iframe链接地址
-    frameLoading: bool = True  # iframe首次加载动画
-    keepAlive: bool = False  # 是否缓存页面
-    hiddenTag: bool = False  # 禁止添加到标签页
-    fixedTag: bool = False  # 固定标签页
-    showLink: bool = True  # 是否显示菜单
-    showParent: bool = False  # 是否显示父级菜单
-    status: int = 1  # 状态(0-禁用, 1-启用)
-    children: list["MenuResponseDTO"] = []  # 子菜单列表
-    createTime: str | None = None  # 创建时间
-    updateTime: str | None = None  # 更新时间
+    id: str
+    parentId: str | None = None
+    menuType: int = 0
+    name: str = ""
+    path: str = ""
+    component: str | None = None
+    rank: int = 0
+    isActive: int = 1
+    method: str | None = None
+    metaId: str = ""
+    meta: MenuMetaDTO | None = None
+    creatorId: str | None = None
+    modifierId: str | None = None
+    createdTime: datetime | None = None
+    updatedTime: datetime | None = None
+    description: str | None = None
+    children: list["MenuResponseDTO"] = []
 
     model_config = {"from_attributes": True}
 

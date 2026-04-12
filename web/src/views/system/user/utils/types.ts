@@ -9,13 +9,13 @@ interface FormItemProps {
   password: string;
   phone: string | number;
   email: string;
-  sex: string | number;
-  status: number;
+  gender: string | number;
+  isActive: boolean;
   dept?: {
     id?: number;
     name?: string;
   };
-  remark: string;
+  description: string;
 }
 interface FormProps {
   formInline: FormItemProps;

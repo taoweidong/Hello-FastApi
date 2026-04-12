@@ -13,38 +13,49 @@ class UserEntity:
     """用户领域实体。
 
     Attributes:
-        id: 用户唯一标识（36位UUID字符串）
-        username: 用户名
-        hashed_password: 哈希后的密码
-        email: 电子邮箱（可选）
-        nickname: 昵称（可选）
-        avatar: 头像URL（可选）
-        phone: 手机号（可选）
-        sex: 性别（0-男, 1-女，可选）
-        status: 状态（0-禁用, 1-启用）
-        dept_id: 所属部门ID（可选）
-        remark: 备注（可选）
+        id: 用户唯一标识（32位UUID字符串）
+        password: 哈希后的密码
+        last_login: 最后登录时间
         is_superuser: 是否为超级管理员
-        created_at: 创建时间
-        updated_at: 更新时间
+        username: 用户名
+        first_name: 名
+        last_name: 姓
+        is_staff: 是否为职员
+        is_active: 是否启用
+        date_joined: 注册时间
+        mode_type: 权限模式(0-OR, 1-AND)
+        avatar: 头像URL
+        nickname: 昵称
+        gender: 性别(0-未知, 1-男, 2-女)
+        phone: 手机号
+        email: 电子邮箱
+        creator_id: 创建人ID
+        modifier_id: 修改人ID
+        dept_id: 所属部门ID
+        created_time: 创建时间
+        updated_time: 更新时间
+        description: 描述
     """
 
     id: str
     username: str
-    hashed_password: str
-    email: str | None = None
-    nickname: str | None = None
+    password: str
+    last_login: datetime | None = None
+    is_superuser: int = 0
+    first_name: str = ""
+    last_name: str = ""
+    is_staff: int = 0
+    is_active: int = 1
+    date_joined: datetime | None = None
+    mode_type: int = 0
     avatar: str | None = None
-    phone: str | None = None
-    sex: int | None = None
-    status: int = 1
+    nickname: str = ""
+    gender: int = 0
+    phone: str = ""
+    email: str = ""
+    creator_id: str | None = None
+    modifier_id: str | None = None
     dept_id: str | None = None
-    remark: str | None = None
-    is_superuser: bool = False
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-
-    @property
-    def is_active(self) -> bool:
-        """是否启用（status=1表示启用）。"""
-        return self.status == 1
+    created_time: datetime | None = None
+    updated_time: datetime | None = None
+    description: str | None = None

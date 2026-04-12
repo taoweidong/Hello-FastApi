@@ -12,10 +12,10 @@
 """
 
 # 导出实体
-from src.domain.entities import DepartmentEntity, LoginLogEntity, MenuEntity, OperationLogEntity, PermissionEntity, RoleEntity, SystemLogEntity, UserEntity
+from src.domain.entities import DepartmentEntity, LoginLogEntity, MenuEntity, MenuMetaEntity, OperationLogEntity, RoleEntity, SystemConfigEntity, UserEntity
 
 # 导出仓储接口
-from src.domain.repositories import DepartmentRepositoryInterface, LogRepositoryInterface, MenuRepositoryInterface, PermissionRepositoryInterface, RoleRepositoryInterface, UserRepositoryInterface
+from src.domain.repositories import DepartmentRepositoryInterface, LogRepositoryInterface, MenuRepositoryInterface, RoleRepositoryInterface, SystemConfigRepositoryInterface, UserRepositoryInterface
 
 # 导出领域服务
 from src.domain.services import PasswordService, TokenService
@@ -24,19 +24,19 @@ __all__ = [
     # 实体
     "UserEntity",
     "RoleEntity",
-    "PermissionEntity",
     "MenuEntity",
+    "MenuMetaEntity",
     "DepartmentEntity",
+    "SystemConfigEntity",
     "LoginLogEntity",
     "OperationLogEntity",
-    "SystemLogEntity",
     # 仓储接口
     "UserRepositoryInterface",
     "RoleRepositoryInterface",
-    "PermissionRepositoryInterface",
     "MenuRepositoryInterface",
     "DepartmentRepositoryInterface",
     "LogRepositoryInterface",
+    "SystemConfigRepositoryInterface",
     # 领域服务
     "PasswordService",
     "TokenService",

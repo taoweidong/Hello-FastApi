@@ -68,7 +68,7 @@ class UserRouter(Routable):
     @put("/{user_id}/status")
     async def update_user_status(self, user_id: str, dto: UpdateStatusDTO, service: UserService = Depends(get_user_service), _: dict = Depends(require_permission("user:edit"))) -> dict:
         """更改用户状态接口。"""
-        await service.update_status(user_id, dto.status)
+        await service.update_status(user_id, dto.isActive)
         return success_response(message="状态更新成功")
 
     @post("/change-password")
