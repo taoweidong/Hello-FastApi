@@ -2,9 +2,7 @@
 
 基于 FastAPI 框架的 RESTful API 服务，采用 DDD（领域驱动设计）架构，支持 JWT 双令牌认证和 RBAC 权限控制。
 
-## 项目概述
-
-本项目是 Vue3 + FastAPI 全栈中后台管理系统的后端服务，具有以下特性：
+## 核心特性
 
 - **DDD 架构**：清晰的四层设计（api/application/domain/infrastructure）
 - **JWT 双令牌**：Access Token + Refresh Token 认证机制
@@ -32,7 +30,9 @@
 service/
 ├── docker/                     # Docker 配置
 ├── docs/                       # 文档目录
-├── logs/                       # 日志目录
+│   ├── api/                    # API 文档
+│   ├── design/                 # 架构设计文档
+│   └── guide/                  # 使用指南
 ├── scripts/                    # 脚本工具
 │   ├── cli.py                  # 管理命令行工具
 │   ├── setup_dev.sh            # 开发环境安装脚本 (Linux/Mac)
@@ -82,32 +82,17 @@ service/
 - Python ≥ 3.10
 - UV（推荐的 Python 包管理工具）
 
-### 安装步骤
-
-**方式一：使用安装脚本（推荐）**
-
-Linux/Mac:
-```bash
-bash scripts/setup_dev.sh
-```
-
-Windows:
-```cmd
-scripts\setup_dev.bat
-```
-
-**方式二：手动安装**
+### 安装
 
 ```bash
-# 安装 UV
-curl -LsSf https://astral.sh/uv/install.sh | sh
+cd service
 
 # 创建虚拟环境
 uv venv --python 3.10
 
 # 激活虚拟环境
-source .venv/bin/activate  # Linux/Mac
-.venv\Scripts\activate     # Windows
+source .venv/bin/activate        # Linux/Mac
+.venv\Scripts\activate           # Windows
 
 # 安装依赖
 uv pip install -e ".[dev]"
@@ -115,19 +100,14 @@ uv pip install -e ".[dev]"
 
 ### 数据库初始化
 
-按以下顺序执行命令完成数据库初始化：
-
 ```bash
 # 1. 创建数据库表
 python -m scripts.cli initdb
 
-# 2. 初始化 RBAC 数据（角色、权限）
+# 2. 初始化 RBAC 数据
 python -m scripts.cli seedrbac
 
-# 3. 初始化测试数据（菜单、日志等）
-python -m scripts.cli seeddata
-
-# 4. 创建超级管理员
+# 3. 创建超级管理员
 python -m scripts.cli createsuperuser -u admin -e admin@example.com -p admin123
 ```
 
@@ -141,102 +121,32 @@ python -m scripts.cli runserver
 - API 文档: http://localhost:8000/api/docs
 - ReDoc 文档: http://localhost:8000/api/redoc
 
-## 管理命令
+## 单元测试
 
-通过 `python -m scripts.cli` 执行管理命令：
+```bash
+pytest                                    # 运行所有测试
+pytest tests/unit/                        # 仅单元测试
+pytest --cov=src --cov-report=term-missing # 带覆盖率
+```
 
-| 命令 | 说明 |
+## 规范检查
+
+```bash
+ruff check . --fix    # Lint + 自动修复
+ruff format .         # 格式化
+mypy src/             # 类型检查
+```
+
+## 📖 文档导航
+
+| 文档 | 说明 |
 |------|------|
-| `runserver` | 启动开发服务器（默认端口 8000） |
-| `initdb` | 初始化数据库表 |
-| `seedrbac` | 初始化默认角色和权限数据 |
-| `seeddata` | 初始化测试数据（菜单、登录日志、操作日志、系统日志） |
-| `createsuperuser` | 创建超级管理员 |
-
-**createsuperuser 参数：**
-```bash
-python -m scripts.cli createsuperuser --username <用户名> --email <邮箱> --password <密码> [--nickname <昵称>]
-# 简写形式
-python -m scripts.cli createsuperuser -u <用户名> -e <邮箱> -p <密码> [-n <昵称>]
-```
-
-## 环境配置
-
-项目支持多环境配置，通过 `APP_ENV` 环境变量切换：
-
-| 环境 | 配置文件 | 说明 |
-|------|----------|------|
-| development | `.env.development` | 开发环境，DEBUG=true，使用 SQLite |
-| production | `.env.production` | 生产环境，DEBUG=false，使用 PostgreSQL |
-| testing | `.env.testing` | 测试环境，使用测试数据库 |
-
-### 切换环境
-
-Linux/Mac:
-```bash
-export APP_ENV=production
-python -m scripts.cli runserver
-```
-
-Windows:
-```cmd
-set APP_ENV=production
-python -m scripts.cli runserver
-```
-
-### 配置加载顺序
-
-```
-系统环境变量 > .env.{APP_ENV} > .env > 默认值
-```
-
-## 开发规范
-
-### 代码风格
-
-- 遵循 PEP 8 规范
-- 使用 Ruff 进行代码格式化和检查
-- **所有代码注释使用中文描述**
-- 所有公共接口使用类型提示
-
-### 数据库规范
-
-- **表名前缀**：所有数据表以 `sys_` 为前缀
-- **主键格式**：`id` 字段使用 36 位 UUID 字符串
-
-### 代码检查
-
-```bash
-# Ruff 检查和格式化
-ruff check . --fix
-ruff format .
-
-# MyPy 类型检查
-mypy src/
-
-# 运行测试
-pytest
-
-# 运行测试（带覆盖率）
-pytest --cov=src --cov-report=term-missing
-```
-
-## 部署
-
-### Docker 部署
-
-```bash
-cd docker
-docker-compose up -d
-```
-
-### 生产环境
-
-使用 Gunicorn + Uvicorn Worker 部署：
-
-```bash
-gunicorn src.config.asgi:application -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
-```
+| [管理命令](docs/guide/cli-commands.md) | CLI 命令详细说明（initdb、seedrbac、createsuperuser 等） |
+| [环境配置](docs/guide/environment.md) | 多环境切换、配置项说明、.env 文件详解 |
+| [开发规范](docs/guide/development.md) | 代码风格、数据库规范、DDD 分层约束、API 响应格式 |
+| [部署](docs/guide/deployment.md) | Docker 部署、生产环境部署、Nginx 反向代理 |
+| [测试](docs/guide/testing.md) | 测试策略、编写测试、覆盖率配置 |
+| [架构设计](docs/design/项目架构设计与约束.md) | DDD 分层架构、依赖约束、代码示例 |
 
 ## 许可证
 
