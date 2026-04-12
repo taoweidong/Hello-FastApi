@@ -10,7 +10,7 @@ interface FormItemProps {
   phone: string | number;
   email: string;
   gender: string | number;
-  isActive: boolean;
+  isActive: number;
   dept?: {
     id?: number;
     name?: string;

@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.application.validators import empty_str_or_zero_to_none, empty_str_to_none
+from src.application.validators import empty_str_to_none
 
 
 class RoleCreateDTO(BaseModel):
@@ -41,8 +41,15 @@ class RoleUpdateDTO(BaseModel):
     @field_validator("isActive", mode="before")
     @classmethod
     def validate_status(cls, v: int | str | None) -> int | None:
-        """将空字符串或 0 转换为 None。"""
-        return empty_str_or_zero_to_none(v)
+        """将空字符串转换为 None，保留 0 值。"""
+        if v == "" or v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return int(v)
+            except ValueError:
+                return None
+        return v
 
 
 class RoleResponseDTO(BaseModel):

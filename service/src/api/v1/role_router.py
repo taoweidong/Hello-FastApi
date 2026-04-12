@@ -1,4 +1,4 @@
-﻿"""System API - 角色管理路由模块。
+"""System API - 角色管理路由模块。
 
 提供角色管理相关的接口，包括角色增删改查、菜单分配等功能。
 路由前缀: /api/system/role
@@ -23,18 +23,7 @@ class RoleRouter(Routable):
     async def get_role_list(self, query: RoleListQueryDTO, service: RoleService = Depends(get_role_service), _: dict = Depends(require_permission("role:view"))) -> dict:
         """获取角色列表接口（分页）。"""
         roles, total = await service.get_roles(query)
-        role_list = []
-        for role in roles:
-            role_dict = {
-                "id": role.id,
-                "name": role.name,
-                "code": role.code,
-                "isActive": role.isActive,
-                "description": role.description or "",
-                "menus": role.menus if role.menus else [],
-                "createdTime": role.createdTime.isoformat() if role.createdTime else None,
-            }
-            role_list.append(role_dict)
+        role_list = [role.model_dump() for role in roles]
         return list_response(list_data=role_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/create")

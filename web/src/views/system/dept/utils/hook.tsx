@@ -105,7 +105,7 @@ export function useDept() {
           phone: row?.phone ?? "",
           email: row?.email ?? "",
           rank: row?.rank ?? 0,
-          isActive: row?.isActive ?? true,
+          isActive: row?.isActive ?? 1,
           description: row?.description ?? ""
         }
       },

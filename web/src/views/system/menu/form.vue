@@ -26,7 +26,7 @@ const props = withDefaults(defineProps<FormProps>(), {
     component: "",
     rank: 99,
     method: "",
-    isActive: true,
+    isActive: 1,
     meta: {
       title: "",
       icon: "",
@@ -316,6 +316,8 @@ defineExpose({ getRef });
         <el-form-item label="是否启用">
           <el-switch
             v-model="newFormInline.isActive"
+            :active-value="1"
+            :inactive-value="0"
             inline-prompt
             active-text="启用"
             inactive-text="停用"

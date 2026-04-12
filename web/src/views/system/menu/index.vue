@@ -62,7 +62,7 @@ function handleAddChild(parentNode?: any) {
     component: "",
     rank: 99,
     method: "",
-    isActive: true,
+    isActive: 1,
     meta: {
       title: "",
       icon: "",

@@ -13,7 +13,7 @@ export function usePublicHooks() {
   });
 
   const tagStyle = computed(() => {
-    return (isActive: boolean) => {
+    return (isActive: number) => {
       return isActive
         ? {
             "--el-tag-text-color": isDark.value ? "#6abe39" : "#389e0d",

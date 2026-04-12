@@ -63,6 +63,8 @@ export function useRole(treeRef: Ref) {
           size={scope.props.size === "small" ? "small" : "default"}
           loading={switchLoadMap.value[scope.index]?.loading}
           v-model={scope.row.isActive}
+          active-value={1}
+          inactive-value={0}
           active-text="已启用"
           inactive-text="已停用"
           inline-prompt
@@ -122,7 +124,7 @@ export function useRole(treeRef: Ref) {
             message(`已${row.isActive ? "启用" : "停用"}${row.name}`, { type: "success" });
           }
         } catch (error) {
-          row.isActive = !row.isActive;
+          row.isActive = row.isActive === 1 ? 0 : 1;
           message("修改角色状态失败", { type: "error" });
         } finally {
           switchLoadMap.value[index] = Object.assign(
@@ -135,7 +137,7 @@ export function useRole(treeRef: Ref) {
         }
       })
       .catch(() => {
-        row.isActive = !row.isActive;
+        row.isActive = row.isActive === 1 ? 0 : 1;
       });
   }
 

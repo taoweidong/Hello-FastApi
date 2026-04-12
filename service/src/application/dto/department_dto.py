@@ -64,11 +64,24 @@ class DepartmentUpdateDTO(BaseModel):
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
-    @field_validator("modeType", "rank", "autoBind", "isActive", mode="before")
+    @field_validator("modeType", "rank", "autoBind", mode="before")
     @classmethod
     def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
         """将空字符串或 0 转换为 None。"""
         return empty_str_or_zero_to_none(v)
+
+    @field_validator("isActive", mode="before")
+    @classmethod
+    def validate_is_active(cls, v: int | str | None) -> int | None:
+        """将空字符串转换为 None，保留 0 值。"""
+        if v == "" or v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return int(v)
+            except ValueError:
+                return None
+        return v
 
 
 class DepartmentResponseDTO(BaseModel):

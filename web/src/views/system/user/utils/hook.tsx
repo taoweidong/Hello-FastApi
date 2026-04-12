@@ -131,6 +131,8 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
           size={scope.props.size === "small" ? "small" : "default"}
           loading={switchLoadMap.value[scope.index]?.loading}
           v-model={scope.row.isActive}
+          active-value={1}
+          inactive-value={0}
           active-text="已启用"
           inactive-text="已停用"
           inline-prompt
@@ -205,7 +207,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
             message("已成功修改用户状态", { type: "success" });
           }
         } catch (error) {
-          row.isActive = !row.isActive;
+          row.isActive = row.isActive === 1 ? 0 : 1;
           message("修改用户状态失败", { type: "error" });
         } finally {
           switchLoadMap.value[index] = Object.assign(
@@ -218,7 +220,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
         }
       })
       .catch(() => {
-        row.isActive = !row.isActive;
+        row.isActive = row.isActive === 1 ? 0 : 1;
       });
   }
 
@@ -334,7 +336,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
           phone: row?.phone ?? "",
           email: row?.email ?? "",
           gender: row?.gender ?? "",
-          isActive: row?.isActive ?? true,
+          isActive: row?.isActive ?? 1,
           description: row?.description ?? ""
         }
       },

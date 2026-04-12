@@ -16,7 +16,7 @@ export function renderOption(options: ReadonlyArray<OptionsType>) {
 }
 
 /** 渲染 el-switch 组件（启用/停用） */
-export function renderSwitch(value: boolean, style?: Record<string, string>) {
+export function renderSwitch(value: number, style?: Record<string, string>) {
   return h("span", { style }, value ? "启用" : "停用");
 }
 

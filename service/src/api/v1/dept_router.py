@@ -9,7 +9,7 @@ from classy_fastapi import Routable, delete, post, put
 from fastapi import Body, Depends
 
 from src.api.common import success_response
-from src.api.dependencies import get_current_active_user, get_department_service, require_permission
+from src.api.dependencies import get_department_service, require_permission
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
 from src.application.services.department_service import DepartmentService
 
@@ -22,21 +22,7 @@ class DeptRouter(Routable):
         """获取部门列表（扁平结构）。"""
         query = DepartmentListQueryDTO(name=data.get("name"), isActive=data.get("isActive"))
         departments = await service.get_departments(query)
-        dept_list = []
-        for dept in departments:
-            dept_dict = {
-                "id": dept.id,
-                "parentId": dept.parentId or 0,
-                "name": dept.name,
-                "modeType": dept.modeType,
-                "code": dept.code,
-                "rank": dept.rank,
-                "autoBind": dept.autoBind,
-                "isActive": dept.isActive,
-                "description": dept.description or "",
-                "createdTime": dept.created_time.isoformat() if dept.created_time else None,
-            }
-            dept_list.append(dept_dict)
+        dept_list = [dept.model_dump() for dept in departments]
         return success_response(data=dept_list)
 
     @post("/dept/create")

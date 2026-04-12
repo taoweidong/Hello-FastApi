@@ -6,7 +6,7 @@ interface FormItemProps {
   phone: string | number;
   email: string;
   rank: number;
-  isActive: boolean;
+  isActive: number;
   description: string;
 }
 interface FormProps {

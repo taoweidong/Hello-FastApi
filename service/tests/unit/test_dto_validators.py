@@ -83,11 +83,11 @@ class TestUserListQueryDTO:
 
     def test_custom_values(self):
         """测试自定义值。"""
-        dto = UserListQueryDTO(pageNum=2, pageSize=20, username="test", isActive=True)
+        dto = UserListQueryDTO(pageNum=2, pageSize=20, username="test", isActive=1)
         assert dto.pageNum == 2
         assert dto.pageSize == 20
         assert dto.username == "test"
-        assert dto.isActive is True
+        assert dto.isActive == 1
 
 
 @pytest.mark.unit
@@ -119,12 +119,17 @@ class TestRoleUpdateDTO:
         """测试有效的角色更新数据。"""
         dto = RoleUpdateDTO(
             name="新名称",
-            isActive=True,
+            isActive=1,
         )
         assert dto.name == "新名称"
-        assert dto.isActive is True
+        assert dto.isActive == 1
 
     def test_default_is_active_is_none(self):
         """测试默认 isActive 为 None。"""
         dto = RoleUpdateDTO()
         assert dto.isActive is None
+
+    def test_is_active_zero_preserved(self):
+        """测试 isActive 为 0 时不会被转为 None。"""
+        dto = RoleUpdateDTO(isActive=0)
+        assert dto.isActive == 0

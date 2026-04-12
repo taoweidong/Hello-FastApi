@@ -39,7 +39,7 @@ interface FormItemProps {
   /** HTTP方法（PERMISSION类型使用） */
   method: string;
   /** 是否启用 */
-  isActive: boolean;
+  isActive: number;
   /** 菜单元数据 */
   meta: MetaProps;
 }

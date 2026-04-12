@@ -124,7 +124,7 @@ export function useMenu() {
           component: row?.component ?? "",
           rank: row?.rank ?? 99,
           method: row?.method ?? "",
-          isActive: row?.isActive ?? true,
+          isActive: row?.isActive ?? 1,
           meta: {
             title: row?.meta?.title ?? "",
             icon: row?.meta?.icon ?? "",
@@ -162,7 +162,7 @@ export function useMenu() {
                 component: curData.component || null,
                 rank: curData.rank || 99,
                 method: curData.method || null,
-                isActive: curData.isActive ?? true,
+                isActive: curData.isActive ?? 1,
                 meta: {
                   title: curData.meta?.title || null,
                   icon: curData.meta?.icon || null,
