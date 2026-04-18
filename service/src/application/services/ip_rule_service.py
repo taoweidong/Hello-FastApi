@@ -8,6 +8,7 @@ from datetime import datetime
 from src.domain.entities.ip_rule import IPRuleEntity
 from src.domain.exceptions import NotFoundError
 from src.domain.repositories.ip_rule_repository import IPRuleRepositoryInterface
+from src.infrastructure.logging.logger import logger
 
 
 def _parse_time_bound(value: object) -> datetime | None:
@@ -61,7 +62,9 @@ class IPRuleService:
             is_active=is_active,
             expires_at=expires_at,
         )
-        return await self.ip_rule_repo.create_ip_rule(entity)
+        result = await self.ip_rule_repo.create_ip_rule(entity)
+        await self._refresh_ip_filter_cache()
+        return result
 
     async def update_ip_rule(self, rule_id: str, ip_address: str | None = None, rule_type: str | None = None, reason: str | None = None, is_active: int | None = None, expires_at: datetime | None = None, description: str | None = None) -> IPRuleEntity:
         """更新 IP 规则。"""
@@ -77,12 +80,28 @@ class IPRuleService:
             expires_at=expires_at,
             description=description,
         )
-        return await self.ip_rule_repo.update_ip_rule(rule)
+        result = await self.ip_rule_repo.update_ip_rule(rule)
+        await self._refresh_ip_filter_cache()
+        return result
 
     async def delete_ip_rules(self, rule_ids: list[str]) -> int:
         """批量删除 IP 规则。"""
-        return await self.ip_rule_repo.delete_ip_rules(rule_ids=rule_ids)
+        result = await self.ip_rule_repo.delete_ip_rules(rule_ids=rule_ids)
+        await self._refresh_ip_filter_cache()
+        return result
 
     async def clear_ip_rules(self) -> int:
         """清空所有 IP 规则。"""
-        return await self.ip_rule_repo.clear_ip_rules()
+        result = await self.ip_rule_repo.clear_ip_rules()
+        await self._refresh_ip_filter_cache()
+        return result
+
+    @staticmethod
+    async def _refresh_ip_filter_cache() -> None:
+        """刷新 IP 过滤缓存。"""
+        try:
+            from src.infrastructure.http.ip_filter_cache import get_ip_filter_cache
+
+            await get_ip_filter_cache().refresh()
+        except Exception:
+            logger.warning("刷新 IP 过滤缓存失败", exc_info=True)

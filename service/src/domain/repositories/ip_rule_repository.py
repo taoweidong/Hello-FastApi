@@ -50,3 +50,8 @@ class IPRuleRepositoryInterface(ABC):
     async def clear_ip_rules(self) -> int:
         """清空 IP 规则。"""
         ...
+
+    @abstractmethod
+    async def get_effective_ip_rules(self) -> list[IPRuleEntity]:
+        """获取所有生效的 IP 规则（is_active=1 且未过期）。"""
+        ...

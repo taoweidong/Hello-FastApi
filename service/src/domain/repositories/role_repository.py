@@ -95,3 +95,11 @@ class RoleRepositoryInterface(ABC):
     async def get_role_menu_ids(self, role_id: str) -> list[str]:
         """获取角色的菜单ID列表。"""
         ...
+
+    @abstractmethod
+    async def get_user_all_menus(self, user_id: str) -> list[MenuEntity]:
+        """一次查询获取用户所有角色关联的菜单（去重）。
+
+        通过三表 JOIN 替代逐角色查询，消除 N+1 问题。
+        """
+        ...

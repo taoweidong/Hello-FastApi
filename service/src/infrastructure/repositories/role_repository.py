@@ -148,3 +148,24 @@ class RoleRepository(RoleRepositoryInterface):
         """获取角色的菜单ID列表。"""
         result = await self.session.exec(select(RoleMenuLink.menu_id).where(RoleMenuLink.userrole_id == role_id))
         return [str(menu_id) for menu_id in result.all()]
+
+    async def get_user_all_menus(self, user_id: str) -> list[MenuEntity]:
+        """一次查询获取用户所有角色关联的菜单（去重），消除 N+1 问题。"""
+        from sqlalchemy.orm import selectinload
+
+        stmt = (
+            select(Menu)
+            .join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id)
+            .join(UserRole, UserRole.userrole_id == RoleMenuLink.userrole_id)
+            .where(UserRole.userinfo_id == user_id)
+            .options(selectinload(Menu.meta))
+        )
+        result = await self.session.exec(stmt)
+        # 应用层去重（selectinload 与 DISTINCT 可能冲突）
+        seen_ids: set[str] = set()
+        menus: list[MenuEntity] = []
+        for model in result.all():
+            if model.id not in seen_ids:
+                seen_ids.add(model.id)
+                menus.append(model.to_domain())
+        return menus

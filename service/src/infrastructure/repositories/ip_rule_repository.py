@@ -96,3 +96,15 @@ class IPRuleRepository(IPRuleRepositoryInterface):
             await self.session.delete(rule)
         await self.session.flush()
         return count
+
+    async def get_effective_ip_rules(self) -> list[IPRuleEntity]:
+        """获取所有生效的 IP 规则（is_active=1 且未过期）。"""
+        from datetime import datetime, timezone
+
+        now = datetime.now(timezone.utc)
+        query = select(IPRule).where(
+            IPRule.is_active == 1,
+            (IPRule.expires_at.is_(None)) | (IPRule.expires_at > now),  # type: ignore[union-attr]
+        )
+        result = await self.session.exec(query)
+        return [rule.to_domain() for rule in result.all()]

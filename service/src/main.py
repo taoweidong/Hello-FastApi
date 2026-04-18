@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.constants import API_SYSTEM_PREFIX
 from src.api.v1 import system_router
 from src.config.settings import settings
-from src.infrastructure.http import RequestLoggingMiddleware, register_exception_handlers
+from src.infrastructure.http import IPFilterMiddleware, RequestLoggingMiddleware, get_ip_filter_cache, register_exception_handlers
 from src.infrastructure.lifecycle import application_lifespan
 
 LifespanFactory = Callable[[FastAPI], AbstractAsyncContextManager[Any]]
@@ -27,6 +27,10 @@ def create_app(*, lifespan_override: LifespanFactory | None = None) -> FastAPI:
 
     app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(IPFilterMiddleware)
+
+    # 设置 IPFilterCache 的 app 引用，供后续 refresh 使用
+    get_ip_filter_cache().set_app(app)
 
     register_exception_handlers(app)
 

@@ -72,20 +72,18 @@ def require_permission(code: str):
                     return current_user
             raise ForbiddenError(f"权限 '{code}' 是必需的")
 
-        # 缓存未命中：查库
+        # 缓存未命中：一次查询获取用户所有菜单，消除 N+1
         role_repo = RoleRepository(db)
-        user_roles = await role_repo.get_user_roles(current_user["id"])
+        user_menus = await role_repo.get_user_all_menus(current_user["id"])
 
         # 构建权限列表并写入缓存
         all_perms = []
         has_permission = False
-        for role in user_roles:
-            menus = await role_repo.get_role_menus(role.id)
-            for menu in menus:
-                if menu.menu_type == MenuEntity.PERMISSION:
-                    all_perms.append({"type": "permission", "name": menu.name, "role": role.name})
-                    if menu.name == code:
-                        has_permission = True
+        for menu in user_menus:
+            if menu.menu_type == MenuEntity.PERMISSION:
+                all_perms.append({"type": "permission", "name": menu.name})
+                if menu.name == code:
+                    has_permission = True
 
         # 写入缓存
         await cache_service.set_user_permissions(current_user["id"], all_perms)
@@ -116,22 +114,20 @@ def require_menu_permission(path: str, method: str):
                     return current_user
             raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
 
-        # 缓存未命中：查库
+        # 缓存未命中：一次查询获取用户所有菜单，消除 N+1
         role_repo = RoleRepository(db)
-        user_roles = await role_repo.get_user_roles(current_user["id"])
+        user_menus = await role_repo.get_user_all_menus(current_user["id"])
 
         all_perms = []
         has_permission = False
-        for role in user_roles:
-            menus = await role_repo.get_role_menus(role.id)
-            for menu in menus:
-                if menu.menu_type == MenuEntity.PERMISSION:
-                    perm_entry = {"type": "permission", "name": menu.name, "role": role.name}
-                    if menu.path and menu.method:
-                        perm_entry = {"type": "api", "path": menu.path, "method": menu.method, "name": menu.name, "role": role.name}
-                        if menu.path == path and menu.method == method:
-                            has_permission = True
-                    all_perms.append(perm_entry)
+        for menu in user_menus:
+            if menu.menu_type == MenuEntity.PERMISSION:
+                perm_entry = {"type": "permission", "name": menu.name}
+                if menu.path and menu.method:
+                    perm_entry = {"type": "api", "path": menu.path, "method": menu.method, "name": menu.name}
+                    if menu.path == path and menu.method == method:
+                        has_permission = True
+                all_perms.append(perm_entry)
 
         await cache_service.set_user_permissions(current_user["id"], all_perms)
 

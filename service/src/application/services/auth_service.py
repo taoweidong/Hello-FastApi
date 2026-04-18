@@ -51,15 +51,8 @@ class AuthService:
             user_menus = await self.menu_repo.get_all()
         else:
             user_roles = await self.role_repo.get_user_roles(user.id)
-            # 收集用户所有角色关联的菜单
-            menu_ids = set()
-            user_menus = []
-            for role in user_roles:
-                role_menus = await self.role_repo.get_role_menus(role.id)
-                for menu in role_menus:
-                    if menu.id not in menu_ids:
-                        menu_ids.add(menu.id)
-                        user_menus.append(menu)
+            # 一次查询获取用户所有角色关联的菜单，消除 N+1
+            user_menus = await self.role_repo.get_user_all_menus(user.id)
 
         # 5. 构建菜单名称列表（用于前端按钮权限 hasAuth 检查）
         menu_names = [m.name for m in user_menus if m.menu_type == MenuEntity.PERMISSION]
@@ -151,15 +144,8 @@ class AuthService:
         if user.is_superuser_user:
             all_menus = await self.menu_repo.get_all()
         else:
-            user_roles = await self.role_repo.get_user_roles(user.id)
-            menu_ids = set()
-            all_menus = []
-            for role in user_roles:
-                role_menus = await self.role_repo.get_role_menus(role.id)
-                for menu in role_menus:
-                    if menu.id not in menu_ids and menu.menu_type in (MenuEntity.DIRECTORY, MenuEntity.MENU_PAGE):
-                        menu_ids.add(menu.id)
-                        all_menus.append(menu)
+            # 一次查询获取用户所有角色关联的菜单，消除 N+1
+            all_menus = await self.role_repo.get_user_all_menus(user.id)
 
         # 只保留DIRECTORY和MENU类型
         route_menus = [m for m in all_menus if m.menu_type in (MenuEntity.DIRECTORY, MenuEntity.MENU_PAGE)]

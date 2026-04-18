@@ -132,6 +132,63 @@ class CacheService:
             logger.warning("Redis 删除用户权限缓存失败", exc_info=True)
             return False
 
+    # ---- IP 规则缓存 ----
+
+    _IP_RULES_KEY = "ip:rules"
+
+    async def set_ip_rules(self, blacklist: set[str], whitelist: set[str]) -> bool:
+        """将 IP 黑白名单写入 Redis 缓存。
+
+        Args:
+            blacklist: 黑名单 IP 集合
+            whitelist: 白名单 IP 集合
+
+        Returns:
+            是否成功写入缓存
+        """
+        if self._redis is None:
+            return False
+        try:
+            await self._redis.hset(self._IP_RULES_KEY, mapping={"blacklist": json.dumps(sorted(blacklist), ensure_ascii=False), "whitelist": json.dumps(sorted(whitelist), ensure_ascii=False)})  # type: ignore[arg-type]
+            return True
+        except Exception:
+            logger.warning("Redis 写入 IP 规则缓存失败", exc_info=True)
+            return False
+
+    async def get_ip_rules(self) -> tuple[set[str], set[str]] | None:
+        """从 Redis 缓存获取 IP 黑白名单。
+
+        Returns:
+            (blacklist, whitelist) 元组（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        if self._redis is None:
+            return None
+        try:
+            data = await self._redis.hgetall(self._IP_RULES_KEY)
+            if not data:
+                return None
+            blacklist = set(json.loads(data.get("blacklist", "[]")))
+            whitelist = set(json.loads(data.get("whitelist", "[]")))
+            return blacklist, whitelist
+        except Exception:
+            logger.warning("Redis 读取 IP 规则缓存失败", exc_info=True)
+            return None
+
+    async def invalidate_ip_rules(self) -> bool:
+        """使 IP 规则缓存失效。
+
+        Returns:
+            是否成功失效
+        """
+        if self._redis is None:
+            return False
+        try:
+            await self._redis.delete(self._IP_RULES_KEY)
+            return True
+        except Exception:
+            logger.warning("Redis 删除 IP 规则缓存失败", exc_info=True)
+            return False
+
     # ---- 内部方法 ----
 
     def _blacklist_key(self, token: str) -> str:

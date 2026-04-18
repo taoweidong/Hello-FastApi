@@ -26,6 +26,16 @@ async def application_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.warning("Redis 连接初始化失败，缓存功能将降级为直接查库", exc_info=True)
 
+    # 加载 IP 黑白名单规则到 app.state
+    try:
+        from src.infrastructure.http.ip_filter_cache import get_ip_filter_cache
+
+        ip_filter_cache = get_ip_filter_cache()
+        await ip_filter_cache.load_to_app_state(app)
+        logger.info("IP 黑白名单规则加载完成")
+    except Exception:
+        logger.warning("IP 黑白名单规则加载失败，IP 过滤将以空规则运行", exc_info=True)
+
     yield
 
     # 关闭 Redis 连接
