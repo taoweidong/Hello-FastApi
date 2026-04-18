@@ -140,8 +140,6 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         async def _write_log_background() -> None:
             """后台任务：写入审计日志。"""
-            from sqlmodel.ext.asyncio.session import AsyncSession
-
             from src.infrastructure.database import get_async_session_factory
             from src.infrastructure.database.models import SystemLog
 
@@ -152,7 +150,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
                     updated_time=datetime.now(timezone.utc),
                 )
                 session_factory = get_async_session_factory()
-                async with AsyncSession(session_factory.kw["bind"], expire_on_commit=False) as session:
+                async with session_factory() as session:
                     session.add(log_entry)
                     await session.commit()
             except Exception:
