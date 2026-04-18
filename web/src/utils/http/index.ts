@@ -44,6 +44,9 @@ class PureHttp {
   /** 防止重复刷新`token` */
   private static isRefreshing = false;
 
+  /** 防止并发401重复登出 */
+  private static isLoggingOut = false;
+
   /** 初始化配置对象 */
   private static initConfig: PureHttpRequestConfig = {};
 
@@ -143,6 +146,23 @@ class PureHttp {
       (error: PureHttpError) => {
         const $error = error;
         $error.isCancelRequest = Axios.isCancel($error);
+
+        // 处理401未授权：token失效时强制登出并跳转登录页
+        const status = error.response?.status;
+        if (status === 401) {
+          // 登录和刷新token请求白名单，避免登出流程自身触发401处理
+          const whiteList = ["/refresh-token", "/login"];
+          const url = error.config?.url || "";
+          if (!whiteList.some(w => url.endsWith(w)) && !PureHttp.isLoggingOut) {
+            PureHttp.isLoggingOut = true;
+            message(transformI18n($t("login.pureLoginExpired")), {
+              type: "warning"
+            });
+            useUserStoreHook().logOut();
+            PureHttp.isLoggingOut = false;
+          }
+        }
+
         // 所有的响应异常 区分来源为取消请求/非取消请求
         return Promise.reject($error);
       }
