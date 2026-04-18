@@ -268,7 +268,11 @@ class CacheService(CachePort):
         if self._redis is None:
             return False
         try:
-            await self._redis.hset(self._IP_RULES_KEY, mapping={"blacklist": json.dumps(sorted(blacklist), ensure_ascii=False), "whitelist": json.dumps(sorted(whitelist), ensure_ascii=False)})  # type: ignore[arg-type]
+            # 使用 pipeline 逐字段写入，兼容 Redis 3.x（不支持 HSET mapping 语法）
+            async with self._redis.pipeline() as pipe:
+                pipe.hset(self._IP_RULES_KEY, "blacklist", json.dumps(sorted(blacklist), ensure_ascii=False))
+                pipe.hset(self._IP_RULES_KEY, "whitelist", json.dumps(sorted(whitelist), ensure_ascii=False))
+                await pipe.execute()
             return True
         except Exception:
             logger.warning("Redis 写入 IP 规则缓存失败", exc_info=True)
