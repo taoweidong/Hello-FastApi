@@ -103,3 +103,27 @@ class RoleRepositoryInterface(ABC):
         通过三表 JOIN 替代逐角色查询，消除 N+1 问题。
         """
         ...
+
+    @abstractmethod
+    async def get_users_roles_batch(self, user_ids: list[str]) -> dict[str, list[RoleEntity]]:
+        """批量获取多个用户的角色列表。
+
+        Args:
+            user_ids: 用户 ID 列表
+
+        Returns:
+            字典: user_id -> list[RoleEntity]
+        """
+        ...
+
+    @abstractmethod
+    async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
+        """批量获取多个角色的菜单ID列表。
+
+        Args:
+            role_ids: 角色 ID 列表
+
+        Returns:
+            字典: role_id -> list[menu_id]
+        """
+        ...

@@ -42,14 +42,26 @@ async def get_current_user_id(
 
 
 async def get_current_active_user(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db), cache_service: CacheService = Depends(get_cache_service)) -> dict:
-    """从数据库获取当前活跃用户。"""
+    """从缓存或数据库获取当前活跃用户。"""
+    # 优先从缓存获取
+    cached_info = await cache_service.get_user_info(user_id)
+    if cached_info is not None:
+        if not cached_info.get("is_active", 0):
+            raise UnauthorizedError("用户账号已被禁用")
+        return cached_info
+
+    # 缓存未命中，查询数据库
     repo = UserRepository(db)
     user = await repo.get_by_id(user_id)
     if user is None:
         raise UnauthorizedError("用户不存在")
     if not user.is_active_user:
         raise UnauthorizedError("用户账号已被禁用")
-    return {"id": user.id, "username": user.username, "email": user.email, "is_superuser": user.is_superuser}
+
+    user_info = {"id": user.id, "username": user.username, "email": user.email, "is_superuser": user.is_superuser, "is_active": user.is_active}
+    # 写入缓存（失败不影响主流程）
+    await cache_service.set_user_info(user_id, user_info)
+    return user_info
 
 
 def require_permission(code: str):

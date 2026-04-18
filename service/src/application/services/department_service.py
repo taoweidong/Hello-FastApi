@@ -16,17 +16,9 @@ class DepartmentService:
         self.dept_repo = dept_repo
 
     async def get_departments(self, query: DepartmentListQueryDTO) -> list[DepartmentResponseDTO]:
-        """获取部门列表（扁平结构，前端自动转树）。"""
-        all_depts = await self.dept_repo.get_all()
-
-        # 前端筛选
-        filtered_depts = all_depts
-        if query.name:
-            filtered_depts = [d for d in filtered_depts if query.name in d.name]
-        if query.isActive is not None:
-            filtered_depts = [d for d in filtered_depts if d.is_active == query.isActive]
-
-        return [self._to_response(d) for d in filtered_depts]
+        """获取部门列表（数据库级别过滤，扁平结构，前端自动转树）。"""
+        departments = await self.dept_repo.get_filtered(name=query.name, is_active=query.isActive)
+        return [self._to_response(d) for d in departments]
 
     async def create_department(self, dto: DepartmentCreateDTO) -> DepartmentResponseDTO:
         """创建部门。"""

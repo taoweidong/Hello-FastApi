@@ -63,24 +63,24 @@ class LogRepository(LogRepositoryInterface):
 
     async def delete_login_logs(self, log_ids: list[str]) -> int:
         """批量删除登录日志。"""
-        count = 0
-        for log_id in log_ids:
-            log = await self.session.get(LoginLog, log_id)
-            if log:
-                await self.session.delete(log)
-                count += 1
+        if not log_ids:
+            return 0
+        from sqlalchemy import delete as sa_delete
+        stmt = sa_delete(LoginLog).where(LoginLog.id.in_(log_ids))
+        result = await self.session.execute(stmt)
         await self.session.flush()
-        return count
+        return result.rowcount or 0
 
     async def clear_login_logs(self) -> int:
         """清空所有登录日志。"""
-        result = await self.session.exec(select(LoginLog))
-        logs = result.all()
-        count = len(logs)
-        for log in logs:
-            await self.session.delete(log)
+        from sqlalchemy import delete as sa_delete
+
+        count_result = await self.session.execute(select(sa_func.count()).select_from(LoginLog))
+        total = count_result.scalar_one()
+        stmt = sa_delete(LoginLog)
+        await self.session.execute(stmt)
         await self.session.flush()
-        return count
+        return total
 
     # ============ 统一操作日志 (sys_logs) ============
 
@@ -130,24 +130,24 @@ class LogRepository(LogRepositoryInterface):
 
     async def delete_operation_logs(self, log_ids: list[str]) -> int:
         """批量删除操作日志。"""
-        count = 0
-        for log_id in log_ids:
-            log = await self.session.get(SystemLog, log_id)
-            if log:
-                await self.session.delete(log)
-                count += 1
+        if not log_ids:
+            return 0
+        from sqlalchemy import delete as sa_delete
+        stmt = sa_delete(SystemLog).where(SystemLog.id.in_(log_ids))
+        result = await self.session.execute(stmt)
         await self.session.flush()
-        return count
+        return result.rowcount or 0
 
     async def clear_operation_logs(self) -> int:
         """清空所有操作日志。"""
-        result = await self.session.exec(select(SystemLog))
-        logs = result.all()
-        count = len(logs)
-        for log in logs:
-            await self.session.delete(log)
+        from sqlalchemy import delete as sa_delete
+
+        count_result = await self.session.execute(select(sa_func.count()).select_from(SystemLog))
+        total = count_result.scalar_one()
+        stmt = sa_delete(SystemLog)
+        await self.session.execute(stmt)
         await self.session.flush()
-        return count
+        return total
 
     # ============ 系统日志（与操作日志共享 sys_logs 表） ============
 

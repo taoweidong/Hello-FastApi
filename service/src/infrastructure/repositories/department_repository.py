@@ -93,3 +93,17 @@ class DepartmentRepository(DepartmentRepositoryInterface):
             filters["is_active"] = is_active
 
         return await self._crud.count(self.session, **filters)
+
+    async def get_filtered(self, name: str | None = None, is_active: int | None = None) -> list[DepartmentEntity]:
+        """获取过滤后的部门列表，按排序号排序。"""
+        from sqlalchemy import select
+
+        stmt = select(Department)
+        if name:
+            stmt = stmt.where(Department.name.contains(name))
+        if is_active is not None:
+            stmt = stmt.where(Department.is_active == is_active)
+        stmt = stmt.order_by(Department.rank)
+
+        result = await self.session.execute(stmt)
+        return [d.to_domain() for d in result.scalars().all()]

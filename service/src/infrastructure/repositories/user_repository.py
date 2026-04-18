@@ -93,11 +93,13 @@ class UserRepository(UserRepositoryInterface):
         return (result.rowcount or 0) > 0
 
     async def batch_delete(self, user_ids: list[str]) -> int:
-        deleted_count = 0
-        for user_id in user_ids:
-            if await self.delete(user_id):
-                deleted_count += 1
-        return deleted_count
+        """批量删除用户。"""
+        if not user_ids:
+            return 0
+        stmt = sa_delete(User).where(User.id.in_(user_ids))
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount or 0
 
     async def update_status(self, user_id: str, is_active: int) -> bool:
         """更新用户启用状态。"""

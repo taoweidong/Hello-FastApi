@@ -19,6 +19,7 @@ class TestDepartmentService:
         """创建模拟部门仓储。"""
         repo = AsyncMock()
         repo.get_all = AsyncMock(return_value=[])
+        repo.get_filtered = AsyncMock(return_value=[])
         repo.get_by_id = AsyncMock(return_value=None)
         repo.get_by_name = AsyncMock(return_value=None)
         repo.get_by_code = AsyncMock(return_value=None)
@@ -36,7 +37,7 @@ class TestDepartmentService:
     @pytest.mark.asyncio
     async def test_get_departments_empty(self, dept_service, mock_dept_repo):
         """测试获取空部门列表。"""
-        mock_dept_repo.get_all = AsyncMock(return_value=[])
+        mock_dept_repo.get_filtered = AsyncMock(return_value=[])
         query = DepartmentListQueryDTO()
         result = await dept_service.get_departments(query)
         assert result == []
@@ -45,8 +46,7 @@ class TestDepartmentService:
     async def test_get_departments_with_name_filter(self, dept_service, mock_dept_repo):
         """测试按名称筛选部门。"""
         d1 = DepartmentEntity(id="1", name="技术部")
-        d2 = DepartmentEntity(id="2", name="产品部")
-        mock_dept_repo.get_all = AsyncMock(return_value=[d1, d2])
+        mock_dept_repo.get_filtered = AsyncMock(return_value=[d1])
         query = DepartmentListQueryDTO(name="技术")
         result = await dept_service.get_departments(query)
         assert len(result) == 1

@@ -43,10 +43,15 @@ class RoleService:
         return await self._role_to_response(role)
 
     async def get_roles(self, query: RoleListQueryDTO) -> tuple[list[RoleResponseDTO], int]:
-        """获取角色列表（分页）。"""
+        """获取角色列表（分页），批量获取菜单ID消除 N+1。"""
         total = await self.role_repo.count(role_name=query.name, is_active=query.isActive)
         roles = await self.role_repo.get_all(page_num=query.pageNum, page_size=query.pageSize, role_name=query.name, is_active=query.isActive)
-        role_responses = [await self._role_to_response(r) for r in roles]
+
+        # 批量获取所有角色的菜单ID
+        role_ids = [r.id for r in roles]
+        menu_ids_map = await self.role_repo.get_roles_menu_ids_batch(role_ids)
+
+        role_responses = [self._role_to_response_with_menus(r, menu_ids_map.get(r.id, [])) for r in roles]
         return role_responses, total
 
     async def update_role(self, role_id: str, dto: RoleUpdateDTO) -> RoleResponseDTO:
@@ -119,4 +124,10 @@ class RoleService:
         menu_ids = await self.role_repo.get_role_menu_ids(role.id)
         menu_list = [{"id": mid} for mid in menu_ids] if menu_ids else []
 
+        return RoleResponseDTO(id=role.id, name=role.name, code=role.code, isActive=role.is_active, menus=menu_list, creatorId=role.creator_id, modifierId=role.modifier_id, createdTime=role.created_time, updatedTime=role.updated_time, description=role.description)
+
+    @staticmethod
+    def _role_to_response_with_menus(role: RoleEntity, menu_ids: list[str]) -> RoleResponseDTO:
+        """将角色实体和预加载的菜单ID列表转换为响应DTO。"""
+        menu_list = [{"id": mid} for mid in menu_ids] if menu_ids else []
         return RoleResponseDTO(id=role.id, name=role.name, code=role.code, isActive=role.is_active, menus=menu_list, creatorId=role.creator_id, modifierId=role.modifier_id, createdTime=role.created_time, updatedTime=role.updated_time, description=role.description)

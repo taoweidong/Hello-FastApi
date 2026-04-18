@@ -71,3 +71,17 @@ class DictionaryRepository(DictionaryRepositoryInterface):
         result = await self.session.execute(stmt)
         await self.session.flush()
         return result.rowcount > 0  # type: ignore[union-attr]
+
+    async def get_filtered(self, name: str | None = None, is_active: int | None = None) -> list[DictionaryEntity]:
+        """获取过滤后的字典列表，按排序号升序排列。"""
+        from sqlalchemy import select
+
+        stmt = select(Dictionary)
+        if name:
+            stmt = stmt.where(Dictionary.name.contains(name))
+        if is_active is not None:
+            stmt = stmt.where(Dictionary.is_active == is_active)
+        stmt = stmt.order_by(Dictionary.sort)
+
+        result = await self.session.execute(stmt)
+        return [d.to_domain() for d in result.scalars().all()]

@@ -54,7 +54,7 @@ class IPRuleRepository(IPRuleRepositoryInterface):
 
     async def get_ip_rule_by_id(self, rule_id: str) -> IPRuleEntity | None:
         """根据 ID 获取 IP 规则。"""
-        model = await self.session.get(IPRule, rule_id)
+        model = await self._crud.get(self.session, id=rule_id, schema_to_select=IPRule, return_as_model=True)
         return model.to_domain() if model else None
 
     async def create_ip_rule(self, rule: IPRuleEntity) -> IPRuleEntity:
@@ -78,24 +78,24 @@ class IPRuleRepository(IPRuleRepositoryInterface):
 
     async def delete_ip_rules(self, rule_ids: list[str]) -> int:
         """批量删除 IP 规则。"""
-        count = 0
-        for rule_id in rule_ids:
-            rule = await self.session.get(IPRule, rule_id)
-            if rule:
-                await self.session.delete(rule)
-                count += 1
+        if not rule_ids:
+            return 0
+        from sqlalchemy import delete as sa_delete
+        stmt = sa_delete(IPRule).where(IPRule.id.in_(rule_ids))
+        result = await self.session.execute(stmt)
         await self.session.flush()
-        return count
+        return result.rowcount or 0
 
     async def clear_ip_rules(self) -> int:
         """清空所有 IP 规则。"""
-        result = await self.session.exec(select(IPRule))
-        rules = result.all()
-        count = len(rules)
-        for rule in rules:
-            await self.session.delete(rule)
+        from sqlalchemy import delete as sa_delete
+
+        count_result = await self.session.execute(select(sa_func.count()).select_from(IPRule))
+        total = count_result.scalar_one()
+        stmt = sa_delete(IPRule)
+        await self.session.execute(stmt)
         await self.session.flush()
-        return count
+        return total
 
     async def get_effective_ip_rules(self) -> list[IPRuleEntity]:
         """获取所有生效的 IP 规则（is_active=1 且未过期）。"""

@@ -50,15 +50,16 @@ DEFAULT_MENUS = [
     {"name": "config:add", "path": "/system/config", "menu_type": 2, "method": "POST", "parent_id": "SystemConfig"},
     {"name": "config:edit", "path": "/system/config", "menu_type": 2, "method": "PUT", "parent_id": "SystemConfig"},
     {"name": "config:delete", "path": "/system/config", "menu_type": 2, "method": "DELETE", "parent_id": "SystemConfig"},
-    # --- 日志管理 ---
-    {"name": "Log", "path": "/system/log", "menu_type": 0, "rank": 7, "parent_id": "System", "meta": {"title": "日志管理", "icon": "ri:file-list-line"}},
-    {"name": "LoginLog", "path": "/system/log/login", "component": "system/logs/login/index", "menu_type": 1, "rank": 1, "parent_id": "Log", "meta": {"title": "登录日志", "icon": "ri:window-line"}, "description": "查询用户登录历史记录及登录状态统计"},
-    {"name": "OperationLog", "path": "/system/log/operation", "component": "system/logs/operation/index", "menu_type": 1, "rank": 2, "parent_id": "Log", "meta": {"title": "操作日志", "icon": "ri:history-fill"}, "description": "查询用户操作行为日志及接口调用记录"},
-    {"name": "log:view", "path": "/system/log", "menu_type": 2, "method": "GET", "parent_id": "Log"},
-    {"name": "log:delete", "path": "/system/log", "menu_type": 2, "method": "DELETE", "parent_id": "Log"},
     # === 系统监控目录 ===
     {"name": "Monitor", "path": "/monitor", "menu_type": 0, "rank": 2, "meta": {"title": "系统监控", "icon": "ep:monitor"}},
+    # --- 在线用户 ---
     {"name": "OnlineUser", "path": "/monitor/online-user", "component": "monitor/online/index", "menu_type": 1, "rank": 1, "parent_id": "Monitor", "meta": {"title": "在线用户", "icon": "ri:user-voice-line"}, "description": "查看当前在线用户列表，支持强制下线操作"},
+    # --- 日志管理 ---
+    {"name": "Log", "path": "/monitor/log", "menu_type": 0, "rank": 2, "parent_id": "Monitor", "meta": {"title": "日志管理", "icon": "ri:file-list-line"}},
+    {"name": "LoginLog", "path": "/monitor/log/login", "component": "monitor/logs/login/index", "menu_type": 1, "rank": 1, "parent_id": "Log", "meta": {"title": "登录日志", "icon": "ri:window-line"}, "description": "查询用户登录历史记录及登录状态统计"},
+    {"name": "OperationLog", "path": "/monitor/log/operation", "component": "monitor/logs/operation/index", "menu_type": 1, "rank": 2, "parent_id": "Log", "meta": {"title": "操作日志", "icon": "ri:history-fill"}, "description": "查询用户操作行为日志及接口调用记录"},
+    {"name": "log:view", "path": "/monitor/log", "menu_type": 2, "method": "GET", "parent_id": "Log"},
+    {"name": "log:delete", "path": "/monitor/log", "menu_type": 2, "method": "DELETE", "parent_id": "Log"},
     {"name": "monitor:view", "path": "/monitor", "menu_type": 2, "method": "GET", "parent_id": "Monitor"},
     {"name": "monitor:manage", "path": "/monitor", "menu_type": 2, "method": "POST", "parent_id": "Monitor"},
 ]

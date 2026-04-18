@@ -107,48 +107,59 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # 添加处理时间到响应头
         response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
 
-        # 非 GET 请求写入 SystemLog 审计表
+        # 非 GET 请求写入 SystemLog 审计表（后台异步执行，不阻塞响应）
         if request.method != "GET":
-            await self._write_system_log(request=request, response=response, client_ip=client_ip, body=body_str, duration_ms=duration_ms)
+            self._write_system_log_async(request=request, response=response, client_ip=client_ip, body=body_str, duration_ms=duration_ms)
 
         return response
 
-    async def _write_system_log(self, request: Request, response: Response, client_ip: str, body: str | None, duration_ms: float) -> None:
-        """将非 GET 请求写入 SystemLog 审计表。"""
-        from sqlmodel.ext.asyncio.session import AsyncSession
+    def _write_system_log_async(self, request: Request, response: Response, client_ip: str, body: str | None, duration_ms: float) -> None:
+        """将非 GET 请求写入 SystemLog 审计表（后台异步执行，不阻塞响应）。"""
+        import asyncio
 
-        from src.infrastructure.database import get_async_session_factory
-        from src.infrastructure.database.models import SystemLog
+        user_agent = request.headers.get("user-agent", "")
+        browser, system = _extract_user_agent_info(user_agent)
+        creator_id = _try_decode_user_id(request.headers.get("authorization"))
 
-        try:
-            user_agent = request.headers.get("user-agent", "")
-            browser, system = _extract_user_agent_info(user_agent)
-            creator_id = _try_decode_user_id(request.headers.get("authorization"))
+        # 捕获写入日志所需的所有数据（不再依赖 request/response 对象）
+        log_data = {
+            "id": uuid.uuid4().hex,
+            "module": self._extract_module(request.url.path),
+            "path": request.url.path,
+            "body": body,
+            "method": request.method,
+            "ipaddress": client_ip,
+            "browser": browser,
+            "system": system,
+            "response_code": response.status_code,
+            "response_result": None,
+            "status_code": response.status_code,
+            "creator_id": creator_id,
+            "description": f"{request.method} {request.url.path} - {duration_ms:.0f}ms",
+        }
 
-            log_entry = SystemLog(
-                id=uuid.uuid4().hex,
-                module=self._extract_module(request.url.path),
-                path=request.url.path,
-                body=body,
-                method=request.method,
-                ipaddress=client_ip,
-                browser=browser,
-                system=system,
-                response_code=response.status_code,
-                response_result=None,
-                status_code=response.status_code,
-                creator_id=creator_id,
-                created_time=datetime.now(timezone.utc),
-                updated_time=datetime.now(timezone.utc),
-                description=f"{request.method} {request.url.path} - {duration_ms:.0f}ms",
-            )
+        async def _write_log_background() -> None:
+            """后台任务：写入审计日志。"""
+            from sqlmodel.ext.asyncio.session import AsyncSession
 
-            session_factory = get_async_session_factory()
-            async with AsyncSession(session_factory.kw["bind"], expire_on_commit=False) as session:
-                session.add(log_entry)
-                await session.commit()
-        except Exception:
-            logger.warning(f"写入 SystemLog 审计日志失败: {request.method} {request.url.path}", exc_info=True)
+            from src.infrastructure.database import get_async_session_factory
+            from src.infrastructure.database.models import SystemLog
+
+            try:
+                log_entry = SystemLog(
+                    **log_data,
+                    created_time=datetime.now(timezone.utc),
+                    updated_time=datetime.now(timezone.utc),
+                )
+                session_factory = get_async_session_factory()
+                async with AsyncSession(session_factory.kw["bind"], expire_on_commit=False) as session:
+                    session.add(log_entry)
+                    await session.commit()
+            except Exception:
+                logger.warning(f"后台写入 SystemLog 审计日志失败: {log_data['method']} {log_data['path']}", exc_info=True)
+
+        # 后台执行，不阻塞响应
+        asyncio.create_task(_write_log_background())
 
     @staticmethod
     def _extract_module(path: str) -> str:

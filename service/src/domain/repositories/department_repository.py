@@ -64,3 +64,16 @@ class DepartmentRepositoryInterface(ABC):
     async def count(self, name: str | None = None, is_active: int | None = None) -> int:
         """获取部门总数。"""
         ...
+
+    @abstractmethod
+    async def get_filtered(self, name: str | None = None, is_active: int | None = None) -> list[DepartmentEntity]:
+        """获取过滤后的部门列表，按排序号排序。
+
+        Args:
+            name: 名称模糊匹配（包含即命中）
+            is_active: 是否启用（0/1）
+
+        Returns:
+            过滤后的部门实体列表
+        """
+        ...

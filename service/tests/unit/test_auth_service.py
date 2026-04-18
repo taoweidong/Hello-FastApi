@@ -106,13 +106,15 @@ class TestAuthService:
         assert "禁用" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_login_superuser(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo):
+    async def test_login_superuser(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service):
         """测试超级用户登录。"""
         user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=1)
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         # get_all 返回 list[RoleEntity]
         mock_role_repo.get_all = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
         mock_menu_repo.get_all = AsyncMock(return_value=[])
+        # 缓存未命中，走数据库查询
+        mock_cache_service.get_all_menus = AsyncMock(return_value=None)
 
         dto = LoginDTO(username="admin", password="TestPass123")
         result = await auth_service.login(dto)
@@ -198,7 +200,7 @@ class TestAuthService:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_get_async_routes_superuser(self, auth_service, mock_user_repo, mock_menu_repo):
+    async def test_get_async_routes_superuser(self, auth_service, mock_user_repo, mock_menu_repo, mock_cache_service):
         """测试超级用户获取动态路由。"""
         user = UserEntity(id="su-1", username="admin", password="hash", is_superuser=1)
         mock_user_repo.get_by_id = AsyncMock(return_value=user)
@@ -208,6 +210,8 @@ class TestAuthService:
             MenuEntity(id="2", name="about", menu_type=1, path="/about", rank=2, parent_id="1", meta=meta),
         ]
         mock_menu_repo.get_all = AsyncMock(return_value=menus)
+        # 缓存未命中，走数据库查询
+        mock_cache_service.get_all_menus = AsyncMock(return_value=None)
 
         routes = await auth_service.get_async_routes("su-1")
         assert len(routes) >= 1

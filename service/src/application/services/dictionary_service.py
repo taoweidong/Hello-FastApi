@@ -16,23 +16,14 @@ class DictionaryService:
         self.dict_repo = dict_repo
 
     async def get_dictionaries(self, query: DictionaryListQueryDTO) -> list[DictionaryResponseDTO]:
-        """获取字典列表（扁平结构，前端自动转树）。"""
-        all_dicts = await self.dict_repo.get_all()
-
-        # 前端筛选
-        filtered_dicts = all_dicts
-        if query.name:
-            filtered_dicts = [d for d in filtered_dicts if query.name in d.name]
-        if query.isActive is not None:
-            filtered_dicts = [d for d in filtered_dicts if d.is_active == query.isActive]
-
-        return [self._to_response(d) for d in filtered_dicts]
+        """获取字典列表（数据库级别过滤，扁平结构，前端自动转树）。"""
+        dictionaries = await self.dict_repo.get_filtered(name=query.name, is_active=query.isActive)
+        return [self._to_response(d) for d in dictionaries]
 
     async def get_dictionary_by_name(self, name: str) -> list[DictionaryResponseDTO]:
         """根据字典名称查询字典项。"""
-        all_dicts = await self.dict_repo.get_all()
-        filtered_dicts = [d for d in all_dicts if name in d.name]
-        return [self._to_response(d) for d in filtered_dicts]
+        dictionaries = await self.dict_repo.get_filtered(name=name)
+        return [self._to_response(d) for d in dictionaries]
 
     async def create_dictionary(self, dto: DictionaryCreateDTO) -> DictionaryResponseDTO:
         """创建字典。"""

@@ -169,3 +169,47 @@ class RoleRepository(RoleRepositoryInterface):
                 seen_ids.add(model.id)
                 menus.append(model.to_domain())
         return menus
+
+    async def get_users_roles_batch(self, user_ids: list[str]) -> dict[str, list[RoleEntity]]:
+        """批量获取多个用户的角色列表。"""
+        if not user_ids:
+            return {}
+
+        from collections import defaultdict
+
+        stmt = select(Role, UserRole.userinfo_id).join(UserRole, UserRole.userrole_id == Role.id).where(UserRole.userinfo_id.in_(user_ids))
+        result = await self.session.exec(stmt)
+        rows = result.all()
+
+        roles_map: dict[str, list[RoleEntity]] = defaultdict(list)
+        for role_model, userinfo_id in rows:
+            roles_map[str(userinfo_id)].append(role_model.to_domain())
+
+        # 确保所有 user_id 都在结果中（即使没有角色）
+        for uid in user_ids:
+            if uid not in roles_map:
+                roles_map[uid] = []
+
+        return dict(roles_map)
+
+    async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
+        """批量获取多个角色的菜单ID列表。"""
+        if not role_ids:
+            return {}
+
+        from collections import defaultdict
+
+        stmt = select(RoleMenuLink).where(RoleMenuLink.userrole_id.in_(role_ids))
+        result = await self.session.exec(stmt)
+        links = result.all()
+
+        menu_ids_map: dict[str, list[str]] = defaultdict(list)
+        for link in links:
+            menu_ids_map[str(link.userrole_id)].append(str(link.menu_id))
+
+        # 确保所有 role_id 都在结果中
+        for rid in role_ids:
+            if rid not in menu_ids_map:
+                menu_ids_map[rid] = []
+
+        return dict(menu_ids_map)

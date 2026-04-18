@@ -19,6 +19,7 @@ class TestDictionaryService:
         """创建模拟字典仓储。"""
         repo = AsyncMock()
         repo.get_all = AsyncMock(return_value=[])
+        repo.get_filtered = AsyncMock(return_value=[])
         repo.get_by_id = AsyncMock(return_value=None)
         repo.get_by_parent_id = AsyncMock(return_value=[])
         repo.get_max_sort = AsyncMock(return_value=0)
@@ -35,7 +36,7 @@ class TestDictionaryService:
     @pytest.mark.asyncio
     async def test_get_dictionaries_empty(self, dict_service, mock_dict_repo):
         """测试获取空字典列表。"""
-        mock_dict_repo.get_all = AsyncMock(return_value=[])
+        mock_dict_repo.get_filtered = AsyncMock(return_value=[])
         query = DictionaryListQueryDTO()
         result = await dict_service.get_dictionaries(query)
         assert result == []
@@ -44,8 +45,7 @@ class TestDictionaryService:
     async def test_get_dictionaries_with_name_filter(self, dict_service, mock_dict_repo):
         """测试按名称筛选字典。"""
         d1 = DictionaryEntity(id="1", name="status", label="状态")
-        d2 = DictionaryEntity(id="2", name="gender", label="性别")
-        mock_dict_repo.get_all = AsyncMock(return_value=[d1, d2])
+        mock_dict_repo.get_filtered = AsyncMock(return_value=[d1])
         query = DictionaryListQueryDTO(name="status")
         result = await dict_service.get_dictionaries(query)
         assert len(result) == 1
@@ -56,7 +56,7 @@ class TestDictionaryService:
         """测试按名称查询字典。"""
         d1 = DictionaryEntity(id="1", name="status_type")
         d2 = DictionaryEntity(id="2", name="status")
-        mock_dict_repo.get_all = AsyncMock(return_value=[d1, d2])
+        mock_dict_repo.get_filtered = AsyncMock(return_value=[d1, d2])
         result = await dict_service.get_dictionary_by_name("status")
         assert len(result) == 2
 

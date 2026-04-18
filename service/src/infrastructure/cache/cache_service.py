@@ -18,9 +18,13 @@ class CacheService:
     # Key 前缀
     _BLACKLIST_PREFIX = "token:blacklist:"
     _PERMS_PREFIX = "user:perms:"
+    _USER_INFO_PREFIX = "user:info:"
+    _MENU_ALL_KEY = "menu:all"
 
-    # 权限缓存 TTL（秒）
+    # 缓存 TTL（秒）
     PERMS_CACHE_TTL = 300  # 5 分钟
+    USER_INFO_CACHE_TTL = 300  # 5 分钟
+    MENU_ALL_CACHE_TTL = 600  # 10 分钟
 
     def __init__(self, redis_client: redis.Redis | None = None) -> None:
         self._redis = redis_client
@@ -132,6 +136,120 @@ class CacheService:
             logger.warning("Redis 删除用户权限缓存失败", exc_info=True)
             return False
 
+    # ---- 用户信息缓存 ----
+
+    async def get_user_info(self, user_id: str) -> dict | None:
+        """从缓存获取用户基本信息。
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            用户信息字典（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        if self._redis is None:
+            return None
+        key = f"{self._USER_INFO_PREFIX}{user_id}"
+        try:
+            data = await self._redis.get(key)
+            if data is None:
+                return None
+            return json.loads(data)
+        except Exception:
+            logger.warning("Redis 读取用户信息缓存失败", exc_info=True)
+            return None
+
+    async def set_user_info(self, user_id: str, info: dict) -> bool:
+        """将用户基本信息写入缓存。
+
+        Args:
+            user_id: 用户 ID
+            info: 用户信息字典
+
+        Returns:
+            是否成功写入缓存
+        """
+        if self._redis is None:
+            return False
+        key = f"{self._USER_INFO_PREFIX}{user_id}"
+        try:
+            await self._redis.set(key, json.dumps(info, ensure_ascii=False), ex=self.USER_INFO_CACHE_TTL)
+            return True
+        except Exception:
+            logger.warning("Redis 写入用户信息缓存失败", exc_info=True)
+            return False
+
+    async def invalidate_user_info(self, user_id: str) -> bool:
+        """使用户信息缓存失效。
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            是否成功失效
+        """
+        if self._redis is None:
+            return False
+        key = f"{self._USER_INFO_PREFIX}{user_id}"
+        try:
+            await self._redis.delete(key)
+            return True
+        except Exception:
+            logger.warning("Redis 删除用户信息缓存失败", exc_info=True)
+            return False
+
+    # ---- 菜单全表缓存 ----
+
+    async def get_all_menus(self) -> list[dict] | None:
+        """从缓存获取所有菜单列表。
+
+        Returns:
+            菜单字典列表（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        if self._redis is None:
+            return None
+        try:
+            data = await self._redis.get(self._MENU_ALL_KEY)
+            if data is None:
+                return None
+            return json.loads(data)
+        except Exception:
+            logger.warning("Redis 读取菜单缓存失败", exc_info=True)
+            return None
+
+    async def set_all_menus(self, menus: list[dict]) -> bool:
+        """将所有菜单列表写入缓存。
+
+        Args:
+            menus: 菜单字典列表
+
+        Returns:
+            是否成功写入缓存
+        """
+        if self._redis is None:
+            return False
+        try:
+            await self._redis.set(self._MENU_ALL_KEY, json.dumps(menus, ensure_ascii=False), ex=self.MENU_ALL_CACHE_TTL)
+            return True
+        except Exception:
+            logger.warning("Redis 写入菜单缓存失败", exc_info=True)
+            return False
+
+    async def invalidate_all_menus(self) -> bool:
+        """使菜单全量缓存失效。
+
+        Returns:
+            是否成功失效
+        """
+        if self._redis is None:
+            return False
+        try:
+            await self._redis.delete(self._MENU_ALL_KEY)
+            return True
+        except Exception:
+            logger.warning("Redis 删除菜单缓存失败", exc_info=True)
+            return False
+
     # ---- IP 规则缓存 ----
 
     _IP_RULES_KEY = "ip:rules"
@@ -213,3 +331,7 @@ class CacheService:
     def _perms_key(self, user_id: str) -> str:
         """生成用户权限缓存的 Redis Key。"""
         return f"{self._PERMS_PREFIX}{user_id}"
+
+    def _user_info_key(self, user_id: str) -> str:
+        """生成用户信息缓存的 Redis Key。"""
+        return f"{self._USER_INFO_PREFIX}{user_id}"

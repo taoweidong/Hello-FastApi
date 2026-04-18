@@ -3,15 +3,17 @@
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.api.dependencies.cache_service import get_cache_service
 from src.application.services.menu_service import MenuService
+from src.infrastructure.cache.cache_service import CacheService
 from src.infrastructure.database import get_db
 from src.infrastructure.repositories.menu_repository import MenuRepository
 
 
-async def get_menu_service(db: AsyncSession = Depends(get_db)) -> MenuService:
+async def get_menu_service(db: AsyncSession = Depends(get_db), cache_service: CacheService = Depends(get_cache_service)) -> MenuService:
     """获取菜单服务实例。"""
     menu_repo = MenuRepository(db)
-    return MenuService(menu_repo=menu_repo)
+    return MenuService(menu_repo=menu_repo, cache_service=cache_service)
 
 
 def get_menu_repository(db: AsyncSession = Depends(get_db)) -> MenuRepository:

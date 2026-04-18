@@ -46,7 +46,7 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
         user_repo = UserRepository(session)
         role_repo = RoleRepository(session)
         password_service = PasswordService()
-        service = UserService(session=session, repo=user_repo, password_service=password_service, role_repo=role_repo)
+        service = UserService(repo=user_repo, password_service=password_service, role_repo=role_repo)
         user = await service.create_superuser(dto)
         await session.commit()
         print(f"超级管理员 '{user.username}' 创建成功 (id: {user.id})")
@@ -66,9 +66,12 @@ async def init_database() -> None:
 
 async def seed_rbac() -> None:
     """初始化RBAC数据：创建菜单、角色，并分配权限。"""
+    import uuid
+
+    from src.domain.entities.role import RoleEntity
     from src.domain.rbac_defaults import ADMIN_MENU_NAMES, DEFAULT_MENUS, DEFAULT_ROLES, USER_MENU_NAMES
     from src.infrastructure.database import close_db, get_async_session_factory, init_db
-    from src.infrastructure.database.models import Menu, MenuMeta, Role
+    from src.infrastructure.database.models import Menu, MenuMeta
     from src.infrastructure.repositories.menu_repository import MenuRepository
     from src.infrastructure.repositories.role_repository import RoleRepository
 
@@ -86,7 +89,7 @@ async def seed_rbac() -> None:
 
         for menu_def in DEFAULT_MENUS:
             # 按name去重，支持幂等执行
-            existing = await menu_repo.get_by_name(menu_def["name"], session)
+            existing = await menu_repo.get_by_name(menu_def["name"])
             if existing:
                 name_to_id[menu_def["name"]] = existing.id
                 continue
@@ -134,14 +137,14 @@ async def seed_rbac() -> None:
         for name, description in DEFAULT_ROLES.items():
             existing = await role_repo.get_by_name(name)
             if existing is None:
-                role = Role(name=name, code=name, description=description, is_active=1)
+                role = RoleEntity(id=uuid.uuid4().hex, name=name, code=name, description=description, is_active=1)
                 await role_repo.create(role)
                 print(f"  创建角色: {name}")
 
         # ========== 3. 为 admin 角色分配所有菜单 ==========
         admin_role = await role_repo.get_by_name("admin")
         if admin_role:
-            all_menus = await menu_repo.get_all(session)
+            all_menus = await menu_repo.get_all()
             menu_ids = [m.id for m in all_menus]
             if menu_ids:
                 await role_repo.assign_menus_to_role(admin_role.id, menu_ids)
@@ -174,6 +177,9 @@ async def seed_data() -> None:
 
     session_factory = get_async_session_factory()
     async with session_factory() as session:
+        browsers = ["Chrome 120", "Firefox 121", "Safari 17", "Edge 120"]
+        systems = ["Windows 11", "macOS 14", "Ubuntu 22.04", "iOS 17"]
+
         # ========== 1. 初始化登录日志 ==========
         print("正在检查登录日志...")
         result = await session.exec(select(LoginLog))
@@ -181,8 +187,6 @@ async def seed_data() -> None:
 
         if not existing_logs:
             print("  添加登录日志测试数据...")
-            browsers = ["Chrome 120", "Firefox 121", "Safari 17", "Edge 120"]
-            systems = ["Windows 11", "macOS 14", "Ubuntu 22.04", "iOS 17"]
 
             for _ in range(20):
                 log = LoginLog(ipaddress=f"192.168.1.{random.randint(1, 254)}", system=random.choice(systems), browser=random.choice(browsers), status=1 if random.random() > 0.1 else 0, login_type=0, creator_id="seed")

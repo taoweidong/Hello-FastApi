@@ -6,15 +6,17 @@ from src.domain.exceptions import ConflictError, NotFoundError, UnauthorizedErro
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.password_service import PasswordService
+from src.infrastructure.cache.cache_service import CacheService
 
 
 class UserService:
     """用户领域操作的应用服务。"""
 
-    def __init__(self, repo: UserRepositoryInterface, password_service: PasswordService, role_repo: RoleRepositoryInterface):
+    def __init__(self, repo: UserRepositoryInterface, password_service: PasswordService, role_repo: RoleRepositoryInterface, cache_service: CacheService | None = None):
         self.repo = repo
         self.password_service = password_service
         self.role_repo = role_repo
+        self.cache_service = cache_service
 
     async def create_user(self, dto: UserCreateDTO) -> UserResponseDTO:
         """创建新用户。"""
@@ -54,7 +56,7 @@ class UserService:
         return await self.repo.get_by_username(username)
 
     async def get_users(self, query: UserListQueryDTO) -> tuple[list[UserResponseDTO], int]:
-        """获取用户列表（支持筛选和分页）。"""
+        """获取用户列表（支持筛选和分页），批量获取角色消除 N+1。"""
         dept_id = query.deptId
         if dept_id == "" or dept_id == "0":
             dept_id = None
@@ -63,7 +65,11 @@ class UserService:
 
         total = await self.repo.count(username=query.username, phone=query.phone, email=query.email, is_active=query.isActive, dept_id=dept_id)
 
-        user_responses = [await self._to_response(u) for u in users]
+        # 批量获取所有用户的角色
+        user_ids = [u.id for u in users]
+        roles_map = await self.role_repo.get_users_roles_batch(user_ids)
+
+        user_responses = [self._to_response_with_roles(u, roles_map.get(u.id, [])) for u in users]
         return user_responses, total
 
     async def update_user(self, user_id: str, dto: UserUpdateDTO) -> UserResponseDTO:
@@ -92,17 +98,21 @@ class UserService:
             description=dto.description,
         )
         updated_user = await self.repo.update(user)
+        await self._invalidate_user_cache(user_id)
         return await self._to_response(updated_user)
 
     async def delete_user(self, user_id: str) -> bool:
         """删除用户。"""
         if not await self.repo.delete(user_id):
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
+        await self._invalidate_user_cache(user_id)
         return True
 
     async def batch_delete_users(self, user_ids: list[str]) -> dict:
         """批量删除用户。"""
         deleted_count = await self.repo.batch_delete(user_ids)
+        for uid in user_ids:
+            await self._invalidate_user_cache(uid)
         return {"deleted_count": deleted_count, "total_requested": len(user_ids)}
 
     async def reset_password(self, user_id: str, new_password: str) -> bool:
@@ -113,12 +123,14 @@ class UserService:
 
         hashed_password = self.password_service.hash_password(new_password)
         await self.repo.reset_password(user_id, hashed_password)
+        await self._invalidate_user_cache(user_id)
         return True
 
     async def update_status(self, user_id: str, is_active: int) -> bool:
         """更改用户状态。"""
         if not await self.repo.update_status(user_id, is_active):
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
+        await self._invalidate_user_cache(user_id)
         return True
 
     async def change_password(self, user_id: str, dto: ChangePasswordDTO) -> bool:
@@ -132,6 +144,7 @@ class UserService:
 
         user.change_password(self.password_service.hash_password(dto.newPassword))
         await self.repo.update(user)
+        await self._invalidate_user_cache(user_id)
         return True
 
     async def create_superuser(self, dto: UserCreateDTO) -> UserResponseDTO:
@@ -170,7 +183,14 @@ class UserService:
         if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
         await self.role_repo.assign_roles_to_user(user_id, role_ids)
+        await self._invalidate_user_cache(user_id)
         return True
+
+    async def _invalidate_user_cache(self, user_id: str) -> None:
+        """使用户信息缓存和权限缓存失效。"""
+        if self.cache_service is not None:
+            await self.cache_service.invalidate_user_info(user_id)
+            await self.cache_service.invalidate_user_permissions(user_id)
 
     async def _to_response(self, user: UserEntity) -> UserResponseDTO:
         """将用户实体转换为响应 DTO。"""
@@ -194,6 +214,31 @@ class UserService:
             isStaff=user.is_staff,
             modeType=user.mode_type,
             roles=roles,
+            creatorId=user.creator_id,
+            modifierId=user.modifier_id,
+            createdTime=user.created_time,
+            updatedTime=user.updated_time,
+            description=user.description,
+        )
+
+    @staticmethod
+    def _to_response_with_roles(user: UserEntity, roles: list) -> UserResponseDTO:
+        """将用户实体和预加载的角色列表转换为响应 DTO。"""
+        role_list = [{"id": role.id, "name": role.name} for role in roles]
+        return UserResponseDTO(
+            id=user.id,
+            username=user.username,
+            nickname=user.nickname,
+            firstName=user.first_name,
+            lastName=user.last_name,
+            avatar=user.avatar,
+            email=user.email,
+            phone=user.phone,
+            gender=user.gender,
+            isActive=user.is_active,
+            isStaff=user.is_staff,
+            modeType=user.mode_type,
+            roles=role_list,
             creatorId=user.creator_id,
             modifierId=user.modifier_id,
             createdTime=user.created_time,
