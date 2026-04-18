@@ -1,18 +1,15 @@
 """应用层 - 角色服务。"""
 
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from src.application.dto.role_dto import RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
+from src.domain.entities.role import RoleEntity
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
-from src.infrastructure.database.models import Role
 
 
 class RoleService:
     """角色操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession, role_repo: RoleRepositoryInterface):
-        self.session = session
+    def __init__(self, role_repo: RoleRepositoryInterface):
         self.role_repo = role_repo
 
     async def create_role(self, dto: RoleCreateDTO) -> RoleResponseDTO:
@@ -22,12 +19,15 @@ class RoleService:
         if await self.role_repo.get_by_code(dto.code):
             raise ConflictError(f"角色编码 '{dto.code}' 已存在")
 
-        role = Role(name=dto.name, code=dto.code, description=dto.description, is_active=dto.isActive if dto.isActive is not None else 1)
-        await self.role_repo.create(role)
-        await self.session.flush()
-        created_role = await self.role_repo.get_by_code(dto.code)
-        if created_role is None:
-            raise NotFoundError(f"角色 '{dto.name}' 创建失败")
+        role_entity = RoleEntity.create_new(
+            name=dto.name,
+            code=dto.code,
+            description=dto.description,
+        )
+        if dto.isActive is not None:
+            role_entity.is_active = dto.isActive
+
+        created_role = await self.role_repo.create(role_entity)
 
         # 如果提供了菜单ID列表，则分配菜单
         if dto.menuIds:
@@ -59,22 +59,14 @@ class RoleService:
             existing = await self.role_repo.get_by_name(dto.name)
             if existing and existing.id != role_id:
                 raise ConflictError(f"角色名称 '{dto.name}' 已存在")
-            role.name = dto.name
 
         if dto.code is not None:
             existing = await self.role_repo.get_by_code(dto.code)
             if existing and existing.id != role_id:
                 raise ConflictError(f"角色编码 '{dto.code}' 已存在")
-            role.code = dto.code
 
-        if dto.description is not None:
-            role.description = dto.description
-
-        if dto.isActive is not None:
-            role.is_active = dto.isActive
-
+        role.update_info(name=dto.name, code=dto.code, description=dto.description, is_active=dto.isActive)
         await self.role_repo.update(role)
-        await self.session.flush()
 
         # 如果提供了菜单ID列表，则重新分配菜单
         if dto.menuIds is not None:
@@ -121,8 +113,8 @@ class RoleService:
         roles = await self.role_repo.get_user_roles(user_id)
         return [await self._role_to_response(r) for r in roles]
 
-    async def _role_to_response(self, role: Role) -> RoleResponseDTO:
-        """将Role模型转换为响应DTO。"""
+    async def _role_to_response(self, role: RoleEntity) -> RoleResponseDTO:
+        """将角色实体转换为响应DTO。"""
         # 获取角色的菜单ID列表
         menu_ids = await self.role_repo.get_role_menu_ids(role.id)
         menu_list = [{"id": mid} for mid in menu_ids] if menu_ids else []

@@ -6,21 +6,13 @@ import pytest
 
 from src.application.dto.system_config_dto import SystemConfigCreateDTO, SystemConfigListQueryDTO, SystemConfigUpdateDTO
 from src.application.services.system_config_service import SystemConfigService
+from src.domain.entities.system_config import SystemConfigEntity
 from src.domain.exceptions import ConflictError, NotFoundError
-from src.infrastructure.database.models import SystemConfig
 
 
 @pytest.mark.unit
 class TestSystemConfigService:
     """SystemConfigService 测试类。"""
-
-    @pytest.fixture
-    def mock_session(self):
-        """创建模拟数据库会话。"""
-        session = AsyncMock()
-        session.commit = AsyncMock()
-        session.flush = AsyncMock()
-        return session
 
     @pytest.fixture
     def mock_config_repo(self):
@@ -36,14 +28,14 @@ class TestSystemConfigService:
         return repo
 
     @pytest.fixture
-    def config_service(self, mock_session, mock_config_repo):
+    def config_service(self, mock_config_repo):
         """创建系统配置服务实例。"""
-        return SystemConfigService(session=mock_session, config_repo=mock_config_repo)
+        return SystemConfigService(config_repo=mock_config_repo)
 
     @pytest.mark.asyncio
-    async def test_create_config_success(self, config_service, mock_config_repo, mock_session):
+    async def test_create_config_success(self, config_service, mock_config_repo):
         """测试创建配置成功。"""
-        created_config = SystemConfig(id="config-id-1", key="site_name", value="测试站点", is_active=1)
+        created_config = SystemConfigEntity(id="config-id-1", key="site_name", value="测试站点", is_active=1)
         mock_config_repo.get_by_key = AsyncMock(return_value=None)
         mock_config_repo.create = AsyncMock(return_value=created_config)
 
@@ -56,7 +48,7 @@ class TestSystemConfigService:
     @pytest.mark.asyncio
     async def test_create_config_duplicate_key(self, config_service, mock_config_repo):
         """测试创建配置时key重复。"""
-        existing = SystemConfig(key="site_name")
+        existing = SystemConfigEntity(id="ex-id", key="site_name")
         mock_config_repo.get_by_key = AsyncMock(return_value=existing)
 
         dto = SystemConfigCreateDTO(key="site_name", value="新值")
@@ -75,7 +67,7 @@ class TestSystemConfigService:
     @pytest.mark.asyncio
     async def test_get_configs_with_pagination(self, config_service, mock_config_repo):
         """测试获取配置列表（分页+筛选）。"""
-        configs = [SystemConfig(id="1", key="site_name", value="站点A", is_active=1), SystemConfig(id="2", key="site_desc", value="描述", is_active=1)]
+        configs = [SystemConfigEntity(id="1", key="site_name", value="站点A", is_active=1), SystemConfigEntity(id="2", key="site_desc", value="描述", is_active=1)]
         mock_config_repo.count = AsyncMock(return_value=2)
         mock_config_repo.get_all = AsyncMock(return_value=configs)
 
@@ -88,11 +80,11 @@ class TestSystemConfigService:
         mock_config_repo.get_all.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_config_success(self, config_service, mock_config_repo, mock_session):
+    async def test_update_config_success(self, config_service, mock_config_repo):
         """测试更新配置成功。"""
-        existing_config = SystemConfig(id="config-id-1", key="site_name", value="旧值", is_active=1)
+        existing_config = SystemConfigEntity(id="config-id-1", key="site_name", value="旧值", is_active=1)
+        updated_config = SystemConfigEntity(id="config-id-1", key="site_name", value="新值", is_active=1)
         mock_config_repo.get_by_id = AsyncMock(return_value=existing_config)
-        updated_config = SystemConfig(id="config-id-1", key="site_name", value="新值", is_active=1)
         mock_config_repo.update = AsyncMock(return_value=updated_config)
 
         dto = SystemConfigUpdateDTO(value="新值")
@@ -113,8 +105,8 @@ class TestSystemConfigService:
     @pytest.mark.asyncio
     async def test_update_config_duplicate_key(self, config_service, mock_config_repo):
         """测试更新配置时key与其他配置重复。"""
-        existing_config = SystemConfig(id="config-id-1", key="site_name", value="旧值")
-        other_config = SystemConfig(id="config-id-2", key="other_key")
+        existing_config = SystemConfigEntity(id="config-id-1", key="site_name", value="旧值")
+        other_config = SystemConfigEntity(id="config-id-2", key="other_key")
         mock_config_repo.get_by_id = AsyncMock(return_value=existing_config)
         mock_config_repo.get_by_key = AsyncMock(return_value=other_config)
 

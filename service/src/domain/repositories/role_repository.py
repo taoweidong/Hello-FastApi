@@ -6,30 +6,38 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from src.domain.entities.menu import MenuEntity
+from src.domain.entities.role import RoleEntity
+
 if TYPE_CHECKING:
-    from src.infrastructure.database.models import Menu, Role
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class RoleRepositoryInterface(ABC):
     """角色的抽象仓储接口。"""
 
     @abstractmethod
-    async def get_by_id(self, role_id: str) -> "Role | None":
+    def __init__(self, session: "AsyncSession") -> None:
+        """初始化仓储，注入数据库会话。"""
+        ...
+
+    @abstractmethod
+    async def get_by_id(self, role_id: str) -> RoleEntity | None:
         """根据 ID 获取角色。"""
         ...
 
     @abstractmethod
-    async def get_by_name(self, name: str) -> "Role | None":
+    async def get_by_name(self, name: str) -> RoleEntity | None:
         """根据名称获取角色。"""
         ...
 
     @abstractmethod
-    async def get_by_code(self, code: str) -> "Role | None":
+    async def get_by_code(self, code: str) -> RoleEntity | None:
         """根据编码获取角色。"""
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list["Role"]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list[RoleEntity]:
         """获取所有角色（分页）。"""
         ...
 
@@ -39,12 +47,12 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def create(self, role: "Role") -> "Role":
+    async def create(self, role: RoleEntity) -> RoleEntity:
         """创建角色。"""
         ...
 
     @abstractmethod
-    async def update(self, role: "Role") -> "Role":
+    async def update(self, role: RoleEntity) -> RoleEntity:
         """更新角色。"""
         ...
 
@@ -64,7 +72,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_user_roles(self, user_id: str) -> list["Role"]:
+    async def get_user_roles(self, user_id: str) -> list[RoleEntity]:
         """获取用户的角色列表。"""
         ...
 
@@ -79,7 +87,7 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_role_menus(self, role_id: str) -> list["Menu"]:
+    async def get_role_menus(self, role_id: str) -> list[MenuEntity]:
         """获取角色的菜单列表。"""
         ...
 

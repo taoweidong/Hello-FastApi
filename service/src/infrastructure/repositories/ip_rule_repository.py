@@ -10,17 +10,19 @@ from sqlalchemy import func as sa_func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.domain.entities.ip_rule import IPRuleEntity
+from src.domain.repositories.ip_rule_repository import IPRuleRepositoryInterface
 from src.infrastructure.database.models import IPRule
 
 
-class IPRuleRepository:
+class IPRuleRepository(IPRuleRepositoryInterface):
     """IP 规则仓储的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self._crud = FastCRUD(IPRule)
 
-    async def get_ip_rules(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, rule_type: str | None = None, is_active: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[IPRule], int]:
+    async def get_ip_rules(self, page_num: int = 1, page_size: int = 10, rule_type: str | None = None, is_active: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[IPRuleEntity], int]:
         """获取 IP 规则列表（支持筛选和分页）。"""
         query = select(IPRule)
         count_query = select(sa_func.count()).select_from(IPRule)
@@ -42,45 +44,55 @@ class IPRuleRepository:
         offset = (page_num - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
-        result = await session.exec(query)
+        result = await self.session.exec(query)
         rules = list(result.all())
 
-        total_result = await session.execute(count_query)
+        total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
-        return rules, total
+        return [rule.to_domain() for rule in rules], total
 
-    async def get_ip_rule_by_id(self, session: AsyncSession, rule_id: str) -> IPRule | None:
+    async def get_ip_rule_by_id(self, rule_id: str) -> IPRuleEntity | None:
         """根据 ID 获取 IP 规则。"""
-        return await session.get(IPRule, rule_id)
+        model = await self.session.get(IPRule, rule_id)
+        return model.to_domain() if model else None
 
-    async def create_ip_rule(self, session: AsyncSession, rule: IPRule) -> IPRule:
+    async def create_ip_rule(self, rule: IPRuleEntity) -> IPRuleEntity:
         """创建 IP 规则。"""
-        return await self._crud.create(session, rule)
+        model = IPRule.from_domain(rule)
+        self.session.add(model)
+        await self.session.flush()
+        # 读回以获取自动生成的字段
+        loaded = await self.get_ip_rule_by_id(model.id)
+        return loaded  # type: ignore[return-value]
 
-    async def update_ip_rule(self, session: AsyncSession, rule: IPRule) -> IPRule:
+    async def update_ip_rule(self, rule: IPRuleEntity) -> IPRuleEntity:
         """更新 IP 规则。"""
-        session.add(rule)
-        await session.flush()
-        return rule
+        from sqlalchemy import update as sa_update
 
-    async def delete_ip_rules(self, session: AsyncSession, rule_ids: list[str]) -> int:
+        stmt = sa_update(IPRule).where(IPRule.id == rule.id).values(ip_address=rule.ip_address, rule_type=rule.rule_type, reason=rule.reason, is_active=rule.is_active, creator_id=rule.creator_id, modifier_id=rule.modifier_id, expires_at=rule.expires_at, description=rule.description)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
+        await self.session.flush()
+        updated = await self.get_ip_rule_by_id(rule.id)
+        return updated  # type: ignore[return-value]
+
+    async def delete_ip_rules(self, rule_ids: list[str]) -> int:
         """批量删除 IP 规则。"""
         count = 0
         for rule_id in rule_ids:
-            rule = await session.get(IPRule, rule_id)
+            rule = await self.session.get(IPRule, rule_id)
             if rule:
-                await session.delete(rule)
+                await self.session.delete(rule)
                 count += 1
-        await session.flush()
+        await self.session.flush()
         return count
 
-    async def clear_ip_rules(self, session: AsyncSession) -> int:
+    async def clear_ip_rules(self) -> int:
         """清空所有 IP 规则。"""
-        result = await session.exec(select(IPRule))
+        result = await self.session.exec(select(IPRule))
         rules = result.all()
         count = len(rules)
         for rule in rules:
-            await session.delete(rule)
-        await session.flush()
+            await self.session.delete(rule)
+        await self.session.flush()
         return count

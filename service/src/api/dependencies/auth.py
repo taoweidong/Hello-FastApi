@@ -5,6 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.dependencies.domain_services import get_token_service
+from src.domain.entities.menu import MenuEntity
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
 from src.domain.services.token_service import TokenService
 from src.infrastructure.database import get_db
@@ -36,7 +37,7 @@ async def get_current_active_user(user_id: str = Depends(get_current_user_id), d
     user = await repo.get_by_id(user_id)
     if user is None:
         raise UnauthorizedError("用户不存在")
-    if not user.is_active:
+    if not user.is_active_user:
         raise UnauthorizedError("用户账号已被禁用")
     return {"id": user.id, "username": user.username, "email": user.email, "is_superuser": user.is_superuser}
 
@@ -58,7 +59,7 @@ def require_permission(code: str):
         for role in user_roles:
             menus = await role_repo.get_role_menus(role.id)
             for menu in menus:
-                if menu.menu_type == 2 and menu.name == code:  # PERMISSION type
+                if menu.menu_type == MenuEntity.PERMISSION and menu.name == code:
                     return current_user
 
         raise ForbiddenError(f"权限 '{code}' 是必需的")
@@ -82,7 +83,7 @@ def require_menu_permission(path: str, method: str):
         for role in user_roles:
             menus = await role_repo.get_role_menus(role.id)
             for menu in menus:
-                if menu.menu_type == 2 and menu.path == path and menu.method == method:
+                if menu.menu_type == MenuEntity.PERMISSION and menu.path == path and menu.method == method:
                     return current_user
 
         raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")

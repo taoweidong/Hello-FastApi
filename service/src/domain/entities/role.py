@@ -4,6 +4,9 @@
 不依赖任何 ORM 或外部库。
 """
 
+from __future__ import annotations
+
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -33,3 +36,44 @@ class RoleEntity:
     created_time: datetime | None = None
     updated_time: datetime | None = None
     description: str | None = None
+
+    # ---- 状态查询属性 ----
+
+    @property
+    def is_active_role(self) -> bool:
+        """是否启用。"""
+        return self.is_active == 1
+
+    # ---- 状态变更方法 ----
+
+    def activate(self) -> None:
+        """启用角色。"""
+        self.is_active = 1
+
+    def deactivate(self) -> None:
+        """禁用角色。"""
+        self.is_active = 0
+
+    def update_info(self, *, name: str | None = None, code: str | None = None, description: str | None = None, is_active: int | None = None) -> None:
+        """有条件地更新角色信息。"""
+        if name is not None:
+            self.name = name
+        if code is not None:
+            self.code = code
+        if description is not None:
+            self.description = description
+        if is_active is not None:
+            self.is_active = is_active
+
+    # ---- 工厂方法 ----
+
+    @classmethod
+    def create_new(cls, name: str, code: str, description: str | None = None) -> RoleEntity:
+        """创建新角色实体的工厂方法。"""
+        return cls(
+            id=uuid.uuid4().hex,
+            name=name,
+            code=code,
+            description=description,
+            is_active=1,
+        )

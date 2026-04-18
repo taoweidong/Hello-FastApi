@@ -14,4 +14,4 @@ async def get_ip_rule_service(db: AsyncSession = Depends(get_db)) -> IPRuleServi
     注入 IP 规则仓储依赖。
     """
     ip_rule_repo = IPRuleRepository(db)
-    return IPRuleService(session=db, ip_rule_repo=ip_rule_repo)
+    return IPRuleService(ip_rule_repo=ip_rule_repo)

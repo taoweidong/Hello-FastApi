@@ -14,7 +14,7 @@ async def get_role_service(db: AsyncSession = Depends(get_db)) -> RoleService:
     注入角色仓储依赖。
     """
     role_repo = RoleRepository(db)
-    return RoleService(session=db, role_repo=role_repo)
+    return RoleService(role_repo=role_repo)
 
 
 async def get_role_repository(db: AsyncSession = Depends(get_db)) -> RoleRepository:

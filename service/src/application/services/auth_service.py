@@ -2,24 +2,22 @@
 
 from datetime import datetime, timedelta
 
-from sqlmodel.ext.asyncio.session import AsyncSession
-
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
 from src.config.settings import settings
+from src.domain.entities.menu import MenuEntity
+from src.domain.entities.user import UserEntity
 from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
-from src.infrastructure.database.models import User
 
 
 class AuthService:
     """认证操作的应用服务。"""
 
-    def __init__(self, session: AsyncSession, user_repo: UserRepositoryInterface, role_repo: RoleRepositoryInterface, menu_repo: MenuRepositoryInterface, token_service: TokenService, password_service: PasswordService):
-        self.session = session
+    def __init__(self, user_repo: UserRepositoryInterface, role_repo: RoleRepositoryInterface, menu_repo: MenuRepositoryInterface, token_service: TokenService, password_service: PasswordService):
         self.user_repo = user_repo
         self.role_repo = role_repo
         self.menu_repo = menu_repo
@@ -37,7 +35,7 @@ class AuthService:
             raise UnauthorizedError("用户名或密码错误")
 
         # 2. 检查用户状态
-        if not user.is_active:
+        if not user.is_active_user:
             raise UnauthorizedError("用户账号已被禁用")
 
         # 3. 生成令牌
@@ -46,9 +44,9 @@ class AuthService:
         refresh_token = self.token_service.create_refresh_token(token_data)
 
         # 4. 查询用户角色和菜单权限
-        if user.is_superuser:
+        if user.is_superuser_user:
             user_roles = await self.role_repo.get_all(page_num=1, page_size=100)
-            user_menus = await self.menu_repo.get_all(self.session)
+            user_menus = await self.menu_repo.get_all()
         else:
             user_roles = await self.role_repo.get_user_roles(user.id)
             # 收集用户所有角色关联的菜单
@@ -62,7 +60,7 @@ class AuthService:
                         user_menus.append(menu)
 
         # 5. 构建菜单名称列表（用于前端按钮权限 hasAuth 检查）
-        menu_names = [m.name for m in user_menus if m.menu_type == 2]  # PERMISSION类型
+        menu_names = [m.name for m in user_menus if m.menu_type == MenuEntity.PERMISSION]
 
         # 6. 计算过期时间
         expires_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -88,10 +86,14 @@ class AuthService:
 
         hashed_password = self.password_service.hash_password(dto.password)
 
-        new_user = User(username=dto.username, password=hashed_password, nickname=dto.nickname, email=dto.email or "", phone=dto.phone or "", is_active=1)
-        await self.user_repo.create(new_user)
-        await self.session.flush()
-        created_user = await self.user_repo.get_by_username(dto.username)
+        user_entity = UserEntity.create_new(
+            username=dto.username,
+            hashed_password=hashed_password,
+            nickname=dto.nickname,
+            email=dto.email or "",
+            phone=dto.phone or "",
+        )
+        created_user = await self.user_repo.create(user_entity)
         if created_user is None:
             raise NotFoundError("注册成功但无法加载用户")
 
@@ -111,7 +113,7 @@ class AuthService:
             raise UnauthorizedError("无效的刷新令牌")
 
         user = await self.user_repo.get_by_id(user_id)
-        if user is None or not user.is_active:
+        if user is None or not user.is_active_user:
             raise UnauthorizedError("用户不存在或已被禁用")
 
         token_data = {"sub": user.id, "username": user.username}
@@ -124,21 +126,14 @@ class AuthService:
         return {"accessToken": new_access_token, "refreshToken": new_refresh_token, "expires": expires_str}
 
     async def get_async_routes(self, user_id: str) -> list[dict]:
-        """根据用户角色获取动态路由（从数据库Menu+MenuMeta构建）。
-
-        Args:
-            user_id: 用户ID
-
-        Returns:
-            前端路由配置列表
-        """
+        """根据用户角色获取动态路由（从数据库Menu+MenuMeta构建）。"""
         user = await self.user_repo.get_by_id(user_id)
         if user is None:
             return []
 
         # 获取用户的菜单（仅DIRECTORY和MENU类型）
-        if user.is_superuser:
-            all_menus = await self.menu_repo.get_all(self.session)
+        if user.is_superuser_user:
+            all_menus = await self.menu_repo.get_all()
         else:
             user_roles = await self.role_repo.get_user_roles(user.id)
             menu_ids = set()
@@ -146,12 +141,12 @@ class AuthService:
             for role in user_roles:
                 role_menus = await self.role_repo.get_role_menus(role.id)
                 for menu in role_menus:
-                    if menu.id not in menu_ids and menu.menu_type in (0, 1):  # DIRECTORY或MENU
+                    if menu.id not in menu_ids and menu.menu_type in (MenuEntity.DIRECTORY, MenuEntity.MENU_PAGE):
                         menu_ids.add(menu.id)
                         all_menus.append(menu)
 
         # 只保留DIRECTORY和MENU类型
-        route_menus = [m for m in all_menus if m.menu_type in (0, 1)]
+        route_menus = [m for m in all_menus if m.menu_type in (MenuEntity.DIRECTORY, MenuEntity.MENU_PAGE)]
 
         # 构建树形路由
         return self._build_route_tree(route_menus)
@@ -170,8 +165,8 @@ class AuthService:
         return sorted(routes, key=lambda r: r.get("rank", 0))
 
     def _build_meta(self, menu) -> dict:
-        """从Menu的关联MenuMeta构建meta对象。"""
-        meta = menu.meta if hasattr(menu, "meta") and menu.meta else None
+        """从菜单实体的meta字段构建meta对象。"""
+        meta = menu.meta
         if meta:
             return {
                 "title": meta.title or "",

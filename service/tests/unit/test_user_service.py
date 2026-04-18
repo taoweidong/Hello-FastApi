@@ -6,23 +6,14 @@ import pytest
 
 from src.application.dto.user_dto import UserCreateDTO
 from src.application.services.user_service import UserService
+from src.domain.entities.user import UserEntity
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.services.password_service import PasswordService
-from src.infrastructure.database.models import User
 
 
 @pytest.mark.unit
 class TestUserService:
     """UserService 测试类。"""
-
-    @pytest.fixture
-    def mock_session(self):
-        """创建模拟数据库会话。"""
-        session = AsyncMock()
-        session.commit = AsyncMock()
-        session.flush = AsyncMock()
-        session.refresh = AsyncMock()
-        return session
 
     @pytest.fixture
     def mock_user_repo(self):
@@ -43,9 +34,9 @@ class TestUserService:
         return service
 
     @pytest.fixture
-    def user_service(self, mock_session, mock_user_repo, mock_password_service, mock_role_repo):
+    def user_service(self, mock_user_repo, mock_password_service, mock_role_repo):
         """创建用户服务实例。"""
-        return UserService(session=mock_session, repo=mock_user_repo, password_service=mock_password_service, role_repo=mock_role_repo)
+        return UserService(repo=mock_user_repo, password_service=mock_password_service, role_repo=mock_role_repo)
 
     @pytest.mark.asyncio
     async def test_create_user_success(self, user_service, mock_user_repo):
@@ -53,9 +44,11 @@ class TestUserService:
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(return_value=None)
 
-        test_user = User(id="test-id", username="testuser", email="test@example.com", password="hashed", nickname="测试用户", is_active=True)
+        test_user = UserEntity(id="test-id", username="testuser", email="test@example.com", password="hashed", nickname="测试用户", is_active=1)
         mock_user_repo.create = AsyncMock(return_value=test_user)
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
+        mock_role_repo = user_service.role_repo
+        mock_role_repo.get_user_roles = AsyncMock(return_value=[])
 
         with patch.object(user_service, "repo", mock_user_repo):
             dto = UserCreateDTO(username="testuser", password="TestPass123", nickname="测试用户", email="test@example.com", isActive=True)
@@ -67,7 +60,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_create_user_duplicate_username(self, user_service, mock_user_repo):
         """测试创建用户时用户名重复。"""
-        existing_user = User(username="existinguser")
+        existing_user = UserEntity(id="ex-id", username="existinguser", password="hashed")
         mock_user_repo.get_by_username = AsyncMock(return_value=existing_user)
 
         with patch.object(user_service, "repo", mock_user_repo):
@@ -133,7 +126,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_reset_password_success(self, user_service, mock_user_repo):
         """测试重置密码成功。"""
-        test_user = User(id="test-id", username="testuser")
+        test_user = UserEntity(id="test-id", username="testuser", password="hashed")
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
         mock_user_repo.reset_password = AsyncMock(return_value=True)
 

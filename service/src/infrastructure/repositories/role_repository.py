@@ -10,6 +10,8 @@ from sqlalchemy import delete
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.domain.entities.menu import MenuEntity
+from src.domain.entities.role import RoleEntity
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.infrastructure.database.models import Menu, Role, RoleMenuLink, UserRole
 
@@ -21,16 +23,19 @@ class RoleRepository(RoleRepositoryInterface):
         self.session = session
         self._crud = FastCRUD(Role)
 
-    async def get_by_id(self, role_id: str) -> Role | None:
-        return await self._crud.get(self.session, id=role_id, schema_to_select=Role, return_as_model=True)
+    async def get_by_id(self, role_id: str) -> RoleEntity | None:
+        model = await self._crud.get(self.session, id=role_id, schema_to_select=Role, return_as_model=True)
+        return model.to_domain() if model else None
 
-    async def get_by_name(self, name: str) -> Role | None:
-        return await self._crud.get(self.session, name=name, schema_to_select=Role, return_as_model=True)
+    async def get_by_name(self, name: str) -> RoleEntity | None:
+        model = await self._crud.get(self.session, name=name, schema_to_select=Role, return_as_model=True)
+        return model.to_domain() if model else None
 
-    async def get_by_code(self, code: str) -> Role | None:
-        return await self._crud.get(self.session, code=code, schema_to_select=Role, return_as_model=True)
+    async def get_by_code(self, code: str) -> RoleEntity | None:
+        model = await self._crud.get(self.session, code=code, schema_to_select=Role, return_as_model=True)
+        return model.to_domain() if model else None
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list[Role]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list[RoleEntity]:
         """获取角色列表，支持分页和筛选。"""
         filters: dict[str, Any] = {}
         if role_name:
@@ -39,7 +44,7 @@ class RoleRepository(RoleRepositoryInterface):
             filters["is_active"] = is_active
 
         result = await self._crud.get_multi(self.session, offset=(page_num - 1) * page_size, limit=page_size, schema_to_select=Role, return_as_model=True, **filters)
-        return list(result.get("data", []))
+        return [m.to_domain() for m in result.get("data", [])]
 
     async def count(self, role_name: str | None = None, is_active: int | None = None) -> int:
         """获取角色总数，支持筛选。"""
@@ -51,14 +56,19 @@ class RoleRepository(RoleRepositoryInterface):
 
         return await self._crud.count(self.session, **filters)
 
-    async def create(self, role: Role) -> Role:
-        return await self._crud.create(self.session, role)
+    async def create(self, role: RoleEntity) -> RoleEntity:
+        model = Role.from_domain(role)
+        self.session.add(model)
+        await self.session.flush()
+        created = await self.get_by_id(role.id)
+        return created  # type: ignore[return-value]
 
-    async def update(self, role: Role) -> Role:
+    async def update(self, role: RoleEntity) -> RoleEntity:
         """更新角色。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(Role).where(Role.id == role.id).values(name=role.name, code=role.code, is_active=role.is_active, creator_id=role.creator_id, modifier_id=role.modifier_id, description=role.description)
+        model = Role.from_domain(role)
+        stmt = sa_update(Role).where(Role.id == model.id).values(name=model.name, code=model.code, is_active=model.is_active, creator_id=model.creator_id, modifier_id=model.modifier_id, description=model.description)
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(role.id)
@@ -97,10 +107,10 @@ class RoleRepository(RoleRepositoryInterface):
         result = await self.session.execute(stmt)
         return bool(getattr(result, "rowcount", 0) > 0)
 
-    async def get_user_roles(self, user_id: str) -> list[Role]:
+    async def get_user_roles(self, user_id: str) -> list[RoleEntity]:
         """获取用户的所有角色。"""
         result = await self.session.exec(select(Role).join(UserRole, UserRole.userrole_id == Role.id).where(UserRole.userinfo_id == user_id))
-        return list(result.all())
+        return [m.to_domain() for m in result.all()]
 
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户批量分配角色（先清除旧角色再分配新的）。"""
@@ -126,10 +136,13 @@ class RoleRepository(RoleRepositoryInterface):
         await self.session.flush()
         return True
 
-    async def get_role_menus(self, role_id: str) -> list[Menu]:
+    async def get_role_menus(self, role_id: str) -> list[MenuEntity]:
         """获取角色的菜单列表。"""
-        result = await self.session.exec(select(Menu).join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id).where(RoleMenuLink.userrole_id == role_id))
-        return list(result.all())
+        from sqlalchemy.orm import selectinload
+
+        stmt = select(Menu).join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id).where(RoleMenuLink.userrole_id == role_id).options(selectinload(Menu.meta))
+        result = await self.session.exec(stmt)
+        return [m.to_domain() for m in result.all()]
 
     async def get_role_menu_ids(self, role_id: str) -> list[str]:
         """获取角色的菜单ID列表。"""

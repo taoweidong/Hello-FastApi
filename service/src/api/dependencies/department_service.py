@@ -14,4 +14,4 @@ async def get_department_service(db: AsyncSession = Depends(get_db)) -> Departme
     注入部门仓储依赖。
     """
     dept_repo = DepartmentRepository(db)
-    return DepartmentService(session=db, dept_repo=dept_repo)
+    return DepartmentService(dept_repo=dept_repo)

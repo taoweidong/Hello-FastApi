@@ -4,6 +4,9 @@
 不依赖任何 ORM 或外部库。
 """
 
+from __future__ import annotations
+
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -40,10 +43,28 @@ class LoginLogEntity:
     updated_time: datetime | None = None
     description: str | None = None
 
+    # ---- 状态查询属性 ----
+
     @property
     def is_success(self) -> bool:
         """登录是否成功（status=1表示成功）。"""
         return self.status == 1
+
+    # ---- 工厂方法 ----
+
+    @classmethod
+    def create_new(cls, status: int = 1, ipaddress: str | None = None, browser: str | None = None, system: str | None = None, agent: str | None = None, login_type: int = 0, description: str | None = None) -> LoginLogEntity:
+        """创建新登录日志实体的工厂方法。"""
+        return cls(
+            id=uuid.uuid4().hex,
+            status=status,
+            ipaddress=ipaddress,
+            browser=browser,
+            system=system,
+            agent=agent,
+            login_type=login_type,
+            description=description,
+        )
 
 
 @dataclass
@@ -85,6 +106,37 @@ class OperationLogEntity:
     created_time: datetime | None = None
     updated_time: datetime | None = None
     description: str | None = None
+
+    # ---- 工厂方法 ----
+
+    @classmethod
+    def create_new(
+        cls,
+        module: str | None = None,
+        path: str | None = None,
+        method: str | None = None,
+        ipaddress: str | None = None,
+        browser: str | None = None,
+        system: str | None = None,
+        response_code: int | None = None,
+        response_result: str | None = None,
+        status_code: int | None = None,
+        description: str | None = None,
+    ) -> OperationLogEntity:
+        """创建新操作日志实体的工厂方法。"""
+        return cls(
+            id=uuid.uuid4().hex,
+            module=module,
+            path=path,
+            method=method,
+            ipaddress=ipaddress,
+            browser=browser,
+            system=system,
+            response_code=response_code,
+            response_result=response_result,
+            status_code=status_code,
+            description=description,
+        )
 
 
 # 保留旧名称作为别名，用于向后兼容（后续阶段3会逐步清理）

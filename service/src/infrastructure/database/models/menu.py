@@ -58,6 +58,7 @@ class Menu(SQLModel, table=True):
             created_time=self.created_time,
             updated_time=self.updated_time,
             description=self.description,
+            meta=self.meta.to_domain() if self.meta else None,
         )
 
     @classmethod

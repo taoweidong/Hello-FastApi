@@ -19,7 +19,7 @@ def _create_token_service() -> TokenService:
 
 
 def _create_user_service(session: AsyncSession) -> UserService:
-    return UserService(session=session, repo=UserRepository(session), password_service=PasswordService(), role_repo=RoleRepository(session))
+    return UserService(repo=UserRepository(session), password_service=PasswordService(), role_repo=RoleRepository(session))
 
 
 async def _superuser_bearer(session: AsyncSession, username: str) -> str:

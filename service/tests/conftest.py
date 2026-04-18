@@ -91,7 +91,7 @@ async def auth_headers(client: AsyncClient, db_session: AsyncSession) -> AsyncGe
     user_repo = UserRepository(db_session)
     role_repo = RoleRepository(db_session)
     password_service = PasswordService()
-    service = UserService(session=db_session, repo=user_repo, password_service=password_service, role_repo=role_repo)
+    service = UserService(repo=user_repo, password_service=password_service, role_repo=role_repo)
     user = await service.create_superuser(UserCreateDTO(username="authtestuser", password="TestPass123", nickname="认证测试用户", email="auth@example.com", isActive=1))
     await db_session.commit()
 

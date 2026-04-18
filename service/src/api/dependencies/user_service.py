@@ -18,7 +18,7 @@ async def get_user_service(db: AsyncSession = Depends(get_db), password_service:
     """
     user_repo = UserRepository(db)
     role_repo = RoleRepository(db)
-    return UserService(session=db, repo=user_repo, password_service=password_service, role_repo=role_repo)
+    return UserService(repo=user_repo, password_service=password_service, role_repo=role_repo)
 
 
 async def get_user_repository(db: AsyncSession = Depends(get_db)) -> UserRepository:

@@ -6,40 +6,47 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from src.domain.entities.user import UserEntity
+
 if TYPE_CHECKING:
-    from src.infrastructure.database.models import User
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class UserRepositoryInterface(ABC):
     """用户领域的抽象仓储接口。"""
 
     @abstractmethod
-    async def get_by_id(self, user_id: str) -> "User | None":
+    def __init__(self, session: "AsyncSession") -> None:
+        """初始化仓储，注入数据库会话。"""
+        ...
+
+    @abstractmethod
+    async def get_by_id(self, user_id: str) -> UserEntity | None:
         """根据 ID 获取用户。"""
         ...
 
     @abstractmethod
-    async def get_by_username(self, username: str) -> "User | None":
+    async def get_by_username(self, username: str) -> UserEntity | None:
         """根据用户名获取用户。"""
         ...
 
     @abstractmethod
-    async def get_by_email(self, email: str) -> "User | None":
+    async def get_by_email(self, email: str) -> UserEntity | None:
         """根据邮箱获取用户。"""
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, is_active: int | None = None, dept_id: str | None = None) -> list["User"]:
+    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, is_active: int | None = None, dept_id: str | None = None) -> list[UserEntity]:
         """获取用户列表（分页与筛选）。"""
         ...
 
     @abstractmethod
-    async def create(self, user: "User") -> "User":
+    async def create(self, user: UserEntity) -> UserEntity:
         """创建新用户。"""
         ...
 
     @abstractmethod
-    async def update(self, user: "User") -> "User":
+    async def update(self, user: UserEntity) -> UserEntity:
         """更新现有用户。"""
         ...
 

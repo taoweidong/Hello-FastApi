@@ -14,4 +14,4 @@ async def get_dictionary_service(db: AsyncSession = Depends(get_db)) -> Dictiona
     注入字典仓储依赖。
     """
     dict_repo = DictionaryRepository(db)
-    return DictionaryService(session=db, dict_repo=dict_repo)
+    return DictionaryService(dict_repo=dict_repo)

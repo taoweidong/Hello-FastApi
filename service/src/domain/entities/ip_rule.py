@@ -4,6 +4,9 @@
 不依赖任何 ORM 或外部库。
 """
 
+from __future__ import annotations
+
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -26,6 +29,9 @@ class IPRuleEntity:
         description: 描述
     """
 
+    WHITELIST = "whitelist"
+    BLACKLIST = "blacklist"
+
     id: str
     ip_address: str = ""
     rule_type: str = "blacklist"
@@ -37,3 +43,59 @@ class IPRuleEntity:
     updated_time: datetime | None = None
     expires_at: datetime | None = None
     description: str | None = None
+
+    # ---- 状态查询属性 ----
+
+    @property
+    def is_whitelist(self) -> bool:
+        """是否为白名单规则。"""
+        return self.rule_type == self.WHITELIST
+
+    @property
+    def is_blacklist(self) -> bool:
+        """是否为黑名单规则。"""
+        return self.rule_type == self.BLACKLIST
+
+    @property
+    def is_expired(self) -> bool:
+        """规则是否已过期。"""
+        if self.expires_at is None:
+            return False
+        return datetime.now() > self.expires_at
+
+    @property
+    def is_effective(self) -> bool:
+        """规则是否生效（启用且未过期）。"""
+        return self.is_active == 1 and not self.is_expired
+
+    # ---- 状态变更方法 ----
+
+    def update_info(self, *, ip_address: str | None = None, rule_type: str | None = None, reason: str | None = None, is_active: int | None = None, expires_at: datetime | None = None, description: str | None = None) -> None:
+        """有条件地更新IP规则信息。"""
+        if ip_address is not None:
+            self.ip_address = ip_address
+        if rule_type is not None:
+            self.rule_type = rule_type
+        if reason is not None:
+            self.reason = reason
+        if is_active is not None:
+            self.is_active = is_active
+        if expires_at is not None:
+            self.expires_at = expires_at
+        if description is not None:
+            self.description = description
+
+    # ---- 工厂方法 ----
+
+    @classmethod
+    def create_new(cls, ip_address: str, rule_type: str = "blacklist", reason: str | None = None, is_active: int = 1, expires_at: datetime | None = None, description: str | None = None) -> IPRuleEntity:
+        """创建新IP规则实体的工厂方法。"""
+        return cls(
+            id=uuid.uuid4().hex,
+            ip_address=ip_address,
+            rule_type=rule_type,
+            reason=reason,
+            is_active=is_active,
+            expires_at=expires_at,
+            description=description,
+        )

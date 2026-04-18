@@ -10,10 +10,12 @@ from sqlalchemy import func as sa_func
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.domain.entities.log import LoginLogEntity, OperationLogEntity
+from src.domain.repositories.log_repository import LogRepositoryInterface
 from src.infrastructure.database.models import LoginLog, SystemLog
 
 
-class LogRepository:
+class LogRepository(LogRepositoryInterface):
     """日志仓储的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
 
     def __init__(self, session: AsyncSession) -> None:
@@ -23,7 +25,7 @@ class LogRepository:
 
     # ============ 登录日志 (sys_userloginlog) ============
 
-    async def get_login_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLog], int]:
+    async def get_login_logs(self, page_num: int = 1, page_size: int = 10, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLogEntity], int]:
         """获取登录日志列表（支持筛选和分页）。"""
         query = select(LoginLog)
         count_query = select(sa_func.count()).select_from(LoginLog)
@@ -42,42 +44,47 @@ class LogRepository:
         offset = (page_num - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
-        result = await session.exec(query)
+        result = await self.session.exec(query)
         logs = list(result.all())
 
-        total_result = await session.execute(count_query)
+        total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
-        return logs, total
+        return [log.to_domain() for log in logs], total
 
-    async def create_login_log(self, session: AsyncSession, log: LoginLog) -> LoginLog:
+    async def create_login_log(self, log: LoginLogEntity) -> LoginLogEntity:
         """创建登录日志。"""
-        return await self._login_log_crud.create(session, log)
+        model = LoginLog.from_domain(log)
+        self.session.add(model)
+        await self.session.flush()
+        # 读回以获取自动生成的字段
+        loaded = await self.session.get(LoginLog, model.id)
+        return loaded.to_domain()  # type: ignore[union-attr]
 
-    async def delete_login_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
+    async def delete_login_logs(self, log_ids: list[str]) -> int:
         """批量删除登录日志。"""
         count = 0
         for log_id in log_ids:
-            log = await session.get(LoginLog, log_id)
+            log = await self.session.get(LoginLog, log_id)
             if log:
-                await session.delete(log)
+                await self.session.delete(log)
                 count += 1
-        await session.flush()
+        await self.session.flush()
         return count
 
-    async def clear_login_logs(self, session: AsyncSession) -> int:
+    async def clear_login_logs(self) -> int:
         """清空所有登录日志。"""
-        result = await session.exec(select(LoginLog))
+        result = await self.session.exec(select(LoginLog))
         logs = result.all()
         count = len(logs)
         for log in logs:
-            await session.delete(log)
-        await session.flush()
+            await self.session.delete(log)
+        await self.session.flush()
         return count
 
     # ============ 统一操作日志 (sys_logs) ============
 
-    async def get_operation_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[SystemLog], int]:
+    async def get_operation_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLogEntity], int]:
         """获取操作日志列表（支持筛选和分页）。"""
         query = select(SystemLog)
         count_query = select(sa_func.count()).select_from(SystemLog)
@@ -99,46 +106,52 @@ class LogRepository:
         offset = (page_num - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
-        result = await session.exec(query)
+        result = await self.session.exec(query)
         logs = list(result.all())
 
-        total_result = await session.execute(count_query)
+        total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
-        return logs, total
+        return [log.to_domain() for log in logs], total
 
-    async def create_operation_log(self, session: AsyncSession, log: SystemLog) -> SystemLog:
+    async def create_operation_log(self, log: OperationLogEntity) -> OperationLogEntity:
         """创建操作日志。"""
-        return await self._system_log_crud.create(session, log)
+        model = SystemLog.from_domain(log)
+        self.session.add(model)
+        await self.session.flush()
+        # 读回以获取自动生成的字段
+        loaded = await self.session.get(SystemLog, model.id)
+        return loaded.to_domain()  # type: ignore[union-attr]
 
-    async def get_operation_log_detail(self, session: AsyncSession, log_id: str) -> SystemLog | None:
+    async def get_operation_log_detail(self, log_id: str) -> OperationLogEntity | None:
         """获取操作日志详情。"""
-        return await self._system_log_crud.get(session, id=log_id, schema_to_select=SystemLog, return_as_model=True)
+        model = await self._system_log_crud.get(self.session, id=log_id, schema_to_select=SystemLog, return_as_model=True)
+        return model.to_domain() if model else None
 
-    async def delete_operation_logs(self, session: AsyncSession, log_ids: list[str]) -> int:
+    async def delete_operation_logs(self, log_ids: list[str]) -> int:
         """批量删除操作日志。"""
         count = 0
         for log_id in log_ids:
-            log = await session.get(SystemLog, log_id)
+            log = await self.session.get(SystemLog, log_id)
             if log:
-                await session.delete(log)
+                await self.session.delete(log)
                 count += 1
-        await session.flush()
+        await self.session.flush()
         return count
 
-    async def clear_operation_logs(self, session: AsyncSession) -> int:
+    async def clear_operation_logs(self) -> int:
         """清空所有操作日志。"""
-        result = await session.exec(select(SystemLog))
+        result = await self.session.exec(select(SystemLog))
         logs = result.all()
         count = len(logs)
         for log in logs:
-            await session.delete(log)
-        await session.flush()
+            await self.session.delete(log)
+        await self.session.flush()
         return count
 
     # ============ 系统日志（与操作日志共享 sys_logs 表） ============
 
-    async def get_system_logs(self, session: AsyncSession, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[SystemLog], int]:
+    async def get_system_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLogEntity], int]:
         """获取系统日志列表（支持筛选和分页）。与操作日志共享同一张表。"""
         query = select(SystemLog)
         count_query = select(sa_func.count()).select_from(SystemLog)
@@ -160,14 +173,15 @@ class LogRepository:
         offset = (page_num - 1) * page_size
         query = query.offset(offset).limit(page_size)
 
-        result = await session.exec(query)
+        result = await self.session.exec(query)
         logs = list(result.all())
 
-        total_result = await session.execute(count_query)
+        total_result = await self.session.execute(count_query)
         total = total_result.scalar_one()
 
-        return logs, total
+        return [log.to_domain() for log in logs], total
 
-    async def get_system_log_detail(self, session: AsyncSession, log_id: str) -> SystemLog | None:
+    async def get_system_log_detail(self, log_id: str) -> OperationLogEntity | None:
         """获取系统日志详情。"""
-        return await session.get(SystemLog, log_id)
+        model = await self.session.get(SystemLog, log_id)
+        return model.to_domain() if model else None

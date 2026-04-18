@@ -11,4 +11,4 @@ from src.infrastructure.repositories.system_config_repository import SystemConfi
 async def get_system_config_service(db: AsyncSession = Depends(get_db)) -> SystemConfigService:
     """获取系统配置服务实例。"""
     config_repo = SystemConfigRepository(db)
-    return SystemConfigService(session=db, config_repo=config_repo)
+    return SystemConfigService(config_repo=config_repo)

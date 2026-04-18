@@ -6,14 +6,13 @@
 
 from classy_fastapi import Routable, get, post
 from fastapi import Depends
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import success_response
 from src.api.dependencies import get_auth_service, get_current_active_user, get_menu_repository, get_role_repository, get_user_repository
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
+from src.domain.entities.menu import MenuEntity
 from src.domain.exceptions import UnauthorizedError
-from src.infrastructure.database import get_db
 from src.infrastructure.repositories.menu_repository import MenuRepository
 from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
@@ -59,15 +58,15 @@ class AuthRouter(Routable):
         return success_response(data={"list": [], "total": 0, "pageSize": 10, "currentPage": 1})
 
     @get("/get-async-routes")
-    async def get_async_routes(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), db: AsyncSession = Depends(get_db)) -> dict:
+    async def get_async_routes(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
         """获取当前用户可访问的动态路由配置。
 
         从数据库读取菜单数据，构建前端路由结构。
         menu_type: 0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限
         """
-        all_menus = await menu_repo.get_all(db)
+        all_menus = await menu_repo.get_all()
         # 过滤掉 PERMISSION 类型（menu_type=2），仅返回目录和页面路由
-        route_menus = [m for m in all_menus if m.menu_type != 2]
+        route_menus = [m for m in all_menus if m.menu_type != MenuEntity.PERMISSION]
         tree = self._build_route_tree(route_menus, None)
         return success_response(data=tree)
 
@@ -87,24 +86,24 @@ class AuthRouter(Routable):
         return success_response(data=[r.id for r in roles])
 
     @post("/role-menu")
-    async def get_role_menu(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), db: AsyncSession = Depends(get_db)) -> dict:
+    async def get_role_menu(self, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository)) -> dict:
         """获取角色菜单权限树。"""
-        all_menus = await menu_repo.get_all(db)
+        all_menus = await menu_repo.get_all()
         menu_list = []
         for menu in all_menus:
-            menu_dict = {"parentId": int(menu.parent_id) if menu.parent_id and menu.parent_id.isdigit() else (menu.parent_id or 0), "id": int(menu.id) if menu.id.isdigit() else menu.id, "menuType": menu.menu_type, "title": menu.meta.title if hasattr(menu, "meta") and menu.meta else (menu.name or "")}
+            menu_dict = {"parentId": int(menu.parent_id) if menu.parent_id and menu.parent_id.isdigit() else (menu.parent_id or 0), "id": int(menu.id) if menu.id.isdigit() else menu.id, "menuType": menu.menu_type, "title": menu.meta.title if menu.meta else (menu.name or "")}
             menu_list.append(menu_dict)
         return success_response(data=menu_list)
 
     @post("/role-menu-ids")
-    async def get_role_menu_ids(self, data: dict, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository), db: AsyncSession = Depends(get_db)) -> dict:
+    async def get_role_menu_ids(self, data: dict, current_user: dict = Depends(get_current_active_user), menu_repo: MenuRepository = Depends(get_menu_repository), role_repo: RoleRepository = Depends(get_role_repository)) -> dict:
         """根据角色ID获取菜单ID列表。"""
         role_id = data.get("id")
         if not role_id:
             return success_response(data=[])
         role = await role_repo.get_by_id(str(role_id))
         if role and role.code == "admin":
-            all_menus = await menu_repo.get_all(db)
+            all_menus = await menu_repo.get_all()
             menu_ids = [m.id for m in all_menus]
             return success_response(data=menu_ids)
         menu_ids = await role_repo.get_role_menu_ids(str(role_id))
@@ -132,7 +131,7 @@ class AuthRouter(Routable):
         """从 Menu 的 meta 关系构建 meta 字典。"""
         meta = {"title": menu.name or ""}
         # 如果有 MenuMeta 关联数据
-        if hasattr(menu, "meta") and menu.meta:
+        if menu.meta:
             m = menu.meta
             if m.title:
                 meta["title"] = m.title

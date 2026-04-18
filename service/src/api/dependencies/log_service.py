@@ -14,4 +14,4 @@ async def get_log_service(db: AsyncSession = Depends(get_db)) -> LogService:
     注入日志仓储依赖。
     """
     log_repo = LogRepository(db)
-    return LogService(session=db, log_repo=log_repo)
+    return LogService(log_repo=log_repo)

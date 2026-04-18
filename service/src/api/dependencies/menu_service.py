@@ -11,7 +11,7 @@ from src.infrastructure.repositories.menu_repository import MenuRepository
 async def get_menu_service(db: AsyncSession = Depends(get_db)) -> MenuService:
     """获取菜单服务实例。"""
     menu_repo = MenuRepository(db)
-    return MenuService(session=db, menu_repo=menu_repo)
+    return MenuService(menu_repo=menu_repo)
 
 
 def get_menu_repository(db: AsyncSession = Depends(get_db)) -> MenuRepository:
