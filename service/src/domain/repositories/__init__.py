@@ -5,10 +5,11 @@
 """
 
 from src.domain.repositories.department_repository import DepartmentRepositoryInterface
+from src.domain.repositories.dictionary_repository import DictionaryRepositoryInterface
 from src.domain.repositories.log_repository import LogRepositoryInterface
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.system_config_repository import SystemConfigRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 
-__all__ = ["DepartmentRepositoryInterface", "LogRepositoryInterface", "MenuRepositoryInterface", "RoleRepositoryInterface", "SystemConfigRepositoryInterface", "UserRepositoryInterface"]
+__all__ = ["DepartmentRepositoryInterface", "DictionaryRepositoryInterface", "LogRepositoryInterface", "MenuRepositoryInterface", "RoleRepositoryInterface", "SystemConfigRepositoryInterface", "UserRepositoryInterface"]

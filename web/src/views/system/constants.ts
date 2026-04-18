@@ -44,6 +44,12 @@ export const YesNoChoices = [
   { label: "否", value: false }
 ] as const;
 
+/** 字典状态选项 */
+export const DictStatusChoices = [
+  { label: "启用", value: 1 },
+  { label: "停用", value: 0 }
+] as const;
+
 /** 根据菜单类型值获取标签 */
 export function getMenuTypeLabel(type: number): string {
   return MenuChoices.find(c => c.value === type)?.label ?? "未知";

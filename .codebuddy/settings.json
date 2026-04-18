@@ -1,0 +1,9 @@
+{
+  "enabledPlugins": {
+    "agent-sdk-dev@codebuddy-plugins-official": true,
+    "agents-language-specialists@codebuddy-plugins-official": true,
+    "mcp-builder@codebuddy-plugins-official": true,
+    "python-development@codebuddy-plugins-official": true,
+    "unit-testing@codebuddy-plugins-official": true
+  }
+}

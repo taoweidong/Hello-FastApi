@@ -7,6 +7,7 @@
 from src.api.dependencies.auth import get_current_active_user, get_current_user_id, require_menu_permission, require_permission, require_superuser, security_scheme
 from src.api.dependencies.auth_service import get_auth_service
 from src.api.dependencies.department_service import get_department_service
+from src.api.dependencies.dictionary_service import get_dictionary_service
 from src.api.dependencies.domain_services import get_password_service, get_token_service
 from src.api.dependencies.ip_rule_service import get_ip_rule_service
 from src.api.dependencies.log_service import get_log_service
@@ -29,6 +30,7 @@ __all__ = [
     # 应用服务工厂
     "get_auth_service",
     "get_department_service",
+    "get_dictionary_service",
     "get_ip_rule_service",
     "get_log_service",
     "get_menu_service",

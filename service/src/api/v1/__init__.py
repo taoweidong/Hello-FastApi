@@ -7,6 +7,7 @@ from fastapi import APIRouter
 
 from src.api.v1.auth_router import AuthRouter
 from src.api.v1.dept_router import DeptRouter
+from src.api.v1.dictionary_router import DictionaryRouter
 from src.api.v1.ip_rule_router import IPRuleRouter
 from src.api.v1.log_router import LogRouter
 from src.api.v1.menu_router import MenuRouter
@@ -32,6 +33,9 @@ system_router.include_router(MenuRouter().router, prefix="/menu", tags=["菜单�
 
 # 部门管理路由（路径含 /dept 前缀）
 system_router.include_router(DeptRouter().router, tags=["部门管理"])
+
+# 字典管理路由（路径含 /dictionary 前缀）
+system_router.include_router(DictionaryRouter().router, tags=["字典管理"])
 
 # 日志管理路由（路径含 /login-logs、/operation-logs 前缀）
 system_router.include_router(LogRouter().router, tags=["日志管理"])

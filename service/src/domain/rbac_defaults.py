@@ -32,6 +32,12 @@ DEFAULT_MENUS = [
     {"name": "dept:add", "path": "/system/dept", "menu_type": 2, "method": "POST", "parent_id": "Dept"},
     {"name": "dept:edit", "path": "/system/dept", "menu_type": 2, "method": "PUT", "parent_id": "Dept"},
     {"name": "dept:delete", "path": "/system/dept", "menu_type": 2, "method": "DELETE", "parent_id": "Dept"},
+    # --- 字典管理 ---
+    {"name": "Dictionary", "path": "/system/dictionary", "component": "system/dictionary/index", "menu_type": 1, "rank": 5, "parent_id": "System", "meta": {"title": "字典管理", "icon": "ri:book-read-line"}, "description": "管理系统业务字典数据，支持树形层级结构"},
+    {"name": "dictionary:view", "path": "/system/dictionary", "menu_type": 2, "method": "GET", "parent_id": "Dictionary"},
+    {"name": "dictionary:add", "path": "/system/dictionary", "menu_type": 2, "method": "POST", "parent_id": "Dictionary"},
+    {"name": "dictionary:edit", "path": "/system/dictionary", "menu_type": 2, "method": "PUT", "parent_id": "Dictionary"},
+    {"name": "dictionary:delete", "path": "/system/dictionary", "menu_type": 2, "method": "DELETE", "parent_id": "Dictionary"},
     # --- IP规则 ---
     {"name": "IpRule", "path": "/system/ip-rule", "component": "system/ip-rule/index", "menu_type": 1, "rank": 5, "parent_id": "System", "meta": {"title": "IP规则", "icon": "ri:shield-keyhole-line"}, "description": "配置 IP 白名单或黑名单访问控制规则"},
     {"name": "ip-rule:view", "path": "/system/ip-rule", "menu_type": 2, "method": "GET", "parent_id": "IpRule"},
@@ -66,6 +72,7 @@ USER_MENU_NAMES = [
     "Role", "role:view",
     "Menu", "menu:view",
     "Dept", "dept:view",
+    "Dictionary", "dictionary:view",
     "IpRule", "ip-rule:view",
     "SystemConfig", "config:view",
     "Log", "LoginLog", "OperationLog", "log:view",

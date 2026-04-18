@@ -5,6 +5,7 @@
 """
 
 from src.domain.entities.department import DepartmentEntity
+from src.domain.entities.dictionary import DictionaryEntity
 from src.domain.entities.ip_rule import IPRuleEntity
 from src.domain.entities.log import LoginLogEntity, OperationLogEntity, SystemLogEntity
 from src.domain.entities.menu import MenuEntity
@@ -13,4 +14,4 @@ from src.domain.entities.role import RoleEntity
 from src.domain.entities.system_config import SystemConfigEntity
 from src.domain.entities.user import UserEntity
 
-__all__ = ["DepartmentEntity", "IPRuleEntity", "LoginLogEntity", "MenuEntity", "MenuMetaEntity", "OperationLogEntity", "RoleEntity", "SystemConfigEntity", "SystemLogEntity", "UserEntity"]
+__all__ = ["DepartmentEntity", "DictionaryEntity", "IPRuleEntity", "LoginLogEntity", "MenuEntity", "MenuMetaEntity", "OperationLogEntity", "RoleEntity", "SystemConfigEntity", "SystemLogEntity", "UserEntity"]

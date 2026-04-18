@@ -21,6 +21,7 @@ env/
 
 # Environment
 .env
+.env.local
 
 # Database (存放在 sql 目录)
 sql/*.db
