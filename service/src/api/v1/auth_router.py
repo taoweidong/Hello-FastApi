@@ -92,7 +92,7 @@ class AuthRouter(Routable):
         all_menus = await menu_repo.get_all(db)
         menu_list = []
         for menu in all_menus:
-            menu_dict = {"parentId": int(menu.parent_id) if menu.parent_id else 0, "id": int(menu.id) if menu.id.isdigit() else menu.id, "menuType": menu.menu_type, "title": menu.meta.title if hasattr(menu, "meta") and menu.meta else (menu.name or "")}
+            menu_dict = {"parentId": int(menu.parent_id) if menu.parent_id and menu.parent_id.isdigit() else (menu.parent_id or 0), "id": int(menu.id) if menu.id.isdigit() else menu.id, "menuType": menu.menu_type, "title": menu.meta.title if hasattr(menu, "meta") and menu.meta else (menu.name or "")}
             menu_list.append(menu_dict)
         return success_response(data=menu_list)
 

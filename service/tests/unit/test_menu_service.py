@@ -1,6 +1,6 @@
 """菜单服务的单元测试。"""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -21,6 +21,7 @@ class TestMenuService:
         session.commit = AsyncMock()
         session.flush = AsyncMock()
         session.refresh = AsyncMock()
+        session.add = MagicMock()  # add() 是同步方法
         return session
 
     @pytest.fixture
@@ -49,11 +50,10 @@ class TestMenuService:
         """测试创建菜单成功。"""
         mock_menu_repo.get_by_name = AsyncMock(return_value=None)
 
+        # create_menu 现在使用 session.add() 而非 repo.create_meta/create
+        # 所以只需要 mock get_by_id 来返回创建后的菜单
         meta = MenuMeta(id="meta-id-1", title="测试菜单", icon="menu", is_show_menu=1, is_keepalive=1)
-        mock_menu_repo.create_meta = AsyncMock(return_value=meta)
-
         created_menu = Menu(id="menu-id-1", name="test_menu", menu_type=0, path="/test", rank=0, is_active=1, meta_id="meta-id-1", meta=meta)
-        mock_menu_repo.create = AsyncMock(return_value=created_menu)
         mock_menu_repo.get_by_id = AsyncMock(return_value=created_menu)
 
         dto = MenuCreateDTO(name="test_menu", menuType=0, path="/test", title="测试菜单", isActive=1)
@@ -61,8 +61,8 @@ class TestMenuService:
 
         assert result.name == "test_menu"
         assert result.menuType == 0
-        mock_menu_repo.create_meta.assert_called_once()
-        mock_menu_repo.create.assert_called_once()
+        mock_session.add.assert_called()
+        mock_session.flush.assert_called()
 
     @pytest.mark.asyncio
     async def test_create_menu_duplicate_name(self, menu_service, mock_menu_repo):

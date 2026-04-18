@@ -92,10 +92,13 @@ class TestSystemConfigService:
         """测试更新配置成功。"""
         existing_config = SystemConfig(id="config-id-1", key="site_name", value="旧值", is_active=1)
         mock_config_repo.get_by_id = AsyncMock(return_value=existing_config)
+        updated_config = SystemConfig(id="config-id-1", key="site_name", value="新值", is_active=1)
+        mock_config_repo.update = AsyncMock(return_value=updated_config)
 
         dto = SystemConfigUpdateDTO(value="新值")
         result = await config_service.update_config("config-id-1", dto)
 
+        assert result.value == "新值"
         mock_config_repo.update.assert_called_once()
 
     @pytest.mark.asyncio

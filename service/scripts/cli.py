@@ -5,7 +5,8 @@
     python -m scripts.cli createsuperuser --username admin --password admin123 --email admin@example.com
     python -m scripts.cli initdb
     python -m scripts.cli seedrbac
-    python -m scripts.cli seeddata  # 初始化测试数据（菜单、日志等）
+    python -m scripts.cli seeddata  # 初始化测试数据（日志等）
+    python -m scripts.cli initall  # 一键初始化（表+RBAC+测试数据+超级管理员）
 """
 
 import argparse
@@ -31,7 +32,7 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
     from src.application.dto.user_dto import UserCreateDTO
     from src.application.services.user_service import UserService
     from src.domain.services.password_service import PasswordService
-    from src.infrastructure.database import get_async_session_factory, init_db
+    from src.infrastructure.database import close_db, get_async_session_factory, init_db
     from src.infrastructure.repositories.role_repository import RoleRepository
     from src.infrastructure.repositories.user_repository import UserRepository
 
@@ -51,22 +52,23 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
         print(f"超级管理员 '{user.username}' 创建成功 (id: {user.id})")
         print("  已自动分配 admin 角色，拥有所有菜单权限")
 
+    await close_db()
+
 
 async def init_database() -> None:
     """初始化数据库表。"""
-    from src.infrastructure.database import init_db
+    from src.infrastructure.database import close_db, init_db
 
     await init_db()
+    await close_db()
     print("数据库表创建成功")
 
 
 async def seed_rbac() -> None:
-    """初始化默认角色，并为 admin 角色分配所有菜单权限。"""
-    from sqlmodel import select
-
-    from src.domain.rbac_defaults import DEFAULT_ROLES
-    from src.infrastructure.database import get_async_session_factory, init_db
-    from src.infrastructure.database.models import Menu, Role
+    """初始化RBAC数据：创建菜单、角色，并分配权限。"""
+    from src.domain.rbac_defaults import ADMIN_MENU_NAMES, DEFAULT_MENUS, DEFAULT_ROLES, USER_MENU_NAMES
+    from src.infrastructure.database import close_db, get_async_session_factory, init_db
+    from src.infrastructure.database.models import Menu, MenuMeta, Role
     from src.infrastructure.repositories.menu_repository import MenuRepository
     from src.infrastructure.repositories.role_repository import RoleRepository
 
@@ -74,10 +76,61 @@ async def seed_rbac() -> None:
 
     session_factory = get_async_session_factory()
     async with session_factory() as session:
-        role_repo = RoleRepository(session)
         menu_repo = MenuRepository(session)
+        role_repo = RoleRepository(session)
 
-        # 创建默认角色
+        # ========== 1. 创建菜单（含MenuMeta） ==========
+        print("正在创建菜单...")
+        name_to_id: dict[str, str] = {}  # name -> menu.id 映射，用于解析 parent_id
+        created_count = 0
+
+        for menu_def in DEFAULT_MENUS:
+            # 按name去重，支持幂等执行
+            existing = await menu_repo.get_by_name(menu_def["name"], session)
+            if existing:
+                name_to_id[menu_def["name"]] = existing.id
+                continue
+
+            # 创建 MenuMeta
+            meta_data = menu_def.get("meta", {})
+            is_show = 0 if menu_def["menu_type"] == 2 else meta_data.get("is_show_menu", 1)
+            meta = MenuMeta(
+                title=meta_data.get("title", menu_def["name"]),
+                icon=meta_data.get("icon", ""),
+                is_show_menu=is_show,
+                is_show_parent=meta_data.get("is_show_parent", 0),
+            )
+            session.add(meta)
+            await session.flush()
+
+            # 解析 parent_id：从 name_to_id 映射中查找
+            raw_parent = menu_def.get("parent_id")
+            resolved_parent = name_to_id.get(raw_parent) if raw_parent else None
+
+            # 创建 Menu
+            menu = Menu(
+                name=menu_def["name"],
+                path=menu_def.get("path", ""),
+                component=menu_def.get("component"),
+                menu_type=menu_def["menu_type"],
+                rank=menu_def.get("rank", 0),
+                method=menu_def.get("method"),
+                parent_id=resolved_parent,
+                meta_id=meta.id,
+                description=menu_def.get("description"),
+            )
+            session.add(menu)
+            await session.flush()
+            name_to_id[menu_def["name"]] = menu.id
+            created_count += 1
+
+        if created_count:
+            print(f"  创建 {created_count} 个菜单（含权限项）")
+        else:
+            print("  菜单已存在，跳过创建")
+
+        # ========== 2. 创建默认角色 ==========
+        print("正在创建角色...")
         for name, description in DEFAULT_ROLES.items():
             existing = await role_repo.get_by_name(name)
             if existing is None:
@@ -85,7 +138,7 @@ async def seed_rbac() -> None:
                 await role_repo.create(role)
                 print(f"  创建角色: {name}")
 
-        # 为 admin 角色分配所有菜单权限
+        # ========== 3. 为 admin 角色分配所有菜单 ==========
         admin_role = await role_repo.get_by_name("admin")
         if admin_role:
             all_menus = await menu_repo.get_all(session)
@@ -94,80 +147,42 @@ async def seed_rbac() -> None:
                 await role_repo.assign_menus_to_role(admin_role.id, menu_ids)
                 print(f"  admin 角色已分配 {len(menu_ids)} 个菜单权限")
 
+        # ========== 4. 为 user 角色分配只读菜单 ==========
+        user_role = await role_repo.get_by_name("user")
+        if user_role:
+            user_menu_ids = [name_to_id[n] for n in USER_MENU_NAMES if n in name_to_id]
+            if user_menu_ids:
+                await role_repo.assign_menus_to_role(user_role.id, user_menu_ids)
+                print(f"  user 角色已分配 {len(user_menu_ids)} 个菜单权限")
+
         await session.commit()
+        await close_db()
         print("RBAC 初始数据创建成功")
 
 
 async def seed_data() -> None:
-    """初始化测试数据（菜单、日志等）。"""
+    """初始化测试数据（日志等）。"""
     import random
     import uuid
 
     from sqlmodel import select
 
-    from src.infrastructure.database import get_async_session_factory, init_db
-    from src.infrastructure.database.models import LoginLog, Menu, MenuMeta, SystemLog
+    from src.infrastructure.database import close_db, get_async_session_factory, init_db
+    from src.infrastructure.database.models import LoginLog, SystemLog
 
     await init_db()
 
     session_factory = get_async_session_factory()
     async with session_factory() as session:
-        # ========== 1. 初始化菜单数据 ==========
-        print("正在检查菜单数据...")
-        result = await session.exec(select(Menu))
-        existing_menus = result.all()
-
-        if not existing_menus:
-            print("  添加系统菜单...")
-            # 菜单定义：(id, name, path, component, icon, title, rank, parent_id, menu_type, description)
-            menus_def = [
-                # 系统管理（顶级菜单）
-                ("1", "System", "/system", "", "ri:settings-3-line", "系统管理", 1, None, 0, "系统管理功能模块入口，包含用户、角色、部门等管理功能"),
-                ("11", "User", "/system/user/index", "system/user/index", "ri:admin-line", "用户管理", 1, "1", 0, "管理系统用户账号，支持新增、编辑、删除及角色分配"),
-                ("12", "Role", "/system/role/index", "system/role/index", "ri:admin-fill", "角色管理", 2, "1", 0, "管理系统角色定义及菜单权限分配"),
-                ("13", "Dept", "/system/dept/index", "system/dept/index", "ri:git-branch-line", "部门管理", 3, "1", 0, "管理组织架构部门层级及人员归属"),
-                ("14", "Menu", "/system/menu/index", "system/menu/index", "ep:menu", "菜单管理", 4, "1", 0, "管理系统导航菜单及路由配置"),
-                ("15", "IpRule", "/system/ip-rule/index", "system/ip-rule/index", "ri:shield-keyhole-line", "IP规则", 5, "1", 0, "配置 IP 白名单或黑名单访问控制规则"),
-                ("16", "SystemConfig", "/system/config/index", "system/config/index", "ri:settings-4-line", "系统配置", 6, "1", 0, "管理系统全局参数及运行配置"),
-                ("17", "RolePermission", "/system/permission/index", "system/permission/index", "ri:key-2-line", "角色权限", 7, "1", 0, "为角色分配细粒度的页面及按钮操作权限"),
-                # 系统监控（顶级菜单）
-                ("2", "Monitor", "/monitor", "", "ep:monitor", "系统监控", 2, None, 0, "系统运行状态监控功能模块入口"),
-                ("21", "OnlineUser", "/monitor/online-user", "monitor/online/index", "ri:user-voice-line", "在线用户", 1, "2", 0, "查看当前在线用户列表，支持强制下线操作"),
-                ("22", "LoginLog", "/monitor/login-logs", "monitor/logs/login/index", "ri:window-line", "登录日志", 2, "2", 0, "查询用户登录历史记录及登录状态统计"),
-                ("23", "OperationLog", "/monitor/operation-logs", "monitor/logs/operation/index", "ri:history-fill", "操作日志", 3, "2", 0, "查询用户操作行为日志及接口调用记录"),
-                ("24", "SystemLog", "/monitor/system-logs", "monitor/logs/system/index", "ri:file-list-2-line", "系统日志", 4, "2", 0, "查看系统运行日志及异常错误信息"),
-                # 权限管理（顶级菜单）
-                ("3", "Permission", "/permission", "", "ep:lollipop", "权限管理", 3, None, 0, "权限演示功能模块，展示页面级和按钮级权限控制"),
-                ("31", "PermissionPage", "/permission/page/index", "permission/page/index", "ep:document", "页面权限", 1, "3", 0, "演示基于角色的页面访问权限控制"),
-                ("32", "PermissionButton", "/permission/button/router", "permission/button/index", "ep:mouse", "按钮权限", 2, "3", 0, "演示基于角色的按钮操作权限控制"),
-            ]
-
-            for menu_id, name, path, component, icon, title, rank, parent_id, menu_type, description in menus_def:
-                # 创建 MenuMeta
-                meta = MenuMeta(id=uuid.uuid4().hex, title=title, icon=icon, is_show_menu=1, is_show_parent=0)
-                session.add(meta)
-                await session.flush()  # 确保 meta.id 可用
-
-                # 创建 Menu
-                menu = Menu(id=menu_id, name=name, path=path, component=component or None, rank=rank, parent_id=parent_id, menu_type=menu_type, meta_id=meta.id, description=description)
-                session.add(menu)
-
-            print(f"    创建 {len(menus_def)} 个菜单（含元数据）")
-        else:
-            print(f"  菜单已存在 ({len(existing_menus)} 条)")
-
-        # ========== 2. 初始化登录日志 ==========
+        # ========== 1. 初始化登录日志 ==========
         print("正在检查登录日志...")
         result = await session.exec(select(LoginLog))
         existing_logs = result.all()
 
         if not existing_logs:
             print("  添加登录日志测试数据...")
-            usernames = ["admin", "user1", "user2", "guest"]
             browsers = ["Chrome 120", "Firefox 121", "Safari 17", "Edge 120"]
             systems = ["Windows 11", "macOS 14", "Ubuntu 22.04", "iOS 17"]
-            addresses = ["中国广东省深圳市", "中国北京市", "中国上海市", "中国浙江省杭州市"]
-            behaviors = ["账户登录", "验证码登录", "扫码登录"]
 
             for _ in range(20):
                 log = LoginLog(ipaddress=f"192.168.1.{random.randint(1, 254)}", system=random.choice(systems), browser=random.choice(browsers), status=1 if random.random() > 0.1 else 0, login_type=0, creator_id="seed")
@@ -176,7 +191,7 @@ async def seed_data() -> None:
         else:
             print(f"  登录日志已存在 ({len(existing_logs)} 条)")
 
-        # ========== 3. 初始化系统日志（sys_logs 表） ==========
+        # ========== 2. 初始化系统日志（sys_logs 表） ==========
         print("正在检查系统日志...")
         result = await session.exec(select(SystemLog))
         existing_logs = result.all()
@@ -208,7 +223,25 @@ async def seed_data() -> None:
             print(f"  系统日志已存在 ({len(existing_logs)} 条)")
 
         await session.commit()
+        await close_db()
         print("测试数据初始化完成！")
+
+
+async def init_all() -> None:
+    """一键初始化：创建表 + RBAC数据 + 测试数据 + 超级管理员。"""
+    print("===== 步骤 1/4: 初始化数据库表 =====")
+    await init_database()
+    print()
+    print("===== 步骤 2/4: 初始化RBAC数据 =====")
+    await seed_rbac()
+    print()
+    print("===== 步骤 3/4: 初始化测试数据 =====")
+    await seed_data()
+    print()
+    print("===== 步骤 4/4: 创建超级管理员 =====")
+    await create_superuser("admin", "admin@example.com", "admin123", "Administrator")
+    print()
+    print("全部初始化完成！默认账号: admin / admin123")
 
 
 def main() -> None:
@@ -230,10 +263,13 @@ def main() -> None:
     subparsers.add_parser("initdb", help="初始化数据库表")
 
     # seedrbac 命令
-    subparsers.add_parser("seedrbac", help="初始化RBAC数据")
+    subparsers.add_parser("seedrbac", help="初始化RBAC数据（菜单、角色、权限）")
 
     # seeddata 命令
-    subparsers.add_parser("seeddata", help="初始化测试数据（菜单、日志等）")
+    subparsers.add_parser("seeddata", help="初始化测试数据（日志等）")
+
+    # initall 命令
+    subparsers.add_parser("initall", help="一键初始化（表+RBAC+测试数据+超级管理员）")
 
     args = parser.parse_args()
 
@@ -251,6 +287,8 @@ def main() -> None:
         asyncio.run(seed_rbac())
     elif args.command == "seeddata":
         asyncio.run(seed_data())
+    elif args.command == "initall":
+        asyncio.run(init_all())
 
 
 if __name__ == "__main__":

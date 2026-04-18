@@ -3,6 +3,7 @@
 from collections.abc import AsyncGenerator
 from functools import partial
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -17,6 +18,15 @@ class DatabaseManager:
         url = database_url or settings.DATABASE_URL
         echo_flag = echo if echo is not None else settings.DEBUG
         self._engine = create_async_engine(url, echo=echo_flag, pool_pre_ping=True)
+
+        # 为 SQLite 启用外键约束
+        if url.startswith("sqlite"):
+            @event.listens_for(self._engine.sync_engine, "connect")
+            def _set_sqlite_pragma(dbapi_connection, connection_record):
+                cursor = dbapi_connection.cursor()
+                cursor.execute("PRAGMA foreign_keys=ON")
+                cursor.close()
+
         self._async_session_factory = partial(AsyncSession, self._engine, expire_on_commit=False)
 
     @property

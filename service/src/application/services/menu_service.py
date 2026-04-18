@@ -65,7 +65,7 @@ class MenuService:
             fixed_tag=dto.fixedTag if dto.fixedTag is not None else 0,
             dynamic_level=dto.dynamicLevel if dto.dynamicLevel is not None else 0,
         )
-        meta = await self.menu_repo.create_meta(meta, session=sess)
+        sess.add(meta)
         await sess.flush()
 
         # 创建Menu
@@ -81,7 +81,7 @@ class MenuService:
             meta_id=meta.id,
             description=dto.description,
         )
-        menu = await self.menu_repo.create(menu, session=sess)
+        sess.add(menu)
         await sess.flush()
 
         # 重新获取以加载meta关系
