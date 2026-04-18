@@ -8,13 +8,13 @@ from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
-from src.infrastructure.cache.cache_service import CacheService
+from src.domain.services.cache_port import CachePort
 
 
 class MenuService:
     """菜单领域操作的应用服务。"""
 
-    def __init__(self, menu_repo: MenuRepositoryInterface, cache_service: CacheService | None = None):
+    def __init__(self, menu_repo: MenuRepositoryInterface, cache_service: CachePort | None = None):
         self.menu_repo = menu_repo
         self.cache_service = cache_service
 
@@ -221,7 +221,7 @@ class MenuService:
 
     def _dict_to_entity(self, data: dict) -> MenuEntity:
         """将序列化的字典转回菜单实体。"""
-        meta_data = data.pop("meta", None)
+        meta_data = data.get("meta")
         meta_entity = None
         if meta_data:
             meta_entity = MenuMetaEntity(
@@ -235,8 +235,8 @@ class MenuService:
                 dynamic_level=meta_data["dynamic_level"],
             )
         from datetime import datetime as dt, timezone
-        created_time = dt.fromisoformat(data.pop("created_time")) if data.get("created_time") else None
-        updated_time = dt.fromisoformat(data.pop("updated_time")) if data.get("updated_time") else None
+        created_time = dt.fromisoformat(data["created_time"]) if data.get("created_time") else None
+        updated_time = dt.fromisoformat(data["updated_time"]) if data.get("updated_time") else None
         menu = MenuEntity(
             id=data["id"], menu_type=data["menu_type"], name=data["name"],
             rank=data["rank"], path=data["path"], component=data["component"],
@@ -246,7 +246,7 @@ class MenuService:
             created_time=created_time, updated_time=updated_time,
             description=data["description"],
         )
-        menu._meta = meta_entity
+        menu.meta = meta_entity
         return menu
 
     def _build_tree(self, menus: list[MenuEntity], parent_id: str | None) -> list[dict]:

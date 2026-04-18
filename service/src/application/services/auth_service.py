@@ -1,6 +1,6 @@
 """应用层 - 认证服务。"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
 from src.config.settings import settings
@@ -12,13 +12,13 @@ from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
-from src.infrastructure.cache.cache_service import CacheService
+from src.domain.services.cache_port import CachePort
 
 
 class AuthService:
     """认证操作的应用服务。"""
 
-    def __init__(self, user_repo: UserRepositoryInterface, role_repo: RoleRepositoryInterface, menu_repo: MenuRepositoryInterface, token_service: TokenService, password_service: PasswordService, cache_service: CacheService | None = None):
+    def __init__(self, user_repo: UserRepositoryInterface, role_repo: RoleRepositoryInterface, menu_repo: MenuRepositoryInterface, token_service: TokenService, password_service: PasswordService, cache_service: CachePort | None = None):
         self.user_repo = user_repo
         self.role_repo = role_repo
         self.menu_repo = menu_repo
@@ -58,7 +58,7 @@ class AuthService:
         menu_names = [m.name for m in user_menus if m.menu_type == MenuEntity.PERMISSION]
 
         # 6. 计算过期时间
-        expires_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
 
         # 7. 构建扁平结构的登录响应
@@ -115,7 +115,7 @@ class AuthService:
         new_access_token = self.token_service.create_access_token(token_data)
         new_refresh_token = self.token_service.create_refresh_token(token_data)
 
-        expires_time = datetime.now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
 
         return {"accessToken": new_access_token, "refreshToken": new_refresh_token, "expires": expires_str}
@@ -130,7 +130,6 @@ class AuthService:
         exp = payload.get("exp")
         if exp is None:
             return True
-        from datetime import datetime, timezone
         expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
         return await self.cache_service.add_token_to_blacklist(access_token, expires_at)
 
@@ -222,7 +221,7 @@ class AuthService:
             created_time=created_time, updated_time=updated_time,
             description=data["description"],
         )
-        menu._meta = meta_entity
+        menu.meta = meta_entity
         return menu
 
     def _build_route_tree(self, menus: list, parent_id: str | None = None) -> list[dict]:

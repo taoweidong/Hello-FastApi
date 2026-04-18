@@ -9,10 +9,11 @@ from datetime import datetime, timezone
 
 import redis.asyncio as redis
 
+from src.domain.services.cache_port import CachePort
 from src.infrastructure.logging.logger import logger
 
 
-class CacheService:
+class CacheService(CachePort):
     """缓存服务，封装黑名单与权限缓存的 Redis 操作。"""
 
     # Key 前缀

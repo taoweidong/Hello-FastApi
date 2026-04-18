@@ -4,14 +4,21 @@ from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.services.ip_rule_service import IPRuleService
+from src.domain.services.cache_port import IPFilterPort
 from src.infrastructure.database import get_db
+from src.infrastructure.http.ip_filter_port_adapter import IPFilterPortAdapter
 from src.infrastructure.repositories.ip_rule_repository import IPRuleRepository
 
 
-async def get_ip_rule_service(db: AsyncSession = Depends(get_db)) -> IPRuleService:
+def _get_ip_filter_port() -> IPFilterPort:
+    """获取 IP 过滤端口实例。"""
+    return IPFilterPortAdapter()
+
+
+async def get_ip_rule_service(db: AsyncSession = Depends(get_db), ip_filter_port: IPFilterPort = Depends(_get_ip_filter_port)) -> IPRuleService:
     """获取 IP 规则服务实例。
 
-    注入 IP 规则仓储依赖。
+    注入 IP 规则仓储和 IP 过滤端口依赖。
     """
     ip_rule_repo = IPRuleRepository(db)
-    return IPRuleService(ip_rule_repo=ip_rule_repo)
+    return IPRuleService(ip_rule_repo=ip_rule_repo, ip_filter_port=ip_filter_port)

@@ -6,13 +6,13 @@ from src.domain.exceptions import ConflictError, NotFoundError, UnauthorizedErro
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.password_service import PasswordService
-from src.infrastructure.cache.cache_service import CacheService
+from src.domain.services.cache_port import CachePort
 
 
 class UserService:
     """用户领域操作的应用服务。"""
 
-    def __init__(self, repo: UserRepositoryInterface, password_service: PasswordService, role_repo: RoleRepositoryInterface, cache_service: CacheService | None = None):
+    def __init__(self, repo: UserRepositoryInterface, password_service: PasswordService, role_repo: RoleRepositoryInterface, cache_service: CachePort | None = None):
         self.repo = repo
         self.password_service = password_service
         self.role_repo = role_repo
@@ -127,9 +127,16 @@ class UserService:
         return True
 
     async def update_status(self, user_id: str, is_active: int) -> bool:
-        """更改用户状态。"""
-        if not await self.repo.update_status(user_id, is_active):
+        """更改用户状态（通过领域实体的 activate/deactivate 方法）。"""
+        user = await self.repo.get_by_id(user_id)
+        if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
+
+        if is_active == 1:
+            user.activate()
+        else:
+            user.deactivate()
+        await self.repo.update(user)
         await self._invalidate_user_cache(user_id)
         return True
 

@@ -8,6 +8,7 @@ from datetime import datetime
 from src.domain.entities.ip_rule import IPRuleEntity
 from src.domain.exceptions import NotFoundError
 from src.domain.repositories.ip_rule_repository import IPRuleRepositoryInterface
+from src.domain.services.cache_port import IPFilterPort
 from src.infrastructure.logging.logger import logger
 
 
@@ -33,8 +34,9 @@ def _parse_time_bound(value: object) -> datetime | None:
 class IPRuleService:
     """IP 规则领域操作的应用服务。"""
 
-    def __init__(self, ip_rule_repo: IPRuleRepositoryInterface):
+    def __init__(self, ip_rule_repo: IPRuleRepositoryInterface, ip_filter_port: IPFilterPort | None = None):
         self.ip_rule_repo = ip_rule_repo
+        self.ip_filter_port = ip_filter_port
 
     async def get_ip_rules(self, page_num: int = 1, page_size: int = 10, rule_type: str | None = None, is_active: int | None = None, created_time: str | list | None = None) -> tuple[list, int]:
         """获取 IP 规则列表。"""
@@ -96,12 +98,11 @@ class IPRuleService:
         await self._refresh_ip_filter_cache()
         return result
 
-    @staticmethod
-    async def _refresh_ip_filter_cache() -> None:
+    async def _refresh_ip_filter_cache(self) -> None:
         """刷新 IP 过滤缓存。"""
+        if self.ip_filter_port is None:
+            return
         try:
-            from src.infrastructure.http.ip_filter_cache import get_ip_filter_cache
-
-            await get_ip_filter_cache().refresh()
+            await self.ip_filter_port.refresh()
         except Exception:
             logger.warning("刷新 IP 过滤缓存失败", exc_info=True)
