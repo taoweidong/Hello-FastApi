@@ -5,10 +5,11 @@
 """
 
 from classy_fastapi import Routable, get, post
-from fastapi import Depends
+from fastapi import Depends, Security
+from fastapi.security import HTTPAuthorizationCredentials
 
 from src.api.common import success_response
-from src.api.dependencies import get_auth_service, get_current_active_user, get_menu_repository, get_role_repository, get_user_repository
+from src.api.dependencies import get_auth_service, get_current_active_user, get_menu_repository, get_role_repository, get_user_repository, security_scheme
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
 from src.domain.entities.menu import MenuEntity
@@ -34,8 +35,10 @@ class AuthRouter(Routable):
         return success_response(data=result, message="注册成功")
 
     @post("/logout")
-    async def logout(self, current_user: dict = Depends(get_current_active_user)) -> dict:
-        """用户登出接口。"""
+    async def logout(self, current_user: dict = Depends(get_current_active_user), service: AuthService = Depends(get_auth_service), credentials: HTTPAuthorizationCredentials = Security(security_scheme)) -> dict:
+        """用户登出接口。将 access_token 写入黑名单。"""
+        token = credentials.credentials
+        await service.logout(token)
         return success_response(message="登出成功")
 
     @post("/refresh-token")
