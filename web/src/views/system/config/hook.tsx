@@ -66,10 +66,7 @@ export function useConfig() {
       prop: "inherit",
       minWidth: 100,
       cellRenderer: ({ row, props }) => (
-        <el-tag
-          size={props.size}
-          type={row.inherit === 1 ? "success" : "info"}
-        >
+        <el-tag size={props.size} type={row.inherit === 1 ? "success" : "info"}>
           {row.inherit === 1 ? "是" : "否"}
         </el-tag>
       )
@@ -179,7 +176,7 @@ export function useConfig() {
               }
               done();
               onSearch();
-            } catch (error) {
+            } catch {
               message(`${title}失败`, { type: "error" });
             }
           }

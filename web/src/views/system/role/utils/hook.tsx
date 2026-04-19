@@ -2,16 +2,11 @@ import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
-import { ElMessageBox } from "element-plus";
-import { usePublicHooks } from "../../hooks";
 import { transformI18n } from "@/plugins/i18n";
-import { addDialog } from "@/components/ReDialog";
-import type { FormItemProps } from "../utils/types";
-import type { PaginationProps } from "@pureadmin/table";
-import { getKeyList, deviceDetection } from "@pureadmin/utils";
+import { useCrudTable, useSwitchStatus, useDialogForm } from "@/composables";
+import { getKeyList } from "@pureadmin/utils";
 import { roleApi } from "@/api/system/role";
-import { menuApi } from "@/api/system/menu";
-import { type Ref, reactive, ref, onMounted, h, toRaw, watch } from "vue";
+import { type Ref, reactive, ref, onMounted, watch } from "vue";
 
 export function useRole(treeRef: Ref) {
   const form = reactive({
@@ -19,30 +14,58 @@ export function useRole(treeRef: Ref) {
     code: "",
     isActive: ""
   });
+
   const curRow = ref();
-  const formRef = ref();
-  const dataList = ref([]);
   const treeIds = ref([]);
   const treeData = ref([]);
   const isShow = ref(false);
-  const loading = ref(true);
   const isLinkage = ref(false);
   const treeSearchValue = ref();
-  const switchLoadMap = ref({});
   const isExpandAll = ref(false);
   const isSelectAll = ref(false);
-  const { switchStyle } = usePublicHooks();
   const treeProps = {
     value: "id",
     label: "title",
     children: "children"
   };
-  const pagination = reactive<PaginationProps>({
-    total: 0,
-    pageSize: 10,
-    currentPage: 1,
-    background: true
+
+  const {
+    loading,
+    dataList,
+    pagination,
+    onSearch,
+    resetForm,
+    handleDelete,
+    handleSizeChange,
+    handleCurrentChange
+  } = useCrudTable({
+    api: roleApi,
+    searchForm: form,
+    displayField: "name",
+    entityName: "角色",
+    immediate: false
   });
+
+  const { createSwitchRenderer } = useSwitchStatus({
+    api: roleApi,
+    displayField: "name",
+    entityName: "角色"
+  });
+
+  const { openDialog } = useDialogForm({
+    formComponent: editForm,
+    entityName: "角色",
+    api: roleApi,
+    fieldMappings: [
+      { key: "name", defaultValue: "" },
+      { key: "code", defaultValue: "" },
+      { key: "isActive", defaultValue: 1 },
+      { key: "description", defaultValue: "", nullable: true }
+    ],
+    width: "40%",
+    onSuccess: onSearch
+  });
+
   const columns: TableColumnList = [
     {
       label: "角色编号",
@@ -58,21 +81,8 @@ export function useRole(treeRef: Ref) {
     },
     {
       label: "状态",
-      cellRenderer: scope => (
-        <el-switch
-          size={scope.props.size === "small" ? "small" : "default"}
-          loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.isActive}
-          active-value={1}
-          inactive-value={0}
-          active-text="已启用"
-          inactive-text="已停用"
-          inline-prompt
-          style={switchStyle.value}
-          onChange={() => onChange(scope as any)}
-        />
-      ),
-      minWidth: 90
+      minWidth: 90,
+      cellRenderer: createSwitchRenderer()
     },
     {
       label: "描述",
@@ -100,163 +110,6 @@ export function useRole(treeRef: Ref) {
       slot: "operation"
     }
   ];
-
-  function onChange({ row, index }) {
-    ElMessageBox.confirm(
-      `确认要<strong>${
-        !row.isActive ? "停用" : "启用"
-      }</strong><strong style='color:var(--el-color-primary)'>${
-        row.name
-      }</strong>吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(async () => {
-        switchLoadMap.value[index] = Object.assign(
-          {},
-          switchLoadMap.value[index],
-          {
-            loading: true
-          }
-        );
-        try {
-          const { code } = await roleApi.updateStatus(row.id, { isActive: row.isActive });
-          if (code === 0) {
-            message(`已${row.isActive ? "启用" : "停用"}${row.name}`, { type: "success" });
-          }
-        } catch (error) {
-          row.isActive = row.isActive === 1 ? 0 : 1;
-          message("修改角色状态失败", { type: "error" });
-        } finally {
-          switchLoadMap.value[index] = Object.assign(
-            {},
-            switchLoadMap.value[index],
-            {
-              loading: false
-            }
-          );
-        }
-      })
-      .catch(() => {
-        row.isActive = row.isActive === 1 ? 0 : 1;
-      });
-  }
-
-  function handleDelete(row) {
-    ElMessageBox.confirm(
-      `确认要删除角色 <strong style='color:var(--el-color-primary)'>${row.name}</strong> 吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(async () => {
-        const { code } = await roleApi.destroy(row.id);
-        if (code === 0) {
-          message(`已成功删除角色 ${row.name}`, { type: "success" });
-          onSearch();
-        }
-      })
-      .catch(() => {});
-  }
-
-  function handleSizeChange(val: number) {
-    console.log(`${val} items per page`);
-  }
-
-  function handleCurrentChange(val: number) {
-    console.log(`current page: ${val}`);
-  }
-
-  function handleSelectionChange(val) {
-    console.log("handleSelectionChange", val);
-  }
-
-  async function onSearch() {
-    loading.value = true;
-    const { code, data } = await roleApi.list(toRaw(form));
-    if (code === 0) {
-      dataList.value = data.list;
-      pagination.total = data.total;
-      pagination.pageSize = data.pageSize;
-      pagination.currentPage = data.currentPage;
-    }
-
-    setTimeout(() => {
-      loading.value = false;
-    }, 500);
-  }
-
-  const resetForm = formEl => {
-    if (!formEl) return;
-    formEl.resetFields();
-    onSearch();
-  };
-
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}角色`,
-      props: {
-        formInline: {
-          name: row?.name ?? "",
-          code: row?.code ?? "",
-          isActive: row?.isActive ?? 1,
-          description: row?.description ?? ""
-        }
-      },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-        
-        FormRef.validate(async valid => {
-          if (valid) {
-            try {
-              const payload = {
-                name: curData.name,
-                code: curData.code,
-                isActive: curData.isActive,
-                description: curData.description || null
-              };
-              
-              if (title === "新增") {
-                const { code } = await roleApi.create(payload);
-                if (code === 0 || code === 201) {
-                  message(`成功创建角色 ${curData.name}`, { type: "success" });
-                  done();
-                  onSearch();
-                }
-              } else {
-                const { code } = await roleApi.partialUpdate(row.id, payload);
-                if (code === 0) {
-                  message(`成功更新角色 ${curData.name}`, { type: "success" });
-                  done();
-                  onSearch();
-                }
-              }
-            } catch (error) {
-              message(`${title}角色失败`, { type: "error" });
-            }
-          }
-        });
-      }
-    });
-  }
 
   /** 菜单权限 */
   async function handleMenu(row?: any) {
@@ -286,13 +139,13 @@ export function useRole(treeRef: Ref) {
   async function handleSave() {
     const { id, name } = curRow.value;
     const menuIds = treeRef.value.getCheckedKeys();
-    
+
     try {
       const { code } = await roleApi.saveRoleMenu(id, menuIds);
       if (code === 0) {
         message(`角色 ${name} 的菜单权限修改成功`, { type: "success" });
       }
-    } catch (error) {
+    } catch {
       message("保存菜单权限失败", { type: "error" });
     }
   }
@@ -351,7 +204,6 @@ export function useRole(treeRef: Ref) {
     transformI18n,
     onQueryChanged,
     handleSizeChange,
-    handleCurrentChange,
-    handleSelectionChange
+    handleCurrentChange
   };
 }

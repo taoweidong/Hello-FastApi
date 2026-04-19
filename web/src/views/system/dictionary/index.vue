@@ -92,7 +92,7 @@ function onFullscreen() {
             :highlight-current="true"
             @node-click="handleNodeClick"
           >
-            <template #default="{ node, data }">
+            <template #default="{ data }">
               <div
                 class="rounded-sm flex items-center select-none hover:text-primary w-full"
                 :style="{
@@ -108,10 +108,7 @@ function onFullscreen() {
               >
                 <span class="truncate flex-1" :title="data.name">
                   {{ data.name }}
-                  <span
-                    v-if="data.value"
-                    class="text-xs text-gray-400 ml-1"
-                  >
+                  <span v-if="data.value" class="text-xs text-gray-400 ml-1">
                     ({{ data.value }})
                   </span>
                 </span>

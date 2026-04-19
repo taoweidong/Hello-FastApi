@@ -1,4 +1,5 @@
 node_modules
+.DS_Store
 dist
 dist-ssr
 *.local
@@ -18,14 +19,3 @@ tests/**/coverage/
 *.njsproj
 *.sln
 tsconfig.tsbuildinfo
-
-# Docker files (avoid recursive copy)
-docker/
-
-# Git
-.git
-.gitignore
-
-# Env files (use build args instead)
-.env.local
-.env.*.local

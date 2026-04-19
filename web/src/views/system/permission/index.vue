@@ -28,7 +28,7 @@ const {
   <div class="main">
     <div class="flex gap-4 w-full">
       <!-- 左侧角色列表 -->
-      <div class="w-1/3 min-w-[300px]">
+      <div class="w-1/3 min-w-75">
         <PureTableBar
           title="角色列表"
           :columns="roleColumns"
@@ -86,7 +86,10 @@ const {
           </template>
           <template v-slot>
             <div class="p-4">
-              <el-empty v-if="!currentRoleId" description="请在左侧选择一个角色" />
+              <el-empty
+                v-if="!currentRoleId"
+                description="请在左侧选择一个角色"
+              />
               <el-tree
                 v-else
                 ref="treeRef"
@@ -101,11 +104,7 @@ const {
                 <template #default="{ node, data }">
                   <span class="flex items-center gap-2">
                     <span>{{ node.label }}</span>
-                    <el-tag
-                      v-if="data.menuType === 0"
-                      size="small"
-                      type="info"
-                    >
+                    <el-tag v-if="data.menuType === 0" size="small" type="info">
                       目录
                     </el-tag>
                     <el-tag

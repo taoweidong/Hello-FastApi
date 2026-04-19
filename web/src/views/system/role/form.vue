@@ -3,7 +3,6 @@ import { ref } from "vue";
 import ReCol from "@/components/ReCol";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
-import { usePublicHooks } from "@/views/system/hooks";
 
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
@@ -15,7 +14,6 @@ const props = withDefaults(defineProps<FormProps>(), {
 });
 
 const ruleFormRef = ref();
-const { switchStyle } = usePublicHooks();
 const newFormInline = ref(props.formInline);
 
 function getRef() {
@@ -61,7 +59,6 @@ defineExpose({ getRef });
             inline-prompt
             active-text="启用"
             inactive-text="停用"
-            :style="switchStyle"
           />
         </el-form-item>
       </re-col>

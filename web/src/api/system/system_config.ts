@@ -1,5 +1,5 @@
 import { http } from "@/utils/http";
-import { BaseApi, type Result, type ResultTable } from "../base";
+import { BaseApi, type ResultTable } from "../base";
 
 class SystemConfigApi extends BaseApi {
   constructor() {

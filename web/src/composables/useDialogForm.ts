@@ -5,7 +5,7 @@
  * openDialog / beforeSure / validate / create/update 代码。
  */
 import { message } from "@/utils/message";
-import { BaseApi } from "@/api/base";
+import type { BaseApi } from "@/api/base";
 import { addDialog } from "@/components/ReDialog";
 import { deviceDetection } from "@pureadmin/utils";
 import type { Component } from "vue";
@@ -47,7 +47,9 @@ export interface UseDialogFormReturn {
   openDialog: (title?: string, row?: any) => void;
 }
 
-export function useDialogForm(options: UseDialogFormOptions): UseDialogFormReturn {
+export function useDialogForm(
+  options: UseDialogFormOptions
+): UseDialogFormReturn {
   const {
     formComponent,
     entityName,
@@ -117,7 +119,9 @@ export function useDialogForm(options: UseDialogFormOptions): UseDialogFormRetur
                 if (code === 0 || code === 201) {
                   // 找到第一个字符串类型的字段作为显示名
                   const displayName =
-                    curData[fieldMappings.find(m => !m.nullable)?.key || "name"];
+                    curData[
+                      fieldMappings.find(m => !m.nullable)?.key || "name"
+                    ];
                   message(`成功创建${entityName} ${displayName ?? ""}`, {
                     type: "success"
                   });
@@ -128,7 +132,9 @@ export function useDialogForm(options: UseDialogFormOptions): UseDialogFormRetur
                 const { code } = await api.partialUpdate(row.id, payload);
                 if (code === 0) {
                   const displayName =
-                    curData[fieldMappings.find(m => !m.nullable)?.key || "name"];
+                    curData[
+                      fieldMappings.find(m => !m.nullable)?.key || "name"
+                    ];
                   message(`成功更新${entityName} ${displayName ?? ""}`, {
                     type: "success"
                   });

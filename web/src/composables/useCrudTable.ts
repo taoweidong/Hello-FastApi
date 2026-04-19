@@ -6,7 +6,7 @@
  */
 import { message } from "@/utils/message";
 import { handleTree } from "@/utils/tree";
-import { BaseApi, type ResultTable } from "@/api/base";
+import type { BaseApi, ResultTable } from "@/api/base";
 import { ElMessageBox } from "element-plus";
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
@@ -82,7 +82,7 @@ export function useCrudTable(options: UseCrudTableOptions): UseCrudTableReturn {
           pagination.currentPage = result.currentPage ?? 1;
         } else {
           // 树形模式：data 直接是数组
-          dataList.value = handleTree(data as any[]);
+          dataList.value = handleTree(data as unknown as any[]);
         }
       }
     } catch {

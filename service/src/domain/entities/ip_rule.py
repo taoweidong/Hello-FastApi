@@ -61,7 +61,12 @@ class IPRuleEntity:
         """规则是否已过期。"""
         if self.expires_at is None:
             return False
-        return datetime.now(timezone.utc) > self.expires_at
+        now = datetime.now(timezone.utc)
+        exp = self.expires_at
+        # 兼容 naive datetime（数据库中无时区信息）
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        return now > exp
 
     @property
     def is_effective(self) -> bool:

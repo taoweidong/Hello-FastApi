@@ -1,8 +1,11 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
 import { getKeyList } from "@pureadmin/utils";
-import { getOperationLogsList, batchDeleteOperationLogs, clearOperationLogs } from "@/api/system/log";
-import { usePublicHooks } from "@/views/system/hooks";
+import {
+  getOperationLogsList,
+  batchDeleteOperationLogs,
+  clearOperationLogs
+} from "@/api/system/log";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 
@@ -15,7 +18,6 @@ export function useOperationLog(tableRef: Ref) {
   const dataList = ref([]);
   const loading = ref(true);
   const selectedNum = ref(0);
-  const { tagStyle } = usePublicHooks();
 
   const pagination = reactive<PaginationProps>({
     total: 0,

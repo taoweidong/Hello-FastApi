@@ -21,7 +21,7 @@ export function useIpRule() {
   const dataList = ref([]);
   const formRef = ref();
   const selectedRows = ref([]);
-  const { tagStyle, switchStyle } = usePublicHooks();
+  const { switchStyle } = usePublicHooks();
 
   const form = reactive({
     ruleType: "",
@@ -204,7 +204,7 @@ export function useIpRule() {
               }
               done();
               onSearch();
-            } catch (error) {
+            } catch {
               message(`${title}失败`, { type: "error" });
             }
           }

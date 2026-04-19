@@ -63,25 +63,30 @@ defineExpose({ treeRef });
         clearable
         @input="onQueryChanged"
       />
-      <el-button :icon="isExpandAll ? useRenderIcon(CollapseIcon) : useRenderIcon(ExpandIcon)" @click="toggleExpandAll" />
+      <el-button
+        :icon="
+          isExpandAll ? useRenderIcon(CollapseIcon) : useRenderIcon(ExpandIcon)
+        "
+        @click="toggleExpandAll"
+      />
     </div>
     <el-tree
       ref="treeRef"
+      v-loading="loading"
       :data="treeData"
       node-key="id"
       :props="{
-        label: (data) => data.meta?.title ?? data.name,
+        label: data => data.meta?.title ?? data.name,
         children: 'children',
-        isLeaf: (data) => !data.children || data.children.length === 0
+        isLeaf: data => !data.children || data.children.length === 0
       }"
       highlight-current
       default-expand-all
       :expand-on-click-node="false"
       :filter-node-method="filterMethod"
       @node-click="handleNodeClick"
-      v-loading="loading"
     >
-      <template #default="{ node, data }">
+      <template #default="{ data }">
         <span class="custom-tree-node">
           <span class="inline-block mr-1">
             <el-icon v-if="data.meta?.icon" size="16">
@@ -92,10 +97,22 @@ defineExpose({ treeRef });
           <el-tag
             size="small"
             class="ml-2"
-            :type="data.menuType === 0 ? 'primary' : data.menuType === 1 ? 'warning' : 'info'"
+            :type="
+              data.menuType === 0
+                ? 'primary'
+                : data.menuType === 1
+                  ? 'warning'
+                  : 'info'
+            "
             effect="plain"
           >
-            {{ data.menuType === 0 ? '目录' : data.menuType === 1 ? '页面' : '权限' }}
+            {{
+              data.menuType === 0
+                ? "目录"
+                : data.menuType === 1
+                  ? "页面"
+                  : "权限"
+            }}
           </el-tag>
         </span>
       </template>
@@ -112,7 +129,7 @@ defineExpose({ treeRef });
 .custom-tree-node {
   display: flex;
   align-items: center;
-  font-size: 14px;
   padding-right: 8px;
+  font-size: 14px;
 }
 </style>

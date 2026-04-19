@@ -4,7 +4,6 @@ import { ref, computed } from "vue";
 import { noticesData } from "./data";
 import NoticeList from "./components/NoticeList.vue";
 
-// 使用 Remix Icon 的铃铛图标替代 lucide/bell
 import BellIcon from "~icons/ri/notification-3-line";
 import ArrowRightIcon from "~icons/ri/arrow-right-s-line";
 

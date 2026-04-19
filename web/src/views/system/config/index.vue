@@ -95,7 +95,13 @@ function onFullscreen() {
           :size="size"
           :data="dataList"
           :columns="dynamicColumns"
-          :pagination="{ total: totalPage, pageSize: pagination.pageSize, currentPage: pagination.currentPage, size, background: true }"
+          :pagination="{
+            total: totalPage,
+            pageSize: pagination.pageSize,
+            currentPage: pagination.currentPage,
+            size,
+            background: true
+          }"
           :header-cell-style="{
             background: 'var(--el-fill-color-light)',
             color: 'var(--el-text-color-primary)'
@@ -141,6 +147,7 @@ function onFullscreen() {
 :deep(.el-table__inner-wrapper::before) {
   height: 0;
 }
+
 .search-form {
   :deep(.el-form-item) {
     margin-bottom: 12px;

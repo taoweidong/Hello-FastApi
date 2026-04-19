@@ -1,6 +1,6 @@
 """领域实体的单元测试。"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -329,18 +329,18 @@ class TestIPRuleEntity:
 
     def test_is_expired_past(self):
         """测试已过期。"""
-        rule = IPRuleEntity(id="1", expires_at=datetime.now() - timedelta(hours=1))
+        rule = IPRuleEntity(id="1", expires_at=datetime.now(timezone.utc) - timedelta(hours=1))
         assert rule.is_expired is True
 
     def test_is_expired_future(self):
         """测试未过期。"""
-        rule = IPRuleEntity(id="1", expires_at=datetime.now() + timedelta(hours=1))
+        rule = IPRuleEntity(id="1", expires_at=datetime.now(timezone.utc) + timedelta(hours=1))
         assert rule.is_expired is False
 
     def test_is_effective(self):
         """测试规则生效判断。"""
         # 活跃且未过期
-        rule = IPRuleEntity(id="1", is_active=1, expires_at=datetime.now() + timedelta(hours=1))
+        rule = IPRuleEntity(id="1", is_active=1, expires_at=datetime.now(timezone.utc) + timedelta(hours=1))
         assert rule.is_effective is True
 
         # 禁用
@@ -349,7 +349,7 @@ class TestIPRuleEntity:
 
         # 已过期
         rule.is_active = 1
-        rule.expires_at = datetime.now() - timedelta(hours=1)
+        rule.expires_at = datetime.now(timezone.utc) - timedelta(hours=1)
         assert rule.is_effective is False
 
     def test_update_info(self):

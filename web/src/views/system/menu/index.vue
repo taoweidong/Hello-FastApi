@@ -127,10 +127,13 @@ function onFullscreen() {
       </el-form-item>
     </el-form>
 
-    <div class="flex gap-4" style="height: calc(100vh - 260px); min-height: 400px;">
+    <div
+      class="flex gap-4"
+      style="height: calc(100vh - 260px); min-height: 400px"
+    >
       <!-- 左侧：菜单树 -->
       <div class="w-1/4 min-w-64 bg-bg_color rounded-md p-4 overflow-auto">
-        <div class="flex items-center justify-between mb-2">
+        <div class="flex-bc mb-2">
           <span class="font-bold text-base">菜单结构</span>
           <el-button
             type="primary"
@@ -235,7 +238,7 @@ function onFullscreen() {
 </template>
 
 <style lang="scss" scoped>
-::deep(.el-table__inner-wrapper::before) {
+:deep(.el-table__inner-wrapper::before) {
   height: 0;
 }
 

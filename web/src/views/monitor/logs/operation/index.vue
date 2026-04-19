@@ -85,11 +85,7 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar
-      title="操作日志"
-      :columns="columns"
-      @refresh="onSearch"
-    >
+    <PureTableBar title="操作日志" :columns="columns" @refresh="onSearch">
       <template #buttons>
         <el-popconfirm title="确定要删除所有日志数据吗？" @confirm="clearAll">
           <template #reference>

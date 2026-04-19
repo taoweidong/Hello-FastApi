@@ -90,7 +90,9 @@ defineExpose({ getRef });
           >
             <template #default="{ node, data }">
               <span>{{ data.meta?.title ?? data.title ?? data.name }}</span>
-              <span v-if="!node.isLeaf"> ({{ data.children?.length ?? 0 }}) </span>
+              <span v-if="!node.isLeaf">
+                ({{ data.children?.length ?? 0 }})
+              </span>
             </template>
           </el-cascader>
         </el-form-item>
@@ -154,7 +156,11 @@ defineExpose({ getRef });
       <!-- PERMISSION类型(2)的HTTP方法选择 -->
       <re-col v-if="newFormInline.menuType === 2" :value="12" :xs="24" :sm="24">
         <el-form-item label="请求方法" prop="method">
-          <el-select v-model="newFormInline.method" placeholder="请选择HTTP方法" class="w-full">
+          <el-select
+            v-model="newFormInline.method"
+            placeholder="请选择HTTP方法"
+            class="w-full"
+          >
             <el-option label="GET" value="GET" />
             <el-option label="POST" value="POST" />
             <el-option label="PUT" value="PUT" />

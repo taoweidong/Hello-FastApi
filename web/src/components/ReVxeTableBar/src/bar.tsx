@@ -13,10 +13,9 @@ import {
   getCurrentInstance
 } from "vue";
 
-// 固定列图标（使用 Remix Icon 替代 Bootstrap Icon）
-import PinAngle from "~icons/ri/pushpin-2-line";
+import PinAngle from "~icons/ri/pushpin-line";
 import Fullscreen from "~icons/ri/fullscreen-fill";
-import PinAngleFill from "~icons/ri/pushpin-2-fill";
+import PinAngleFill from "~icons/ri/pushpin-fill";
 import ExitFullscreen from "~icons/ri/fullscreen-exit-fill";
 import DragIcon from "@/assets/table-bar/drag.svg?component";
 import ExpandIcon from "@/assets/table-bar/expand.svg?component";

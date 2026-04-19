@@ -3,12 +3,12 @@ import Detail from "./detail.vue";
 import { message } from "@/utils/message";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
-import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
+import { type Ref, reactive, ref, onMounted } from "vue";
 import { useCopyToClipboard } from "@pureadmin/utils";
 import { getSystemLogsList, getSystemLogsDetail } from "@/api/system/log";
 import Info from "~icons/ri/question-line";
 
-export function useSystemLog(tableRef: Ref) {
+export function useSystemLog(_tableRef: Ref) {
   const form = reactive({
     module: "",
     createdTime: ""

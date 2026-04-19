@@ -1,5 +1,5 @@
 import { http } from "@/utils/http";
-import { type Result, type ResultTable } from "../base";
+import type { Result, ResultTable } from "../base";
 
 /** 获取在线用户列表 */
 export const getOnlineLogsList = (data?: object) => {

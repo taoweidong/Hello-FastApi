@@ -7,7 +7,7 @@ import { usePublicHooks } from "@/views/system/hooks";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h, computed } from "vue";
 import type { FormItemProps } from "../utils/types";
-import { cloneDeep, deviceDetection } from "@pureadmin/utils";
+import { deviceDetection } from "@pureadmin/utils";
 
 export function useDictionary() {
   const form = reactive({
@@ -20,7 +20,7 @@ export function useDictionary() {
   const allDataList = ref([]);
   const loading = ref(true);
   const treeLoading = ref(true);
-  const { tagStyle, switchStyle } = usePublicHooks();
+  const { switchStyle } = usePublicHooks();
 
   /** 根节点列表（左侧树数据） */
   const dictTypeList = computed(() => {
@@ -63,7 +63,12 @@ export function useDictionary() {
       )
     },
     { label: "排序", prop: "sort", minWidth: 70 },
-    { label: "备注", prop: "description", minWidth: 160, showOverflowTooltip: true },
+    {
+      label: "备注",
+      prop: "description",
+      minWidth: 160,
+      showOverflowTooltip: true
+    },
     {
       label: "创建时间",
       prop: "createdTime",
@@ -172,7 +177,7 @@ export function useDictionary() {
                 done();
                 onSearch();
               }
-            } catch (error) {
+            } catch {
               message("新增字典类型失败", { type: "error" });
             }
           }
@@ -232,7 +237,7 @@ export function useDictionary() {
                 done();
                 onSearch();
               }
-            } catch (error) {
+            } catch {
               message("新增字典详情失败", { type: "error" });
             }
           }
@@ -302,7 +307,7 @@ export function useDictionary() {
                   onSearch();
                 }
               }
-            } catch (error) {
+            } catch {
               message(`${title}字典失败`, { type: "error" });
             }
           }

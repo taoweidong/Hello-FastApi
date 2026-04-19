@@ -1,5 +1,5 @@
 import { http } from "@/utils/http";
-import { BaseApi, type Result, type ResultTable } from "../base";
+import { BaseApi, type Result } from "../base";
 
 class UserApi extends BaseApi {
   constructor() {

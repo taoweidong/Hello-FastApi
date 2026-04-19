@@ -109,9 +109,7 @@ function onFullscreen() {
         >
           批量删除
         </el-button>
-        <el-button type="warning" @click="handleClear">
-          清空全部
-        </el-button>
+        <el-button type="warning" @click="handleClear"> 清空全部 </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
@@ -173,6 +171,7 @@ function onFullscreen() {
 :deep(.el-table__inner-wrapper::before) {
   height: 0;
 }
+
 .search-form {
   :deep(.el-form-item) {
     margin-bottom: 12px;

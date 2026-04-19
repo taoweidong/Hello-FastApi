@@ -83,7 +83,11 @@ const fileListTotal: number[] = [];
 const getPackageSize = options => {
   const { folder = "dist", callback, format = true } = options;
   readdir(folder, (err, files: string[]) => {
-    if (err) throw err;
+    if (err) {
+      // dist目录可能尚未写入完成，静默处理
+      callback(format ? formatBytes(0) : 0);
+      return;
+    }
     let count = 0;
     const checkEnd = () => {
       ++count == files.length &&

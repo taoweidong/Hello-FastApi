@@ -147,7 +147,7 @@ export function useDept() {
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
-        
+
         FormRef.validate(async valid => {
           if (valid) {
             try {
@@ -162,7 +162,7 @@ export function useDept() {
                 isActive: curData.isActive,
                 description: curData.description || null
               };
-              
+
               if (title === "新增") {
                 const { code } = await deptApi.create(payload);
                 if (code === 0 || code === 201) {
@@ -178,7 +178,7 @@ export function useDept() {
                   onSearch();
                 }
               }
-            } catch (error) {
+            } catch {
               message(`${title}部门失败`, { type: "error" });
             }
           }

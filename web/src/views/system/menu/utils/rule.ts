@@ -11,9 +11,7 @@ export const dirFormRules = reactive(<FormRules>{
 export const menuFormRules = reactive(<FormRules>{
   name: [{ required: true, message: "路由名称为必填项", trigger: "blur" }],
   path: [{ required: true, message: "路由路径为必填项", trigger: "blur" }],
-  component: [
-    { required: true, message: "组件路径为必填项", trigger: "blur" }
-  ]
+  component: [{ required: true, message: "组件路径为必填项", trigger: "blur" }]
 });
 
 /** 权限类型表单校验规则 */

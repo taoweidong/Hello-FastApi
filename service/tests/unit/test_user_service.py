@@ -118,7 +118,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_update_is_active_not_found(self, user_service, mock_user_repo):
         """测试更新不存在用户的状态。"""
-        mock_user_repo.update_status = AsyncMock(return_value=False)
+        mock_user_repo.get_by_id = AsyncMock(return_value=None)
 
         with patch.object(user_service, "repo", mock_user_repo), pytest.raises(NotFoundError):
             await user_service.update_status("non-existent-id", False)

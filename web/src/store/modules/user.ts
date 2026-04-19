@@ -27,7 +27,8 @@ export const useUserStore = defineStore("pure-user", {
     // 页面级别权限
     roles: storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [],
     // 按钮级别权限（基于菜单name）
-    permissions: storageLocal().getItem<DataInfo<number>>(userKey)?.permissions ?? [],
+    permissions:
+      storageLocal().getItem<DataInfo<number>>(userKey)?.permissions ?? [],
     // 前端生成的验证码（按实际需求替换）
     verifyCode: "",
     // 判断登录页面显示哪个组件（0：登录（默认）、1：手机登录、2：二维码登录、3：注册、4：忘记密码）

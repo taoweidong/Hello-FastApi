@@ -30,9 +30,11 @@ export function useMenu() {
       cellRenderer: ({ row }) => (
         <>
           <span class="inline-block mr-1">
-            {row.meta?.icon ? h(useRenderIcon(row.meta.icon), {
-              style: { paddingTop: "1px" }
-            }) : null}
+            {row.meta?.icon
+              ? h(useRenderIcon(row.meta.icon), {
+                  style: { paddingTop: "1px" }
+                })
+              : null}
           </span>
           <span>{row.meta?.title ?? row.name}</span>
         </>
@@ -65,7 +67,7 @@ export function useMenu() {
     {
       label: "权限标识",
       prop: "method",
-      cellRenderer: ({ row }) => row.menuType === 2 ? row.method : "-"
+      cellRenderer: ({ row }) => (row.menuType === 2 ? row.method : "-")
     },
     {
       label: "排序",
@@ -75,7 +77,8 @@ export function useMenu() {
     {
       label: "显示",
       prop: "isShowMenu",
-      cellRenderer: ({ row }) => row.meta?.isShowMenu === false ? "隐藏" : "显示",
+      cellRenderer: ({ row }) =>
+        row.meta?.isShowMenu === false ? "隐藏" : "显示",
       width: 100
     },
     {
@@ -213,23 +216,29 @@ export function useMenu() {
                   dynamicLevel: curData.meta?.dynamicLevel || null
                 }
               };
-              
+
               if (title === "新增") {
                 const { code } = await menuApi.create(payload);
                 if (code === 0 || code === 201) {
-                  message(`成功创建菜单 ${curData.meta?.title ?? curData.name}`, { type: "success" });
+                  message(
+                    `成功创建菜单 ${curData.meta?.title ?? curData.name}`,
+                    { type: "success" }
+                  );
                   done();
                   onSearch();
                 }
               } else {
                 const { code } = await menuApi.partialUpdate(row.id, payload);
                 if (code === 0) {
-                  message(`成功更新菜单 ${curData.meta?.title ?? curData.name}`, { type: "success" });
+                  message(
+                    `成功更新菜单 ${curData.meta?.title ?? curData.name}`,
+                    { type: "success" }
+                  );
                   done();
                   onSearch();
                 }
               }
-            } catch (error) {
+            } catch {
               message(`${title}菜单失败`, { type: "error" });
             }
           }
@@ -253,7 +262,9 @@ export function useMenu() {
       .then(async () => {
         const { code } = await menuApi.destroy(row.id);
         if (code === 0) {
-          message(`已成功删除菜单 ${row.meta?.title ?? row.name}`, { type: "success" });
+          message(`已成功删除菜单 ${row.meta?.title ?? row.name}`, {
+            type: "success"
+          });
           onSearch();
         }
       })

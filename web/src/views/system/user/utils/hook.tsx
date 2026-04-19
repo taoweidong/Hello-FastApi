@@ -124,7 +124,8 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
       label: "手机号码",
       prop: "phone",
       minWidth: 90,
-      formatter: ({ phone }) => phone ? hideTextAtIndex(phone, { start: 3, end: 6 }) : "-"
+      formatter: ({ phone }) =>
+        phone ? hideTextAtIndex(phone, { start: 3, end: 6 }) : "-"
     },
     {
       label: "邮箱",
@@ -225,11 +226,13 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
           }
         );
         try {
-          const { code } = await userApi.updateStatus(row.id, { isActive: row.isActive });
+          const { code } = await userApi.updateStatus(row.id, {
+            isActive: row.isActive
+          });
           if (code === 0) {
             message("已成功修改用户状态", { type: "success" });
           }
-        } catch (error) {
+        } catch {
           row.isActive = row.isActive === 1 ? 0 : 1;
           message("修改用户状态失败", { type: "error" });
         } finally {
@@ -294,7 +297,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
   function onbatchDel() {
     const curSelected = tableRef.value.getTableRef().getSelectionRows();
     const userIds = getKeyList(curSelected, "id");
-    
+
     ElMessageBox.confirm(
       `确认要删除选中的 <strong style='color:var(--el-color-primary)'>${userIds.length}</strong> 个用户吗?`,
       "系统提示",
@@ -372,7 +375,7 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
-        
+
         FormRef.validate(async valid => {
           if (valid) {
             try {
@@ -387,23 +390,27 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
                 deptId: curData.parentId || null,
                 description: curData.description || null
               };
-              
+
               if (title === "新增") {
                 const { code } = await userApi.create(payload);
                 if (code === 0 || code === 201) {
-                  message(`成功创建用户 ${curData.username}`, { type: "success" });
+                  message(`成功创建用户 ${curData.username}`, {
+                    type: "success"
+                  });
                   done();
                   onSearch();
                 }
               } else {
                 const { code } = await userApi.partialUpdate(row.id, payload);
                 if (code === 0) {
-                  message(`成功更新用户 ${curData.username}`, { type: "success" });
+                  message(`成功更新用户 ${curData.username}`, {
+                    type: "success"
+                  });
                   done();
                   onSearch();
                 }
               }
-            } catch (error) {
+            } catch {
               message(`${title}用户失败`, { type: "error" });
             }
           }
@@ -500,13 +507,17 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
         ruleFormRef.value.validate(async valid => {
           if (valid) {
             try {
-              const { code } = await userApi.resetPassword(row.id, { newPassword: pwdForm.newPwd });
+              const { code } = await userApi.resetPassword(row.id, {
+                newPassword: pwdForm.newPwd
+              });
               if (code === 0) {
-                message(`已成功重置 ${row.username} 用户的密码`, { type: "success" });
+                message(`已成功重置 ${row.username} 用户的密码`, {
+                  type: "success"
+                });
                 done();
                 onSearch();
               }
-            } catch (error) {
+            } catch {
               message("重置密码失败", { type: "error" });
             }
           }
@@ -537,15 +548,17 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
         const curData = options.props.formInline as RoleFormItemProps;
         (async () => {
           try {
-            const { code } = await userApi.assignUserRole({ 
-              user_id: row.id, 
-              role_ids: curData.ids 
+            const { code } = await userApi.assignUserRole({
+              user_id: row.id,
+              role_ids: curData.ids
             });
             if (code === 0) {
-              message(`已成功为用户 ${row.username} 分配角色`, { type: "success" });
+              message(`已成功为用户 ${row.username} 分配角色`, {
+                type: "success"
+              });
               done();
             }
-          } catch (error) {
+          } catch {
             message("分配角色失败", { type: "error" });
           }
         })();

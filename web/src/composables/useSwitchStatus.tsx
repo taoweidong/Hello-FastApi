@@ -5,7 +5,7 @@
  * 配合 useCrudTable 使用，消除每个 hook.tsx 中重复的 onChange 代码。
  */
 import { message } from "@/utils/message";
-import { BaseApi } from "@/api/base";
+import type { BaseApi } from "@/api/base";
 import { ElMessageBox } from "element-plus";
 import { computed, ref, type Ref, type ComputedRef } from "vue";
 
@@ -71,9 +71,12 @@ export function useSwitchStatus(
             isActive: row.isActive
           });
           if (code === 0) {
-            message(`已${row.isActive ? "启用" : "停用"}${entityName} ${row[displayField]}`, {
-              type: "success"
-            });
+            message(
+              `已${row.isActive ? "启用" : "停用"}${entityName} ${row[displayField]}`,
+              {
+                type: "success"
+              }
+            );
           }
         } catch {
           row.isActive = row.isActive === 1 ? 0 : 1;
