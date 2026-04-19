@@ -5,10 +5,7 @@ import { FormProps } from "../utils/types";
 import { IconSelect } from "@/components/ReIcon";
 import Segmented from "@/components/ReSegmented";
 import ReAnimateSelector from "@/components/ReAnimateSelector";
-import {
-  dirFormRules,
-  menuFormRules
-} from "../utils/rule";
+import { dirFormRules, menuFormRules } from "../utils/rule";
 import {
   menuTypeOptions,
   showLinkOptions,
@@ -168,20 +165,12 @@ defineExpose({ getRef });
       </re-col>
 
       <!-- 以下为 meta 元数据字段（仅目录/页面类型显示） -->
-      <re-col
-        :value="12"
-        :xs="24"
-        :sm="24"
-      >
+      <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="菜单图标">
           <IconSelect v-model="newFormInline.meta.icon" class="w-full" />
         </el-form-item>
       </re-col>
-      <re-col
-        :value="12"
-        :xs="24"
-        :sm="24"
-      >
+      <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="SVG图标">
           <el-input
             v-model="newFormInline.meta.rSvgName"
@@ -191,7 +180,12 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
+      <re-col
+        v-show="newFormInline.menuType === 0"
+        :value="12"
+        :xs="24"
+        :sm="24"
+      >
         <el-form-item label="进场动画">
           <ReAnimateSelector
             v-model="newFormInline.meta.transitionEnter"
@@ -199,7 +193,12 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
-      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
+      <re-col
+        v-show="newFormInline.menuType === 0"
+        :value="12"
+        :xs="24"
+        :sm="24"
+      >
         <el-form-item label="离场动画">
           <ReAnimateSelector
             v-model="newFormInline.meta.transitionLeave"
@@ -236,11 +235,7 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col
-        :value="12"
-        :xs="24"
-        :sm="24"
-      >
+      <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="是否显示">
           <Segmented
             :modelValue="newFormInline.meta.isShowMenu ? 0 : 1"
@@ -253,11 +248,7 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
-      <re-col
-        :value="12"
-        :xs="24"
-        :sm="24"
-      >
+      <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="父级菜单">
           <Segmented
             :modelValue="newFormInline.meta.isShowParent ? 0 : 1"
@@ -271,7 +262,12 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
+      <re-col
+        v-show="newFormInline.menuType === 0"
+        :value="12"
+        :xs="24"
+        :sm="24"
+      >
         <el-form-item label="缓存页面">
           <Segmented
             :modelValue="newFormInline.meta.isKeepalive ? 0 : 1"
@@ -285,7 +281,12 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
+      <re-col
+        v-show="newFormInline.menuType === 0"
+        :value="12"
+        :xs="24"
+        :sm="24"
+      >
         <el-form-item label="标签页">
           <Segmented
             :modelValue="newFormInline.meta.isHiddenTag ? 1 : 0"
@@ -298,7 +299,12 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
-      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
+      <re-col
+        v-show="newFormInline.menuType === 0"
+        :value="12"
+        :xs="24"
+        :sm="24"
+      >
         <el-form-item label="固定标签页">
           <Segmented
             :modelValue="newFormInline.meta.fixedTag ? 0 : 1"

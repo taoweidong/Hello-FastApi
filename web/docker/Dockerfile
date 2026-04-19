@@ -16,15 +16,21 @@ RUN npm config set registry https://registry.npmmirror.com
 COPY .npmrc package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
-# 复制源码并构建
+# 复制源码并构建生产环境产物
 COPY . .
 RUN pnpm build
 
 # ── 生产阶段 ──
 FROM nginx:stable-alpine AS production-stage
 
-# 删除默认配置
+# 安装 Brotli 动态模块（支持 .br 预压缩文件）
+RUN apk add --no-cache nginx-mod-http-brotli
+
+# 替换默认配置
 RUN rm /etc/nginx/conf.d/default.conf
+
+# 在 Nginx 主配置顶部加载 Brotli 模块（load_module 必须在 main 上下文）
+RUN sed -i '1i\load_module modules/ngx_http_brotli_filter_module.so;\nload_module modules/ngx_http_brotli_static_module.so;' /etc/nginx/nginx.conf
 
 # 复制自定义 Nginx 配置
 COPY docker/nginx.conf /etc/nginx/conf.d/app.conf
@@ -39,8 +45,10 @@ RUN chown -R nginx:nginx /usr/share/nginx/html && \
     touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 
+# 暴露端口
 EXPOSE 80
 
+# 健康检查
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD wget -qO- http://localhost/ || exit 1
 

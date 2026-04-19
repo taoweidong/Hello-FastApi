@@ -110,18 +110,10 @@ defineExpose({ treeRef });
           <el-tag
             size="small"
             class="ml-2"
-            :type="
-              data.menuType === 0
-                ? 'primary'
-                : 'warning'
-            "
+            :type="data.menuType === 0 ? 'primary' : 'warning'"
             effect="plain"
           >
-            {{
-              data.menuType === 0
-                ? "目录"
-                : "页面"
-            }}
+            {{ data.menuType === 0 ? "目录" : "页面" }}
           </el-tag>
         </span>
       </template>

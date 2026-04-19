@@ -20,5 +20,4 @@ services:
 
 networks:
   hello-fastapi-net:
-    external: true
     name: hello-fastapi-net
