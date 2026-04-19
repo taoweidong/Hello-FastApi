@@ -3,5 +3,6 @@ import type { FormRules } from "element-plus";
 
 /** 自定义表单规则校验 */
 export const formRules = reactive(<FormRules>{
-  name: [{ required: true, message: "字典名称为必填项", trigger: "blur" }]
+  name: [{ required: true, message: "字典名称为必填项", trigger: "blur" }],
+  label: [{ required: true, message: "显示标签为必填项", trigger: "blur" }]
 });

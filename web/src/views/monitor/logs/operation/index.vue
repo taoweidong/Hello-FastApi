@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRole } from "./hook";
+import { useOperationLog } from "./hook";
 import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -30,7 +30,7 @@ const {
   onSelectionCancel,
   handleCurrentChange,
   handleSelectionChange
-} = useRole(tableRef);
+} = useOperationLog(tableRef);
 </script>
 
 <template>
@@ -60,9 +60,9 @@ const {
           <el-option label="失败" value="0" />
         </el-select>
       </el-form-item>
-      <el-form-item label="操作时间" prop="operatingTime">
+      <el-form-item label="操作时间" prop="createdTime">
         <el-date-picker
-          v-model="form.operatingTime"
+          v-model="form.createdTime"
           :shortcuts="getPickerShortcuts()"
           type="datetimerange"
           range-separator="至"
@@ -86,7 +86,7 @@ const {
     </el-form>
 
     <PureTableBar
-      title="操作日志（仅演示，操作后不生效）"
+      title="操作日志"
       :columns="columns"
       @refresh="onSearch"
     >

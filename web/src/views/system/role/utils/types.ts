@@ -5,6 +5,8 @@ interface FormItemProps {
   name: string;
   /** 角色编号 */
   code: string;
+  /** 是否启用 */
+  isActive: number;
   /** 描述 */
   description: string;
 }

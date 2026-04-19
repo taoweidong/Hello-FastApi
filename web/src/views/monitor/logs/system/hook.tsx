@@ -5,13 +5,13 @@ import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 import { useCopyToClipboard } from "@pureadmin/utils";
-import { getSystemLogsList, getSystemLogsDetail } from "@/api/system";
+import { getSystemLogsList, getSystemLogsDetail } from "@/api/system/log";
 import Info from "~icons/ri/question-line";
 
-export function useRole(tableRef: Ref) {
+export function useSystemLog(tableRef: Ref) {
   const form = reactive({
     module: "",
-    requestTime: ""
+    createdTime: ""
   });
   const dataList = ref([]);
   const loading = ref(true);
@@ -49,7 +49,8 @@ export function useRole(tableRef: Ref) {
         </span>
       ),
       prop: "path",
-      minWidth: 140
+      minWidth: 140,
+      showOverflowTooltip: true
     },
     {
       label: "请求方法",
@@ -86,6 +87,17 @@ export function useRole(tableRef: Ref) {
       )
     },
     {
+      label: "业务状态码",
+      prop: "statusCode",
+      minWidth: 90
+    },
+    {
+      label: "描述",
+      prop: "description",
+      minWidth: 160,
+      showOverflowTooltip: true
+    },
+    {
       label: "请求时间",
       prop: "createdTime",
       minWidth: 180,
@@ -109,7 +121,6 @@ export function useRole(tableRef: Ref) {
     onSearch();
   }
 
-  /** 拷贝请求接口，表格单元格被双击时触发 */
   function handleCellDblclick(row: any, { property }: { property: string }) {
     if (property !== "path") return;
     update(row.path);
@@ -139,8 +150,8 @@ export function useRole(tableRef: Ref) {
       pageSize: pagination.pageSize,
       module: form.module || undefined
     };
-    if (form.requestTime && form.requestTime.length === 2) {
-      params.createdTime = form.requestTime;
+    if (form.createdTime && form.createdTime.length === 2) {
+      params.createdTime = form.createdTime;
     }
     const { code, data } = await getSystemLogsList(params);
     if (code === 0) {

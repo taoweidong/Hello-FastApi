@@ -4,12 +4,16 @@ import ReCol from "@/components/ReCol";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
 import { usePublicHooks } from "@/views/system/hooks";
+import { IPRuleTypeChoices } from "@/views/system/constants";
 
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
-    name: "",
-    code: "",
+    id: "",
+    ipAddress: "",
+    ruleType: "blacklist",
+    reason: "",
     isActive: 1,
+    expiresAt: "",
     description: ""
   })
 });
@@ -34,21 +38,28 @@ defineExpose({ getRef });
   >
     <el-row :gutter="30">
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="角色名称" prop="name">
+        <el-form-item label="IP地址" prop="ipAddress">
           <el-input
-            v-model="newFormInline.name"
+            v-model="newFormInline.ipAddress"
             clearable
-            placeholder="请输入角色名称"
+            placeholder="请输入IP地址"
           />
         </el-form-item>
       </re-col>
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="角色标识" prop="code">
-          <el-input
-            v-model="newFormInline.code"
-            clearable
-            placeholder="请输入角色标识"
-          />
+        <el-form-item label="规则类型">
+          <el-select
+            v-model="newFormInline.ruleType"
+            placeholder="请选择规则类型"
+            class="w-full!"
+          >
+            <el-option
+              v-for="item in IPRuleTypeChoices"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
         </el-form-item>
       </re-col>
 
@@ -62,6 +73,27 @@ defineExpose({ getRef });
             active-text="启用"
             inactive-text="停用"
             :style="switchStyle"
+          />
+        </el-form-item>
+      </re-col>
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-form-item label="过期时间">
+          <el-date-picker
+            v-model="newFormInline.expiresAt"
+            type="datetime"
+            placeholder="留空则永不过期"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            class="w-full!"
+          />
+        </el-form-item>
+      </re-col>
+
+      <re-col>
+        <el-form-item label="原因">
+          <el-input
+            v-model="newFormInline.reason"
+            placeholder="请输入原因"
+            type="textarea"
           />
         </el-form-item>
       </re-col>

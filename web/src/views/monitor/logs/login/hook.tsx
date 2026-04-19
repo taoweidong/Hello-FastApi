@@ -6,11 +6,11 @@ import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 
-export function useRole(tableRef: Ref) {
+export function useLoginLog(tableRef: Ref) {
   const form = reactive({
-    username: "",
+    loginType: "",
     status: "",
-    loginTime: ""
+    createdTime: ""
   });
   const dataList = ref([]);
   const loading = ref(true);
@@ -23,42 +23,18 @@ export function useRole(tableRef: Ref) {
     currentPage: 1,
     background: true
   });
+
   const columns: TableColumnList = [
     {
-      label: "勾选列", // 如果需要表格多选，此处label必须设置
+      label: "勾选列",
       type: "selection",
       fixed: "left",
-      reserveSelection: true // 数据刷新后保留选项
+      reserveSelection: true
     },
     {
       label: "序号",
       prop: "id",
       minWidth: 90
-    },
-    {
-      label: "用户名",
-      prop: "username",
-      minWidth: 100
-    },
-    {
-      label: "登录 IP",
-      prop: "ip",
-      minWidth: 140
-    },
-    {
-      label: "登录地点",
-      prop: "address",
-      minWidth: 140
-    },
-    {
-      label: "操作系统",
-      prop: "system",
-      minWidth: 100
-    },
-    {
-      label: "浏览器类型",
-      prop: "browser",
-      minWidth: 100
     },
     {
       label: "登录状态",
@@ -71,44 +47,71 @@ export function useRole(tableRef: Ref) {
       )
     },
     {
-      label: "登录行为",
-      prop: "behavior",
+      label: "登录类型",
+      prop: "loginType",
+      minWidth: 100,
+      cellRenderer: ({ row }) => {
+        const typeMap = { 0: "密码", 1: "短信", 2: "OAuth" };
+        return typeMap[row.loginType] ?? row.loginType;
+      }
+    },
+    {
+      label: "IP地址",
+      prop: "ipaddress",
+      minWidth: 140
+    },
+    {
+      label: "操作系统",
+      prop: "system",
       minWidth: 100
     },
     {
+      label: "浏览器",
+      prop: "browser",
+      minWidth: 100
+    },
+    {
+      label: "User-Agent",
+      prop: "agent",
+      minWidth: 200,
+      showOverflowTooltip: true
+    },
+    {
+      label: "描述",
+      prop: "description",
+      minWidth: 160,
+      showOverflowTooltip: true
+    },
+    {
       label: "登录时间",
-      prop: "loginTime",
+      prop: "createdTime",
       minWidth: 180,
-      formatter: ({ loginTime }) =>
-        dayjs(loginTime).format("YYYY-MM-DD HH:mm:ss")
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     }
   ];
 
   function handleSizeChange(val: number) {
-    console.log(`${val} items per page`);
+    pagination.pageSize = val;
+    onSearch();
   }
 
   function handleCurrentChange(val: number) {
-    console.log(`current page: ${val}`);
+    pagination.currentPage = val;
+    onSearch();
   }
 
-  /** 当CheckBox选择项发生变化时会触发该事件 */
   function handleSelectionChange(val) {
     selectedNum.value = val.length;
-    // 重置表格高度
     tableRef.value.setAdaptive();
   }
 
-  /** 取消选择 */
   function onSelectionCancel() {
     selectedNum.value = 0;
-    // 用于多选表格，清空用户的选择
     tableRef.value.getTableRef().clearSelection();
   }
 
-  /** 批量删除 */
   function onbatchDel() {
-    // 返回当前选中的行
     const curSelected = tableRef.value.getTableRef().getSelectionRows();
     const ids = getKeyList(curSelected, "id");
     batchDeleteLoginLogs({ ids }).then(res => {
@@ -120,7 +123,6 @@ export function useRole(tableRef: Ref) {
     });
   }
 
-  /** 清空日志 */
   function clearAll() {
     clearLoginLogs().then(res => {
       if (res.code === 0) {

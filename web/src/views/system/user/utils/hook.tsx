@@ -7,6 +7,7 @@ import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
 import userAvatar from "@/assets/user.jpg";
 import { usePublicHooks, formatHigherDeptOptions } from "../../hooks";
+import { GenderChoices } from "../../constants";
 import { addDialog } from "@/components/ReDialog";
 import type { PaginationProps } from "@pureadmin/table";
 import ReCropperPreview from "@/components/ReCropperPreview";
@@ -101,15 +102,18 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
       label: "性别",
       prop: "gender",
       minWidth: 90,
-      cellRenderer: ({ row, props }) => (
-        <el-tag
-          size={props.size}
-          type={row.gender === 1 ? "danger" : null}
-          effect="plain"
-        >
-          {row.gender === 1 ? "女" : "男"}
-        </el-tag>
-      )
+      cellRenderer: ({ row, props }) => {
+        const choice = GenderChoices.find(c => c.value === row.gender);
+        return (
+          <el-tag
+            size={props.size}
+            type={row.gender === 1 ? "danger" : null}
+            effect="plain"
+          >
+            {choice?.label ?? "未知"}
+          </el-tag>
+        );
+      }
     },
     {
       label: "部门",
@@ -121,6 +125,12 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
       prop: "phone",
       minWidth: 90,
       formatter: ({ phone }) => phone ? hideTextAtIndex(phone, { start: 3, end: 6 }) : "-"
+    },
+    {
+      label: "邮箱",
+      prop: "email",
+      minWidth: 160,
+      showOverflowTooltip: true
     },
     {
       label: "状态",
@@ -143,10 +153,23 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     },
     {
       label: "创建时间",
-      minWidth: 90,
+      minWidth: 160,
       prop: "createdTime",
       formatter: ({ createdTime }) =>
         createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "描述",
+      prop: "description",
+      minWidth: 160,
+      showOverflowTooltip: true
+    },
+    {
+      label: "更新时间",
+      prop: "updatedTime",
+      minWidth: 160,
+      formatter: ({ updatedTime }) =>
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "操作",

@@ -29,6 +29,27 @@ export function useDept() {
       align: "left"
     },
     {
+      label: "部门编码",
+      prop: "code",
+      minWidth: 120
+    },
+    {
+      label: "负责人",
+      prop: "principal",
+      minWidth: 100
+    },
+    {
+      label: "联系电话",
+      prop: "phone",
+      minWidth: 120
+    },
+    {
+      label: "邮箱",
+      prop: "email",
+      minWidth: 160,
+      showOverflowTooltip: true
+    },
+    {
       label: "排序",
       prop: "rank",
       minWidth: 70
@@ -45,15 +66,23 @@ export function useDept() {
     },
     {
       label: "创建时间",
-      minWidth: 200,
+      minWidth: 160,
       prop: "createdTime",
       formatter: ({ createdTime }) =>
         createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
+      label: "更新时间",
+      prop: "updatedTime",
+      minWidth: 160,
+      formatter: ({ updatedTime }) =>
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
       label: "描述",
       prop: "description",
-      minWidth: 320
+      minWidth: 200,
+      showOverflowTooltip: true
     },
     {
       label: "操作",

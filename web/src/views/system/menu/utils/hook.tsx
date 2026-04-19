@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
@@ -9,6 +10,7 @@ import type { FormItemProps } from "../utils/types";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { cloneDeep, isAllEmpty, deviceDetection } from "@pureadmin/utils";
 import { formatHigherMenuOptions, getMenuType } from "../../hooks";
+import { usePublicHooks } from "../../hooks";
 
 export function useMenu() {
   const form = reactive({
@@ -18,6 +20,7 @@ export function useMenu() {
   const formRef = ref();
   const dataList = ref([]);
   const loading = ref(true);
+  const { switchStyle } = usePublicHooks();
 
   const columns: TableColumnList = [
     {
@@ -74,6 +77,37 @@ export function useMenu() {
       prop: "isShowMenu",
       cellRenderer: ({ row }) => row.meta?.isShowMenu === false ? "隐藏" : "显示",
       width: 100
+    },
+    {
+      label: "状态",
+      prop: "isActive",
+      minWidth: 100,
+      cellRenderer: ({ row, props }) => (
+        <el-switch
+          size={props.size}
+          v-model={row.isActive}
+          active-value={1}
+          inactive-value={0}
+          inline-prompt
+          active-text="启用"
+          inactive-text="停用"
+          style={switchStyle.value}
+        />
+      )
+    },
+    {
+      label: "创建时间",
+      prop: "createdTime",
+      minWidth: 160,
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "更新时间",
+      prop: "updatedTime",
+      minWidth: 160,
+      formatter: ({ updatedTime }) =>
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "操作",

@@ -7,9 +7,12 @@ import { usePublicHooks } from "@/views/system/hooks";
 
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
-    name: "",
-    code: "",
+    id: "",
+    key: "",
+    value: "",
+    access: 0,
     isActive: 1,
+    inherit: 0,
     description: ""
   })
 });
@@ -34,26 +37,39 @@ defineExpose({ getRef });
   >
     <el-row :gutter="30">
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="角色名称" prop="name">
+        <el-form-item label="配置键" prop="key">
           <el-input
-            v-model="newFormInline.name"
+            v-model="newFormInline.key"
             clearable
-            placeholder="请输入角色名称"
+            placeholder="请输入配置键"
           />
         </el-form-item>
       </re-col>
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="角色标识" prop="code">
+        <el-form-item label="访问级别">
+          <el-input-number
+            v-model="newFormInline.access"
+            class="w-full!"
+            :min="0"
+            :max="999"
+            controls-position="right"
+          />
+        </el-form-item>
+      </re-col>
+
+      <re-col>
+        <el-form-item label="配置值">
           <el-input
-            v-model="newFormInline.code"
-            clearable
-            placeholder="请输入角色标识"
+            v-model="newFormInline.value"
+            placeholder="请输入配置值(JSON格式)"
+            type="textarea"
+            :rows="3"
           />
         </el-form-item>
       </re-col>
 
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="状态">
+        <el-form-item label="是否启用">
           <el-switch
             v-model="newFormInline.isActive"
             :active-value="1"
@@ -65,12 +81,25 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-form-item label="是否继承">
+          <el-switch
+            v-model="newFormInline.inherit"
+            :active-value="1"
+            :inactive-value="0"
+            inline-prompt
+            active-text="是"
+            inactive-text="否"
+            :style="switchStyle"
+          />
+        </el-form-item>
+      </re-col>
 
       <re-col>
         <el-form-item label="描述">
           <el-input
             v-model="newFormInline.description"
-            placeholder="请输入描述信息"
+            placeholder="请输入描述"
             type="textarea"
           />
         </el-form-item>

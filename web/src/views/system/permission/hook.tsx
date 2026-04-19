@@ -38,11 +38,20 @@ export function usePermission() {
       minWidth: 100
     },
     {
+      label: "描述",
+      prop: "description",
+      minWidth: 160,
+      showOverflowTooltip: true
+    },
+    {
       label: "状态",
       prop: "isActive",
       minWidth: 80,
-      cellRenderer: ({ row }) => (
-        <el-tag type={row.isActive === 1 ? "success" : "danger"}>
+      cellRenderer: ({ row, props }) => (
+        <el-tag
+          size={props.size}
+          type={row.isActive === 1 ? "success" : "danger"}
+        >
           {row.isActive === 1 ? "启用" : "停用"}
         </el-tag>
       )

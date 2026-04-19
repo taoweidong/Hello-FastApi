@@ -87,6 +87,13 @@ export function useRole(treeRef: Ref) {
         createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
+      label: "更新时间",
+      prop: "updatedTime",
+      minWidth: 160,
+      formatter: ({ updatedTime }) =>
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
       label: "操作",
       fixed: "right",
       width: 210,
@@ -203,6 +210,7 @@ export function useRole(treeRef: Ref) {
         formInline: {
           name: row?.name ?? "",
           code: row?.code ?? "",
+          isActive: row?.isActive ?? 1,
           description: row?.description ?? ""
         }
       },
@@ -222,6 +230,7 @@ export function useRole(treeRef: Ref) {
               const payload = {
                 name: curData.name,
                 code: curData.code,
+                isActive: curData.isActive,
                 description: curData.description || null
               };
               

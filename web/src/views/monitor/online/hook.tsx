@@ -1,10 +1,10 @@
 import dayjs from "dayjs";
 import { message } from "@/utils/message";
-import { getOnlineLogsList, forceOffline } from "@/api/system";
+import { getOnlineLogsList, forceOffline } from "@/api/system/log";
 import { reactive, ref, onMounted, toRaw } from "vue";
 import type { PaginationProps } from "@pureadmin/table";
 
-export function useRole() {
+export function useOnline() {
   const form = reactive({
     username: ""
   });
@@ -52,7 +52,7 @@ export function useRole() {
       prop: "loginTime",
       minWidth: 180,
       formatter: ({ loginTime }) =>
-        dayjs(loginTime).format("YYYY-MM-DD HH:mm:ss")
+        loginTime ? dayjs(loginTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "操作",
@@ -62,11 +62,13 @@ export function useRole() {
   ];
 
   function handleSizeChange(val: number) {
-    console.log(`${val} items per page`);
+    pagination.pageSize = val;
+    onSearch();
   }
 
   function handleCurrentChange(val: number) {
-    console.log(`current page: ${val}`);
+    pagination.currentPage = val;
+    onSearch();
   }
 
   function handleSelectionChange(val) {

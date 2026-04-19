@@ -1,17 +1,22 @@
-import { ref, onMounted, reactive } from "vue";
+import dayjs from "dayjs";
+import editForm from "./form.vue";
 import { message } from "@/utils/message";
+import { usePublicHooks } from "@/views/system/hooks";
+import { addDialog } from "@/components/ReDialog";
 import {
   getConfigList,
   createConfig,
   updateConfig,
   deleteConfig
 } from "@/api/system";
-import type { FormInstance } from "element-plus";
+import type { FormItemProps } from "./utils/types";
+import { ref, onMounted, reactive, h } from "vue";
+import { deviceDetection } from "@pureadmin/utils";
 
 export function useConfig() {
   const loading = ref(true);
   const dataList = ref([]);
-  const formRef = ref<FormInstance>();
+  const formRef = ref();
   const totalPage = ref(0);
   const pagination = reactive({
     currentPage: 1,
@@ -21,6 +26,8 @@ export function useConfig() {
   const form = reactive({
     key: ""
   });
+
+  const { tagStyle } = usePublicHooks();
 
   const columns: TableColumnList = [
     {
@@ -48,8 +55,8 @@ export function useConfig() {
       label: "是否启用",
       prop: "isActive",
       minWidth: 100,
-      cellRenderer: ({ row }) => (
-        <el-tag type={row.isActive === 1 ? "success" : "danger"}>
+      cellRenderer: ({ row, props }) => (
+        <el-tag size={props.size} style={tagStyle.value(row.isActive)}>
           {row.isActive === 1 ? "启用" : "停用"}
         </el-tag>
       )
@@ -58,8 +65,11 @@ export function useConfig() {
       label: "是否继承",
       prop: "inherit",
       minWidth: 100,
-      cellRenderer: ({ row }) => (
-        <el-tag type={row.inherit === 1 ? "success" : "info"}>
+      cellRenderer: ({ row, props }) => (
+        <el-tag
+          size={props.size}
+          type={row.inherit === 1 ? "success" : "info"}
+        >
           {row.inherit === 1 ? "是" : "否"}
         </el-tag>
       )
@@ -69,6 +79,20 @@ export function useConfig() {
       prop: "description",
       minWidth: 150,
       showOverflowTooltip: true
+    },
+    {
+      label: "创建时间",
+      prop: "createdTime",
+      minWidth: 180,
+      formatter: ({ createdTime }) =>
+        createdTime ? dayjs(createdTime).format("YYYY-MM-DD HH:mm:ss") : "-"
+    },
+    {
+      label: "更新时间",
+      prop: "updatedTime",
+      minWidth: 180,
+      formatter: ({ updatedTime }) =>
+        updatedTime ? dayjs(updatedTime).format("YYYY-MM-DD HH:mm:ss") : "-"
     },
     {
       label: "操作",
@@ -94,7 +118,7 @@ export function useConfig() {
     loading.value = false;
   }
 
-  function resetForm(formEl: FormInstance | undefined) {
+  function resetForm(formEl) {
     form.key = "";
     formEl?.resetFields();
     onSearch();
@@ -110,63 +134,58 @@ export function useConfig() {
     onSearch();
   }
 
-  const dialogVisible = ref(false);
-  const dialogTitle = ref("");
-  const ruleForm = reactive({
-    id: "",
-    key: "",
-    value: "",
-    access: 0,
-    isActive: true,
-    inherit: false,
-    description: ""
-  });
+  function openDialog(title = "新增", row?: FormItemProps) {
+    addDialog({
+      title: `${title}配置`,
+      props: {
+        formInline: {
+          id: row?.id ?? "",
+          key: row?.key ?? "",
+          value: row?.value ?? "",
+          access: row?.access ?? 0,
+          isActive: row?.isActive ?? 1,
+          inherit: row?.inherit ?? 0,
+          description: row?.description ?? ""
+        }
+      },
+      width: "40%",
+      draggable: true,
+      fullscreen: deviceDetection(),
+      fullscreenIcon: true,
+      closeOnClickModal: false,
+      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
+      beforeSure: (done, { options }) => {
+        const FormRef = formRef.value.getRef();
+        const curData = options.props.formInline as FormItemProps;
 
-  function openDialog(title = "新增", row?: any) {
-    dialogTitle.value = title;
-    if (row) {
-      Object.assign(ruleForm, {
-        id: row.id,
-        key: row.key,
-        value: row.value,
-        access: row.access,
-        isActive: row.isActive === 1,
-        inherit: row.inherit === 1,
-        description: row.description || ""
-      });
-    } else {
-      Object.assign(ruleForm, {
-        id: "",
-        key: "",
-        value: "",
-        access: 0,
-        isActive: true,
-        inherit: false,
-        description: ""
-      });
-    }
-    dialogVisible.value = true;
-  }
+        FormRef.validate(async valid => {
+          if (valid) {
+            try {
+              const payload = {
+                key: curData.key,
+                value: curData.value,
+                access: curData.access,
+                isActive: curData.isActive,
+                inherit: curData.inherit,
+                description: curData.description || undefined
+              };
 
-  async function handleSubmit() {
-    const data = {
-      key: ruleForm.key,
-      value: ruleForm.value,
-      access: ruleForm.access,
-      isActive: ruleForm.isActive ? 1 : 0,
-      inherit: ruleForm.inherit ? 1 : 0,
-      description: ruleForm.description || undefined
-    };
-
-    if (ruleForm.id) {
-      await updateConfig(ruleForm.id, data);
-      message("更新成功", { type: "success" });
-    } else {
-      await createConfig(data);
-      message("新增成功", { type: "success" });
-    }
-    dialogVisible.value = false;
-    onSearch();
+              if (title === "新增") {
+                await createConfig(payload);
+                message("新增成功", { type: "success" });
+              } else {
+                await updateConfig(row.id, payload);
+                message("更新成功", { type: "success" });
+              }
+              done();
+              onSearch();
+            } catch (error) {
+              message(`${title}失败`, { type: "error" });
+            }
+          }
+        });
+      }
+    });
   }
 
   async function handleDelete(row) {
@@ -184,16 +203,11 @@ export function useConfig() {
     form,
     columns,
     dataList,
-    formRef,
     totalPage,
     pagination,
-    dialogVisible,
-    dialogTitle,
-    ruleForm,
     onSearch,
     resetForm,
     openDialog,
-    handleSubmit,
     handleDelete,
     handleSizeChange,
     handleCurrentChange

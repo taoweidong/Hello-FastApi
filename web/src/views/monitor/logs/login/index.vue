@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRole } from "./hook";
+import { useLoginLog } from "./hook";
 import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -30,7 +30,7 @@ const {
   onSelectionCancel,
   handleCurrentChange,
   handleSelectionChange
-} = useRole(tableRef);
+} = useLoginLog(tableRef);
 </script>
 
 <template>
@@ -41,13 +41,17 @@ const {
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-3 overflow-auto"
     >
-      <el-form-item label="用户名" prop="username">
-        <el-input
-          v-model="form.username"
-          placeholder="请输入用户名"
+      <el-form-item label="登录类型" prop="loginType">
+        <el-select
+          v-model="form.loginType"
+          placeholder="请选择"
           clearable
           class="w-37.5!"
-        />
+        >
+          <el-option label="密码" value="0" />
+          <el-option label="短信" value="1" />
+          <el-option label="OAuth" value="2" />
+        </el-select>
       </el-form-item>
       <el-form-item label="登录状态" prop="status">
         <el-select
@@ -60,9 +64,9 @@ const {
           <el-option label="失败" value="0" />
         </el-select>
       </el-form-item>
-      <el-form-item label="登录时间" prop="loginTime">
+      <el-form-item label="登录时间" prop="createdTime">
         <el-date-picker
-          v-model="form.loginTime"
+          v-model="form.createdTime"
           :shortcuts="getPickerShortcuts()"
           type="datetimerange"
           range-separator="至"

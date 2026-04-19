@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useIpRule } from "./hook";
+import { IPRuleTypeChoices } from "@/views/system/constants";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
@@ -21,13 +22,9 @@ const {
   columns,
   dataList,
   pagination,
-  dialogVisible,
-  dialogTitle,
-  ruleForm,
   onSearch,
   resetForm,
   openDialog,
-  handleSubmit,
   handleDelete,
   handleSelectionChange,
   handleBatchDelete,
@@ -49,18 +46,22 @@ function onFullscreen() {
       :model="form"
       class="search-form bg-bg_color w-full pl-8 pt-3 overflow-auto"
     >
-      <el-form-item label="规则类型：" prop="ruleType">
+      <el-form-item label="规则类型" prop="ruleType">
         <el-select
           v-model="form.ruleType"
           placeholder="请选择规则类型"
           clearable
           class="w-45!"
         >
-          <el-option label="黑名单" value="blacklist" />
-          <el-option label="白名单" value="whitelist" />
+          <el-option
+            v-for="item in IPRuleTypeChoices"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
         </el-select>
       </el-form-item>
-      <el-form-item label="状态：" prop="isActive">
+      <el-form-item label="状态" prop="isActive">
         <el-select
           v-model="form.isActive"
           placeholder="请选择状态"
@@ -108,10 +109,7 @@ function onFullscreen() {
         >
           批量删除
         </el-button>
-        <el-button
-          type="warning"
-          @click="handleClear"
-        >
+        <el-button type="warning" @click="handleClear">
           清空全部
         </el-button>
       </template>
@@ -168,53 +166,11 @@ function onFullscreen() {
         </pure-table>
       </template>
     </PureTableBar>
-
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogTitle"
-      width="500px"
-      destroy-on-close
-    >
-      <el-form :model="ruleForm" label-width="82px">
-        <el-form-item label="IP地址" prop="ipAddress" required>
-          <el-input v-model="ruleForm.ipAddress" placeholder="请输入IP地址" clearable />
-        </el-form-item>
-        <el-form-item label="规则类型" prop="ruleType">
-          <el-select v-model="ruleForm.ruleType" placeholder="请选择规则类型">
-            <el-option label="黑名单" value="blacklist" />
-            <el-option label="白名单" value="whitelist" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="原因">
-          <el-input v-model="ruleForm.reason" placeholder="请输入原因" clearable />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-switch
-            v-model="ruleForm.isActive"
-            inline-prompt
-            active-text="启用"
-            inactive-text="停用"
-          />
-        </el-form-item>
-        <el-form-item label="过期时间">
-          <el-date-picker
-            v-model="ruleForm.expiresAt"
-            type="datetime"
-            placeholder="留空则永不过期"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSubmit">确定</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <style lang="scss" scoped>
-::deep(.el-table__inner-wrapper::before) {
+:deep(.el-table__inner-wrapper::before) {
   height: 0;
 }
 .search-form {

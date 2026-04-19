@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import ReCol from "@/components/ReCol";
 import { formRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
-import { usePublicHooks } from "./utils/hooks";
+import { usePublicHooks } from "@/views/system/hooks";
 
 const props = withDefaults(defineProps<FormProps>(), {
   formInline: () => ({
@@ -22,6 +22,15 @@ const ruleFormRef = ref();
 const { switchStyle } = usePublicHooks();
 const newFormInline = ref(props.formInline);
 
+/** 是否为根级字典类型（新增子典时 parentId 为 0 或空） */
+const isRootType = computed(() => {
+  return (
+    !newFormInline.value.parentId ||
+    newFormInline.value.parentId === 0 ||
+    newFormInline.value.parentId === "0"
+  );
+});
+
 function getRef() {
   return ruleFormRef.value;
 }
@@ -37,33 +46,8 @@ defineExpose({ getRef });
     label-width="82px"
   >
     <el-row :gutter="30">
-      <re-col>
-        <el-form-item label="上级字典">
-          <el-cascader
-            v-model="newFormInline.parentId"
-            class="w-full"
-            :options="newFormInline.higherDictOptions"
-            :props="{
-              value: 'id',
-              label: 'name',
-              emitPath: false,
-              checkStrictly: true
-            }"
-            clearable
-            filterable
-            placeholder="请选择上级字典"
-          >
-            <template #default="{ node, data }">
-              <span>{{ data.name }}</span>
-              <span v-if="!node.isLeaf">
-                ({{ data.children.length }})
-              </span>
-            </template>
-          </el-cascader>
-        </el-form-item>
-      </re-col>
-
-      <re-col :value="12" :xs="24" :sm="24">
+      <!-- 根级字典类型才显示字典名称（必填） -->
+      <re-col v-if="isRootType" :value="12" :xs="24" :sm="24">
         <el-form-item label="字典名称" prop="name">
           <el-input
             v-model="newFormInline.name"
@@ -72,8 +56,20 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
+
+      <!-- 子项详情时显示所属字典（只读） -->
+      <re-col v-if="!isRootType" :value="24" :xs="24" :sm="24">
+        <el-form-item label="所属字典">
+          <el-input
+            v-model="newFormInline.name"
+            disabled
+            placeholder="所属字典"
+          />
+        </el-form-item>
+      </re-col>
+
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="显示标签">
+        <el-form-item label="显示标签" :prop="isRootType ? '' : 'label'">
           <el-input
             v-model="newFormInline.label"
             clearable
@@ -91,6 +87,7 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
+
       <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="排序">
           <el-input-number

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useRole } from "./hook";
+import { useSystemLog } from "./hook";
 import { getPickerShortcuts } from "../../utils";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -27,7 +27,7 @@ const {
   handleSizeChange,
   handleCellDblclick,
   handleCurrentChange
-} = useRole(tableRef);
+} = useSystemLog(tableRef);
 </script>
 
 <template>
@@ -46,9 +46,9 @@ const {
           class="w-42.5!"
         />
       </el-form-item>
-      <el-form-item label="请求时间" prop="requestTime">
+      <el-form-item label="请求时间" prop="createdTime">
         <el-date-picker
-          v-model="form.requestTime"
+          v-model="form.createdTime"
           :shortcuts="getPickerShortcuts()"
           type="datetimerange"
           range-separator="至"
