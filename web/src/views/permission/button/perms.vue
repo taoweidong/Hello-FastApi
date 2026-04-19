@@ -2,7 +2,7 @@
 import { hasPerms } from "@/utils/auth";
 import { useUserStoreHook } from "@/store/modules/user";
 
-const { menus } = useUserStoreHook();
+const { permissions: menus } = useUserStoreHook();
 
 defineOptions({
   name: "PermissionButtonLogin"

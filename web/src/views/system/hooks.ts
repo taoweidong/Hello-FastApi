@@ -80,7 +80,10 @@ export function formatHigherMenuOptions(
  * 获取菜单类型标签
  * 0-DIRECTORY(目录) 1-MENU(页面) 2-PERMISSION(按钮/权限)
  */
-export function getMenuType(type: number, text = false): string {
+export function getMenuType(
+  type: number,
+  text = false
+): "primary" | "warning" | "info" | "" | string {
   switch (type) {
     case 0:
       return text ? "目录" : "primary";

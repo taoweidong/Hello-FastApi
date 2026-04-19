@@ -30,6 +30,7 @@ interface MetaProps {
 interface FormItemProps {
   /** 菜单类型（0-DIRECTORY目录、1-MENU页面）*/
   menuType: number;
+  id?: string;
   higherMenuOptions: Record<string, unknown>[];
   parentId: number;
   name: string;

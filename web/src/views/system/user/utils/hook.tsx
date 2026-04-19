@@ -393,7 +393,10 @@ export function useUser(tableRef: Ref) {
                   onSearch();
                 }
               } else {
-                const { code } = await userApi.partialUpdate(row.id, payload);
+                const { code } = await userApi.partialUpdate(
+                  String(row.id),
+                  payload
+                );
                 if (code === 0) {
                   message(`成功更新用户 ${curData.username}`, {
                     type: "success"
