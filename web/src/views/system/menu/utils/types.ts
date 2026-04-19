@@ -28,7 +28,7 @@ interface MetaProps {
 }
 
 interface FormItemProps {
-  /** 菜单类型（0-DIRECTORY目录、1-MENU页面、2-PERMISSION按钮/权限）*/
+  /** 菜单类型（0-DIRECTORY目录、1-MENU页面）*/
   menuType: number;
   higherMenuOptions: Record<string, unknown>[];
   parentId: number;
@@ -36,8 +36,6 @@ interface FormItemProps {
   path: string;
   component: string;
   rank: number;
-  /** HTTP方法（PERMISSION类型使用） */
-  method: string;
   /** 是否启用 */
   isActive: number;
   /** 菜单元数据 */

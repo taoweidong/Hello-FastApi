@@ -192,13 +192,24 @@ export function useDictionary() {
       message("请先选择左侧字典类型", { type: "warning" });
       return;
     }
+    _openAddDictDetailDialog(selectedDictType.value);
+  }
+
+  /** 从树节点新增字典详情（子项） */
+  function openAddDictDetailForNode(parentNode: any) {
+    selectedDictType.value = parentNode;
+    _openAddDictDetailDialog(parentNode);
+  }
+
+  /** 新增字典详情对话框的共用逻辑 */
+  function _openAddDictDetailDialog(parentNode: any) {
     addDialog({
       title: "新增字典详情",
       props: {
         formInline: {
           higherDictOptions: [],
-          parentId: selectedDictType.value.id,
-          name: selectedDictType.value.name,
+          parentId: parentNode.id,
+          name: parentNode.name,
           label: "",
           value: "",
           sort: null,
@@ -395,6 +406,7 @@ export function useDictionary() {
     handleNodeClick,
     openAddDictType,
     openAddDictDetail,
+    openAddDictDetailForNode,
     openDialog,
     handleDelete,
     handleDeleteType,

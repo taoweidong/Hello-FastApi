@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, computed, watch } from "vue";
 import { handleTree } from "@/utils/tree";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import { isAllEmpty } from "@pureadmin/utils";
@@ -20,6 +20,19 @@ const emit = defineEmits<{
 const treeRef = ref();
 const searchValue = ref("");
 const isExpandAll = ref(true);
+
+/** 过滤掉 menuType===2 的权限节点 */
+const filteredTreeData = computed(() => {
+  function filterNodes(nodes: Array<any>): Array<any> {
+    return nodes
+      .filter(node => node.menuType !== 2)
+      .map(node => ({
+        ...node,
+        children: node.children ? filterNodes(node.children) : []
+      }));
+  }
+  return filterNodes(props.treeData);
+});
 
 /** 搜索过滤 */
 function filterMethod(query: string, node: any) {
@@ -73,7 +86,7 @@ defineExpose({ treeRef });
     <el-tree
       ref="treeRef"
       v-loading="loading"
-      :data="treeData"
+      :data="filteredTreeData"
       node-key="id"
       :props="{
         label: data => data.meta?.title ?? data.name,
@@ -100,18 +113,14 @@ defineExpose({ treeRef });
             :type="
               data.menuType === 0
                 ? 'primary'
-                : data.menuType === 1
-                  ? 'warning'
-                  : 'info'
+                : 'warning'
             "
             effect="plain"
           >
             {{
               data.menuType === 0
                 ? "目录"
-                : data.menuType === 1
-                  ? "页面"
-                  : "权限"
+                : "页面"
             }}
           </el-tag>
         </span>

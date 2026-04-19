@@ -25,7 +25,6 @@ const props = withDefaults(defineProps<FormProps>(), {
     path: "",
     component: "",
     rank: 99,
-    method: "",
     isActive: 1,
     meta: {
       title: "",
@@ -117,7 +116,7 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col v-if="newFormInline.menuType !== 2" :value="12" :xs="24" :sm="24">
+      <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="路由路径" prop="path">
           <el-input
             v-model="newFormInline.path"
@@ -153,25 +152,8 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <!-- PERMISSION类型(2)的HTTP方法选择 -->
-      <re-col v-if="newFormInline.menuType === 2" :value="12" :xs="24" :sm="24">
-        <el-form-item label="请求方法" prop="method">
-          <el-select
-            v-model="newFormInline.method"
-            placeholder="请选择HTTP方法"
-            class="w-full"
-          >
-            <el-option label="GET" value="GET" />
-            <el-option label="POST" value="POST" />
-            <el-option label="PUT" value="PUT" />
-            <el-option label="DELETE" value="DELETE" />
-          </el-select>
-        </el-form-item>
-      </re-col>
-
       <!-- 以下为meta元数据字段 -->
       <re-col
-        v-show="newFormInline.menuType !== 2"
         :value="12"
         :xs="24"
         :sm="24"
@@ -181,7 +163,6 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
       <re-col
-        v-show="newFormInline.menuType !== 2"
         :value="12"
         :xs="24"
         :sm="24"
@@ -195,7 +176,7 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col v-show="newFormInline.menuType < 2" :value="12" :xs="24" :sm="24">
+      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
         <el-form-item label="进场动画">
           <ReAnimateSelector
             v-model="newFormInline.meta.transitionEnter"
@@ -203,7 +184,7 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
-      <re-col v-show="newFormInline.menuType < 2" :value="12" :xs="24" :sm="24">
+      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
         <el-form-item label="离场动画">
           <ReAnimateSelector
             v-model="newFormInline.meta.transitionLeave"
@@ -241,7 +222,7 @@ defineExpose({ getRef });
       </re-col>
 
       <re-col
-        v-show="newFormInline.menuType !== 2"
+        v-show="newFormInline.menuType === 0"
         :value="12"
         :xs="24"
         :sm="24"
@@ -259,7 +240,7 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
       <re-col
-        v-show="newFormInline.menuType !== 2"
+        v-show="newFormInline.menuType === 0"
         :value="12"
         :xs="24"
         :sm="24"
@@ -277,7 +258,7 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col v-show="newFormInline.menuType < 2" :value="12" :xs="24" :sm="24">
+      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
         <el-form-item label="缓存页面">
           <Segmented
             :modelValue="newFormInline.meta.isKeepalive ? 0 : 1"
@@ -291,7 +272,7 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <re-col v-show="newFormInline.menuType < 2" :value="12" :xs="24" :sm="24">
+      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
         <el-form-item label="标签页">
           <Segmented
             :modelValue="newFormInline.meta.isHiddenTag ? 1 : 0"
@@ -304,7 +285,7 @@ defineExpose({ getRef });
           />
         </el-form-item>
       </re-col>
-      <re-col v-show="newFormInline.menuType < 2" :value="12" :xs="24" :sm="24">
+      <re-col v-show="newFormInline.menuType === 0" :value="12" :xs="24" :sm="24">
         <el-form-item label="固定标签页">
           <Segmented
             :modelValue="newFormInline.meta.fixedTag ? 0 : 1"

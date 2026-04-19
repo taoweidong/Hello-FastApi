@@ -28,6 +28,7 @@ const {
   handleNodeClick,
   openAddDictType,
   openAddDictDetail,
+  openAddDictDetailForNode,
   openDialog,
   handleDelete,
   handleDeleteType
@@ -132,6 +133,17 @@ function onFullscreen() {
                           @click="openDialog('修改', data)"
                         >
                           修改
+                        </el-button>
+                      </el-dropdown-item>
+                      <el-dropdown-item>
+                        <el-button
+                          class="reset-margin"
+                          link
+                          type="primary"
+                          :icon="useRenderIcon(AddFill)"
+                          @click="openAddDictDetailForNode(data)"
+                        >
+                          新增子项
                         </el-button>
                       </el-dropdown-item>
                       <el-dropdown-item>

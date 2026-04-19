@@ -65,11 +65,6 @@ export function useMenu() {
         isAllEmpty(component) ? path : component
     },
     {
-      label: "权限标识",
-      prop: "method",
-      cellRenderer: ({ row }) => (row.menuType === 2 ? row.method : "-")
-    },
-    {
       label: "排序",
       prop: "rank",
       width: 100
@@ -160,7 +155,6 @@ export function useMenu() {
           path: row?.path ?? "",
           component: row?.component ?? "",
           rank: row?.rank ?? 99,
-          method: row?.method ?? "",
           isActive: row?.isActive ?? 1,
           meta: {
             title: row?.meta?.title ?? "",
@@ -198,7 +192,6 @@ export function useMenu() {
                 path: curData.path || null,
                 component: curData.component || null,
                 rank: curData.rank || 99,
-                method: curData.method || null,
                 isActive: curData.isActive ?? 1,
                 meta: {
                   title: curData.meta?.title || null,

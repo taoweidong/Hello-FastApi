@@ -15,6 +15,20 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from src.config.settings import settings
 from src.infrastructure.logging.logger import log_request, logger
 
+# 不需要写入 SystemLog 审计表的路径前缀集合
+# 这些路径仍会写入 access.log 文件，但不写数据库审计表
+_SKIP_LOG_PATH_PREFIXES = frozenset({
+    "/api/system/login",              # 含密码明文，有独立的 login_logs 表
+    "/api/system/register",           # 含密码明文
+    "/api/system/logout",             # 无业务审计价值
+    "/api/system/refresh-token",      # 高频(30min)、含敏感token
+    "/api/system/get-async-routes",   # 高频路由加载
+    "/api/system/list-all-role",      # 高频下拉列表
+    "/api/system/list-role-ids",      # 高频角色查询
+    "/api/system/role-menu",          # 高频权限查询
+    "/api/system/role-menu-ids",      # 高频权限查询
+})
+
 
 def _extract_user_agent_info(user_agent: str) -> tuple[str, str]:
     """从 User-Agent 字符串中粗略提取浏览器和操作系统信息。
@@ -73,8 +87,16 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """记录所有 HTTP 请求的中间件。
 
     - 所有请求：打印日志 + 记录处理时间
-    - 非 GET 请求：额外写入 SystemLog 表作为审计日志
+    - 非 GET 请求：额外写入 SystemLog 表作为审计日志（排除 _SKIP_LOG_PATH_PREFIXES 中的路径）
     """
+
+    @staticmethod
+    def _should_skip_log(path: str) -> bool:
+        """判断请求路径是否应跳过审计日志写入。
+
+        使用前缀匹配：若 path 以 _SKIP_LOG_PATH_PREFIXES 中任一前缀开头则跳过。
+        """
+        return any(path.startswith(prefix) for prefix in _SKIP_LOG_PATH_PREFIXES)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         start_time = time.time()
@@ -107,8 +129,8 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # 添加处理时间到响应头
         response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
 
-        # 非 GET 请求写入 SystemLog 审计表（后台异步执行，不阻塞响应）
-        if request.method != "GET":
+        # 非 GET 请求写入 SystemLog 审计表（排除敏感/高频路径，后台异步执行，不阻塞响应）
+        if request.method != "GET" and not self._should_skip_log(request.url.path):
             self._write_system_log_async(request=request, response=response, client_ip=client_ip, body=body_str, duration_ms=duration_ms)
 
         return response

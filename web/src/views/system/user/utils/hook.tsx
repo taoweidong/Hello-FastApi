@@ -38,7 +38,7 @@ import {
   onMounted
 } from "vue";
 
-export function useUser(tableRef: Ref, treeRef: Ref) {
+export function useUser(tableRef: Ref) {
   const form = reactive({
     deptId: "",
     username: "",
@@ -53,8 +53,6 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
   const switchLoadMap = ref({});
   const { switchStyle } = usePublicHooks();
   const higherDeptOptions = ref();
-  const treeData = ref([]);
-  const treeLoading = ref(true);
   const selectedNum = ref(0);
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -339,14 +337,8 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     if (!formEl) return;
     formEl.resetFields();
     form.deptId = "";
-    treeRef.value.onTreeReset();
     onSearch();
   };
-
-  function onTreeSelect({ id, selected }) {
-    form.deptId = selected ? id : "";
-    onSearch();
-  }
 
   function openDialog(title = "新增", row?: FormItemProps) {
     addDialog({
@@ -567,16 +559,12 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
   }
 
   onMounted(async () => {
-    treeLoading.value = true;
     onSearch();
 
     const { code, data } = await deptApi.list();
     if (code === 0) {
       higherDeptOptions.value = handleTree(data);
-      treeData.value = handleTree(data);
     }
-
-    treeLoading.value = false;
 
     roleOptions.value = (await userApi.getAllRoleList()).data ?? [];
   });
@@ -586,8 +574,6 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     loading,
     columns,
     dataList,
-    treeData,
-    treeLoading,
     selectedNum,
     pagination,
     buttonClass,
@@ -596,7 +582,6 @@ export function useUser(tableRef: Ref, treeRef: Ref) {
     resetForm,
     onbatchDel,
     openDialog,
-    onTreeSelect,
     handleUpdate,
     handleDelete,
     handleUpload,

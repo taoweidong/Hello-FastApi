@@ -1,6 +1,6 @@
 import type { OptionsType } from "@/components/ReSegmented";
 
-/** 菜单类型：0-DIRECTORY(目录) 1-MENU(页面) 2-PERMISSION(按钮/权限) */
+/** 菜单类型：0-DIRECTORY(目录) 1-MENU(页面) */
 const menuTypeOptions: Array<OptionsType> = [
   {
     label: "目录",
@@ -9,10 +9,6 @@ const menuTypeOptions: Array<OptionsType> = [
   {
     label: "页面",
     value: 1
-  },
-  {
-    label: "权限",
-    value: 2
   }
 ];
 
@@ -94,7 +90,7 @@ const frameLoadingOptions: Array<OptionsType> = [
   }
 ];
 
-/** HTTP 方法选项（PERMISSION 类型使用） */
+/** HTTP 方法选项（已弃用：菜单管理不再使用权限类型） */
 const methodOptions: Array<OptionsType> = [
   { label: "GET", value: "GET" },
   { label: "POST", value: "POST" },
