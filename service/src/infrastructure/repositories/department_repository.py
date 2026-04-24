@@ -19,7 +19,9 @@ class DepartmentRepository(DepartmentRepositoryInterface):
 
     async def get_all(self) -> list[DepartmentEntity]:
         """获取所有部门，按排序号排序。"""
-        result = await self._crud.get_multi(self.session, schema_to_select=Department, return_as_model=True, return_total_count=False)
+        result = await self._crud.get_multi(
+            self.session, schema_to_select=Department, return_as_model=True, return_total_count=False
+        )
         departments = result.get("data", [])
         return sorted([d.to_domain() for d in departments], key=lambda d: d.rank)
 
@@ -40,7 +42,13 @@ class DepartmentRepository(DepartmentRepositoryInterface):
 
     async def get_by_parent_id(self, parent_id: str | None) -> list[DepartmentEntity]:
         """根据父部门 ID 获取子部门，按排序号排序。"""
-        result = await self._crud.get_multi(self.session, parent_id=parent_id, schema_to_select=Department, return_as_model=True, return_total_count=False)
+        result = await self._crud.get_multi(
+            self.session,
+            parent_id=parent_id,
+            schema_to_select=Department,
+            return_as_model=True,
+            return_total_count=False,
+        )
         departments = result.get("data", [])
         return sorted([d.to_domain() for d in departments], key=lambda d: d.rank)
 
@@ -60,7 +68,18 @@ class DepartmentRepository(DepartmentRepositoryInterface):
         stmt = (
             sa_update(Department)
             .where(Department.id == department.id)
-            .values(mode_type=department.mode_type, name=department.name, code=department.code, rank=department.rank, auto_bind=department.auto_bind, is_active=department.is_active, creator_id=department.creator_id, modifier_id=department.modifier_id, parent_id=department.parent_id, description=department.description)
+            .values(
+                mode_type=department.mode_type,
+                name=department.name,
+                code=department.code,
+                rank=department.rank,
+                auto_bind=department.auto_bind,
+                is_active=department.is_active,
+                creator_id=department.creator_id,
+                modifier_id=department.modifier_id,
+                parent_id=department.parent_id,
+                description=department.description,
+            )
         )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()

@@ -15,7 +15,12 @@ from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
 
-async def get_auth_service(db: AsyncSession = Depends(get_db), token_service: TokenService = Depends(get_token_service), password_service: PasswordService = Depends(get_password_service), cache_service: CachePort = Depends(get_cache_service)) -> AuthService:
+async def get_auth_service(
+    db: AsyncSession = Depends(get_db),
+    token_service: TokenService = Depends(get_token_service),
+    password_service: PasswordService = Depends(get_password_service),
+    cache_service: CachePort = Depends(get_cache_service),
+) -> AuthService:
     """获取认证服务实例。
 
     注入所有必需的仓储、领域服务和缓存服务依赖。
@@ -23,4 +28,11 @@ async def get_auth_service(db: AsyncSession = Depends(get_db), token_service: To
     user_repo = UserRepository(db)
     role_repo = RoleRepository(db)
     menu_repo = MenuRepository(db)
-    return AuthService(user_repo=user_repo, role_repo=role_repo, menu_repo=menu_repo, token_service=token_service, password_service=password_service, cache_service=cache_service)
+    return AuthService(
+        user_repo=user_repo,
+        role_repo=role_repo,
+        menu_repo=menu_repo,
+        token_service=token_service,
+        password_service=password_service,
+        cache_service=cache_service,
+    )

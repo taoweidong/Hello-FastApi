@@ -60,7 +60,17 @@ class DepartmentEntity:
 
     # ---- 状态变更方法 ----
 
-    def update_info(self, *, name: str | None = None, code: str | None = None, mode_type: int | None = None, rank: int | None = None, auto_bind: int | None = None, parent_id: str | None = None, description: str | None = None) -> None:
+    def update_info(
+        self,
+        *,
+        name: str | None = None,
+        code: str | None = None,
+        mode_type: int | None = None,
+        rank: int | None = None,
+        auto_bind: int | None = None,
+        parent_id: str | None = None,
+        description: str | None = None,
+    ) -> None:
         """有条件地更新部门信息。"""
         if name is not None:
             self.name = name
@@ -80,7 +90,16 @@ class DepartmentEntity:
     # ---- 工厂方法 ----
 
     @classmethod
-    def create_new(cls, name: str, code: str = "", parent_id: str | None = None, mode_type: int = 0, rank: int = 0, auto_bind: int = 0, description: str | None = None) -> DepartmentEntity:
+    def create_new(
+        cls,
+        name: str,
+        code: str = "",
+        parent_id: str | None = None,
+        mode_type: int = 0,
+        rank: int = 0,
+        auto_bind: int = 0,
+        description: str | None = None,
+    ) -> DepartmentEntity:
         """创建新部门实体的工厂方法。"""
         return cls(
             id=uuid.uuid4().hex,

@@ -13,14 +13,20 @@ from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
 
-async def get_user_service(db: AsyncSession = Depends(get_db), password_service: PasswordService = Depends(get_password_service), cache_service: CachePort = Depends(get_cache_service)) -> UserService:
+async def get_user_service(
+    db: AsyncSession = Depends(get_db),
+    password_service: PasswordService = Depends(get_password_service),
+    cache_service: CachePort = Depends(get_cache_service),
+) -> UserService:
     """获取用户服务实例。
 
     注入用户仓储、角色仓储、密码服务和缓存服务依赖。
     """
     user_repo = UserRepository(db)
     role_repo = RoleRepository(db)
-    return UserService(repo=user_repo, password_service=password_service, role_repo=role_repo, cache_service=cache_service)
+    return UserService(
+        repo=user_repo, password_service=password_service, role_repo=role_repo, cache_service=cache_service
+    )
 
 
 async def get_user_repository(db: AsyncSession = Depends(get_db)) -> UserRepository:

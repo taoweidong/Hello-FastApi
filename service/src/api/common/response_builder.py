@@ -27,7 +27,9 @@ def list_response(list_data: list[T], total: int, page_size: int = 10, current_p
     Returns:
         符合 Pure Admin 前端标准的分页响应字典，包含 list, total, pageSize, currentPage
     """
-    return success_response(data={"list": list_data, "total": total, "pageSize": page_size, "currentPage": current_page})
+    return success_response(
+        data={"list": list_data, "total": total, "pageSize": page_size, "currentPage": current_page}
+    )
 
 
 def page_response(rows: list[T], total: int, page_num: int, page_size: int) -> dict[str, object]:
@@ -39,7 +41,9 @@ def page_response(rows: list[T], total: int, page_num: int, page_size: int) -> d
         包含 total, pageNum, pageSize, totalPage, rows 的字典
     """
     total_page = math.ceil(total / page_size) if page_size > 0 else 0
-    return success_response(data={"total": total, "pageNum": page_num, "pageSize": page_size, "totalPage": total_page, "rows": rows})
+    return success_response(
+        data={"total": total, "pageNum": page_num, "pageSize": page_size, "totalPage": total_page, "rows": rows}
+    )
 
 
 def error_response(message: str, code: int = 400) -> dict[str, str | int]:

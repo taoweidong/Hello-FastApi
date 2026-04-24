@@ -17,7 +17,12 @@ class DictionaryRouter(Routable):
     """字典管理路由类，提供字典增删改查功能。"""
 
     @post("/dictionary")
-    async def get_dictionary_list(self, data: dict = Body(default={}), service: DictionaryService = Depends(get_dictionary_service), _: dict = Depends(require_permission("dictionary:view"))) -> dict:
+    async def get_dictionary_list(
+        self,
+        data: dict = Body(default={}),
+        service: DictionaryService = Depends(get_dictionary_service),
+        _: dict = Depends(require_permission("dictionary:view")),
+    ) -> dict:
         """获取字典列表（扁平结构）。"""
         query = DictionaryListQueryDTO(name=data.get("name"), isActive=data.get("isActive"))
         dictionaries = await service.get_dictionaries(query)
@@ -25,7 +30,12 @@ class DictionaryRouter(Routable):
         return success_response(data=dict_list)
 
     @post("/dictionary/getByName")
-    async def get_dictionary_by_name(self, data: dict = Body(default={}), service: DictionaryService = Depends(get_dictionary_service), _: dict = Depends(require_permission("dictionary:view"))) -> dict:
+    async def get_dictionary_by_name(
+        self,
+        data: dict = Body(default={}),
+        service: DictionaryService = Depends(get_dictionary_service),
+        _: dict = Depends(require_permission("dictionary:view")),
+    ) -> dict:
         """根据字典名称查询字典项。"""
         name = data.get("name", "")
         dictionaries = await service.get_dictionary_by_name(name)
@@ -33,19 +43,35 @@ class DictionaryRouter(Routable):
         return success_response(data=dict_list)
 
     @post("/dictionary/create")
-    async def create_dictionary(self, dto: DictionaryCreateDTO, service: DictionaryService = Depends(get_dictionary_service), _: dict = Depends(require_permission("dictionary:add"))) -> dict:
+    async def create_dictionary(
+        self,
+        dto: DictionaryCreateDTO,
+        service: DictionaryService = Depends(get_dictionary_service),
+        _: dict = Depends(require_permission("dictionary:add")),
+    ) -> dict:
         """创建字典。"""
         dictionary = await service.create_dictionary(dto)
         return success_response(data={"id": dictionary.id, "name": dictionary.name}, message="创建成功", code=201)
 
     @put("/dictionary/{dict_id}")
-    async def update_dictionary(self, dict_id: str, dto: DictionaryUpdateDTO, service: DictionaryService = Depends(get_dictionary_service), _: dict = Depends(require_permission("dictionary:edit"))) -> dict:
+    async def update_dictionary(
+        self,
+        dict_id: str,
+        dto: DictionaryUpdateDTO,
+        service: DictionaryService = Depends(get_dictionary_service),
+        _: dict = Depends(require_permission("dictionary:edit")),
+    ) -> dict:
         """更新字典。"""
         dictionary = await service.update_dictionary(dict_id, dto)
         return success_response(data={"id": dictionary.id, "name": dictionary.name}, message="更新成功")
 
     @delete("/dictionary/{dict_id}")
-    async def delete_dictionary(self, dict_id: str, service: DictionaryService = Depends(get_dictionary_service), _: dict = Depends(require_permission("dictionary:delete"))) -> dict:
+    async def delete_dictionary(
+        self,
+        dict_id: str,
+        service: DictionaryService = Depends(get_dictionary_service),
+        _: dict = Depends(require_permission("dictionary:delete")),
+    ) -> dict:
         """删除字典。"""
         await service.delete_dictionary(dict_id)
         return success_response(message="删除成功")

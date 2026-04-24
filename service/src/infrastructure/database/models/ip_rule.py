@@ -27,7 +27,9 @@ class IPRule(SQLModel, table=True):
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
-    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    updated_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())
+    )
     expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime, nullable=True))
     description: str | None = Field(default=None, max_length=256)
 

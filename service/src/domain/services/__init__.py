@@ -5,7 +5,8 @@
 """
 
 from src.domain.services.cache_port import CachePort, IPFilterPort
+from src.domain.services.logging_port import LoggingPort
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
 
-__all__ = ["CachePort", "IPFilterPort", "PasswordService", "TokenService"]
+__all__ = ["CachePort", "IPFilterPort", "LoggingPort", "PasswordService", "TokenService"]

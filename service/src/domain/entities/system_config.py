@@ -43,7 +43,16 @@ class SystemConfigEntity:
 
     # ---- 状态变更方法 ----
 
-    def update_info(self, *, value: str | None = None, is_active: int | None = None, access: int | None = None, key: str | None = None, inherit: int | None = None, description: str | None = None) -> None:
+    def update_info(
+        self,
+        *,
+        value: str | None = None,
+        is_active: int | None = None,
+        access: int | None = None,
+        key: str | None = None,
+        inherit: int | None = None,
+        description: str | None = None,
+    ) -> None:
         """有条件地更新系统配置信息。"""
         if value is not None:
             self.value = value
@@ -63,9 +72,4 @@ class SystemConfigEntity:
     @classmethod
     def create_new(cls, key: str, value: str = "", description: str | None = None) -> SystemConfigEntity:
         """创建新系统配置实体的工厂方法。"""
-        return cls(
-            id=uuid.uuid4().hex,
-            key=key,
-            value=value,
-            description=description,
-        )
+        return cls(id=uuid.uuid4().hex, key=key, value=value, description=description)

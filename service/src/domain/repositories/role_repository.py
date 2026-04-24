@@ -37,7 +37,9 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list[RoleEntity]:
+    async def get_all(
+        self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None
+    ) -> list[RoleEntity]:
         """获取所有角色（分页）。"""
         ...
 

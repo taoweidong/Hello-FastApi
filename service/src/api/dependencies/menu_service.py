@@ -10,7 +10,9 @@ from src.infrastructure.database import get_db
 from src.infrastructure.repositories.menu_repository import MenuRepository
 
 
-async def get_menu_service(db: AsyncSession = Depends(get_db), cache_service: CachePort = Depends(get_cache_service)) -> MenuService:
+async def get_menu_service(
+    db: AsyncSession = Depends(get_db), cache_service: CachePort = Depends(get_cache_service)
+) -> MenuService:
     """获取菜单服务实例。"""
     menu_repo = MenuRepository(db)
     return MenuService(menu_repo=menu_repo, cache_service=cache_service)

@@ -10,15 +10,23 @@ from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedErro
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
+from src.domain.services.cache_port import CachePort
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
-from src.domain.services.cache_port import CachePort
 
 
 class AuthService:
     """认证操作的应用服务。"""
 
-    def __init__(self, user_repo: UserRepositoryInterface, role_repo: RoleRepositoryInterface, menu_repo: MenuRepositoryInterface, token_service: TokenService, password_service: PasswordService, cache_service: CachePort | None = None):
+    def __init__(
+        self,
+        user_repo: UserRepositoryInterface,
+        role_repo: RoleRepositoryInterface,
+        menu_repo: MenuRepositoryInterface,
+        token_service: TokenService,
+        password_service: PasswordService,
+        cache_service: CachePort | None = None,
+    ):
         self.user_repo = user_repo
         self.role_repo = role_repo
         self.menu_repo = menu_repo
@@ -92,7 +100,14 @@ class AuthService:
         if created_user is None:
             raise NotFoundError("注册成功但无法加载用户")
 
-        return {"id": created_user.id, "username": created_user.username, "nickname": created_user.nickname, "email": created_user.email, "phone": created_user.phone, "is_active": created_user.is_active}
+        return {
+            "id": created_user.id,
+            "username": created_user.username,
+            "nickname": created_user.nickname,
+            "email": created_user.email,
+            "phone": created_user.phone,
+            "is_active": created_user.is_active,
+        }
 
     async def refresh_token(self, refresh_token: str) -> dict:
         """使用刷新令牌刷新访问令牌。"""
@@ -170,24 +185,37 @@ class AuthService:
     def _menu_entity_to_dict(menu: MenuEntity) -> dict:
         """将菜单实体转为可序列化的字典。"""
         result = {
-            "id": menu.id, "menu_type": menu.menu_type, "name": menu.name,
-            "rank": menu.rank, "path": menu.path, "component": menu.component,
-            "is_active": menu.is_active, "method": menu.method,
-            "creator_id": menu.creator_id, "modifier_id": menu.modifier_id,
-            "parent_id": menu.parent_id, "meta_id": menu.meta_id,
+            "id": menu.id,
+            "menu_type": menu.menu_type,
+            "name": menu.name,
+            "rank": menu.rank,
+            "path": menu.path,
+            "component": menu.component,
+            "is_active": menu.is_active,
+            "method": menu.method,
+            "creator_id": menu.creator_id,
+            "modifier_id": menu.modifier_id,
+            "parent_id": menu.parent_id,
+            "meta_id": menu.meta_id,
             "created_time": menu.created_time.isoformat() if menu.created_time else None,
             "updated_time": menu.updated_time.isoformat() if menu.updated_time else None,
             "description": menu.description,
         }
         if menu.meta:
             result["meta"] = {
-                "id": menu.meta.id, "title": menu.meta.title, "icon": menu.meta.icon,
-                "r_svg_name": menu.meta.r_svg_name, "is_show_menu": menu.meta.is_show_menu,
-                "is_show_parent": menu.meta.is_show_parent, "is_keepalive": menu.meta.is_keepalive,
-                "frame_url": menu.meta.frame_url, "frame_loading": menu.meta.frame_loading,
+                "id": menu.meta.id,
+                "title": menu.meta.title,
+                "icon": menu.meta.icon,
+                "r_svg_name": menu.meta.r_svg_name,
+                "is_show_menu": menu.meta.is_show_menu,
+                "is_show_parent": menu.meta.is_show_parent,
+                "is_keepalive": menu.meta.is_keepalive,
+                "frame_url": menu.meta.frame_url,
+                "frame_loading": menu.meta.frame_loading,
                 "transition_enter": menu.meta.transition_enter,
                 "transition_leave": menu.meta.transition_leave,
-                "is_hidden_tag": menu.meta.is_hidden_tag, "fixed_tag": menu.meta.fixed_tag,
+                "is_hidden_tag": menu.meta.is_hidden_tag,
+                "fixed_tag": menu.meta.fixed_tag,
                 "dynamic_level": menu.meta.dynamic_level,
             }
         return result
@@ -201,24 +229,40 @@ class AuthService:
         meta_entity = None
         if meta_data:
             meta_entity = MenuMetaEntity(
-                id=meta_data["id"], title=meta_data["title"], icon=meta_data["icon"],
-                r_svg_name=meta_data["r_svg_name"], is_show_menu=meta_data["is_show_menu"],
-                is_show_parent=meta_data["is_show_parent"], is_keepalive=meta_data["is_keepalive"],
-                frame_url=meta_data["frame_url"], frame_loading=meta_data["frame_loading"],
-                transition_enter=meta_data["transition_enter"], transition_leave=meta_data["transition_leave"],
-                is_hidden_tag=meta_data["is_hidden_tag"], fixed_tag=meta_data["fixed_tag"],
+                id=meta_data["id"],
+                title=meta_data["title"],
+                icon=meta_data["icon"],
+                r_svg_name=meta_data["r_svg_name"],
+                is_show_menu=meta_data["is_show_menu"],
+                is_show_parent=meta_data["is_show_parent"],
+                is_keepalive=meta_data["is_keepalive"],
+                frame_url=meta_data["frame_url"],
+                frame_loading=meta_data["frame_loading"],
+                transition_enter=meta_data["transition_enter"],
+                transition_leave=meta_data["transition_leave"],
+                is_hidden_tag=meta_data["is_hidden_tag"],
+                fixed_tag=meta_data["fixed_tag"],
                 dynamic_level=meta_data["dynamic_level"],
             )
         from datetime import datetime as dt
+
         created_time = dt.fromisoformat(data["created_time"]) if data.get("created_time") else None
         updated_time = dt.fromisoformat(data["updated_time"]) if data.get("updated_time") else None
         menu = MenuEntity(
-            id=data["id"], menu_type=data["menu_type"], name=data["name"],
-            rank=data["rank"], path=data["path"], component=data["component"],
-            is_active=data["is_active"], method=data["method"],
-            creator_id=data["creator_id"], modifier_id=data["modifier_id"],
-            parent_id=data["parent_id"], meta_id=data["meta_id"],
-            created_time=created_time, updated_time=updated_time,
+            id=data["id"],
+            menu_type=data["menu_type"],
+            name=data["name"],
+            rank=data["rank"],
+            path=data["path"],
+            component=data["component"],
+            is_active=data["is_active"],
+            method=data["method"],
+            creator_id=data["creator_id"],
+            modifier_id=data["modifier_id"],
+            parent_id=data["parent_id"],
+            meta_id=data["meta_id"],
+            created_time=created_time,
+            updated_time=updated_time,
             description=data["description"],
         )
         menu.meta = meta_entity
@@ -229,7 +273,13 @@ class AuthService:
         routes = []
         for menu in menus:
             if menu.parent_id == parent_id:
-                route = {"path": menu.path, "name": menu.name, "rank": menu.rank, "component": menu.component, "meta": self._build_meta(menu)}
+                route = {
+                    "path": menu.path,
+                    "name": menu.name,
+                    "rank": menu.rank,
+                    "component": menu.component,
+                    "meta": self._build_meta(menu),
+                }
                 children = self._build_route_tree(menus, menu.id)
                 if children:
                     route["children"] = children
@@ -250,7 +300,9 @@ class AuthService:
                 "keepAlive": bool(meta.is_keepalive),
                 "frameUrl": meta.frame_url or "",
                 "frameLoading": bool(meta.frame_loading),
-                "transition": {"enter": meta.transition_enter or "", "leave": meta.transition_leave or ""} if meta.transition_enter or meta.transition_leave else {},
+                "transition": {"enter": meta.transition_enter or "", "leave": meta.transition_leave or ""}
+                if meta.transition_enter or meta.transition_leave
+                else {},
                 "hiddenTag": bool(meta.is_hidden_tag),
                 "fixedTag": bool(meta.fixed_tag),
                 "dynamicLevel": meta.dynamic_level,

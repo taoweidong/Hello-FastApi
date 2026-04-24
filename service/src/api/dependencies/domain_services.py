@@ -16,4 +16,9 @@ def get_token_service() -> TokenService:
     从配置中读取 JWT 参数并创建令牌服务。
     """
     settings = get_settings()
-    return TokenService(secret_key=settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM, access_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES, refresh_expire_days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    return TokenService(
+        secret_key=settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+        access_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        refresh_expire_days=settings.REFRESH_TOKEN_EXPIRE_DAYS,
+    )

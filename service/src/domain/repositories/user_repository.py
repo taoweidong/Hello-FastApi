@@ -36,7 +36,16 @@ class UserRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, is_active: int | None = None, dept_id: str | None = None) -> list[UserEntity]:
+    async def get_all(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        username: str | None = None,
+        phone: str | None = None,
+        email: str | None = None,
+        is_active: int | None = None,
+        dept_id: str | None = None,
+    ) -> list[UserEntity]:
         """获取用户列表（分页与筛选）。"""
         ...
 
@@ -56,7 +65,14 @@ class UserRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def count(self, username: str | None = None, phone: str | None = None, email: str | None = None, is_active: int | None = None, dept_id: str | None = None) -> int:
+    async def count(
+        self,
+        username: str | None = None,
+        phone: str | None = None,
+        email: str | None = None,
+        is_active: int | None = None,
+        dept_id: str | None = None,
+    ) -> int:
         """统计用户数（支持筛选）。"""
         ...
 

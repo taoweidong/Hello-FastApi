@@ -30,7 +30,16 @@ class UserRepository(UserRepositoryInterface):
         model = await self._crud.get(self.session, email=email, schema_to_select=User, return_as_model=True)
         return model.to_domain() if model else None
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, username: str | None = None, phone: str | None = None, email: str | None = None, is_active: int | None = None, dept_id: str | None = None) -> list[UserEntity]:
+    async def get_all(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        username: str | None = None,
+        phone: str | None = None,
+        email: str | None = None,
+        is_active: int | None = None,
+        dept_id: str | None = None,
+    ) -> list[UserEntity]:
         """获取用户列表（支持筛选和分页）。"""
         filters: dict[str, Any] = {}
         if username:
@@ -44,11 +53,25 @@ class UserRepository(UserRepositoryInterface):
         if dept_id is not None:
             filters["dept_id"] = dept_id
 
-        result = await self._crud.get_multi(self.session, offset=(page_num - 1) * page_size, limit=page_size, schema_to_select=User, return_as_model=True, **filters)
+        result = await self._crud.get_multi(
+            self.session,
+            offset=(page_num - 1) * page_size,
+            limit=page_size,
+            schema_to_select=User,
+            return_as_model=True,
+            **filters,
+        )
         models = list(result.get("data", []))
         return [m.to_domain() for m in models]
 
-    async def count(self, username: str | None = None, phone: str | None = None, email: str | None = None, is_active: int | None = None, dept_id: str | None = None) -> int:
+    async def count(
+        self,
+        username: str | None = None,
+        phone: str | None = None,
+        email: str | None = None,
+        is_active: int | None = None,
+        dept_id: str | None = None,
+    ) -> int:
         """获取用户总数（支持筛选）。"""
         filters: dict[str, Any] = {}
         if username:

@@ -17,17 +17,19 @@ from src.infrastructure.logging.logger import log_request, logger
 
 # 不需要写入 SystemLog 审计表的路径前缀集合
 # 这些路径仍会写入 access.log 文件，但不写数据库审计表
-_SKIP_LOG_PATH_PREFIXES = frozenset({
-    "/api/system/login",              # 含密码明文，有独立的 login_logs 表
-    "/api/system/register",           # 含密码明文
-    "/api/system/logout",             # 无业务审计价值
-    "/api/system/refresh-token",      # 高频(30min)、含敏感token
-    "/api/system/get-async-routes",   # 高频路由加载
-    "/api/system/list-all-role",      # 高频下拉列表
-    "/api/system/list-role-ids",      # 高频角色查询
-    "/api/system/role-menu",          # 高频权限查询
-    "/api/system/role-menu-ids",      # 高频权限查询
-})
+_SKIP_LOG_PATH_PREFIXES = frozenset(
+    {
+        "/api/system/login",  # 含密码明文，有独立的 login_logs 表
+        "/api/system/register",  # 含密码明文
+        "/api/system/logout",  # 无业务审计价值
+        "/api/system/refresh-token",  # 高频(30min)、含敏感token
+        "/api/system/get-async-routes",  # 高频路由加载
+        "/api/system/list-all-role",  # 高频下拉列表
+        "/api/system/list-role-ids",  # 高频角色查询
+        "/api/system/role-menu",  # 高频权限查询
+        "/api/system/role-menu-ids",  # 高频权限查询
+    }
+)
 
 
 def _extract_user_agent_info(user_agent: str) -> tuple[str, str]:
@@ -124,18 +126,28 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         duration_ms = process_time * 1000
 
         # 记录请求完成
-        log_request(method=request.method, path=request.url.path, status_code=response.status_code, duration_ms=duration_ms, client_ip=client_ip)
+        log_request(
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+            client_ip=client_ip,
+        )
 
         # 添加处理时间到响应头
         response.headers["X-Process-Time"] = f"{duration_ms:.2f}ms"
 
         # 非 GET 请求写入 SystemLog 审计表（排除敏感/高频路径，后台异步执行，不阻塞响应）
         if request.method != "GET" and not self._should_skip_log(request.url.path):
-            self._write_system_log_async(request=request, response=response, client_ip=client_ip, body=body_str, duration_ms=duration_ms)
+            self._write_system_log_async(
+                request=request, response=response, client_ip=client_ip, body=body_str, duration_ms=duration_ms
+            )
 
         return response
 
-    def _write_system_log_async(self, request: Request, response: Response, client_ip: str, body: str | None, duration_ms: float) -> None:
+    def _write_system_log_async(
+        self, request: Request, response: Response, client_ip: str, body: str | None, duration_ms: float
+    ) -> None:
         """将非 GET 请求写入 SystemLog 审计表（后台异步执行，不阻塞响应）。"""
         import asyncio
 
@@ -167,16 +179,16 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
             try:
                 log_entry = SystemLog(
-                    **log_data,
-                    created_time=datetime.now(timezone.utc),
-                    updated_time=datetime.now(timezone.utc),
+                    **log_data, created_time=datetime.now(timezone.utc), updated_time=datetime.now(timezone.utc)
                 )
                 session_factory = get_async_session_factory()
                 async with session_factory() as session:
                     session.add(log_entry)
                     await session.commit()
             except Exception:
-                logger.warning(f"后台写入 SystemLog 审计日志失败: {log_data['method']} {log_data['path']}", exc_info=True)
+                logger.warning(
+                    f"后台写入 SystemLog 审计日志失败: {log_data['method']} {log_data['path']}", exc_info=True
+                )
 
         # 后台执行，不阻塞响应
         asyncio.create_task(_write_log_background())

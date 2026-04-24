@@ -89,7 +89,19 @@ class MenuEntity:
 
     # ---- 状态变更方法 ----
 
-    def update_info(self, *, menu_type: int | None = None, name: str | None = None, path: str | None = None, component: str | None = None, rank: int | None = None, is_active: int | None = None, method: str | None = None, parent_id: str | None = None, description: str | None = None) -> None:
+    def update_info(
+        self,
+        *,
+        menu_type: int | None = None,
+        name: str | None = None,
+        path: str | None = None,
+        component: str | None = None,
+        rank: int | None = None,
+        is_active: int | None = None,
+        method: str | None = None,
+        parent_id: str | None = None,
+        description: str | None = None,
+    ) -> None:
         """有条件地更新菜单信息。"""
         if menu_type is not None:
             self.menu_type = menu_type
@@ -113,7 +125,18 @@ class MenuEntity:
     # ---- 工厂方法 ----
 
     @classmethod
-    def create_new(cls, name: str, menu_type: int = 0, path: str = "", component: str | None = None, rank: int = 0, is_active: int = 1, method: str | None = None, parent_id: str | None = None, description: str | None = None) -> MenuEntity:
+    def create_new(
+        cls,
+        name: str,
+        menu_type: int = 0,
+        path: str = "",
+        component: str | None = None,
+        rank: int = 0,
+        is_active: int = 1,
+        method: str | None = None,
+        parent_id: str | None = None,
+        description: str | None = None,
+    ) -> MenuEntity:
         """创建新菜单实体的工厂方法。"""
         return cls(
             id=uuid.uuid4().hex,

@@ -17,7 +17,9 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
         self.session = session
         self._crud = FastCRUD(SystemConfig)
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, key: str | None = None, is_active: int | None = None) -> list[SystemConfigEntity]:
+    async def get_all(
+        self, page_num: int = 1, page_size: int = 10, key: str | None = None, is_active: int | None = None
+    ) -> list[SystemConfigEntity]:
         """获取配置列表（支持分页和筛选）。"""
         offset = (page_num - 1) * page_size
         query = select(SystemConfig)
@@ -66,7 +68,20 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
         """更新配置。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(SystemConfig).where(SystemConfig.id == config.id).values(value=config.value, is_active=config.is_active, access=config.access, key=config.key, inherit=config.inherit, creator_id=config.creator_id, modifier_id=config.modifier_id, description=config.description)
+        stmt = (
+            sa_update(SystemConfig)
+            .where(SystemConfig.id == config.id)
+            .values(
+                value=config.value,
+                is_active=config.is_active,
+                access=config.access,
+                key=config.key,
+                inherit=config.inherit,
+                creator_id=config.creator_id,
+                modifier_id=config.modifier_id,
+                description=config.description,
+            )
+        )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(config.id)

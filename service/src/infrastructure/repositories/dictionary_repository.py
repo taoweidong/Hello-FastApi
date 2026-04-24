@@ -18,7 +18,9 @@ class DictionaryRepository(DictionaryRepositoryInterface):
 
     async def get_all(self) -> list[DictionaryEntity]:
         """获取所有字典，按排序号升序排列。"""
-        result = await self._crud.get_multi(self.session, schema_to_select=Dictionary, return_as_model=True, return_total_count=False)
+        result = await self._crud.get_multi(
+            self.session, schema_to_select=Dictionary, return_as_model=True, return_total_count=False
+        )
         dictionaries = result.get("data", [])
         return sorted([d.to_domain() for d in dictionaries], key=lambda d: d.sort)
 
@@ -34,7 +36,13 @@ class DictionaryRepository(DictionaryRepositoryInterface):
 
     async def get_by_parent_id(self, parent_id: str | None) -> list[DictionaryEntity]:
         """根据父字典 ID 获取子字典，按排序号升序排列。"""
-        result = await self._crud.get_multi(self.session, parent_id=parent_id, schema_to_select=Dictionary, return_as_model=True, return_total_count=False)
+        result = await self._crud.get_multi(
+            self.session,
+            parent_id=parent_id,
+            schema_to_select=Dictionary,
+            return_as_model=True,
+            return_total_count=False,
+        )
         dictionaries = result.get("data", [])
         return sorted([d.to_domain() for d in dictionaries], key=lambda d: d.sort)
 
@@ -57,7 +65,19 @@ class DictionaryRepository(DictionaryRepositoryInterface):
         """更新现有字典。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(Dictionary).where(Dictionary.id == dictionary.id).values(name=dictionary.name, label=dictionary.label, value=dictionary.value, sort=dictionary.sort, is_active=dictionary.is_active, parent_id=dictionary.parent_id, description=dictionary.description)
+        stmt = (
+            sa_update(Dictionary)
+            .where(Dictionary.id == dictionary.id)
+            .values(
+                name=dictionary.name,
+                label=dictionary.label,
+                value=dictionary.value,
+                sort=dictionary.sort,
+                is_active=dictionary.is_active,
+                parent_id=dictionary.parent_id,
+                description=dictionary.description,
+            )
+        )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(dictionary.id)

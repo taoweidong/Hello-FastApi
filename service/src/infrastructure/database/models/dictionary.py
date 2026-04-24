@@ -28,18 +28,42 @@ class Dictionary(SQLModel, table=True):
     parent_id: str | None = Field(default=None, foreign_key="sys_dictionary.id")  # 父字典ID
     description: str | None = Field(default=None, max_length=256)  # 描述
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
-    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    updated_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())
+    )
 
     def to_domain(self) -> "DictionaryEntity":
         """将 ORM 模型转换为领域实体。"""
         from src.domain.entities.dictionary import DictionaryEntity
 
-        return DictionaryEntity(id=self.id, name=self.name, label=self.label, value=self.value, sort=self.sort, is_active=self.is_active, parent_id=self.parent_id, description=self.description, created_time=self.created_time, updated_time=self.updated_time)
+        return DictionaryEntity(
+            id=self.id,
+            name=self.name,
+            label=self.label,
+            value=self.value,
+            sort=self.sort,
+            is_active=self.is_active,
+            parent_id=self.parent_id,
+            description=self.description,
+            created_time=self.created_time,
+            updated_time=self.updated_time,
+        )
 
     @classmethod
     def from_domain(cls, entity: "DictionaryEntity") -> "Dictionary":
         """从领域实体创建 ORM 模型实例。"""
-        return cls(id=entity.id, name=entity.name, label=entity.label, value=entity.value, sort=entity.sort, is_active=entity.is_active, parent_id=entity.parent_id, description=entity.description, created_time=entity.created_time, updated_time=entity.updated_time)
+        return cls(
+            id=entity.id,
+            name=entity.name,
+            label=entity.label,
+            value=entity.value,
+            sort=entity.sort,
+            is_active=entity.is_active,
+            parent_id=entity.parent_id,
+            description=entity.description,
+            created_time=entity.created_time,
+            updated_time=entity.updated_time,
+        )
 
     def __repr__(self) -> str:
         return f"<Dictionary(id={self.id}, name={self.name})>"

@@ -47,7 +47,9 @@ class LogService:
         if query.status:
             status = int(query.status)
 
-        logs, total = await self.log_repo.get_login_logs(page_num=query.pageNum, page_size=query.pageSize, status=status, start_time=start_time, end_time=end_time)
+        logs, total = await self.log_repo.get_login_logs(
+            page_num=query.pageNum, page_size=query.pageSize, status=status, start_time=start_time, end_time=end_time
+        )
         return logs, total
 
     async def delete_login_logs(self, dto) -> int:
@@ -73,7 +75,14 @@ class LogService:
         if query.status:
             status_code = int(query.status)
 
-        logs, total = await self.log_repo.get_operation_logs(page_num=query.pageNum, page_size=query.pageSize, module=query.module, status_code=status_code, start_time=start_time, end_time=end_time)
+        logs, total = await self.log_repo.get_operation_logs(
+            page_num=query.pageNum,
+            page_size=query.pageSize,
+            module=query.module,
+            status_code=status_code,
+            start_time=start_time,
+            end_time=end_time,
+        )
         return logs, total
 
     async def delete_operation_logs(self, dto) -> int:
@@ -99,7 +108,14 @@ class LogService:
         if query.status:
             status_code = int(query.status)
 
-        logs, total = await self.log_repo.get_system_logs(page_num=query.pageNum, page_size=query.pageSize, module=query.module, status_code=status_code, start_time=start_time, end_time=end_time)
+        logs, total = await self.log_repo.get_system_logs(
+            page_num=query.pageNum,
+            page_size=query.pageSize,
+            module=query.module,
+            status_code=status_code,
+            start_time=start_time,
+            end_time=end_time,
+        )
         return logs, total
 
     async def get_system_log_detail(self, log_id: str):

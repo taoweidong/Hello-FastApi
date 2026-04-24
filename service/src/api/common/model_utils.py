@@ -6,7 +6,9 @@ from pydantic import BaseModel
 from sqlmodel import SQLModel
 
 
-def model_to_dict(model: BaseModel | SQLModel, exclude_none: bool = False, exclude: set[str] | None = None) -> dict[str, object]:
+def model_to_dict(
+    model: BaseModel | SQLModel, exclude_none: bool = False, exclude: set[str] | None = None
+) -> dict[str, object]:
     """将模型转换为字典。
 
     Args:
@@ -36,7 +38,9 @@ def model_to_dict(model: BaseModel | SQLModel, exclude_none: bool = False, exclu
     return result
 
 
-def models_to_list(models: list[BaseModel | SQLModel], exclude_none: bool = False, exclude: set[str] | None = None) -> list[dict[str, object]]:
+def models_to_list(
+    models: list[BaseModel | SQLModel], exclude_none: bool = False, exclude: set[str] | None = None
+) -> list[dict[str, object]]:
     """将模型列表转换为字典列表。
 
     Args:

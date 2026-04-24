@@ -15,7 +15,9 @@ class RoleMenuLink(SQLModel, table=True):
     __tablename__ = "sys_userrole_menu"
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
-    userrole_id: str = Field(sa_column=Column(String(32), ForeignKey("sys_roles.id", ondelete="CASCADE"), nullable=False))
+    userrole_id: str = Field(
+        sa_column=Column(String(32), ForeignKey("sys_roles.id", ondelete="CASCADE"), nullable=False)
+    )
     menu_id: str = Field(sa_column=Column(String(32), ForeignKey("sys_menus.id", ondelete="CASCADE"), nullable=False))
 
     def __repr__(self) -> str:

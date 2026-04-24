@@ -18,11 +18,29 @@ class MonitorRouter(Routable):
     """系统监控路由类，提供在线用户、地图数据、卡片列表等 stub 接口。"""
 
     @post("/online-logs")
-    async def get_online_logs(self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))) -> dict:
+    async def get_online_logs(
+        self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))
+    ) -> dict:
         """获取在线用户列表（stub 数据）。"""
         list_data: list[dict[str, Any]] = [
-            {"id": 1, "username": "admin", "ip": "192.168.1.1", "address": "中国河南省信阳市", "system": "macOS", "browser": "Chrome", "loginTime": "2026-03-29T10:00:00"},
-            {"id": 2, "username": "common", "ip": "192.168.1.2", "address": "中国广东省深圳市", "system": "Windows", "browser": "Firefox", "loginTime": "2026-03-29T09:30:00"},
+            {
+                "id": 1,
+                "username": "admin",
+                "ip": "192.168.1.1",
+                "address": "中国河南省信阳市",
+                "system": "macOS",
+                "browser": "Chrome",
+                "loginTime": "2026-03-29T10:00:00",
+            },
+            {
+                "id": 2,
+                "username": "common",
+                "ip": "192.168.1.2",
+                "address": "中国广东省深圳市",
+                "system": "Windows",
+                "browser": "Firefox",
+                "loginTime": "2026-03-29T09:30:00",
+            },
         ]
         username = data.get("username", "")
         if username:
@@ -30,7 +48,9 @@ class MonitorRouter(Routable):
         return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
 
     @post("/online-logs/force-offline")
-    async def force_offline(self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:manage"))) -> dict:
+    async def force_offline(
+        self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:manage"))
+    ) -> dict:
         """强制下线用户（stub 实现，仅返回成功响应）。"""
         return success_response(message="强制下线成功")
 
@@ -43,14 +63,30 @@ class MonitorRouter(Routable):
             lng = round(random.uniform(113.0, 114.1), 4)
             lat = round(random.uniform(34.0, 35.1), 4)
             plate_number = f"豫A{random.randint(10000, 99999)}{random.choice('ABCDEFGHJKLMNPQRSTUVWXYZ')}"
-            map_list.append({"plateNumber": plate_number, "driver": random.choice(drivers), "orientation": random.randint(1, 360), "lng": lng, "lat": lat})
+            map_list.append(
+                {
+                    "plateNumber": plate_number,
+                    "driver": random.choice(drivers),
+                    "orientation": random.randint(1, 360),
+                    "lng": lng,
+                    "lat": lat,
+                }
+            )
         return success_response(data=map_list)
 
     @post("/get-card-list")
-    async def get_card_list(self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))) -> dict:
+    async def get_card_list(
+        self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))
+    ) -> dict:
         """获取卡片列表（stub 数据）。"""
         card_names = ["SSL证书", "人脸识别", "CVM", "云数据库", "T-Sec 云防火墙"]
-        banners = ["https://tdesign.gtimg.com/tdesign-pro/cloud-server.jpg", "https://tdesign.gtimg.com/tdesign-pro/t-sec.jpg", "https://tdesign.gtimg.com/tdesign-pro/ssl.jpg", "https://tdesign.gtimg.com/tdesign-pro/cloud-db.jpg", "https://tdesign.gtimg.com/tdesign-pro/face-recognition.jpg"]
+        banners = [
+            "https://tdesign.gtimg.com/tdesign-pro/cloud-server.jpg",
+            "https://tdesign.gtimg.com/tdesign-pro/t-sec.jpg",
+            "https://tdesign.gtimg.com/tdesign-pro/ssl.jpg",
+            "https://tdesign.gtimg.com/tdesign-pro/cloud-db.jpg",
+            "https://tdesign.gtimg.com/tdesign-pro/face-recognition.jpg",
+        ]
         descriptions = [
             "SSL证书又叫服务器证书，腾讯云为您提供证书的一站式服务，包括免费、付费证书的申请、管理及部署",
             "基于腾讯优图强大的面部分析技术，提供包括人脸检测与分析、五官定位、人脸搜索、人脸比对、人脸验证等功能",
@@ -60,5 +96,14 @@ class MonitorRouter(Routable):
         ]
         card_list = []
         for i in range(1, 49):
-            card_list.append({"index": i, "isSetup": random.choice([True, False]), "type": random.randint(1, 5), "banner": random.choice(banners), "name": random.choice(card_names), "description": random.choice(descriptions)})
+            card_list.append(
+                {
+                    "index": i,
+                    "isSetup": random.choice([True, False]),
+                    "type": random.randint(1, 5),
+                    "banner": random.choice(banners),
+                    "name": random.choice(card_names),
+                    "description": random.choice(descriptions),
+                }
+            )
         return success_response(data={"list": card_list})

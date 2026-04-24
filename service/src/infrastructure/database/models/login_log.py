@@ -29,7 +29,9 @@ class LoginLog(SQLModel, table=True):
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
-    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    updated_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())
+    )
     description: str | None = Field(default=None, max_length=256)
 
     def to_domain(self) -> "LoginLogEntity":
@@ -37,7 +39,18 @@ class LoginLog(SQLModel, table=True):
         from src.domain.entities.log import LoginLogEntity
 
         return LoginLogEntity(
-            id=self.id, status=self.status, ipaddress=self.ipaddress, browser=self.browser, system=self.system, agent=self.agent, login_type=self.login_type, creator_id=self.creator_id, modifier_id=self.modifier_id, created_time=self.created_time, updated_time=self.updated_time, description=self.description
+            id=self.id,
+            status=self.status,
+            ipaddress=self.ipaddress,
+            browser=self.browser,
+            system=self.system,
+            agent=self.agent,
+            login_type=self.login_type,
+            creator_id=self.creator_id,
+            modifier_id=self.modifier_id,
+            created_time=self.created_time,
+            updated_time=self.updated_time,
+            description=self.description,
         )
 
     @classmethod

@@ -54,7 +54,14 @@ class RoleEntity:
         """禁用角色。"""
         self.is_active = 0
 
-    def update_info(self, *, name: str | None = None, code: str | None = None, description: str | None = None, is_active: int | None = None) -> None:
+    def update_info(
+        self,
+        *,
+        name: str | None = None,
+        code: str | None = None,
+        description: str | None = None,
+        is_active: int | None = None,
+    ) -> None:
         """有条件地更新角色信息。"""
         if name is not None:
             self.name = name
@@ -70,10 +77,4 @@ class RoleEntity:
     @classmethod
     def create_new(cls, name: str, code: str, description: str | None = None) -> RoleEntity:
         """创建新角色实体的工厂方法。"""
-        return cls(
-            id=uuid.uuid4().hex,
-            name=name,
-            code=code,
-            description=description,
-            is_active=1,
-        )
+        return cls(id=uuid.uuid4().hex, name=name, code=code, description=description, is_active=1)

@@ -14,4 +14,16 @@ from src.domain.entities.role import RoleEntity
 from src.domain.entities.system_config import SystemConfigEntity
 from src.domain.entities.user import UserEntity
 
-__all__ = ["DepartmentEntity", "DictionaryEntity", "IPRuleEntity", "LoginLogEntity", "MenuEntity", "MenuMetaEntity", "OperationLogEntity", "RoleEntity", "SystemConfigEntity", "SystemLogEntity", "UserEntity"]
+__all__ = [
+    "DepartmentEntity",
+    "DictionaryEntity",
+    "IPRuleEntity",
+    "LoginLogEntity",
+    "MenuEntity",
+    "MenuMetaEntity",
+    "OperationLogEntity",
+    "RoleEntity",
+    "SystemConfigEntity",
+    "SystemLogEntity",
+    "UserEntity",
+]

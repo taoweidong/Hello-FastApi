@@ -47,7 +47,17 @@ class DictionaryEntity:
 
     # ---- 状态变更方法 ----
 
-    def update_info(self, *, name: str | None = None, label: str | None = None, value: str | None = None, sort: int | None = None, is_active: int | None = None, parent_id: str | None = None, description: str | None = None) -> None:
+    def update_info(
+        self,
+        *,
+        name: str | None = None,
+        label: str | None = None,
+        value: str | None = None,
+        sort: int | None = None,
+        is_active: int | None = None,
+        parent_id: str | None = None,
+        description: str | None = None,
+    ) -> None:
         """有条件地更新字典信息。"""
         if name is not None:
             self.name = name
@@ -67,7 +77,15 @@ class DictionaryEntity:
     # ---- 工厂方法 ----
 
     @classmethod
-    def create_new(cls, name: str, label: str = "", value: str = "", sort: int = 0, parent_id: str | None = None, description: str | None = None) -> DictionaryEntity:
+    def create_new(
+        cls,
+        name: str,
+        label: str = "",
+        value: str = "",
+        sort: int = 0,
+        parent_id: str | None = None,
+        description: str | None = None,
+    ) -> DictionaryEntity:
         """创建新字典实体的工厂方法。"""
         return cls(
             id=uuid.uuid4().hex,

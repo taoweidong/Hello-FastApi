@@ -75,7 +75,16 @@ class IPRuleEntity:
 
     # ---- 状态变更方法 ----
 
-    def update_info(self, *, ip_address: str | None = None, rule_type: str | None = None, reason: str | None = None, is_active: int | None = None, expires_at: datetime | None = None, description: str | None = None) -> None:
+    def update_info(
+        self,
+        *,
+        ip_address: str | None = None,
+        rule_type: str | None = None,
+        reason: str | None = None,
+        is_active: int | None = None,
+        expires_at: datetime | None = None,
+        description: str | None = None,
+    ) -> None:
         """有条件地更新IP规则信息。"""
         if ip_address is not None:
             self.ip_address = ip_address
@@ -93,7 +102,15 @@ class IPRuleEntity:
     # ---- 工厂方法 ----
 
     @classmethod
-    def create_new(cls, ip_address: str, rule_type: str = "blacklist", reason: str | None = None, is_active: int = 1, expires_at: datetime | None = None, description: str | None = None) -> IPRuleEntity:
+    def create_new(
+        cls,
+        ip_address: str,
+        rule_type: str = "blacklist",
+        reason: str | None = None,
+        is_active: int = 1,
+        expires_at: datetime | None = None,
+        description: str | None = None,
+    ) -> IPRuleEntity:
         """创建新IP规则实体的工厂方法。"""
         return cls(
             id=uuid.uuid4().hex,

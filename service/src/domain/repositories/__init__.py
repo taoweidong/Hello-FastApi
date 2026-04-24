@@ -12,4 +12,12 @@ from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.system_config_repository import SystemConfigRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 
-__all__ = ["DepartmentRepositoryInterface", "DictionaryRepositoryInterface", "LogRepositoryInterface", "MenuRepositoryInterface", "RoleRepositoryInterface", "SystemConfigRepositoryInterface", "UserRepositoryInterface"]
+__all__ = [
+    "DepartmentRepositoryInterface",
+    "DictionaryRepositoryInterface",
+    "LogRepositoryInterface",
+    "MenuRepositoryInterface",
+    "RoleRepositoryInterface",
+    "SystemConfigRepositoryInterface",
+    "UserRepositoryInterface",
+]

@@ -14,7 +14,9 @@ from src.infrastructure.logging.logger import log_shutdown, log_startup, logger
 @asynccontextmanager
 async def application_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """生产/开发环境：日志、建表、Redis初始化、关闭连接。"""
-    log_startup(app_name=settings.APP_NAME, version=settings.API_VERSION, docs_url=app.docs_url, redoc_url=app.redoc_url)
+    log_startup(
+        app_name=settings.APP_NAME, version=settings.API_VERSION, docs_url=app.docs_url, redoc_url=app.redoc_url
+    )
     await init_db()
     logger.info("数据库初始化完成")
 

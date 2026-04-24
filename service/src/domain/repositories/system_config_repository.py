@@ -21,7 +21,9 @@ class SystemConfigRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_all(self, page_num: int = 1, page_size: int = 10, key: str | None = None, is_active: int | None = None) -> list[SystemConfigEntity]:
+    async def get_all(
+        self, page_num: int = 1, page_size: int = 10, key: str | None = None, is_active: int | None = None
+    ) -> list[SystemConfigEntity]:
         """获取配置列表（支持分页和筛选）。"""
         ...
 

@@ -6,6 +6,7 @@
 
 from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Any
 
 
 class CachePort(ABC):
@@ -45,7 +46,7 @@ class CachePort(ABC):
     # ---- 用户权限缓存 ----
 
     @abstractmethod
-    async def get_user_permissions(self, user_id: str) -> list[dict] | None:
+    async def get_user_permissions(self, user_id: str) -> list[dict[str, Any]] | None:
         """从缓存获取用户权限列表。
 
         Args:
@@ -57,7 +58,7 @@ class CachePort(ABC):
         ...
 
     @abstractmethod
-    async def set_user_permissions(self, user_id: str, permissions: list[dict]) -> bool:
+    async def set_user_permissions(self, user_id: str, permissions: list[dict[str, Any]]) -> bool:
         """将用户权限列表写入缓存。
 
         Args:
@@ -77,7 +78,7 @@ class CachePort(ABC):
     # ---- 用户信息缓存 ----
 
     @abstractmethod
-    async def get_user_info(self, user_id: str) -> dict | None:
+    async def get_user_info(self, user_id: str) -> dict[str, Any] | None:
         """从缓存获取用户基本信息。
 
         Args:
@@ -89,7 +90,7 @@ class CachePort(ABC):
         ...
 
     @abstractmethod
-    async def set_user_info(self, user_id: str, info: dict) -> bool:
+    async def set_user_info(self, user_id: str, info: dict[str, Any]) -> bool:
         """将用户基本信息写入缓存。"""
         ...
 
@@ -101,7 +102,7 @@ class CachePort(ABC):
     # ---- 菜单全表缓存 ----
 
     @abstractmethod
-    async def get_all_menus(self) -> list[dict] | None:
+    async def get_all_menus(self) -> list[dict[str, Any]] | None:
         """从缓存获取所有菜单列表。
 
         Returns:
@@ -110,7 +111,7 @@ class CachePort(ABC):
         ...
 
     @abstractmethod
-    async def set_all_menus(self, menus: list[dict]) -> bool:
+    async def set_all_menus(self, menus: list[dict[str, Any]]) -> bool:
         """将所有菜单列表写入缓存。"""
         ...
 

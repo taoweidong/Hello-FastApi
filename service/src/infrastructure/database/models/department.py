@@ -30,7 +30,9 @@ class Department(SQLModel, table=True):
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
     parent_id: str | None = Field(default=None, foreign_key="sys_departments.id")  # 父部门ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
-    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    updated_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())
+    )
     description: str | None = Field(default=None, max_length=256)
 
     def to_domain(self) -> "DepartmentEntity":

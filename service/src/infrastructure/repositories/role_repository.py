@@ -35,7 +35,9 @@ class RoleRepository(RoleRepositoryInterface):
         model = await self._crud.get(self.session, code=code, schema_to_select=Role, return_as_model=True)
         return model.to_domain() if model else None
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list[RoleEntity]:
+    async def get_all(
+        self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None
+    ) -> list[RoleEntity]:
         """获取角色列表，支持分页和筛选。"""
         filters: dict[str, Any] = {}
         if role_name:
@@ -43,7 +45,14 @@ class RoleRepository(RoleRepositoryInterface):
         if is_active is not None:
             filters["is_active"] = is_active
 
-        result = await self._crud.get_multi(self.session, offset=(page_num - 1) * page_size, limit=page_size, schema_to_select=Role, return_as_model=True, **filters)
+        result = await self._crud.get_multi(
+            self.session,
+            offset=(page_num - 1) * page_size,
+            limit=page_size,
+            schema_to_select=Role,
+            return_as_model=True,
+            **filters,
+        )
         return [m.to_domain() for m in result.get("data", [])]
 
     async def count(self, role_name: str | None = None, is_active: int | None = None) -> int:
@@ -68,7 +77,18 @@ class RoleRepository(RoleRepositoryInterface):
         from sqlalchemy import update as sa_update
 
         model = Role.from_domain(role)
-        stmt = sa_update(Role).where(Role.id == model.id).values(name=model.name, code=model.code, is_active=model.is_active, creator_id=model.creator_id, modifier_id=model.modifier_id, description=model.description)
+        stmt = (
+            sa_update(Role)
+            .where(Role.id == model.id)
+            .values(
+                name=model.name,
+                code=model.code,
+                is_active=model.is_active,
+                creator_id=model.creator_id,
+                modifier_id=model.modifier_id,
+                description=model.description,
+            )
+        )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(role.id)
@@ -92,7 +112,9 @@ class RoleRepository(RoleRepositoryInterface):
 
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
         """为用户分配角色。"""
-        result = await self.session.exec(select(UserRole).where(UserRole.userinfo_id == user_id, UserRole.userrole_id == role_id))
+        result = await self.session.exec(
+            select(UserRole).where(UserRole.userinfo_id == user_id, UserRole.userrole_id == role_id)
+        )
         if result.one_or_none() is not None:
             return False
 
@@ -109,7 +131,9 @@ class RoleRepository(RoleRepositoryInterface):
 
     async def get_user_roles(self, user_id: str) -> list[RoleEntity]:
         """获取用户的所有角色。"""
-        result = await self.session.exec(select(Role).join(UserRole, UserRole.userrole_id == Role.id).where(UserRole.userinfo_id == user_id))
+        result = await self.session.exec(
+            select(Role).join(UserRole, UserRole.userrole_id == Role.id).where(UserRole.userinfo_id == user_id)
+        )
         return [m.to_domain() for m in result.all()]
 
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
@@ -140,7 +164,12 @@ class RoleRepository(RoleRepositoryInterface):
         """获取角色的菜单列表。"""
         from sqlalchemy.orm import selectinload
 
-        stmt = select(Menu).join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id).where(RoleMenuLink.userrole_id == role_id).options(selectinload(Menu.meta))
+        stmt = (
+            select(Menu)
+            .join(RoleMenuLink, RoleMenuLink.menu_id == Menu.id)
+            .where(RoleMenuLink.userrole_id == role_id)
+            .options(selectinload(Menu.meta))
+        )
         result = await self.session.exec(stmt)
         return [m.to_domain() for m in result.all()]
 
@@ -177,7 +206,11 @@ class RoleRepository(RoleRepositoryInterface):
 
         from collections import defaultdict
 
-        stmt = select(Role, UserRole.userinfo_id).join(UserRole, UserRole.userrole_id == Role.id).where(UserRole.userinfo_id.in_(user_ids))
+        stmt = (
+            select(Role, UserRole.userinfo_id)
+            .join(UserRole, UserRole.userrole_id == Role.id)
+            .where(UserRole.userinfo_id.in_(user_ids))
+        )
         result = await self.session.exec(stmt)
         rows = result.all()
 

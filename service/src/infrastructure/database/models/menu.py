@@ -13,6 +13,8 @@ from sqlmodel import Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from src.domain.entities.menu import MenuEntity
 
+    from .menu_meta import MenuMeta
+
 
 class Menu(SQLModel, table=True):
     """菜单实体模型（路由/组件/权限）。"""
@@ -29,14 +31,22 @@ class Menu(SQLModel, table=True):
     method: str | None = Field(default=None, max_length=10)  # HTTP方法(GET/POST/PUT/DELETE)，用于PERMISSION类型
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
-    parent_id: str | None = Field(default=None, sa_column=Column(String(32), ForeignKey("sys_menus.id"), nullable=True))  # 父菜单ID
-    meta_id: str = Field(sa_column=Column(String(32), ForeignKey("sys_menumeta.id"), nullable=False, unique=True))  # 菜单元数据ID(一对一)
+    parent_id: str | None = Field(
+        default=None, sa_column=Column(String(32), ForeignKey("sys_menus.id"), nullable=True)
+    )  # 父菜单ID
+    meta_id: str = Field(
+        sa_column=Column(String(32), ForeignKey("sys_menumeta.id"), nullable=False, unique=True)
+    )  # 菜单元数据ID(一对一)
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
-    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    updated_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())
+    )
     description: str | None = Field(default=None, max_length=256)
 
     # 关系 - meta一对一关联
-    meta: "MenuMeta" = Relationship(back_populates="menu", sa_relationship_kwargs={"lazy": "selectin", "uselist": False})  # noqa: F821
+    meta: "MenuMeta" = Relationship(
+        back_populates="menu", sa_relationship_kwargs={"lazy": "selectin", "uselist": False}
+    )  # noqa: F821
 
     def to_domain(self) -> "MenuEntity":
         """将 ORM 模型转换为领域实体。"""

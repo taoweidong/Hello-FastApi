@@ -22,7 +22,15 @@ class IPRuleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
-    async def get_ip_rules(self, page_num: int = 1, page_size: int = 10, rule_type: str | None = None, is_active: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[IPRuleEntity], int]:
+    async def get_ip_rules(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        rule_type: str | None = None,
+        is_active: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[IPRuleEntity], int]:
         """获取 IP 规则列表。"""
         ...
 

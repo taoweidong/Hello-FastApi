@@ -22,11 +22,15 @@ class ExceptionHandlerRegistry:
 
         @self._app.exception_handler(AppError)
         async def app_exception_handler(request: Request, exc: AppError) -> JSONResponse:
-            return JSONResponse(status_code=exc.status_code, content={"code": exc.status_code, "message": str(exc.detail)})
+            return JSONResponse(
+                status_code=exc.status_code, content={"code": exc.status_code, "message": str(exc.detail)}
+            )
 
         @self._app.exception_handler(RequestValidationError)
         async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-            return JSONResponse(status_code=422, content={"code": 422, "message": "参数验证失败", "errors": exc.errors()})
+            return JSONResponse(
+                status_code=422, content={"code": 422, "message": "参数验证失败", "errors": exc.errors()}
+            )
 
         @self._app.exception_handler(Exception)
         async def general_exception_handler(request: Request, exc: Exception) -> JSONResponse:

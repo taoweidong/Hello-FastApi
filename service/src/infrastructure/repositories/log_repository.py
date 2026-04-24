@@ -25,7 +25,14 @@ class LogRepository(LogRepositoryInterface):
 
     # ============ 登录日志 (sys_userloginlog) ============
 
-    async def get_login_logs(self, page_num: int = 1, page_size: int = 10, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLogEntity], int]:
+    async def get_login_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        status: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[LoginLogEntity], int]:
         """获取登录日志列表（支持筛选和分页）。"""
         query = select(LoginLog)
         count_query = select(sa_func.count()).select_from(LoginLog)
@@ -66,6 +73,7 @@ class LogRepository(LogRepositoryInterface):
         if not log_ids:
             return 0
         from sqlalchemy import delete as sa_delete
+
         stmt = sa_delete(LoginLog).where(LoginLog.id.in_(log_ids))
         result = await self.session.execute(stmt)
         await self.session.flush()
@@ -84,7 +92,15 @@ class LogRepository(LogRepositoryInterface):
 
     # ============ 统一操作日志 (sys_logs) ============
 
-    async def get_operation_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLogEntity], int]:
+    async def get_operation_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        status_code: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[OperationLogEntity], int]:
         """获取操作日志列表（支持筛选和分页）。"""
         query = select(SystemLog)
         count_query = select(sa_func.count()).select_from(SystemLog)
@@ -125,7 +141,9 @@ class LogRepository(LogRepositoryInterface):
 
     async def get_operation_log_detail(self, log_id: str) -> OperationLogEntity | None:
         """获取操作日志详情。"""
-        model = await self._system_log_crud.get(self.session, id=log_id, schema_to_select=SystemLog, return_as_model=True)
+        model = await self._system_log_crud.get(
+            self.session, id=log_id, schema_to_select=SystemLog, return_as_model=True
+        )
         return model.to_domain() if model else None
 
     async def delete_operation_logs(self, log_ids: list[str]) -> int:
@@ -133,6 +151,7 @@ class LogRepository(LogRepositoryInterface):
         if not log_ids:
             return 0
         from sqlalchemy import delete as sa_delete
+
         stmt = sa_delete(SystemLog).where(SystemLog.id.in_(log_ids))
         result = await self.session.execute(stmt)
         await self.session.flush()
@@ -151,7 +170,15 @@ class LogRepository(LogRepositoryInterface):
 
     # ============ 系统日志（与操作日志共享 sys_logs 表） ============
 
-    async def get_system_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLogEntity], int]:
+    async def get_system_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        status_code: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[OperationLogEntity], int]:
         """获取系统日志列表（支持筛选和分页）。与操作日志共享同一张表。"""
         query = select(SystemLog)
         count_query = select(sa_func.count()).select_from(SystemLog)

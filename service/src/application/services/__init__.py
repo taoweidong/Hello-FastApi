@@ -9,4 +9,13 @@ from src.application.services.role_service import RoleService
 from src.application.services.system_config_service import SystemConfigService
 from src.application.services.user_service import UserService
 
-__all__ = ["AuthService", "DepartmentService", "DictionaryService", "LogService", "MenuService", "RoleService", "SystemConfigService", "UserService"]
+__all__ = [
+    "AuthService",
+    "DepartmentService",
+    "DictionaryService",
+    "LogService",
+    "MenuService",
+    "RoleService",
+    "SystemConfigService",
+    "UserService",
+]

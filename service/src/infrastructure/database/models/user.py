@@ -28,7 +28,9 @@ class User(SQLModel, table=True):
     last_name: str = Field(default="", max_length=150)  # 姓
     is_staff: int = Field(default=0)  # 是否为职员
     is_active: int = Field(default=1)  # 是否启用
-    date_joined: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))  # 注册时间
+    date_joined: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now())
+    )  # 注册时间
     mode_type: int = Field(default=0)  # 权限模式(0-OR, 1-AND)
     avatar: str | None = Field(default=None, max_length=100)  # 头像URL
     nickname: str = Field(default="", max_length=150)  # 昵称
@@ -37,9 +39,13 @@ class User(SQLModel, table=True):
     email: str = Field(default="", max_length=254)  # 邮箱
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
-    dept_id: str | None = Field(default=None, sa_column=Column(String(32), ForeignKey("sys_departments.id"), nullable=True))  # 部门ID
+    dept_id: str | None = Field(
+        default=None, sa_column=Column(String(32), ForeignKey("sys_departments.id"), nullable=True)
+    )  # 部门ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
-    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    updated_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())
+    )
     description: str | None = Field(default=None, max_length=256)
 
     # 关系 - 使用字符串引用避免循环导入

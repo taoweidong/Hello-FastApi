@@ -3,7 +3,12 @@
 提供字典相关的业务逻辑，包括字典的增删改查等操作。
 """
 
-from src.application.dto.dictionary_dto import DictionaryCreateDTO, DictionaryListQueryDTO, DictionaryResponseDTO, DictionaryUpdateDTO
+from src.application.dto.dictionary_dto import (
+    DictionaryCreateDTO,
+    DictionaryListQueryDTO,
+    DictionaryResponseDTO,
+    DictionaryUpdateDTO,
+)
 from src.domain.entities.dictionary import DictionaryEntity
 from src.domain.exceptions import BusinessError, NotFoundError
 from src.domain.repositories.dictionary_repository import DictionaryRepositoryInterface
@@ -98,4 +103,15 @@ class DictionaryService:
     @staticmethod
     def _to_response(dictionary: DictionaryEntity) -> DictionaryResponseDTO:
         """将字典实体转换为响应 DTO。"""
-        return DictionaryResponseDTO(id=dictionary.id, parentId=dictionary.parent_id, name=dictionary.name, label=dictionary.label, value=dictionary.value, sort=dictionary.sort, isActive=dictionary.is_active, createdTime=dictionary.created_time, updatedTime=dictionary.updated_time, description=dictionary.description)
+        return DictionaryResponseDTO(
+            id=dictionary.id,
+            parentId=dictionary.parent_id,
+            name=dictionary.name,
+            label=dictionary.label,
+            value=dictionary.value,
+            sort=dictionary.sort,
+            isActive=dictionary.is_active,
+            createdTime=dictionary.created_time,
+            updatedTime=dictionary.updated_time,
+            description=dictionary.description,
+        )

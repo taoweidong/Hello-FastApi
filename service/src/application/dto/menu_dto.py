@@ -63,7 +63,20 @@ class MenuCreateDTO(BaseModel):
     fixedTag: int = Field(default=0, description="固定标签页")
     dynamicLevel: int = Field(default=0, description="动态路由层级")
 
-    @field_validator("name", "path", "component", "method", "description", "title", "icon", "rSvgName", "frameUrl", "transitionEnter", "transitionLeave", mode="before")
+    @field_validator(
+        "name",
+        "path",
+        "component",
+        "method",
+        "description",
+        "title",
+        "icon",
+        "rSvgName",
+        "frameUrl",
+        "transitionEnter",
+        "transitionLeave",
+        mode="before",
+    )
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""
@@ -105,7 +118,20 @@ class MenuUpdateDTO(BaseModel):
     fixedTag: int | None = Field(default=None, description="固定标签页")
     dynamicLevel: int | None = Field(default=None, description="动态路由层级")
 
-    @field_validator("name", "path", "component", "method", "description", "title", "icon", "rSvgName", "frameUrl", "transitionEnter", "transitionLeave", mode="before")
+    @field_validator(
+        "name",
+        "path",
+        "component",
+        "method",
+        "description",
+        "title",
+        "icon",
+        "rSvgName",
+        "frameUrl",
+        "transitionEnter",
+        "transitionLeave",
+        mode="before",
+    )
     @classmethod
     def validate_empty_str(cls, v: str | None) -> str | None:
         """将空字符串转换为 None。"""

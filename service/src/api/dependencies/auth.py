@@ -41,7 +41,11 @@ async def get_current_user_id(
     return str(user_id)
 
 
-async def get_current_active_user(user_id: str = Depends(get_current_user_id), db: AsyncSession = Depends(get_db), cache_service: CacheService = Depends(get_cache_service)) -> dict:
+async def get_current_active_user(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    cache_service: CacheService = Depends(get_cache_service),
+) -> dict:
     """从缓存或数据库获取当前活跃用户。"""
     # 优先从缓存获取
     cached_info = await cache_service.get_user_info(user_id)
@@ -58,7 +62,13 @@ async def get_current_active_user(user_id: str = Depends(get_current_user_id), d
     if not user.is_active_user:
         raise UnauthorizedError("用户账号已被禁用")
 
-    user_info = {"id": user.id, "username": user.username, "email": user.email, "is_superuser": user.is_superuser, "is_active": user.is_active}
+    user_info = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "is_superuser": user.is_superuser,
+        "is_active": user.is_active,
+    }
     # 写入缓存（失败不影响主流程）
     await cache_service.set_user_info(user_id, user_info)
     return user_info
@@ -71,7 +81,11 @@ def require_permission(code: str):
     和name字段来实现按钮级权限控制。code参数现在对应menu.name。
     """
 
-    async def permission_checker(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), cache_service: CacheService = Depends(get_cache_service)) -> dict:
+    async def permission_checker(
+        current_user: dict = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_db),
+        cache_service: CacheService = Depends(get_cache_service),
+    ) -> dict:
         if current_user["is_superuser"]:
             return current_user
 
@@ -114,7 +128,11 @@ def require_menu_permission(path: str, method: str):
     基于Menu.path和Menu.method检查API级权限。
     """
 
-    async def permission_checker(current_user: dict = Depends(get_current_active_user), db: AsyncSession = Depends(get_db), cache_service: CacheService = Depends(get_cache_service)) -> dict:
+    async def permission_checker(
+        current_user: dict = Depends(get_current_active_user),
+        db: AsyncSession = Depends(get_db),
+        cache_service: CacheService = Depends(get_cache_service),
+    ) -> dict:
         if current_user["is_superuser"]:
             return current_user
 

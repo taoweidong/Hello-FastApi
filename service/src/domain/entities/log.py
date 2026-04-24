@@ -53,7 +53,16 @@ class LoginLogEntity:
     # ---- 工厂方法 ----
 
     @classmethod
-    def create_new(cls, status: int = 1, ipaddress: str | None = None, browser: str | None = None, system: str | None = None, agent: str | None = None, login_type: int = 0, description: str | None = None) -> LoginLogEntity:
+    def create_new(
+        cls,
+        status: int = 1,
+        ipaddress: str | None = None,
+        browser: str | None = None,
+        system: str | None = None,
+        agent: str | None = None,
+        login_type: int = 0,
+        description: str | None = None,
+    ) -> LoginLogEntity:
         """创建新登录日志实体的工厂方法。"""
         return cls(
             id=uuid.uuid4().hex,

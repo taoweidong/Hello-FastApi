@@ -1,18 +1,30 @@
 """应用层 - 用户服务。"""
 
-from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserListQueryDTO, UserResponseDTO, UserUpdateDTO
+from src.application.dto.user_dto import (
+    ChangePasswordDTO,
+    UserCreateDTO,
+    UserListQueryDTO,
+    UserResponseDTO,
+    UserUpdateDTO,
+)
 from src.domain.entities.user import UserEntity
 from src.domain.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
-from src.domain.services.password_service import PasswordService
 from src.domain.services.cache_port import CachePort
+from src.domain.services.password_service import PasswordService
 
 
 class UserService:
     """用户领域操作的应用服务。"""
 
-    def __init__(self, repo: UserRepositoryInterface, password_service: PasswordService, role_repo: RoleRepositoryInterface, cache_service: CachePort | None = None):
+    def __init__(
+        self,
+        repo: UserRepositoryInterface,
+        password_service: PasswordService,
+        role_repo: RoleRepositoryInterface,
+        cache_service: CachePort | None = None,
+    ):
         self.repo = repo
         self.password_service = password_service
         self.role_repo = role_repo
@@ -61,9 +73,19 @@ class UserService:
         if dept_id == "" or dept_id == "0":
             dept_id = None
 
-        users = await self.repo.get_all(page_num=query.pageNum, page_size=query.pageSize, username=query.username, phone=query.phone, email=query.email, is_active=query.isActive, dept_id=dept_id)
+        users = await self.repo.get_all(
+            page_num=query.pageNum,
+            page_size=query.pageSize,
+            username=query.username,
+            phone=query.phone,
+            email=query.email,
+            is_active=query.isActive,
+            dept_id=dept_id,
+        )
 
-        total = await self.repo.count(username=query.username, phone=query.phone, email=query.email, is_active=query.isActive, dept_id=dept_id)
+        total = await self.repo.count(
+            username=query.username, phone=query.phone, email=query.email, is_active=query.isActive, dept_id=dept_id
+        )
 
         # 批量获取所有用户的角色
         user_ids = [u.id for u in users]

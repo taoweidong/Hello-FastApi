@@ -3,7 +3,12 @@
 提供部门相关的业务逻辑，包括部门的增删改查等操作。
 """
 
-from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentResponseDTO, DepartmentUpdateDTO
+from src.application.dto.department_dto import (
+    DepartmentCreateDTO,
+    DepartmentListQueryDTO,
+    DepartmentResponseDTO,
+    DepartmentUpdateDTO,
+)
 from src.domain.entities.department import DepartmentEntity
 from src.domain.exceptions import BusinessError, ConflictError, NotFoundError
 from src.domain.repositories.department_repository import DepartmentRepositoryInterface
@@ -102,5 +107,17 @@ class DepartmentService:
     def _to_response(dept: DepartmentEntity) -> DepartmentResponseDTO:
         """将部门实体转换为响应 DTO。"""
         return DepartmentResponseDTO(
-            id=dept.id, parentId=dept.parent_id, name=dept.name, modeType=dept.mode_type, code=dept.code, rank=dept.rank, autoBind=dept.auto_bind, isActive=dept.is_active, creatorId=dept.creator_id, modifierId=dept.modifier_id, createdTime=dept.created_time, updatedTime=dept.updated_time, description=dept.description
+            id=dept.id,
+            parentId=dept.parent_id,
+            name=dept.name,
+            modeType=dept.mode_type,
+            code=dept.code,
+            rank=dept.rank,
+            autoBind=dept.auto_bind,
+            isActive=dept.is_active,
+            creatorId=dept.creator_id,
+            modifierId=dept.modifier_id,
+            createdTime=dept.created_time,
+            updatedTime=dept.updated_time,
+            description=dept.description,
         )

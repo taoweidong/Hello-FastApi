@@ -49,7 +49,20 @@ class MenuRepository(MenuRepositoryInterface):
         stmt = (
             sa_update(Menu)
             .where(Menu.id == menu.id)
-            .values(menu_type=menu.menu_type, name=menu.name, rank=menu.rank, path=menu.path, component=menu.component, is_active=menu.is_active, method=menu.method, creator_id=menu.creator_id, modifier_id=menu.modifier_id, parent_id=menu.parent_id, meta_id=menu.meta_id, description=menu.description)
+            .values(
+                menu_type=menu.menu_type,
+                name=menu.name,
+                rank=menu.rank,
+                path=menu.path,
+                component=menu.component,
+                is_active=menu.is_active,
+                method=menu.method,
+                creator_id=menu.creator_id,
+                modifier_id=menu.modifier_id,
+                parent_id=menu.parent_id,
+                meta_id=menu.meta_id,
+                description=menu.description,
+            )
         )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
@@ -95,7 +108,9 @@ class MenuRepository(MenuRepositoryInterface):
 
     async def get_by_parent_id(self, parent_id: str | None) -> list[MenuEntity]:
         """根据父菜单 ID 获取子菜单，按排序号排序。"""
-        result = await self._crud.get_multi(self.session, parent_id=parent_id, schema_to_select=Menu, return_as_model=True, return_total_count=False)
+        result = await self._crud.get_multi(
+            self.session, parent_id=parent_id, schema_to_select=Menu, return_as_model=True, return_total_count=False
+        )
         menus = result.get("data", [])
         return sorted([m.to_domain() for m in menus], key=lambda m: m.rank)
 

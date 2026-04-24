@@ -10,7 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.constants import API_SYSTEM_PREFIX
 from src.api.v1 import system_router
 from src.config.settings import settings
-from src.infrastructure.http import IPFilterMiddleware, RequestLoggingMiddleware, get_ip_filter_cache, register_exception_handlers
+from src.infrastructure.http import (
+    IPFilterMiddleware,
+    RequestLoggingMiddleware,
+    get_ip_filter_cache,
+    register_exception_handlers,
+)
 from src.infrastructure.lifecycle import application_lifespan
 
 LifespanFactory = Callable[[FastAPI], AbstractAsyncContextManager[Any]]
@@ -23,9 +28,23 @@ def create_app(*, lifespan_override: LifespanFactory | None = None) -> FastAPI:
         lifespan_override: 自定义生命周期；默认执行数据库初始化与关闭。
     """
     life = lifespan_override if lifespan_override is not None else application_lifespan
-    app = FastAPI(title=settings.APP_NAME, description="FastAPI + DDD + RBAC API Service", version=settings.API_VERSION, docs_url="/docs", redoc_url="/redoc", openapi_url="/openapi.json", lifespan=life)
+    app = FastAPI(
+        title=settings.APP_NAME,
+        description="FastAPI + DDD + RBAC API Service",
+        version=settings.API_VERSION,
+        docs_url="/docs",
+        redoc_url="/redoc",
+        openapi_url="/openapi.json",
+        lifespan=life,
+    )
 
-    app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins_list, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins_list,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(IPFilterMiddleware)
 

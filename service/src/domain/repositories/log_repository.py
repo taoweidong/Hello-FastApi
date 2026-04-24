@@ -23,7 +23,14 @@ class LogRepositoryInterface(ABC):
 
     # 登录日志
     @abstractmethod
-    async def get_login_logs(self, page_num: int = 1, page_size: int = 10, status: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[LoginLogEntity], int]:
+    async def get_login_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        status: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[LoginLogEntity], int]:
         """获取登录日志列表。"""
         ...
 
@@ -44,7 +51,15 @@ class LogRepositoryInterface(ABC):
 
     # 统一操作日志(sys_logs)
     @abstractmethod
-    async def get_operation_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLogEntity], int]:
+    async def get_operation_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        status_code: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[OperationLogEntity], int]:
         """获取操作日志列表。"""
         ...
 
@@ -70,7 +85,15 @@ class LogRepositoryInterface(ABC):
 
     # 系统日志(与操作日志共享 sys_logs 表，仅查询)
     @abstractmethod
-    async def get_system_logs(self, page_num: int = 1, page_size: int = 10, module: str | None = None, status_code: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[OperationLogEntity], int]:
+    async def get_system_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        status_code: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[OperationLogEntity], int]:
         """获取系统日志列表。"""
         ...
 

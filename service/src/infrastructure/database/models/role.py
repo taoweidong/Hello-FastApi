@@ -26,7 +26,9 @@ class Role(SQLModel, table=True):
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
-    updated_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now()))
+    updated_time: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())
+    )
     description: str | None = Field(default=None, max_length=256)
 
     # 关系 - 使用字符串引用避免循环导入
@@ -36,12 +38,32 @@ class Role(SQLModel, table=True):
         """将 ORM 模型转换为领域实体。"""
         from src.domain.entities.role import RoleEntity
 
-        return RoleEntity(id=self.id, name=self.name, code=self.code, is_active=self.is_active, creator_id=self.creator_id, modifier_id=self.modifier_id, created_time=self.created_time, updated_time=self.updated_time, description=self.description)
+        return RoleEntity(
+            id=self.id,
+            name=self.name,
+            code=self.code,
+            is_active=self.is_active,
+            creator_id=self.creator_id,
+            modifier_id=self.modifier_id,
+            created_time=self.created_time,
+            updated_time=self.updated_time,
+            description=self.description,
+        )
 
     @classmethod
     def from_domain(cls, entity: "RoleEntity") -> "Role":
         """从领域实体创建 ORM 模型实例。"""
-        return cls(id=entity.id, name=entity.name, code=entity.code, is_active=entity.is_active, creator_id=entity.creator_id, modifier_id=entity.modifier_id, created_time=entity.created_time, updated_time=entity.updated_time, description=entity.description)
+        return cls(
+            id=entity.id,
+            name=entity.name,
+            code=entity.code,
+            is_active=entity.is_active,
+            creator_id=entity.creator_id,
+            modifier_id=entity.modifier_id,
+            created_time=entity.created_time,
+            updated_time=entity.updated_time,
+            description=entity.description,
+        )
 
     def __repr__(self) -> str:
         return f"<Role(id={self.id}, name={self.name})>"

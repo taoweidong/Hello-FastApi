@@ -109,11 +109,19 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_update_is_active_success(self, user_service, mock_user_repo):
         """测试更新用户活跃状态成功。"""
-        mock_user_repo.update_status = AsyncMock(return_value=True)
+        test_user = UserEntity(
+            id="test-id",
+            username="testuser",
+            password="hashed",
+            is_active=1,
+        )
+        mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
+        mock_user_repo.update = AsyncMock(return_value=test_user)
 
         with patch.object(user_service, "repo", mock_user_repo):
-            result = await user_service.update_status("test-id", False)
+            result = await user_service.update_status("test-id", 0)
             assert result is True
+            assert test_user.is_active == 0
 
     @pytest.mark.asyncio
     async def test_update_is_active_not_found(self, user_service, mock_user_repo):

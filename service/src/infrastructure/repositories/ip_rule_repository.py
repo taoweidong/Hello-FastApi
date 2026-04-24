@@ -22,7 +22,15 @@ class IPRuleRepository(IPRuleRepositoryInterface):
         self.session = session
         self._crud = FastCRUD(IPRule)
 
-    async def get_ip_rules(self, page_num: int = 1, page_size: int = 10, rule_type: str | None = None, is_active: int | None = None, start_time: datetime | None = None, end_time: datetime | None = None) -> tuple[list[IPRuleEntity], int]:
+    async def get_ip_rules(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        rule_type: str | None = None,
+        is_active: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+    ) -> tuple[list[IPRuleEntity], int]:
         """获取 IP 规则列表（支持筛选和分页）。"""
         query = select(IPRule)
         count_query = select(sa_func.count()).select_from(IPRule)
@@ -70,7 +78,20 @@ class IPRuleRepository(IPRuleRepositoryInterface):
         """更新 IP 规则。"""
         from sqlalchemy import update as sa_update
 
-        stmt = sa_update(IPRule).where(IPRule.id == rule.id).values(ip_address=rule.ip_address, rule_type=rule.rule_type, reason=rule.reason, is_active=rule.is_active, creator_id=rule.creator_id, modifier_id=rule.modifier_id, expires_at=rule.expires_at, description=rule.description)
+        stmt = (
+            sa_update(IPRule)
+            .where(IPRule.id == rule.id)
+            .values(
+                ip_address=rule.ip_address,
+                rule_type=rule.rule_type,
+                reason=rule.reason,
+                is_active=rule.is_active,
+                creator_id=rule.creator_id,
+                modifier_id=rule.modifier_id,
+                expires_at=rule.expires_at,
+                description=rule.description,
+            )
+        )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_ip_rule_by_id(rule.id)
@@ -81,6 +102,7 @@ class IPRuleRepository(IPRuleRepositoryInterface):
         if not rule_ids:
             return 0
         from sqlalchemy import delete as sa_delete
+
         stmt = sa_delete(IPRule).where(IPRule.id.in_(rule_ids))
         result = await self.session.execute(stmt)
         await self.session.flush()

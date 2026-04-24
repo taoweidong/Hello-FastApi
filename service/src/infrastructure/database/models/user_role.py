@@ -16,8 +16,12 @@ class UserRole(SQLModel, table=True):
     __tablename__ = "sys_userinfo_roles"
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
-    userinfo_id: str = Field(sa_column=Column(String(32), ForeignKey("sys_users.id", ondelete="CASCADE"), nullable=False))
-    userrole_id: str = Field(sa_column=Column(String(32), ForeignKey("sys_roles.id", ondelete="CASCADE"), nullable=False))
+    userinfo_id: str = Field(
+        sa_column=Column(String(32), ForeignKey("sys_users.id", ondelete="CASCADE"), nullable=False)
+    )
+    userrole_id: str = Field(
+        sa_column=Column(String(32), ForeignKey("sys_roles.id", ondelete="CASCADE"), nullable=False)
+    )
 
     # 关系 - 使用字符串引用避免循环导入
     user: Optional["User"] = Relationship(back_populates="roles")  # noqa: F821

@@ -30,6 +30,7 @@ class DatabaseManager:
 
         # 为 SQLite 启用外键约束
         if url.startswith("sqlite"):
+
             @event.listens_for(self._engine.sync_engine, "connect")
             def _set_sqlite_pragma(dbapi_connection, connection_record):
                 cursor = dbapi_connection.cursor()
