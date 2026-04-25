@@ -25,6 +25,30 @@ class DepartmentService:
         departments = await self.dept_repo.get_filtered(name=query.name, is_active=query.isActive)
         return [self._to_response(d) for d in departments]
 
+    async def get_dept_tree(self) -> list[dict]:
+        """获取部门树形结构。"""
+        all_depts = await self.dept_repo.get_all()
+        return self._build_tree(all_depts, None)
+
+    def _build_tree(self, depts: list[DepartmentEntity], parent_id: str | None) -> list[dict]:
+        """构建部门树形结构。"""
+        tree = []
+        for dept in depts:
+            if dept.parent_id == parent_id:
+                node = {
+                    "id": dept.id,
+                    "parentId": dept.parent_id,
+                    "name": dept.name,
+                    "code": dept.code,
+                    "rank": dept.rank,
+                    "isActive": dept.is_active,
+                }
+                children = self._build_tree(depts, dept.id)
+                if children:
+                    node["children"] = children
+                tree.append(node)
+        return sorted(tree, key=lambda x: x.get("rank", 0))
+
     async def create_department(self, dto: DepartmentCreateDTO) -> DepartmentResponseDTO:
         """创建部门。"""
         # 检查名称唯一性

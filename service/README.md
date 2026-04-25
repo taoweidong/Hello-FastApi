@@ -151,6 +151,14 @@ mypy src/             # 类型检查
 | [测试](docs/guide/testing.md) | 测试策略、编写测试、覆盖率配置 |
 | [架构设计](docs/design/项目架构设计与约束.md) | DDD 分层架构、依赖约束、代码示例 |
 
+## 📊 代码质量报告
+
+| 报告 | 说明 |
+|------|------|
+| [代码质量分析报告](docs/code-quality-report.md) | Ruff/MyPy/Pytest 检查结果、架构分析、改进建议 |
+| [系统框架分析报告](docs/design/系统框架分析报告.md) | 架构分层分析、问题清单、改进计划 |
+| [大型项目演进路线图](docs/design/大型项目演进路线图.md) | 分阶段改进计划 |
+
 ## 许可证
 
 MIT License

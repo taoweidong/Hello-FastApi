@@ -11,7 +11,7 @@ from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
-from src.domain.exceptions import BusinessError, UnauthorizedError
+from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
 
@@ -257,3 +257,144 @@ class TestAuthService:
         assert result["title"] == "test"
         assert result["showLink"] is True
         assert result["keepAlive"] is False
+
+    @pytest.mark.asyncio
+    async def test_register_create_returns_none(self, auth_service, mock_user_repo, mock_password_service):
+        """测试注册时 create 返回 None。"""
+        mock_user_repo.get_by_username = AsyncMock(return_value=None)
+        mock_user_repo.create = AsyncMock(return_value=None)
+
+        dto = RegisterDTO(username="newuser", password="TestPass123", nickname="新用户")
+        with pytest.raises(NotFoundError) as exc_info:
+            await auth_service.register(dto)
+        assert "无法加载" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_logout_invalid_token(self, auth_service, mock_cache_service):
+        """测试登出时无效的 token。"""
+        result = await auth_service.logout("invalid-token")
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_logout_token_no_exp(self, auth_service, mock_cache_service, token_service):
+        """测试登出时 token 没有 exp。"""
+        from src.domain.services.token_service import TokenService
+        # Create a token with zero expiry to avoid 'exp' claim
+        minimal_service = TokenService(secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=0, refresh_expire_days=0)
+        token = minimal_service.create_access_token({"sub": "user-1"})
+        # token has no 'exp' -> should return True without calling cache
+        mock_cache_service.add_token_to_blacklist = AsyncMock(return_value=True)
+        result = await auth_service.logout(token)
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_get_async_routes_superuser_cached(self, auth_service, mock_user_repo, mock_cache_service):
+        """测试超级用户获取动态路由（命中缓存）。"""
+        user = UserEntity(id="su-1", username="admin", password="hash", is_superuser=1)
+        mock_user_repo.get_by_id = AsyncMock(return_value=user)
+        cached_menus = [
+            {"id": "1", "menu_type": 0, "name": "home", "rank": 1, "path": "/home", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": "m1", "created_time": None, "updated_time": None, "description": None, "meta": {"id": "m1", "title": "首页", "icon": "", "r_svg_name": "", "is_show_menu": 1, "is_show_parent": 0, "is_keepalive": 0, "frame_url": "", "frame_loading": 1, "transition_enter": "", "transition_leave": "", "is_hidden_tag": 0, "fixed_tag": 0, "dynamic_level": 0}},
+        ]
+        mock_cache_service.get_all_menus = AsyncMock(return_value=cached_menus)
+
+        routes = await auth_service.get_async_routes("su-1")
+        assert len(routes) == 1
+        assert routes[0]["name"] == "home"
+
+    @pytest.mark.asyncio
+    async def test_get_async_routes_normal_user(self, auth_service, mock_user_repo, mock_role_repo):
+        """测试普通用户获取动态路由。"""
+        user = UserEntity(id="u-1", username="normal", password="hash", is_superuser=0)
+        mock_user_repo.get_by_id = AsyncMock(return_value=user)
+        mock_role_repo.get_user_all_menus = AsyncMock(return_value=[])
+
+        routes = await auth_service.get_async_routes("u-1")
+        assert routes == []
+
+    def test_build_route_tree_empty(self, auth_service):
+        """测试构建空路由树。"""
+        tree = auth_service._build_route_tree([])
+        assert tree == []
+
+    def test_build_route_tree_single(self, auth_service):
+        """测试构建单节点路由树。"""
+        meta = MenuMetaEntity(id="m1", title="首页", icon="home")
+        menus = [MenuEntity(id="1", name="home", menu_type=0, path="/home", rank=1, meta=meta)]
+        tree = auth_service._build_route_tree(menus)
+        assert len(tree) == 1
+        assert tree[0]["name"] == "home"
+        assert "children" not in tree[0]
+
+    def test_menu_entity_to_dict_with_meta(self, auth_service):
+        """测试 _menu_entity_to_dict 含 meta。"""
+        meta = MenuMetaEntity(id="m1", title="测试", icon="home", r_svg_name="ri-home", is_show_menu=1, is_show_parent=0, is_keepalive=1, frame_url="", frame_loading=1, transition_enter="", transition_leave="", is_hidden_tag=0, fixed_tag=0, dynamic_level=0)
+        menu = MenuEntity(id="1", name="test", menu_type=0, path="/test", rank=1, is_active=1, component="", method="", creator_id=None, modifier_id=None, parent_id=None, meta_id="m1", description=None, meta=meta)
+        result = auth_service._menu_entity_to_dict(menu)
+        assert result["id"] == "1"
+        assert result["name"] == "test"
+        assert result["meta"]["title"] == "测试"
+        assert result["meta"]["icon"] == "home"
+
+    def test_menu_entity_to_dict_without_meta(self, auth_service):
+        """测试 _menu_entity_to_dict 不含 meta。"""
+        menu = MenuEntity(id="1", name="test", menu_type=0, path="/test", rank=1)
+        result = auth_service._menu_entity_to_dict(menu)
+        assert result["id"] == "1"
+        assert "meta" not in result
+
+    def test_menu_dict_to_entity_with_meta(self, auth_service):
+        """测试 _menu_dict_to_entity 含 meta。"""
+        data = {"id": "1", "menu_type": 0, "name": "test", "rank": 1, "path": "/test", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": "m1", "created_time": None, "updated_time": None, "description": None, "meta": {"id": "m1", "title": "测试", "icon": "home", "r_svg_name": "", "is_show_menu": 1, "is_show_parent": 0, "is_keepalive": 0, "frame_url": "", "frame_loading": 1, "transition_enter": "", "transition_leave": "", "is_hidden_tag": 0, "fixed_tag": 0, "dynamic_level": 0}}
+        entity = auth_service._menu_dict_to_entity(data)
+        assert entity.id == "1"
+        assert entity.meta is not None
+        assert entity.meta.title == "测试"
+
+    def test_menu_dict_to_entity_without_meta(self, auth_service):
+        """测试 _menu_dict_to_entity 不含 meta。"""
+        data = {"id": "1", "menu_type": 0, "name": "test", "rank": 1, "path": "/test", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": None, "created_time": None, "updated_time": None, "description": None}
+        entity = auth_service._menu_dict_to_entity(data)
+        assert entity.id == "1"
+        assert entity.meta is None
+
+    @pytest.mark.asyncio
+    async def test_refresh_token_no_sub_claim(self, auth_service, mock_user_repo, token_service):
+        """测试刷新令牌时 payload 缺少 sub。"""
+        import jwt as pyjwt
+        # Forge a refresh token with no "sub" claim but valid structure
+        forged = pyjwt.encode({"type": "refresh", "exp": 9999999999}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
+        with pytest.raises(UnauthorizedError):
+            await auth_service.refresh_token(forged)
+
+    @pytest.mark.asyncio
+    async def test_logout_token_no_exp_claim(self, auth_service, mock_cache_service, token_service):
+        """测试登出时 token 无 exp 声明。"""
+        import jwt as pyjwt
+        forged = pyjwt.encode({"sub": "user-1", "type": "access"}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
+        result = await auth_service.logout(forged)
+        assert result is True
+
+    def test_build_meta_partial(self, auth_service):
+        """测试构建 meta 对象（只有部分字段）。"""
+        meta = MenuMetaEntity(id="m1", title="部分")
+        menu = MenuEntity(id="1", name="test", meta=meta)
+        result = auth_service._build_meta(menu)
+        assert result["title"] == "部分"
+        assert result["icon"] == ""
+        assert result["transition"] == {}
+
+    @pytest.mark.asyncio
+    async def test_login_superuser_cached_menus(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service):
+        """测试超级用户登录时菜单从缓存读取。"""
+        user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=1)
+        mock_user_repo.get_by_username = AsyncMock(return_value=user)
+        mock_role_repo.get_all = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
+        cached_menus = [
+            {"id": "1", "menu_type": 2, "name": "btn:add", "rank": 1, "path": "", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": "p1", "meta_id": None, "created_time": None, "updated_time": None, "description": None}
+        ]
+        mock_cache_service.get_all_menus = AsyncMock(return_value=cached_menus)
+
+        dto = LoginDTO(username="admin", password="TestPass123")
+        result = await auth_service.login(dto)
+        assert "accessToken" in result
+        assert "btn:add" in result["permissions"]

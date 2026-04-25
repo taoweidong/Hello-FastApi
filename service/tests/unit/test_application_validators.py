@@ -197,3 +197,39 @@ class TestNormalizeOptionalId:
 
     def test_non_zero_string(self):
         assert normalize_optional_id("123") == "123"
+
+
+@pytest.mark.unit
+class TestValidateUsernameEdgeCases:
+    """validate_username 边界输入。"""
+
+    def test_digit_only(self):
+        assert validate_username("1234567890") == "1234567890"
+
+    def test_underscore_only(self):
+        assert validate_username("___") == "___"
+
+    def test_mixed_pattern(self):
+        assert validate_username("a1_b2_c3") == "a1_b2_c3"
+
+
+@pytest.mark.unit
+class TestEmptyStrOrZeroToNoneEdgeCases:
+    """empty_str_or_zero_to_none 边界输入。"""
+
+    def test_boolean_false(self):
+        assert empty_str_or_zero_to_none(False) is None
+
+    def test_float_zero(self):
+        assert empty_str_or_zero_to_none(0.0) is None
+
+
+@pytest.mark.unit
+class TestNormalizeOptionalIdEdgeCases:
+    """normalize_optional_id 边界输入。"""
+
+    def test_negative_int(self):
+        assert normalize_optional_id(-1) == "-1"
+
+    def test_float_value(self):
+        assert normalize_optional_id(1.5) == 1.5

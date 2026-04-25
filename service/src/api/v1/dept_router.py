@@ -5,7 +5,7 @@
 路由直接挂在 /api/system 路径下（无额外前缀）。
 """
 
-from classy_fastapi import Routable, delete, post, put
+from classy_fastapi import Routable, delete, get, post, put
 from fastapi import Body, Depends
 
 from src.api.common import success_response
@@ -63,3 +63,13 @@ class DeptRouter(Routable):
         """删除部门。"""
         await service.delete_department(dept_id)
         return success_response(message="删除成功")
+
+    @get("/dept/tree")
+    async def get_dept_tree(
+        self,
+        service: DepartmentService = Depends(get_department_service),
+        _: dict = Depends(require_permission("dept:view")),
+    ) -> dict:
+        """获取部门树形结构。"""
+        dept_tree = await service.get_dept_tree()
+        return success_response(data=dept_tree)

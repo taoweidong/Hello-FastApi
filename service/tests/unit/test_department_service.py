@@ -160,3 +160,98 @@ class TestDepartmentService:
         with pytest.raises(BusinessError) as exc_info:
             await dept_service.delete_department("1")
         assert "子部门" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_get_dept_tree_empty(self, dept_service, mock_dept_repo):
+        """测试获取空部门树。"""
+        mock_dept_repo.get_all = AsyncMock(return_value=[])
+        tree = await dept_service.get_dept_tree()
+        assert tree == []
+
+    @pytest.mark.asyncio
+    async def test_get_dept_tree_with_hierarchy(self, dept_service, mock_dept_repo):
+        """测试获取多级部门树。"""
+        parent = DepartmentEntity(id="1", name="总公司", rank=1)
+        child = DepartmentEntity(id="2", name="子公司", parent_id="1", rank=1)
+        mock_dept_repo.get_all = AsyncMock(return_value=[parent, child])
+        tree = await dept_service.get_dept_tree()
+        assert len(tree) == 1
+        assert tree[0]["name"] == "总公司"
+        assert len(tree[0]["children"]) == 1
+        assert tree[0]["children"][0]["name"] == "子公司"
+
+    @pytest.mark.asyncio
+    async def test_get_dept_tree_sorted_by_rank(self, dept_service, mock_dept_repo):
+        """测试部门树按 rank 排序。"""
+        dept2 = DepartmentEntity(id="2", name="B部门", rank=2)
+        dept1 = DepartmentEntity(id="1", name="A部门", rank=1)
+        mock_dept_repo.get_all = AsyncMock(return_value=[dept2, dept1])
+        tree = await dept_service.get_dept_tree()
+        assert tree[0]["name"] == "A部门"
+        assert tree[1]["name"] == "B部门"
+
+    @pytest.mark.asyncio
+    async def test_get_departments_with_active_filter(self, dept_service, mock_dept_repo):
+        """测试按启用状态筛选部门。"""
+        d = DepartmentEntity(id="1", name="技术部", is_active=0)
+        mock_dept_repo.get_filtered = AsyncMock(return_value=[d])
+        query = DepartmentListQueryDTO(isActive=0)
+        result = await dept_service.get_departments(query)
+        assert len(result) == 1
+        assert result[0].isActive == 0
+
+    @pytest.mark.asyncio
+    async def test_create_department_with_full_fields(self, dept_service, mock_dept_repo):
+        """测试创建部门包含所有字段。"""
+        mock_dept_repo.get_by_name = AsyncMock(return_value=None)
+        mock_dept_repo.get_by_code = AsyncMock(return_value=None)
+        created = DepartmentEntity(id="1", name="技术部", code="tech", mode_type=1, rank=10, auto_bind=1, is_active=1, parent_id=None)
+        mock_dept_repo.create = AsyncMock(return_value=created)
+
+        dto = DepartmentCreateDTO(name="技术部", code="tech", modeType=1, rank=10, autoBind=1, isActive=1)
+        result = await dept_service.create_department(dto)
+        assert result.name == "技术部"
+        assert result.code == "tech"
+        assert result.modeType == 1
+        assert result.rank == 10
+        assert result.autoBind == 1
+
+    @pytest.mark.asyncio
+    async def test_update_department_parent_not_found(self, dept_service, mock_dept_repo):
+        """测试更新部门时设置不存在的父部门。"""
+        dept = DepartmentEntity(id="1", name="部门")
+        mock_dept_repo.get_by_id = AsyncMock(side_effect=[dept, None])
+
+        dto = DepartmentUpdateDTO(parentId="non-existent")
+        with pytest.raises(BusinessError) as exc_info:
+            await dept_service.update_department("1", dto)
+        assert "父部门" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_update_department_parent_id_cleared(self, dept_service, mock_dept_repo):
+        """测试更新部门时清除 parentId。"""
+        dept = DepartmentEntity(id="1", name="部门", parent_id="parent-1")
+        updated = DepartmentEntity(id="1", name="部门", parent_id=None)
+        mock_dept_repo.get_by_id = AsyncMock(side_effect=[dept, updated])
+        mock_dept_repo.update = AsyncMock(return_value=updated)
+
+        dto = DepartmentUpdateDTO(parentId="")
+        result = await dept_service.update_department("1", dto)
+        assert result.parentId is None
+
+    def test_to_response(self, dept_service):
+        """测试 _to_response 静态方法。"""
+        from datetime import datetime
+        now = datetime.now()
+        dept = DepartmentEntity(id="1", name="技术部", code="tech", mode_type=1, rank=5, auto_bind=1, is_active=1, parent_id="0", creator_id="u1", modifier_id="u2", created_time=now, updated_time=now, description="描述")
+        result = dept_service._to_response(dept)
+        assert result.id == "1"
+        assert result.name == "技术部"
+        assert result.code == "tech"
+        assert result.modeType == 1
+        assert result.rank == 5
+        assert result.autoBind == 1
+        assert result.isActive == 1
+        assert result.parentId == "0"
+        assert result.creatorId == "u1"
+        assert result.description == "描述"
