@@ -337,6 +337,7 @@ pnpm install
 
 | 时间 | 修改人 | 主要修改内容 |
 |------|--------|-------------|
+| 2026-04-26 09:38 | Taowd | 重构 .opencode 目录结构；agent-browser 技能迁移至 .opencode/skills；清理冗余配置文件 |
 | 2026-04-26 09:33 | Taowd | 新增 .opencode 目录（含 code-gen、git-release 技能配置） |
 | 2026-04-26 09:27 | Taowd | 新增 commit-changelog 提交记录 Skill；README.md 添加修改记录章节模板 |
 
