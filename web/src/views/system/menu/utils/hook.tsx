@@ -97,6 +97,7 @@ export function useMenu() {
           active-text="启用"
           inactive-text="停用"
           style={switchStyle.value}
+          onChange={() => handleMenuStatusChange(row)}
         />
       )
     },
@@ -124,6 +125,20 @@ export function useMenu() {
 
   function handleSelectionChange(val) {
     console.log("handleSelectionChange", val);
+  }
+
+  async function handleMenuStatusChange(row) {
+    try {
+      const { code } = await menuApi.updateStatus(row.id, {
+        isActive: row.isActive
+      });
+      if (code === 0) {
+        message("已成功修改菜单状态", { type: "success" });
+      }
+    } catch {
+      row.isActive = row.isActive === 1 ? 0 : 1;
+      message("修改菜单状态失败", { type: "error" });
+    }
   }
 
   function resetForm(formEl) {
