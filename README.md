@@ -333,6 +333,12 @@ rm -rf node_modules pnpm-lock.yaml
 pnpm install
 ```
 
+## 修改记录
+
+| 时间 | 修改人 | 主要修改内容 |
+|------|--------|-------------|
+| 2026-04-26 09:27 | Taowd | 新增 commit-changelog 提交记录 Skill；README.md 添加修改记录章节模板 |
+
 ## 开发规范
 
 ### 后端代码规范
