@@ -127,7 +127,7 @@ python -m scripts.cli runserver
 ## 单元测试
 
 ```bash
-pytest                                    # 运行所有测试
+pytest                                    # 运行所有测试（1850 tests）
 pytest tests/unit/                        # 仅单元测试
 pytest --cov=src --cov-report=term-missing # 带覆盖率
 ```

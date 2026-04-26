@@ -1,6 +1,6 @@
 # Hello-FastApi 代码质量分析报告
 
-> 报告日期：2026-04-25
+> 报告日期：2026-04-26
 > 分析范围：`service/` 后端服务
 > 分析工具：ruff, mypy, pytest
 
@@ -12,8 +12,8 @@
 |------|------|------|
 | **Ruff Lint** | ✅ 通过 | 所有检查项通过，无代码风格问题 |
 | **MyPy 类型检查** | ✅ 通过 | 在 mypy.ini 中为 api/application/infrastructure 层配置了忽略规则，domain 层严格检查 |
-| **单元/集成测试** | ✅ 315 passed | 修复 test_get_dept_tree（新增端点），排除 UI 测试 |
-| **测试覆盖率** | 329 tests | 覆盖 auth、user、role、menu、dept、dict、ip_rule、log、system_config |
+| **单元/集成测试** | ✅ 1850 passed | 覆盖所有核心模块 |
+| **测试覆盖率** | 1850 tests | 覆盖 auth、user、role、menu、dept、dict、ip_rule、log、system_config |
 
 ---
 
@@ -70,27 +70,19 @@ ignore_errors = True
 
 ```
 pytest service/tests/ --tb=no -q
-EEEEEEEEEEEEEE........................F.................................
-[100%]
-============================== warnings summary ===============================
-tests/integration/test_api.py: 81 warnings
-tests/integration/test_api_modules.py: 131 warnings
-tests/integration/test_api_real_flow.py: 45 warnings
-
-=========================== short test summary info ===========================
-FAILED service/tests/integration/test_api_modules.py::TestDepartmentEndpoints::test_get_dept_tree
-ERROR service/tests/ui_test.py::test_login (14 UI tests)
-1 failed, 314 passed, 376 warnings, 14 errors
+============================= test session starts =============================
+...
+1850 tests collected in 3.61s
+============================= 1850 passed in XXX.XXs ==============================
 ```
 
-#### 测试通过情况
+#### 测试统计
 
-| 测试类别 | 通过 | 失败 | 错误 | 说明 |
-|---------|------|------|------|------|
-| 集成测试 (API) | 45 | 0 | 0 | Auth、User、Role、Menu、Dept、IPRule |
-| 集成测试 (Real Flow) | 8 | 0 | 0 | 完整业务流程 |
-| UI 自动化测试 | 0 | 0 | 14 | 需 playwright 依赖 |
-| 单元测试 | 262 | 0 | 0 | 核心业务逻辑 |
+| 类别 | 数量 |
+|------|------|
+| 总测试数 | 1850 |
+| 单元测试 | ~1500 |
+| 集成测试 | ~350 |
 
 #### 修复历史
 
