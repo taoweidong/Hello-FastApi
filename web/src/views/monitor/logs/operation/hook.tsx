@@ -48,6 +48,11 @@ export function useOperationLog(tableRef: Ref) {
       prop: "module",
       minWidth: 120
     },
+        {
+      label: "请求地址",
+      prop: "path",
+      minWidth: 120
+    },
     {
       label: "操作概要",
       prop: "description",
@@ -82,10 +87,10 @@ export function useOperationLog(tableRef: Ref) {
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
-          type={row.statusCode === 0 ? "success" : "danger"}
+          type={row.statusCode === 200 ? "success" : "danger"}
           effect="plain"
         >
-          {row.statusCode === 0 ? "成功" : "失败"}
+          {row.statusCode === 200 ? "成功" : "失败"}
         </el-tag>
       )
     },
