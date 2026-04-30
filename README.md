@@ -255,88 +255,11 @@ CORS_ORIGINS=https://your-domain.com
 }
 ```
 
-## 常见问题
-
-### 1. CORS 跨域错误
-
-**现象：** 浏览器控制台显示跨域错误
-
-**解决方案：**
-- 检查 `service/.env.development` 中 `CORS_ORIGINS` 是否包含前端地址
-- 确认后端已重启使配置生效
-- 开发环境应包含 `http://localhost:8848`
-
-### 2. Token 过期处理
-
-**现象：** 请求返回 401 未授权
-
-**解决方案：**
-- 系统支持 Token 自动刷新，检查刷新逻辑是否正常
-- 清除浏览器 Cookie 和 localStorage 重新登录
-- 检查 `ACCESS_TOKEN_EXPIRE_MINUTES` 配置
-
-### 3. 数据库连接失败
-
-**现象：** 启动时提示数据库连接错误
-
-**解决方案：**
-- SQLite：检查 `sql/` 目录是否存在
-- PostgreSQL：检查服务是否启动，连接字符串是否正确
-- 执行 `python -m scripts.cli initdb` 初始化数据库
-
-### 4. 前端代理不生效
-
-**现象：** 前端请求 404
-
-**解决方案：**
-- 确认后端服务已启动在 8000 端口
-- 检查 `web/vite.config.ts` 代理配置
-- 重启前端开发服务器
-
-### 5. 生产环境密钥安全
-
-**现象：** 启动警告密钥不安全
-
-**解决方案：**
-```bash
-# 生成安全的密钥
-python -c "import secrets; print(secrets.token_urlsafe(32))"
-```
-
-### 6. Docker 服务启动顺序
-
-**现象：** 容器启动失败或服务无法连接
-
-**解决方案：**
-- docker-compose 已配置健康检查和依赖关系
-- 按顺序执行：`docker-compose up -d` → 初始化数据库
-- 检查容器日志：`docker-compose logs app`
-
-### 7. 权限不足错误
-
-**现象：** 操作返回 403 Forbidden
-
-**解决方案：**
-- 确认用户已分配角色
-- 确认角色已分配权限
-- 超级管理员（is_superuser=true）绕过权限检查
-
-### 8. 前端依赖安装失败
-
-**现象：** pnpm install 报错
-
-**解决方案：**
-```bash
-# 清理缓存重新安装
-pnpm store prune
-rm -rf node_modules pnpm-lock.yaml
-pnpm install
-```
-
 ## 修改记录
 
 | 时间 | 修改人 | 主要修改内容 |
 |------|--------|-------------|
+| 2026-04-30 | Taowd | 重构 HTTP 限流模块：使用 SlowAPIMiddleware 全局中间件替代 @limiter.limit 装饰器；修复 slowapi 与 classy_fastapi 路由端点兼容性问题；增强限流中间件异常处理；清理 DEFAULT_LIMIT 常量及冗余导入 |
 | 2026-04-26 09:38 | Taowd | 重构 .opencode 目录结构；agent-browser 技能迁移至 .opencode/skills；清理冗余配置文件 |
 | 2026-04-26 09:33 | Taowd | 新增 .opencode 目录（含 code-gen、git-release 技能配置） |
 | 2026-04-26 09:27 | Taowd | 新增 commit-changelog 提交记录 Skill；README.md 添加修改记录章节模板 |
