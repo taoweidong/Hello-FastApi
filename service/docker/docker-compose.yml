@@ -9,18 +9,73 @@ services:
     environment:
       - APP_ENV=production
       - TZ=Asia/Shanghai
+      - DATABASE_URL=postgresql+asyncpg://hello_fastapi:hello_fastapi_pass@db:5432/hello_fastapi
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-this-to-a-random-secret-key-in-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-to-a-random-jwt-secret}
     volumes:
       - ../logs:/app/logs
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
+    networks:
+      - hello-fastapi-net
+
+  db:
+    image: postgres:15-alpine
+    container_name: hello-fastapi-db
+    environment:
+      - POSTGRES_DB=hello_fastapi
+      - POSTGRES_USER=hello_fastapi
+      - POSTGRES_PASSWORD=hello_fastapi_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hello_fastapi -d hello_fastapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
       start_period: 10s
     networks:
       - hello-fastapi-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: hello-fastapi-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - hello-fastapi-net
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+
 networks:
   hello-fastapi-net:
     name: hello-fastapi-net
+    driver: bridge
