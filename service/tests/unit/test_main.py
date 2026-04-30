@@ -115,8 +115,10 @@ class TestCreateApp:
 
     def test_all_middleware_registered(self, app):
         """测试所有中间件均已注册。"""
+        from slowapi.middleware import SlowAPIMiddleware
+
         middleware_classes = [m.cls for m in app.user_middleware]
         assert CORSMiddleware in middleware_classes
         assert RequestLoggingMiddleware in middleware_classes
         assert IPFilterMiddleware in middleware_classes
-        assert len(middleware_classes) == 3
+        assert SlowAPIMiddleware in middleware_classes
