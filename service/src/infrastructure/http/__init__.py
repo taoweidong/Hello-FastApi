@@ -3,11 +3,10 @@
 from src.infrastructure.http.exception_handler_registry import register_exception_handlers
 from src.infrastructure.http.ip_filter_cache import IPFilterCache, get_ip_filter_cache
 from src.infrastructure.http.ip_filter_middleware import IPFilterMiddleware
-from src.infrastructure.http.limiter import DEFAULT_LIMIT, limiter
+from src.infrastructure.http.limiter import limiter
 from src.infrastructure.http.request_logging_middleware import RequestLoggingMiddleware
 
 __all__ = [
-    "DEFAULT_LIMIT",
     "IPFilterCache",
     "IPFilterMiddleware",
     "limiter",

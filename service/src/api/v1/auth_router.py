@@ -21,7 +21,6 @@ from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
 from src.domain.entities.menu import MenuEntity
 from src.domain.exceptions import UnauthorizedError
-from src.infrastructure.http.limiter import DEFAULT_LIMIT, limiter
 from src.infrastructure.repositories.menu_repository import MenuRepository
 from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
@@ -31,14 +30,12 @@ class AuthRouter(Routable):
     """认证管理路由类，提供登录、注册、令牌刷新、动态路由等接口。"""
 
     @post("/login")
-    @limiter.limit(DEFAULT_LIMIT)
     async def login(self, request: Request, dto: LoginDTO, service: AuthService = Depends(get_auth_service)) -> dict:
         """用户登录接口。"""
         result = await service.login(dto)
         return success_response(data=result, message="登录成功")
 
     @post("/register")
-    @limiter.limit("10/minute")
     async def register(
         self, request: Request, dto: RegisterDTO, service: AuthService = Depends(get_auth_service)
     ) -> dict:
