@@ -16,3 +16,6 @@ Thumbs.db
 # Qoder 临时文件
 .qoder/*.diff
 .qoder/review_diff.txt
+
+# Git worktrees
+.worktrees/
