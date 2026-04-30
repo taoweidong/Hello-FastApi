@@ -11,6 +11,8 @@
 
 import argparse
 import asyncio
+import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -69,7 +71,7 @@ async def seed_rbac() -> None:
     import uuid
 
     from src.domain.entities.role import RoleEntity
-    from src.domain.rbac_defaults import ADMIN_MENU_NAMES, DEFAULT_MENUS, DEFAULT_ROLES, USER_MENU_NAMES
+    from src.domain.rbac_defaults import DEFAULT_MENUS, DEFAULT_ROLES, USER_MENU_NAMES
     from src.infrastructure.database import close_db, get_async_session_factory, init_db
     from src.infrastructure.database.models import Menu, MenuMeta
     from src.infrastructure.repositories.menu_repository import MenuRepository
@@ -189,7 +191,14 @@ async def seed_data() -> None:
             print("  添加登录日志测试数据...")
 
             for _ in range(20):
-                log = LoginLog(ipaddress=f"192.168.1.{random.randint(1, 254)}", system=random.choice(systems), browser=random.choice(browsers), status=1 if random.random() > 0.1 else 0, login_type=0, creator_id="seed")
+                log = LoginLog(
+                    ipaddress=f"192.168.1.{random.randint(1, 254)}",
+                    system=random.choice(systems),
+                    browser=random.choice(browsers),
+                    status=1 if random.random() > 0.1 else 0,
+                    login_type=0,
+                    creator_id="seed",
+                )
                 session.add(log)
             print("    创建 20 条登录日志")
         else:
@@ -203,7 +212,14 @@ async def seed_data() -> None:
         if not existing_logs:
             print("  添加系统日志测试数据...")
             modules = ["user", "role", "menu", "dept", "config", "ip-rule"]
-            paths = ["/api/system/user", "/api/system/role", "/api/system/menu", "/api/system/dept", "/api/system/config", "/api/system/ip-rule"]
+            paths = [
+                "/api/system/user",
+                "/api/system/role",
+                "/api/system/menu",
+                "/api/system/dept",
+                "/api/system/config",
+                "/api/system/ip-rule",
+            ]
             methods = ["POST", "PUT", "DELETE"]
 
             for _ in range(30):
@@ -248,6 +264,51 @@ async def init_all() -> None:
     print("全部初始化完成！默认账号: admin / admin123")
 
 
+def run_migrate() -> None:
+    """执行 Alembic 数据库迁移 (upgrade head)。"""
+    project_root = Path(__file__).parent.parent
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=project_root,
+        env={**os.environ, "PYTHONPATH": str(project_root)},
+    )
+    if result.returncode == 0:
+        print("数据库迁移成功")
+    else:
+        print("数据库迁移失败", file=sys.stderr)
+        sys.exit(result.returncode)
+
+
+def run_rollback(steps: int = 1) -> None:
+    """回滚 Alembic 数据库迁移 (downgrade)。"""
+    project_root = Path(__file__).parent.parent
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "downgrade", f"-{steps}"],
+        cwd=project_root,
+        env={**os.environ, "PYTHONPATH": str(project_root)},
+    )
+    if result.returncode == 0:
+        print(f"数据库回滚 {steps} 步成功")
+    else:
+        print("数据库回滚失败", file=sys.stderr)
+        sys.exit(result.returncode)
+
+
+def run_stamp(version: str) -> None:
+    """标记 Alembic 迁移版本（不执行 SQL）。"""
+    project_root = Path(__file__).parent.parent
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "stamp", version],
+        cwd=project_root,
+        env={**os.environ, "PYTHONPATH": str(project_root)},
+    )
+    if result.returncode == 0:
+        print(f"已标记数据库版本为 {version}")
+    else:
+        print("标记版本失败", file=sys.stderr)
+        sys.exit(result.returncode)
+
+
 def main() -> None:
     """管理命令主入口。"""
     parser = argparse.ArgumentParser(description="FastAPI 管理命令行工具")
@@ -275,6 +336,17 @@ def main() -> None:
     # initall 命令
     subparsers.add_parser("initall", help="一键初始化（表+RBAC+测试数据+超级管理员）")
 
+    # migrate 命令
+    subparsers.add_parser("migrate", help="执行 Alembic 数据库迁移 (upgrade head)")
+
+    # rollback 命令
+    rollback_parser = subparsers.add_parser("rollback", help="回滚 Alembic 数据库迁移")
+    rollback_parser.add_argument("--steps", "-s", type=int, default=1, help="回滚步数（默认 1）")
+
+    # stamp 命令
+    stamp_parser = subparsers.add_parser("stamp", help="标记 Alembic 迁移版本（不执行 SQL）")
+    stamp_parser.add_argument("version", help="目标版本号（如 head、base、或具体 revision）")
+
     args = parser.parse_args()
 
     if args.command is None:
@@ -293,6 +365,12 @@ def main() -> None:
         asyncio.run(seed_data())
     elif args.command == "initall":
         asyncio.run(init_all())
+    elif args.command == "migrate":
+        run_migrate()
+    elif args.command == "rollback":
+        run_rollback(args.steps)
+    elif args.command == "stamp":
+        run_stamp(args.version)
 
 
 if __name__ == "__main__":
