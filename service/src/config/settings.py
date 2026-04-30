@@ -77,6 +77,8 @@ class Settings(BaseSettings):
     # ============ 限流配置 ============
     RATE_LIMIT_TIMES: int = Field(default=100, ge=1)
     RATE_LIMIT_SECONDS: int = Field(default=60, ge=1)
+    RATE_LIMIT_STORAGE: str = "redis"  # redis 或 memory
+    RATE_LIMIT_WHITELIST_IPS: str = ""  # 逗号分隔的 IP 白名单
 
     # ============ 日志配置 ============
     LOG_LEVEL: str = "INFO"
