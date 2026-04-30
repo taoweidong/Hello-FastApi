@@ -1,0 +1,151 @@
+// Jenkins 声明式 Pipeline - Hello-FastApi CI/CD
+// 触发方式：Git Webhook (push 到 main/develop 分支) 或手动触发
+
+pipeline {
+    agent {
+        docker {
+            image 'python:3.10-slim'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
+
+    parameters {
+        choice(
+            name: 'DEPLOY_ENV',
+            choices: ['dev', 'staging', 'prod'],
+            description: '部署目标环境'
+        )
+        booleanParam(
+            name: 'RUN_TESTS',
+            defaultValue: true,
+            description: '是否运行测试'
+        )
+    }
+
+    environment {
+        APP_NAME = 'hello-fastapi'
+        IMAGE_REGISTRY = "${env.DOCKER_REGISTRY ?: 'registry.example.com'}"
+        IMAGE_TAG = "${params.DEPLOY_ENV}-${env.BUILD_NUMBER}"
+        PYTHONUNBUFFERED = '1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "检出代码: ${env.BRANCH_NAME}"
+                sh 'python --version'
+                sh 'pwd'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                echo '安装依赖...'
+                sh '''
+                    cd service
+                    pip install uv
+                    uv pip install --system -e ".[dev]"
+                '''
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                echo '运行 Ruff Lint 检查...'
+                sh '''
+                    cd service
+                    ruff check src/ tests/
+                '''
+            }
+        }
+
+        stage('Format Check') {
+            steps {
+                echo '检查代码格式...'
+                sh '''
+                    cd service
+                    ruff format src/ tests/ --check
+                '''
+            }
+        }
+
+        stage('Typecheck') {
+            steps {
+                echo '运行 MyPy 类型检查...'
+                sh '''
+                    cd service
+                    mypy src/
+                '''
+            }
+        }
+
+        stage('Test') {
+            when {
+                expression { params.RUN_TESTS == true }
+            }
+            steps {
+                echo '运行 pytest...'
+                sh '''
+                    cd service
+                    pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=80 -v
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                echo "构建 Docker 镜像: ${APP_NAME}:${IMAGE_TAG}"
+                sh '''
+                    cd service/docker
+                    docker build -t ${APP_NAME}:${IMAGE_TAG} -f Dockerfile ..
+                    docker tag ${APP_NAME}:${IMAGE_TAG} ${IMAGE_REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+                    docker tag ${APP_NAME}:${IMAGE_TAG} ${IMAGE_REGISTRY}/${APP_NAME}:latest
+                '''
+            }
+        }
+
+        stage('Push Docker Image') {
+            when {
+                expression { params.DEPLOY_ENV != 'dev' }
+            }
+            steps {
+                echo "推送 Docker 镜像到仓库..."
+                withCredentials([usernamePassword(credentialsId: 'docker-registry-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "${DOCKER_PASS}" | docker login ${IMAGE_REGISTRY} -u "${DOCKER_USER}" --password-stdin
+                        docker push ${IMAGE_REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+                        docker push ${IMAGE_REGISTRY}/${APP_NAME}:latest
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                expression { params.DEPLOY_ENV in ['dev', 'staging', 'prod'] }
+            }
+            steps {
+                echo "部署到 ${params.DEPLOY_ENV} 环境..."
+                sh '''
+                    cd service/docker/Jenkins
+                    chmod +x deploy.sh
+                    ./deploy.sh ${DEPLOY_ENV} ${IMAGE_REGISTRY} ${APP_NAME} ${IMAGE_TAG}
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '构建成功！'
+            sh 'echo "构建成功: ${APP_NAME} ${IMAGE_TAG}"'
+        }
+        failure {
+            echo '构建失败！'
+            sh 'echo "构建失败: ${APP_NAME} ${IMAGE_TAG}"'
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
