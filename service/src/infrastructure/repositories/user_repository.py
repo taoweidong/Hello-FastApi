@@ -111,7 +111,7 @@ class UserRepository(UserRepositoryInterface):
         return loaded
 
     async def delete(self, user_id: str) -> bool:
-        result = await self.session.execute(sa_delete(User).where(User.id == user_id))
+        result = await self.session.exec(sa_delete(User).where(User.id == user_id))
         await self.session.flush()
         return (result.rowcount or 0) > 0
 
@@ -120,7 +120,7 @@ class UserRepository(UserRepositoryInterface):
         if not user_ids:
             return 0
         stmt = sa_delete(User).where(User.id.in_(user_ids))
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)
         await self.session.flush()
         return result.rowcount or 0
 

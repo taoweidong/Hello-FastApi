@@ -132,7 +132,7 @@ class TestRoleRepository:
         """测试 delete 成功删除角色。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("role-1")
         assert result is True
@@ -142,7 +142,7 @@ class TestRoleRepository:
         """测试 delete 未找到返回 False。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("not-exist")
         assert result is False
@@ -171,7 +171,7 @@ class TestRoleRepository:
         """测试 remove_role_from_user 移除角色。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.remove_role_from_user("user-1", "role-1")
         assert result is True
@@ -309,7 +309,7 @@ class TestRoleRepository:
         """测试 remove_role_from_user 未找到关联。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.remove_role_from_user("user-1", "role-1")
 

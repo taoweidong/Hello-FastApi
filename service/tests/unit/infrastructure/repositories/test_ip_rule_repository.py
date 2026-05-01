@@ -32,11 +32,9 @@ class TestIPRuleRepository:
         mock_model = MagicMock()
         mock_model.to_domain.return_value = IPRuleEntity(id="1", ip_address="192.168.1.1")
         mock_result.all.return_value = [mock_model]
-        mock_session.exec = AsyncMock(return_value=mock_result)
-
         mock_count_result = MagicMock()
-        mock_count_result.scalar_one.return_value = 1
-        mock_session.execute.return_value = mock_count_result
+        mock_count_result.one.return_value = 1
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count_result])
 
         rules, total = await repo.get_ip_rules()
 
@@ -51,8 +49,8 @@ class TestIPRuleRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count_result = MagicMock()
-        mock_count_result.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count_result
+        mock_count_result.one.return_value = 0
+        mock_session.exec.return_value = mock_count_result
 
         rules, total = await repo.get_ip_rules(
             page_num=1,
@@ -129,7 +127,7 @@ class TestIPRuleRepository:
         """测试 delete_ip_rules 批量删除成功。"""
         mock_result = MagicMock()
         mock_result.rowcount = 3
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         count = await repo.delete_ip_rules(["1", "2", "3"])
 
@@ -146,8 +144,8 @@ class TestIPRuleRepository:
     async def test_clear_ip_rules(self, repo, mock_session):
         """测试 clear_ip_rules 清空所有规则。"""
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 5
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 5
+        mock_session.exec.return_value = mock_count
 
         total = await repo.clear_ip_rules()
 
@@ -187,8 +185,8 @@ class TestIPRuleRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         rules, total = await repo.get_ip_rules(rule_type="whitelist")
 
@@ -202,8 +200,8 @@ class TestIPRuleRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         rules, total = await repo.get_ip_rules(is_active=1)
 
@@ -217,8 +215,8 @@ class TestIPRuleRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         rules, total = await repo.get_ip_rules(start_time=datetime(2024, 1, 1))
 
@@ -232,8 +230,8 @@ class TestIPRuleRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         rules, total = await repo.get_ip_rules(end_time=datetime(2024, 12, 31))
 
@@ -245,7 +243,7 @@ class TestIPRuleRepository:
         """测试 delete_ip_rules 未找到返回 0。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         count = await repo.delete_ip_rules(["nonexistent"])
 
@@ -255,8 +253,8 @@ class TestIPRuleRepository:
     async def test_clear_ip_rules_empty(self, repo, mock_session):
         """测试 clear_ip_rules 空表返回 0。"""
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         total = await repo.clear_ip_rules()
 

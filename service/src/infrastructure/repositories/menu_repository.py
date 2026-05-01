@@ -82,17 +82,17 @@ class MenuRepository(MenuRepositoryInterface):
 
         # 清除菜单的角色关联
         stmt = sa_delete(RoleMenuLink).where(RoleMenuLink.menu_id == menu_id)
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
 
         # 将子菜单的 parent_id 置空
         child_update = sa_update(Menu).where(Menu.parent_id == menu_id).values(parent_id=None)
-        await self.session.execute(child_update)
+        await self.session.exec(child_update)  # type: ignore[arg-type]
         await self.session.flush()
 
         # 删除菜单
         stmt = sa_delete(Menu).where(Menu.id == menu_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
 
         # 删除关联的MenuMeta
@@ -166,6 +166,6 @@ class MenuRepository(MenuRepositoryInterface):
         from sqlalchemy import delete as sa_delete
 
         stmt = sa_delete(MenuMeta).where(MenuMeta.id == meta_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount > 0  # type: ignore[union-attr]

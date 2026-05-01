@@ -84,7 +84,7 @@ class TestDictionaryRepository:
         """测试 get_max_sort 返回最大排序值。"""
         mock_result = MagicMock()
         mock_result.scalar.return_value = 10
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_max_sort("parent-1")
 
@@ -95,7 +95,7 @@ class TestDictionaryRepository:
         """测试 get_max_sort 无数据时返回 0。"""
         mock_result = MagicMock()
         mock_result.scalar.return_value = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_max_sort(None)
 
@@ -137,7 +137,7 @@ class TestDictionaryRepository:
         """测试 delete 成功删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("dict-1")
 
@@ -148,7 +148,7 @@ class TestDictionaryRepository:
         """测试 delete 未找到返回 False。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("not-exist")
 
@@ -163,7 +163,7 @@ class TestDictionaryRepository:
         mock_scalars.all.return_value = [mock_model]
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered(name="gender", is_active=1)
 
@@ -177,7 +177,7 @@ class TestDictionaryRepository:
         mock_scalars.all.return_value = []
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered()
 
@@ -219,7 +219,7 @@ class TestDictionaryRepository:
         mock_scalars.all.return_value = [mock_model]
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered(name="gender")
 
@@ -234,7 +234,7 @@ class TestDictionaryRepository:
         mock_scalars.all.return_value = [mock_model]
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered(is_active=1)
 
@@ -245,7 +245,7 @@ class TestDictionaryRepository:
         """测试 get_max_sort 返回 None 时默认 0。"""
         mock_result = MagicMock()
         mock_result.scalar.return_value = None
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_max_sort("parent-1")
 

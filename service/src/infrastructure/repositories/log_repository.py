@@ -54,8 +54,8 @@ class LogRepository(LogRepositoryInterface):
         result = await self.session.exec(query)
         logs = list(result.all())
 
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar_one()
+        total_result = await self.session.exec(count_query)
+        total = total_result.one()
 
         return [log.to_domain() for log in logs], total
 
@@ -75,7 +75,7 @@ class LogRepository(LogRepositoryInterface):
         from sqlalchemy import delete as sa_delete
 
         stmt = sa_delete(LoginLog).where(LoginLog.id.in_(log_ids))
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount or 0
 
@@ -83,10 +83,10 @@ class LogRepository(LogRepositoryInterface):
         """清空所有登录日志。"""
         from sqlalchemy import delete as sa_delete
 
-        count_result = await self.session.execute(select(sa_func.count()).select_from(LoginLog))
-        total = count_result.scalar_one()
+        count_result = await self.session.exec(select(sa_func.count()).select_from(LoginLog))
+        total = count_result.one()
         stmt = sa_delete(LoginLog)
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return total
 
@@ -125,8 +125,8 @@ class LogRepository(LogRepositoryInterface):
         result = await self.session.exec(query)
         logs = list(result.all())
 
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar_one()
+        total_result = await self.session.exec(count_query)
+        total = total_result.one()
 
         return [log.to_domain() for log in logs], total
 
@@ -153,7 +153,7 @@ class LogRepository(LogRepositoryInterface):
         from sqlalchemy import delete as sa_delete
 
         stmt = sa_delete(SystemLog).where(SystemLog.id.in_(log_ids))
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount or 0
 
@@ -161,10 +161,10 @@ class LogRepository(LogRepositoryInterface):
         """清空所有操作日志。"""
         from sqlalchemy import delete as sa_delete
 
-        count_result = await self.session.execute(select(sa_func.count()).select_from(SystemLog))
-        total = count_result.scalar_one()
+        count_result = await self.session.exec(select(sa_func.count()).select_from(SystemLog))
+        total = count_result.one()
         stmt = sa_delete(SystemLog)
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return total
 
@@ -203,8 +203,8 @@ class LogRepository(LogRepositoryInterface):
         result = await self.session.exec(query)
         logs = list(result.all())
 
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar_one()
+        total_result = await self.session.exec(count_query)
+        total = total_result.one()
 
         return [log.to_domain() for log in logs], total
 

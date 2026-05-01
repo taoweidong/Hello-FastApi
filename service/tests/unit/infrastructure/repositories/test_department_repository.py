@@ -148,19 +148,19 @@ class TestDepartmentRepository:
         """测试 delete 成功删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("dept-1")
 
         assert result is True
-        assert mock_session.execute.call_count >= 2
+        assert mock_session.exec.call_count >= 2
 
     @pytest.mark.asyncio
     async def test_delete_not_found(self, repo, mock_session):
         """测试 delete 未找到返回 False。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("not-exist")
 
@@ -194,7 +194,7 @@ class TestDepartmentRepository:
         mock_scalars.all.return_value = [mock_model]
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered(name="技术", is_active=1)
 
@@ -208,7 +208,7 @@ class TestDepartmentRepository:
         mock_scalars.all.return_value = []
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered()
 
@@ -250,7 +250,7 @@ class TestDepartmentRepository:
         mock_scalars.all.return_value = [mock_model]
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered(name="技术")
 
@@ -265,7 +265,7 @@ class TestDepartmentRepository:
         mock_scalars.all.return_value = [mock_model]
         mock_result = MagicMock()
         mock_result.scalars.return_value = mock_scalars
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.get_filtered(is_active=1)
 

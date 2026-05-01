@@ -36,11 +36,9 @@ class TestLogRepository:
         mock_model = MagicMock()
         mock_model.to_domain.return_value = LoginLogEntity(id="1", status=1)
         mock_result.all.return_value = [mock_model]
-        mock_session.exec = AsyncMock(return_value=mock_result)
-
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 1
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 1
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count])
 
         logs, total = await repo.get_login_logs(page_num=1, page_size=10, status=1)
         assert len(logs) == 1
@@ -53,8 +51,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_login_logs(start_time=datetime(2024, 1, 1), end_time=datetime(2024, 12, 31))
         assert logs == []
@@ -80,7 +78,7 @@ class TestLogRepository:
         """测试 delete_login_logs 批量删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 2
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         count = await repo.delete_login_logs(["1", "2"])
         assert count == 2
@@ -95,8 +93,8 @@ class TestLogRepository:
     async def test_clear_login_logs(self, repo, mock_session):
         """测试 clear_login_logs 清空所有登录日志。"""
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 10
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 10
+        mock_session.exec.return_value = mock_count
 
         total = await repo.clear_login_logs()
         assert total == 10
@@ -110,10 +108,9 @@ class TestLogRepository:
         mock_model = MagicMock()
         mock_model.to_domain.return_value = OperationLogEntity(id="1", module="user", method="POST")
         mock_result.all.return_value = [mock_model]
-        mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 1
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 1
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count])
 
         logs, total = await repo.get_operation_logs(module="user", status_code=200)
         assert len(logs) == 1
@@ -158,7 +155,7 @@ class TestLogRepository:
         """测试 delete_operation_logs 批量删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 3
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         count = await repo.delete_operation_logs(["1", "2", "3"])
         assert count == 3
@@ -173,8 +170,8 @@ class TestLogRepository:
     async def test_clear_operation_logs(self, repo, mock_session):
         """测试 clear_operation_logs 清空操作日志。"""
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 5
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 5
+        mock_session.exec.return_value = mock_count
 
         total = await repo.clear_operation_logs()
         assert total == 5
@@ -188,10 +185,9 @@ class TestLogRepository:
         mock_model = MagicMock()
         mock_model.to_domain.return_value = OperationLogEntity(id="1", module="auth")
         mock_result.all.return_value = [mock_model]
-        mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 1
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 1
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count])
 
         logs, total = await repo.get_system_logs(module="auth", status_code=500)
         assert len(logs) == 1
@@ -222,8 +218,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_login_logs()
 
@@ -237,8 +233,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_login_logs(status=1)
 
@@ -252,8 +248,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_operation_logs()
 
@@ -267,8 +263,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_operation_logs(module="user")
 
@@ -282,8 +278,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_operation_logs(status_code=200)
 
@@ -297,8 +293,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_system_logs()
 
@@ -312,8 +308,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_operation_logs(start_time=datetime(2024, 1, 1))
 
@@ -327,8 +323,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_operation_logs(end_time=datetime(2024, 12, 31))
 
@@ -342,8 +338,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_system_logs(start_time=datetime(2024, 1, 1))
 
@@ -357,8 +353,8 @@ class TestLogRepository:
         mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count = MagicMock()
-        mock_count.scalar_one.return_value = 0
-        mock_session.execute.return_value = mock_count
+        mock_count.one.return_value = 0
+        mock_session.exec.return_value = mock_count
 
         logs, total = await repo.get_system_logs(end_time=datetime(2024, 12, 31))
 

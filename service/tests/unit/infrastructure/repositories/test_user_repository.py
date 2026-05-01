@@ -172,7 +172,7 @@ class TestUserRepository:
         """测试 delete 成功删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("user-1")
         assert result is True
@@ -182,7 +182,7 @@ class TestUserRepository:
         """测试 delete 未找到返回 False。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("not-exist")
         assert result is False
@@ -192,7 +192,7 @@ class TestUserRepository:
         """测试 batch_delete 批量删除用户。"""
         mock_result = MagicMock()
         mock_result.rowcount = 3
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         count = await repo.batch_delete(["1", "2", "3"])
         assert count == 3

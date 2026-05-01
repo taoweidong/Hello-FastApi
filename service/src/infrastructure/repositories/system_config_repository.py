@@ -42,8 +42,8 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
         if is_active is not None:
             count_query = count_query.where(SystemConfig.is_active == is_active)
 
-        result = await self.session.execute(count_query)
-        return result.scalar_one()
+        result = await self.session.exec(count_query)
+        return result.one()
 
     async def get_by_id(self, config_id: str) -> SystemConfigEntity | None:
         """根据 ID 获取配置。"""
@@ -92,6 +92,6 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
         from sqlalchemy import delete as sa_delete
 
         stmt = sa_delete(SystemConfig).where(SystemConfig.id == config_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount > 0  # type: ignore[union-attr]

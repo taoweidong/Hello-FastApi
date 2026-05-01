@@ -55,8 +55,8 @@ class IPRuleRepository(IPRuleRepositoryInterface):
         result = await self.session.exec(query)
         rules = list(result.all())
 
-        total_result = await self.session.execute(count_query)
-        total = total_result.scalar_one()
+        total_result = await self.session.exec(count_query)
+        total = total_result.one()
 
         return [rule.to_domain() for rule in rules], total
 
@@ -104,7 +104,7 @@ class IPRuleRepository(IPRuleRepositoryInterface):
         from sqlalchemy import delete as sa_delete
 
         stmt = sa_delete(IPRule).where(IPRule.id.in_(rule_ids))
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount or 0
 
@@ -112,10 +112,10 @@ class IPRuleRepository(IPRuleRepositoryInterface):
         """清空所有 IP 规则。"""
         from sqlalchemy import delete as sa_delete
 
-        count_result = await self.session.execute(select(sa_func.count()).select_from(IPRule))
-        total = count_result.scalar_one()
+        count_result = await self.session.exec(select(sa_func.count()).select_from(IPRule))
+        total = count_result.one()
         stmt = sa_delete(IPRule)
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return total
 

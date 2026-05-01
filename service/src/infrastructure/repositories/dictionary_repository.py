@@ -49,7 +49,7 @@ class DictionaryRepository(DictionaryRepositoryInterface):
     async def get_max_sort(self, parent_id: str | None) -> int:
         """获取同级最大排序值。"""
         stmt = select(func.coalesce(func.max(Dictionary.sort), 0)).where(Dictionary.parent_id == parent_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)
         return result.scalar() or 0
 
     async def create(self, dictionary: DictionaryEntity) -> DictionaryEntity:
@@ -88,7 +88,7 @@ class DictionaryRepository(DictionaryRepositoryInterface):
         from sqlalchemy import delete as sa_delete
 
         stmt = sa_delete(Dictionary).where(Dictionary.id == dict_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount > 0  # type: ignore[union-attr]
 
@@ -103,5 +103,5 @@ class DictionaryRepository(DictionaryRepositoryInterface):
             stmt = stmt.where(Dictionary.is_active == is_active)
         stmt = stmt.order_by(Dictionary.sort)
 
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)
         return [d.to_domain() for d in result.scalars().all()]

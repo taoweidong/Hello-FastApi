@@ -8,16 +8,26 @@ from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.services.password_service import PasswordService
-from src.infrastructure.database.models import Department, LoginLog, Menu, MenuMeta, Role, RoleMenuLink, SystemLog, User, UserRole
+from src.infrastructure.database.models import (
+    Department,
+    LoginLog,
+    Menu,
+    MenuMeta,
+    Role,
+    RoleMenuLink,
+    SystemLog,
+    User,
+    UserRole,
+)
 
 
 # 测试库为 SQLite，关闭外键检查后清空，避免自引用表顺序问题
 async def clear_all_test_data(session: AsyncSession) -> None:
     """删除当前库中所有业务数据（测试库专用）。"""
-    await session.execute(text("PRAGMA foreign_keys=OFF"))
+    await session.exec(text("PRAGMA foreign_keys=OFF"))  # type: ignore[arg-type]
     for table in ("sys_userrole_menu", "sys_userinfo_roles", "sys_userloginlog", "sys_logs", "sys_menus", "sys_menumeta", "sys_users", "sys_roles", "sys_departments", "sys_ip_rules", "sys_systemconfig"):
-        await session.execute(text(f"DELETE FROM {table}"))
-    await session.execute(text("PRAGMA foreign_keys=ON"))
+        await session.exec(text(f"DELETE FROM {table}"))  # type: ignore[arg-type]
+    await session.exec(text("PRAGMA foreign_keys=ON"))  # type: ignore[arg-type]
     await session.commit()
 
 

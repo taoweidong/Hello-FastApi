@@ -51,8 +51,8 @@ class TestSystemConfigRepository:
     async def test_count(self, repo, mock_session):
         """测试 count 返回总数。"""
         mock_result = MagicMock()
-        mock_result.scalar_one.return_value = 10
-        mock_session.execute.return_value = mock_result
+        mock_result.one.return_value = 10
+        mock_session.exec.return_value = mock_result
 
         result = await repo.count()
         assert result == 10
@@ -61,8 +61,8 @@ class TestSystemConfigRepository:
     async def test_count_with_filters(self, repo, mock_session):
         """测试 count 支持筛选。"""
         mock_result = MagicMock()
-        mock_result.scalar_one.return_value = 3
-        mock_session.execute.return_value = mock_result
+        mock_result.one.return_value = 3
+        mock_session.exec.return_value = mock_result
 
         result = await repo.count(key="site", is_active=1)
         assert result == 3
@@ -147,7 +147,7 @@ class TestSystemConfigRepository:
         """测试 delete 成功删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("config-1")
         assert result is True
@@ -157,7 +157,7 @@ class TestSystemConfigRepository:
         """测试 delete 未找到返回 False。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete("not-exist")
         assert result is False

@@ -116,7 +116,7 @@ class TestMenuRepository:
 
         mock_del_result = MagicMock()
         mock_del_result.rowcount = 1
-        mock_session.execute.return_value = mock_del_result
+        mock_session.exec.return_value = mock_del_result
 
         with patch.object(repo, "delete_meta", AsyncMock(return_value=True)):
             result = await repo.delete("menu-1")
@@ -131,7 +131,7 @@ class TestMenuRepository:
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_del_result = MagicMock()
         mock_del_result.rowcount = 0
-        mock_session.execute.return_value = mock_del_result
+        mock_session.exec.return_value = mock_del_result
 
         result = await repo.delete("not-exist")
         assert result is False
@@ -229,7 +229,7 @@ class TestMenuRepository:
         """测试 delete_meta 成功删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete_meta("meta-1")
         assert result is True
@@ -239,7 +239,7 @@ class TestMenuRepository:
         """测试 delete_meta 未找到返回 False。"""
         mock_result = MagicMock()
         mock_result.rowcount = 0
-        mock_session.execute.return_value = mock_result
+        mock_session.exec.return_value = mock_result
 
         result = await repo.delete_meta("not-exist")
         assert result is False
@@ -274,7 +274,7 @@ class TestMenuRepository:
         mock_session.exec = AsyncMock(return_value=mock_result)
         mock_del_result = MagicMock()
         mock_del_result.rowcount = 1
-        mock_session.execute.return_value = mock_del_result
+        mock_session.exec.return_value = mock_del_result
 
         result = await repo.delete("menu-no-meta")
 

@@ -100,13 +100,13 @@ class RoleRepository(RoleRepositoryInterface):
 
         # 先清除角色的所有关联关系
         stmt1 = sa_delete(RoleMenuLink).where(RoleMenuLink.userrole_id == role_id)
-        await self.session.execute(stmt1)
+        await self.session.exec(stmt1)  # type: ignore[arg-type]
         stmt2 = sa_delete(UserRole).where(UserRole.userrole_id == role_id)
-        await self.session.execute(stmt2)
+        await self.session.exec(stmt2)  # type: ignore[arg-type]
         await self.session.flush()
 
         stmt = sa_delete(Role).where(Role.id == role_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount > 0  # type: ignore[union-attr]
 
@@ -126,7 +126,7 @@ class RoleRepository(RoleRepositoryInterface):
     async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
         """移除用户的角色。"""
         stmt = delete(UserRole).where(UserRole.userinfo_id == user_id, UserRole.userrole_id == role_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         return bool(getattr(result, "rowcount", 0) > 0)
 
     async def get_user_roles(self, user_id: str) -> list[RoleEntity]:
@@ -139,7 +139,7 @@ class RoleRepository(RoleRepositoryInterface):
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户批量分配角色（先清除旧角色再分配新的）。"""
         stmt = delete(UserRole).where(UserRole.userinfo_id == user_id)
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
 
         for role_id in role_ids:
             user_role = UserRole(userinfo_id=user_id, userrole_id=role_id)
@@ -151,7 +151,7 @@ class RoleRepository(RoleRepositoryInterface):
     async def assign_menus_to_role(self, role_id: str, menu_ids: list[str]) -> bool:
         """为角色分配菜单权限（先清除旧菜单再分配新的）。"""
         stmt = delete(RoleMenuLink).where(RoleMenuLink.userrole_id == role_id)
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
 
         for menu_id in menu_ids:
             link = RoleMenuLink(userrole_id=role_id, menu_id=menu_id)

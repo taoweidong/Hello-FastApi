@@ -95,11 +95,11 @@ class DepartmentRepository(DepartmentRepositoryInterface):
 
         # 先将引用该部门的用户 dept_id 设为 NULL
         user_update = sa_update(User).where(User.dept_id == dept_id).values(dept_id=None)
-        await self.session.execute(user_update)
+        await self.session.exec(user_update)  # type: ignore[arg-type]
         await self.session.flush()
 
         stmt = sa_delete(Department).where(Department.id == dept_id)
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return result.rowcount > 0  # type: ignore[union-attr]
 
@@ -124,5 +124,5 @@ class DepartmentRepository(DepartmentRepositoryInterface):
             stmt = stmt.where(Department.is_active == is_active)
         stmt = stmt.order_by(Department.rank)
 
-        result = await self.session.execute(stmt)
+        result = await self.session.exec(stmt)
         return [d.to_domain() for d in result.scalars().all()]
