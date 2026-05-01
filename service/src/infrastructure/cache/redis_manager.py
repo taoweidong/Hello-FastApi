@@ -23,7 +23,7 @@ class RedisManager:
     async def close(self) -> None:
         """关闭 Redis 连接。"""
         if self._client is not None:
-            await self._client.close()
+            await self._client.aclose()
             self._client = None
 
 

@@ -3,6 +3,8 @@
 测试 application_lifespan 的启动/关闭流程及 empty_lifespan。
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from fastapi import FastAPI
 
@@ -41,3 +43,27 @@ class TestApplicationLifespan:
                 pass
         except Exception:
             pytest.fail("application_lifespan 不应抛出异常")
+
+    @pytest.mark.asyncio
+    async def test_redis_connection_failure_is_logged_and_ignored(self):
+        """Redis 连接失败时应记录警告并继续启动流程。"""
+        app = FastAPI()
+        with patch("src.infrastructure.lifecycle.lifespan.get_redis") as mock_get_redis:
+            mock_get_redis.return_value = AsyncMock(side_effect=ConnectionError("Redis unavailable"))
+            async with application_lifespan(app):
+                pass
+
+    @pytest.mark.asyncio
+    async def test_ip_filter_cache_load_failure_is_logged_and_ignored(self):
+        """IP 黑白名单规则加载失败时应记录警告并继续启动流程。"""
+        app = FastAPI()
+        with patch("src.infrastructure.lifecycle.lifespan.get_redis") as mock_get_redis:
+            mock_get_redis.return_value = AsyncMock()
+            mock_ping = AsyncMock()
+            mock_get_redis.return_value.ping = mock_ping
+            with patch("src.infrastructure.http.ip_filter_cache.get_ip_filter_cache") as mock_cache:
+                mock_cache_instance = AsyncMock()
+                mock_cache_instance.load_to_app_state = AsyncMock(side_effect=RuntimeError("DB unavailable"))
+                mock_cache.return_value = mock_cache_instance
+                async with application_lifespan(app):
+                    pass

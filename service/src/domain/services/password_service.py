@@ -4,6 +4,8 @@
 使用 bcrypt 算法进行安全的密码哈希处理。
 """
 
+import hashlib
+
 import bcrypt
 
 
@@ -12,6 +14,8 @@ class PasswordService:
 
     提供密码哈希和验证的静态方法，用于用户认证场景。
     """
+
+    _BCRYPT_MAX_LENGTH = 72
 
     @staticmethod
     def hash_password(password: str) -> str:
@@ -24,6 +28,8 @@ class PasswordService:
             哈希后的密码字符串
         """
         password_bytes = password.encode("utf-8")
+        if len(password_bytes) > PasswordService._BCRYPT_MAX_LENGTH:
+            password_bytes = hashlib.sha256(password_bytes).digest()
         salt = bcrypt.gensalt()
         hashed = bcrypt.hashpw(password_bytes, salt)
         return hashed.decode("utf-8")
@@ -39,4 +45,7 @@ class PasswordService:
         Returns:
             密码是否匹配
         """
-        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+        password_bytes = plain_password.encode("utf-8")
+        if len(password_bytes) > PasswordService._BCRYPT_MAX_LENGTH:
+            password_bytes = hashlib.sha256(password_bytes).digest()
+        return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))

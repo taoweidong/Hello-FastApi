@@ -6,6 +6,8 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from src.api.constants import API_SYSTEM_PREFIX
 from src.api.v1 import system_router
@@ -16,10 +18,7 @@ from src.infrastructure.http import (
     get_ip_filter_cache,
     register_exception_handlers,
 )
-from slowapi.errors import RateLimitExceeded
-
 from src.infrastructure.http.limiter import limiter, rate_limit_exceeded_handler
-from slowapi.middleware import SlowAPIMiddleware
 from src.infrastructure.lifecycle import application_lifespan
 
 LifespanFactory = Callable[[FastAPI], AbstractAsyncContextManager[Any]]
@@ -53,7 +52,7 @@ def create_app(*, lifespan_override: LifespanFactory | None = None) -> FastAPI:
     app.add_middleware(IPFilterMiddleware)
 
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
     app.add_middleware(SlowAPIMiddleware)
 
     # 设置 IPFilterCache 的 app 引用，供后续 refresh 使用

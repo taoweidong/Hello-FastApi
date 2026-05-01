@@ -78,3 +78,9 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
 ]
+filterwarnings = [
+    "ignore::pytest.PytestCollectionWarning",
+    "ignore::DeprecationWarning:fastcrud",
+    "ignore::DeprecationWarning:sqlalchemy",
+    "ignore::RuntimeWarning",
+]

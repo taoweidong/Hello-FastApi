@@ -4,15 +4,11 @@
 以及模块级单例函数和兼容接口函数。
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.infrastructure.cache.redis_manager import (
-    RedisManager,
-    _get_redis_manager,
-    close_redis,
-    get_redis,
-)
+import pytest
+
+from src.infrastructure.cache.redis_manager import RedisManager, _get_redis_manager, close_redis, get_redis
 
 
 @pytest.mark.unit
@@ -102,12 +98,12 @@ class TestRedisManagerClose:
         """测试有关联客户端时关闭连接。"""
         mgr = RedisManager()
         mock_client = MagicMock()
-        mock_client.close = AsyncMock()
+        mock_client.aclose = AsyncMock()
         mgr._client = mock_client
 
         await mgr.close()
 
-        mock_client.close.assert_called_once()
+        mock_client.aclose.assert_called_once()
         assert mgr._client is None
 
     @pytest.mark.asyncio
@@ -123,13 +119,13 @@ class TestRedisManagerClose:
         """测试 close 多次调用幂等。"""
         mgr = RedisManager()
         mock_client = MagicMock()
-        mock_client.close = AsyncMock()
+        mock_client.aclose = AsyncMock()
         mgr._client = mock_client
 
         await mgr.close()
         await mgr.close()
 
-        mock_client.close.assert_called_once()
+        mock_client.aclose.assert_called_once()
         assert mgr._client is None
 
 
@@ -174,7 +170,7 @@ class TestRedisManagerModuleFunctions:
 
         mgr = RedisManager()
         mock_client = MagicMock()
-        mock_client.close = AsyncMock()
+        mock_client.aclose = AsyncMock()
         mgr._client = mock_client
         rm_mod._redis_manager = mgr
 
@@ -216,10 +212,10 @@ class TestRedisManagerCloseEdgeCases:
 
     @pytest.mark.asyncio
     async def test_close_client_error(self):
-        """测试 client.close 抛出异常时向上传播。"""
+        """测试 client.aclose 抛出异常时向上传播。"""
         mgr = RedisManager()
         mock_client = MagicMock()
-        mock_client.close = AsyncMock(side_effect=Exception("关闭失败"))
+        mock_client.aclose = AsyncMock(side_effect=Exception("关闭失败"))
         mgr._client = mock_client
 
         with pytest.raises(Exception):

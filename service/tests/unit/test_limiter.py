@@ -1,12 +1,14 @@
 """限流模块测试。"""
 
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
 
-from src.infrastructure.http.limiter import get_limiter, get_real_ip
+from src.infrastructure.http.limiter import get_limiter, get_real_ip, rate_limit_exceeded_handler
 
 
 class TestLimiterConfig:
@@ -91,3 +93,30 @@ class TestRateLimitStorage:
             assert limiter_mod._get_storage_uri() == "memory://"
         finally:
             limiter_mod.settings = original
+
+
+class TestRateLimitExceededHandler:
+    """限流异常处理器测试。"""
+
+    @pytest.mark.asyncio
+    async def test_handler_returns_429_with_retry_after(self):
+        """测试限流异常返回 429 和重试时间。"""
+        request = MagicMock(spec=Request)
+        mock_exc = MagicMock()
+        mock_exc.__str__ = MagicMock(return_value="limit exceeded: 60")
+        response = await rate_limit_exceeded_handler(request, mock_exc)
+        assert response.status_code == 429
+        body = response.body.decode()
+        assert "请求过于频繁" in body
+        assert "retry_after" in body
+
+    @pytest.mark.asyncio
+    async def test_handler_returns_default_retry_when_no_detail(self):
+        """测试限流异常无详细信息时返回默认 60 秒重试。"""
+        request = MagicMock(spec=Request)
+        mock_exc = MagicMock()
+        mock_exc.__str__ = MagicMock(return_value="no-colon-here")
+        response = await rate_limit_exceeded_handler(request, mock_exc)
+        assert response.status_code == 429
+        body = response.body.decode()
+        assert "retry_after" in body
