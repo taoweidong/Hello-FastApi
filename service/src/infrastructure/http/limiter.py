@@ -123,7 +123,7 @@ def _get_storage_uri() -> str:
 
 
 # 使用默认限额，SlowAPIMiddleware 会对所有未豁免的路由生效
-_default_limit = f"{settings.RATE_LIMIT_TIMES}/{settings.RATE_LIMIT_SECONDS}"
+_default_limit = f"{settings.RATE_LIMIT_TIMES} per {settings.RATE_LIMIT_SECONDS} seconds"
 
 limiter = Limiter(
     key_func=get_real_ip, default_limits=[_default_limit], storage_uri=_get_storage_uri(), strategy="fixed-window"

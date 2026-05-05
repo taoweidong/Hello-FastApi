@@ -32,7 +32,7 @@ class TestDictionaryRepository:
         mock_d2 = MagicMock()
         mock_d2.to_domain.return_value = DictionaryEntity(id="2", name="gender", label="女", value="0", sort=1)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_d1, mock_d2]
+        mock_result.all.return_value = [mock_d1, mock_d2]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_all()
@@ -79,7 +79,7 @@ class TestDictionaryRepository:
         mock_child = MagicMock()
         mock_child.to_domain.return_value = DictionaryEntity(id="2", name="gender", label="男", sort=1, parent_id="1")
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_child]
+        mock_result.all.return_value = [mock_child]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_parent_id("1")
@@ -178,7 +178,7 @@ class TestDictionaryRepository:
         mock_model = MagicMock()
         mock_model.to_domain.return_value = DictionaryEntity(id="1", name="gender", label="男", sort=1)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_model]
+        mock_result.all.return_value = [mock_model]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_filtered(name="gender", is_active=1)
@@ -189,7 +189,7 @@ class TestDictionaryRepository:
     async def test_get_filtered_no_filters(self, repo, mock_session):
         """测试 get_filtered 无筛选条件。"""
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
+        mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_filtered()
@@ -211,7 +211,7 @@ class TestDictionaryRepository:
     async def test_get_all_empty(self, repo, mock_session):
         """测试 get_all 无数据返回空列表。"""
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
+        mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_all()
@@ -222,7 +222,7 @@ class TestDictionaryRepository:
     async def test_get_by_parent_id_none(self, repo, mock_session):
         """测试 get_by_parent_id(None) 返回根字典。"""
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
+        mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_parent_id(None)
@@ -235,7 +235,7 @@ class TestDictionaryRepository:
         mock_model = MagicMock()
         mock_model.to_domain.return_value = DictionaryEntity(id="1", name="gender", label="男", sort=1)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_model]
+        mock_result.all.return_value = [mock_model]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_filtered(name="gender")
@@ -248,7 +248,7 @@ class TestDictionaryRepository:
         mock_model = MagicMock()
         mock_model.to_domain.return_value = DictionaryEntity(id="1", name="gender", label="男", sort=1)
         mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_model]
+        mock_result.all.return_value = [mock_model]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_filtered(is_active=1)
