@@ -22,78 +22,95 @@ class TestRoleRepository:
         return RoleRepository(mock_session)
 
     def test_init(self, repo, mock_session):
-        """测试初始化设置 session 和 crud。"""
+        """测试初始化设置 session。"""
         assert repo.session is mock_session
 
     @pytest.mark.asyncio
-    async def test_get_by_id_found(self, repo):
+    async def test_get_by_id_found(self, repo, mock_session):
         """测试 get_by_id 找到角色。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = RoleEntity(id="1", name="管理员", code="admin")
-        repo._crud.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_id("1")
         assert result is not None
         assert result.name == "管理员"
 
     @pytest.mark.asyncio
-    async def test_get_by_id_not_found(self, repo):
+    async def test_get_by_id_not_found(self, repo, mock_session):
         """测试 get_by_id 未找到返回 None。"""
-        repo._crud.get = AsyncMock(return_value=None)
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
         result = await repo.get_by_id("not-exist")
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_by_name_found(self, repo):
+    async def test_get_by_name_found(self, repo, mock_session):
         """测试 get_by_name 找到角色。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = RoleEntity(id="1", name="管理员", code="admin")
-        repo._crud.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_name("管理员")
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_get_by_code_found(self, repo):
+    async def test_get_by_code_found(self, repo, mock_session):
         """测试 get_by_code 找到角色。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = RoleEntity(id="1", name="管理员", code="admin")
-        repo._crud.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_code("admin")
         assert result is not None
 
     @pytest.mark.asyncio
-    async def test_get_all(self, repo):
+    async def test_get_all(self, repo, mock_session):
         """测试 get_all 返回分页角色列表。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = RoleEntity(id="1", name="管理员", code="admin")
-        repo._crud.get_multi = AsyncMock(return_value={"data": [mock_model]})
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_model]
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_all(page_num=1, page_size=10)
         assert len(result) == 1
 
     @pytest.mark.asyncio
-    async def test_get_all_with_filters(self, repo):
+    async def test_get_all_with_filters(self, repo, mock_session):
         """测试 get_all 带筛选条件。"""
-        repo._crud.get_multi = AsyncMock(return_value={"data": []})
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_all(role_name="管理员", is_active=1)
         assert result == []
-        repo._crud.get_multi.assert_called_once()
+        mock_session.exec.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_count(self, repo):
+    async def test_count(self, repo, mock_session):
         """测试 count 返回总数。"""
-        repo._crud.count = AsyncMock(return_value=5)
+        mock_result = MagicMock()
+        mock_result.one.return_value = 5
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.count()
         assert result == 5
 
     @pytest.mark.asyncio
-    async def test_count_with_filters(self, repo):
+    async def test_count_with_filters(self, repo, mock_session):
         """测试 count 支持筛选。"""
-        repo._crud.count = AsyncMock(return_value=2)
+        mock_result = MagicMock()
+        mock_result.one.return_value = 2
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.count(role_name="管理员", is_active=1)
         assert result == 2
@@ -104,13 +121,17 @@ class TestRoleRepository:
         entity = RoleEntity(id="1", name="新角色", code="new_role")
         mock_model = MagicMock()
         mock_model.id = "1"
-        repo.get_by_id = AsyncMock(return_value=entity)
+        mock_model.to_domain.return_value = entity
+
+        mock_session.add = MagicMock()
+        mock_session.flush = AsyncMock()
+        mock_session.refresh = AsyncMock()
 
         with patch("src.infrastructure.repositories.role_repository.Role.from_domain", return_value=mock_model):
             result = await repo.create(entity)
 
         assert result is not None
-        assert result.name == "新角色"
+        assert result.id == "1"
         mock_session.add.assert_called_once_with(mock_model)
 
     @pytest.mark.asyncio
@@ -119,13 +140,18 @@ class TestRoleRepository:
         entity = RoleEntity(
             id="1", name="更新角色", code="upd", is_active=1, creator_id="u1", modifier_id="u2", description="desc"
         )
-        repo.get_by_id = AsyncMock(return_value=entity)
+        mock_merged = MagicMock()
+        mock_merged.id = "1"
+        mock_merged.to_domain.return_value = entity
 
-        with patch("src.infrastructure.repositories.role_repository.Role.from_domain", return_value=MagicMock()):
-            result = await repo.update(entity)
+        mock_session.merge = AsyncMock(return_value=mock_merged)
+        mock_session.flush = AsyncMock()
+        mock_session.refresh = AsyncMock()
+
+        result = await repo.update(entity)
 
         assert result is not None
-        assert result.name == "更新角色"
+        assert result.id == "1"
 
     @pytest.mark.asyncio
     async def test_delete_success(self, repo, mock_session):
@@ -278,27 +304,33 @@ class TestRoleRepository:
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_get_by_name_not_found(self, repo):
+    async def test_get_by_name_not_found(self, repo, mock_session):
         """测试 get_by_name 未找到返回 None。"""
-        repo._crud.get = AsyncMock(return_value=None)
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_name("not-exist")
 
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_by_code_not_found(self, repo):
+    async def test_get_by_code_not_found(self, repo, mock_session):
         """测试 get_by_code 未找到返回 None。"""
-        repo._crud.get = AsyncMock(return_value=None)
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_code("not-exist")
 
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_all_no_filters(self, repo):
+    async def test_get_all_no_filters(self, repo, mock_session):
         """测试 get_all 无筛选条件。"""
-        repo._crud.get_multi = AsyncMock(return_value={"data": []})
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = []
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_all()
 

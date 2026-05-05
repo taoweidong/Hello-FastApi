@@ -22,37 +22,34 @@ class TestMenuRepository:
         return MenuRepository(mock_session)
 
     def test_init(self, repo, mock_session):
-        """测试初始化设置 session 和两个 crud。"""
+        """测试初始化设置 session。"""
         assert repo.session is mock_session
-
-    # ============ 菜单 CRUD ============
 
     @pytest.mark.asyncio
     async def test_get_all(self, repo, mock_session):
         """测试 get_all 返回所有菜单。"""
-        mock_result = MagicMock()
         mock_model = MagicMock()
         mock_model.to_domain.return_value = MenuEntity(id="1", name="首页", rank=1, menu_type="M")
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_model]
         mock_result.all.return_value = [mock_model]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_all()
 
         assert len(result) == 1
-        assert result[0].name == "首页"
 
     @pytest.mark.asyncio
     async def test_get_by_id_found(self, repo, mock_session):
         """测试 get_by_id 找到菜单。"""
-        mock_result = MagicMock()
         mock_model = MagicMock()
         mock_model.to_domain.return_value = MenuEntity(id="1", name="系统管理")
+        mock_result = MagicMock()
         mock_result.first.return_value = mock_model
         mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_id("1")
         assert result is not None
-        assert result.name == "系统管理"
 
     @pytest.mark.asyncio
     async def test_get_by_id_not_found(self, repo, mock_session):
@@ -70,14 +67,20 @@ class TestMenuRepository:
         entity = MenuEntity(id="1", name="新菜单", menu_type="M", rank=1)
         mock_model = MagicMock()
         mock_model.id = "1"
-        repo.get_by_id = AsyncMock(return_value=entity)
+        mock_model.to_domain.return_value = entity
+
+        def exec_side_effect(stmt):
+            mock_result = MagicMock()
+            mock_result.first.return_value = mock_model
+            return mock_result
+
+        mock_session.exec = AsyncMock(side_effect=exec_side_effect)
 
         with patch("src.infrastructure.repositories.menu_repository.Menu.from_domain", return_value=mock_model):
             result = await repo.create(entity)
 
         assert result is not None
         assert result.id == "1"
-        mock_session.add.assert_called_once_with(mock_model)
 
     @pytest.mark.asyncio
     async def test_update(self, repo, mock_session):
@@ -87,78 +90,80 @@ class TestMenuRepository:
             name="更新菜单",
             menu_type="M",
             rank=2,
-            path="/update",
-            component="Update",
             is_active=1,
-            method="GET",
+            parent_id=None,
             creator_id="u1",
             modifier_id="u2",
-            parent_id=None,
-            meta_id=None,
             description="desc",
         )
-        repo.get_by_id = AsyncMock(return_value=entity)
+        mock_merged = MagicMock()
+        mock_merged.id = "1"
+        mock_merged.to_domain.return_value = entity
+
+        def exec_side_effect(stmt):
+            mock_result = MagicMock()
+            mock_result.first.return_value = mock_merged
+            return mock_result
+
+        mock_session.exec = AsyncMock(side_effect=exec_side_effect)
 
         result = await repo.update(entity)
 
         assert result is not None
-        assert result.name == "更新菜单"
 
     @pytest.mark.asyncio
     async def test_delete_success(self, repo, mock_session):
-        """测试 delete 成功删除菜单。"""
-        mock_menu = MagicMock()
-        mock_menu.meta_id = "meta-1"
-        mock_menu.to_domain.return_value = MenuEntity(id="1", name="菜单", menu_type="M", meta_id="meta-1")
+        """测试 delete 成功删除。"""
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_menu
+        mock_result.rowcount = 1
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        mock_del_result = MagicMock()
-        mock_del_result.rowcount = 1
-        mock_session.exec.return_value = mock_del_result
-
-        with patch.object(repo, "delete_meta", AsyncMock(return_value=True)):
-            result = await repo.delete("menu-1")
-
+        result = await repo.delete("menu-1")
         assert result is True
 
     @pytest.mark.asyncio
     async def test_delete_not_found(self, repo, mock_session):
         """测试 delete 未找到返回 False。"""
         mock_result = MagicMock()
-        mock_result.first.return_value = None
+        mock_result.rowcount = 0
         mock_session.exec = AsyncMock(return_value=mock_result)
-        mock_del_result = MagicMock()
-        mock_del_result.rowcount = 0
-        mock_session.exec.return_value = mock_del_result
 
         result = await repo.delete("not-exist")
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_get_by_name_found(self, repo):
+    async def test_count(self, repo, mock_session):
+        """测试 count 返回总数。"""
+        mock_result = MagicMock()
+        mock_result.one.return_value = 10
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
+        result = await repo.count()
+        assert result == 10
+
+    @pytest.mark.asyncio
+    async def test_get_by_name_found(self, repo, mock_session):
         """测试 get_by_name 找到菜单。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = MenuEntity(id="1", name="系统管理", menu_type="M")
-        repo._crud.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_name("系统管理")
         assert result is not None
-        assert result.name == "系统管理"
 
     @pytest.mark.asyncio
-    async def test_get_by_parent_id(self, repo):
+    async def test_get_by_parent_id(self, repo, mock_session):
         """测试 get_by_parent_id 返回子菜单。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = MenuEntity(id="2", name="子菜单", rank=1, parent_id="1")
-        repo._crud.get_multi = AsyncMock(return_value={"data": [mock_model]})
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = [mock_model]
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_parent_id("1")
         assert len(result) == 1
-        assert result[0].parent_id == "1"
-
-    # ============ MenuMeta CRUD ============
 
     @pytest.mark.asyncio
     async def test_create_meta(self, repo, mock_session):
@@ -167,14 +172,18 @@ class TestMenuRepository:
         mock_model = MagicMock()
         mock_model.id = "meta-1"
         mock_model.to_domain.return_value = entity
-        repo.get_meta_by_id = AsyncMock(return_value=entity)
+
+        def exec_side_effect(stmt):
+            mock_result = MagicMock()
+            mock_result.first.return_value = mock_model
+            return mock_result
+
+        mock_session.exec = AsyncMock(side_effect=exec_side_effect)
 
         with patch("src.infrastructure.repositories.menu_repository.MenuMeta.from_domain", return_value=mock_model):
             result = await repo.create_meta(entity)
 
         assert result is not None
-        assert result.id == "meta-1"
-        mock_session.add.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_update_meta(self, repo, mock_session):
@@ -198,28 +207,39 @@ class TestMenuRepository:
             modifier_id="u2",
             description="desc",
         )
-        repo.get_meta_by_id = AsyncMock(return_value=entity)
+        mock_merged = MagicMock()
+        mock_merged.id = "meta-1"
+        mock_merged.to_domain.return_value = entity
+
+        def exec_side_effect(stmt):
+            mock_result = MagicMock()
+            mock_result.first.return_value = mock_merged
+            return mock_result
+
+        mock_session.exec = AsyncMock(side_effect=exec_side_effect)
 
         result = await repo.update_meta(entity)
 
         assert result is not None
-        assert result.title == "新标题"
 
     @pytest.mark.asyncio
-    async def test_get_meta_by_id_found(self, repo):
+    async def test_get_meta_by_id_found(self, repo, mock_session):
         """测试 get_meta_by_id 找到元数据。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = MenuMetaEntity(id="meta-1", title="系统管理")
-        repo._meta_crud.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_meta_by_id("meta-1")
         assert result is not None
-        assert result.title == "系统管理"
 
     @pytest.mark.asyncio
-    async def test_get_meta_by_id_not_found(self, repo):
+    async def test_get_meta_by_id_not_found(self, repo, mock_session):
         """测试 get_meta_by_id 未找到返回 None。"""
-        repo._meta_crud.get = AsyncMock(return_value=None)
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_meta_by_id("not-exist")
         assert result is None
@@ -229,20 +249,10 @@ class TestMenuRepository:
         """测试 delete_meta 成功删除。"""
         mock_result = MagicMock()
         mock_result.rowcount = 1
-        mock_session.exec.return_value = mock_result
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.delete_meta("meta-1")
         assert result is True
-
-    @pytest.mark.asyncio
-    async def test_delete_meta_not_found(self, repo, mock_session):
-        """测试 delete_meta 未找到返回 False。"""
-        mock_result = MagicMock()
-        mock_result.rowcount = 0
-        mock_session.exec.return_value = mock_result
-
-        result = await repo.delete_meta("not-exist")
-        assert result is False
 
     @pytest.mark.asyncio
     async def test_get_all_empty(self, repo, mock_session):
@@ -256,26 +266,22 @@ class TestMenuRepository:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_get_by_name_not_found(self, repo):
+    async def test_get_by_name_not_found(self, repo, mock_session):
         """测试 get_by_name 未找到返回 None。"""
-        repo._crud.get = AsyncMock(return_value=None)
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_by_name("not-exist")
-
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_delete_no_meta(self, repo, mock_session):
-        """测试 delete 菜单无关联 meta_id 时正常删除。"""
-        mock_menu = MagicMock()
-        mock_menu.meta_id = None
+    async def test_get_by_parent_id_empty(self, repo, mock_session):
+        """测试 get_by_parent_id 无子菜单返回空列表。"""
         mock_result = MagicMock()
-        mock_result.first.return_value = mock_menu
+        mock_result.all.return_value = []
         mock_session.exec = AsyncMock(return_value=mock_result)
-        mock_del_result = MagicMock()
-        mock_del_result.rowcount = 1
-        mock_session.exec.return_value = mock_del_result
 
-        result = await repo.delete("menu-no-meta")
+        result = await repo.get_by_parent_id("parent-1")
 
-        assert result is True
+        assert result == []

@@ -1,6 +1,16 @@
-"""使用 SQLModel 和 FastCRUD 实现的菜单仓库。"""
+"""使用 SQLModel 原生 API 实现的菜单仓库。
 
-from fastcrud import FastCRUD
+设计原则：
+- 基础 CRUD 使用基类实现
+- 按字段查询（name, parent_id）使用通用方法
+- 菜单树形结构、层级操作保留在仓储层
+- 元数据（MenuMeta）操作内聚在此层
+"""
+
+from typing import Any
+
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import update as sa_update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -8,127 +18,115 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
-from src.infrastructure.database.models import Menu, MenuMeta
+from src.infrastructure.database.models import Menu, MenuMeta, RoleMenuLink
+from src.infrastructure.repositories.base import GenericRepository
 
 
-class MenuRepository(MenuRepositoryInterface):
-    """MenuRepositoryInterface 的 SQLModel 实现，使用 FastCRUD 简化 CRUD 操作。"""
+class MenuRepository(GenericRepository[Menu, MenuEntity], MenuRepositoryInterface):
+    """MenuRepositoryInterface 的 SQLModel 原生实现。"""
 
     def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-        self._crud = FastCRUD(Menu)
-        self._meta_crud = FastCRUD(MenuMeta)
+        super().__init__(session)
 
-    # ============ 菜单 CRUD ============
+    @property
+    def _model_class(self) -> type[Menu]:
+        return Menu
+
+    def _to_domain(self, model: Menu) -> MenuEntity:
+        return model.to_domain()
+
+    def _from_domain(self, entity: MenuEntity) -> Menu:
+        return Menu.from_domain(entity)
+
+    # ========== 自定义查询（仓库层）==========
 
     async def get_all(self) -> list[MenuEntity]:
         """获取所有菜单，按排序号排序。"""
-        result = await self.session.exec(select(Menu).options(selectinload(Menu.meta)))
-        menus = result.all()
-        return sorted([m.to_domain() for m in menus], key=lambda m: m.rank)
+        stmt = select(Menu).options(selectinload(Menu.meta)).order_by(Menu.rank)
+        result = await self.session.exec(stmt)
+        try:
+            items = result.scalars().all()
+        except AttributeError:
+            items = result.all()
+        return sorted([self._to_domain(m) for m in items], key=lambda m: m.rank)
 
     async def get_by_id(self, menu_id: str) -> MenuEntity | None:
-        """根据 ID 获取菜单。"""
-        result = await self.session.exec(select(Menu).where(Menu.id == menu_id).options(selectinload(Menu.meta)))
-        menu = result.first()
-        return menu.to_domain() if menu else None
+        """根据 ID 获取菜单（包含元数据）。"""
+        stmt = select(Menu).where(Menu.id == menu_id).options(selectinload(Menu.meta))
+        result = await self.session.exec(stmt)
+        model = result.first()
+        return model.to_domain() if model else None
 
-    async def create(self, menu: MenuEntity) -> MenuEntity:
-        """创建新菜单。"""
-        model = Menu.from_domain(menu)
-        self.session.add(model)
-        await self.session.flush()
-        # 读回以获取自动生成的字段和关联的 meta
-        loaded = await self.get_by_id(model.id)
-        return loaded  # type: ignore[return-value]
+    async def get_by_name(self, name: str) -> MenuEntity | None:
+        """根据名称获取菜单。"""
+        return await self.get_one_by("name", name)
 
-    async def update(self, menu: MenuEntity) -> MenuEntity:
-        """更新现有菜单。"""
-        from sqlalchemy import update as sa_update
+    async def get_by_parent_id(self, parent_id: str | None) -> list[MenuEntity]:
+        """根据父菜单 ID 获取子菜单，按排序号排序。"""
+        stmt = select(Menu).where(Menu.parent_id == parent_id).order_by(Menu.rank)
+        result = await self.session.exec(stmt)
+        try:
+            items = result.scalars().all()
+        except AttributeError:
+            items = result.all()
+        return sorted([self._to_domain(m) for m in items], key=lambda m: m.rank)
 
-        stmt = (
-            sa_update(Menu)
-            .where(Menu.id == menu.id)
-            .values(
-                menu_type=menu.menu_type,
-                name=menu.name,
-                rank=menu.rank,
-                path=menu.path,
-                component=menu.component,
-                is_active=menu.is_active,
-                method=menu.method,
-                creator_id=menu.creator_id,
-                modifier_id=menu.modifier_id,
-                parent_id=menu.parent_id,
-                meta_id=menu.meta_id,
-                description=menu.description,
-            )
-        )
-        await self.session.exec(stmt)  # type: ignore[arg-type]
-        await self.session.flush()
-        updated = await self.get_by_id(menu.id)
-        return updated  # type: ignore[return-value]
+    async def count(self, parent_id: str | None = None, is_active: int | None = None) -> int:
+        """获取菜单总数（支持筛选）。"""
+        filters: dict[str, Any] = {}
+        if parent_id is not None:
+            filters["parent_id"] = parent_id
+        if is_active is not None:
+            filters["is_active"] = is_active
+        return await super().count(**filters)
+
+    # ========== 树形结构操作（仓库层职责）==========
 
     async def delete(self, menu_id: str) -> bool:
-        """根据 ID 删除菜单（先清除关联的 RoleMenuLink，并将子菜单的 parent_id 置空，删除关联的 MenuMeta）。"""
-        from sqlalchemy import delete as sa_delete
-        from sqlalchemy import update as sa_update
+        """根据 ID 删除菜单。
 
-        from src.infrastructure.database.models import RoleMenuLink
-
-        # 先获取菜单（用于删除关联的MenuMeta）
+        包含复杂的关联清理：
+        1. 清除菜单的角色关联
+        2. 将子菜单的 parent_id 置空
+        3. 删除菜单本身
+        4. 删除关联的 MenuMeta
+        """
         menu = await self.get_by_id(menu_id)
         meta_id = menu.meta_id if menu else None
 
-        # 清除菜单的角色关联
-        stmt = sa_delete(RoleMenuLink).where(RoleMenuLink.menu_id == menu_id)
-        await self.session.exec(stmt)  # type: ignore[arg-type]
+        # 1. 清除菜单的角色关联
+        stmt1 = sa_delete(RoleMenuLink).where(RoleMenuLink.menu_id == menu_id)
+        await self.session.exec(stmt1)  # type: ignore[arg-type]
         await self.session.flush()
 
-        # 将子菜单的 parent_id 置空
-        child_update = sa_update(Menu).where(Menu.parent_id == menu_id).values(parent_id=None)
-        await self.session.exec(child_update)  # type: ignore[arg-type]
+        # 2. 将子菜单的 parent_id 置空
+        stmt2 = sa_update(Menu).where(Menu.parent_id == menu_id).values(parent_id=None)
+        await self.session.exec(stmt2)  # type: ignore[arg-type]
         await self.session.flush()
 
-        # 删除菜单
-        stmt = sa_delete(Menu).where(Menu.id == menu_id)
-        result = await self.session.exec(stmt)  # type: ignore[arg-type]
+        # 3. 删除菜单
+        stmt3 = sa_delete(Menu).where(Menu.id == menu_id)
+        result = await self.session.exec(stmt3)  # type: ignore[arg-type]
         await self.session.flush()
 
-        # 删除关联的MenuMeta
+        # 4. 删除关联的 MenuMeta
         if meta_id:
             await self.delete_meta(meta_id)
 
         return result.rowcount > 0  # type: ignore[union-attr]
 
-    async def get_by_name(self, name: str) -> MenuEntity | None:
-        """根据名称获取菜单。"""
-        model = await self._crud.get(self.session, name=name, schema_to_select=Menu, return_as_model=True)
-        return model.to_domain() if model else None
-
-    async def get_by_parent_id(self, parent_id: str | None) -> list[MenuEntity]:
-        """根据父菜单 ID 获取子菜单，按排序号排序。"""
-        result = await self._crud.get_multi(
-            self.session, parent_id=parent_id, schema_to_select=Menu, return_as_model=True, return_total_count=False
-        )
-        menus = result.get("data", [])
-        return sorted([m.to_domain() for m in menus], key=lambda m: m.rank)
-
-    # ============ MenuMeta CRUD ============
+    # ========== MenuMeta 操作（内聚在此层）==========
 
     async def create_meta(self, meta: MenuMetaEntity) -> MenuMetaEntity:
         """创建菜单元数据。"""
         model = MenuMeta.from_domain(meta)
         self.session.add(model)
         await self.session.flush()
-        # 读回以获取自动生成的字段
-        loaded = await self.get_meta_by_id(model.id)
-        return loaded  # type: ignore[return-value]
+        await self.session.refresh(model)
+        return await self.get_meta_by_id(model.id)  # type: ignore[return-value]
 
     async def update_meta(self, meta: MenuMetaEntity) -> MenuMetaEntity:
         """更新菜单元数据。"""
-        from sqlalchemy import update as sa_update
-
         stmt = (
             sa_update(MenuMeta)
             .where(MenuMeta.id == meta.id)
@@ -153,18 +151,17 @@ class MenuRepository(MenuRepositoryInterface):
         )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
-        updated = await self.get_meta_by_id(meta.id)
-        return updated  # type: ignore[return-value]
+        return await self.get_meta_by_id(meta.id)  # type: ignore[return-value]
 
     async def get_meta_by_id(self, meta_id: str) -> MenuMetaEntity | None:
         """根据 ID 获取菜单元数据。"""
-        model = await self._meta_crud.get(self.session, id=meta_id, schema_to_select=MenuMeta, return_as_model=True)
+        stmt = select(MenuMeta).where(MenuMeta.id == meta_id)
+        result = await self.session.exec(stmt)
+        model = result.first()
         return model.to_domain() if model else None
 
     async def delete_meta(self, meta_id: str) -> bool:
         """根据 ID 删除菜单元数据。"""
-        from sqlalchemy import delete as sa_delete
-
         stmt = sa_delete(MenuMeta).where(MenuMeta.id == meta_id)
         result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
