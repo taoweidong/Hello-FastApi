@@ -4,7 +4,16 @@ from http import HTTPStatus
 
 import pytest
 
-from src.domain.exceptions import AppError, BusinessError, ConflictError, ForbiddenError, NotFoundError, RateLimitError, UnauthorizedError, ValidationError
+from src.domain.exceptions import (
+    AppError,
+    BusinessError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    RateLimitError,
+    UnauthorizedError,
+    ValidationError,
+)
 
 
 @pytest.mark.unit

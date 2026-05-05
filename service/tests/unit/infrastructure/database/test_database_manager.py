@@ -5,7 +5,6 @@
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
-from sqlmodel import SQLModel
 
 from src.infrastructure.database.database_manager import (
     DatabaseManager,

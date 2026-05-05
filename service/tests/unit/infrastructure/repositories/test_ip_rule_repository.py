@@ -22,7 +22,7 @@ class TestIPRuleRepository:
         return IPRuleRepository(mock_session)
 
     def test_init(self, repo, mock_session):
-        """测试初始化设置 session 和 crud。"""
+        """测试初始化设置 session。"""
         assert repo.session is mock_session
 
     @pytest.mark.asyncio
@@ -47,10 +47,9 @@ class TestIPRuleRepository:
         """测试 get_ip_rules 带筛选条件。"""
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec = AsyncMock(return_value=mock_result)
         mock_count_result = MagicMock()
         mock_count_result.one.return_value = 0
-        mock_session.exec.return_value = mock_count_result
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count_result])
 
         rules, total = await repo.get_ip_rules(
             page_num=1,
@@ -65,23 +64,27 @@ class TestIPRuleRepository:
         assert total == 0
 
     @pytest.mark.asyncio
-    async def test_get_ip_rule_by_id_found(self, repo):
-        """测试 get_ip_rule_by_id 找到规则。"""
+    async def test_get_by_id_found(self, repo, mock_session):
+        """测试 get_by_id 找到规则。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = IPRuleEntity(id="1", ip_address="10.0.0.1")
-        repo._crud.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await repo.get_ip_rule_by_id("1")
+        result = await repo.get_by_id("1")
 
         assert result is not None
         assert result.id == "1"
 
     @pytest.mark.asyncio
-    async def test_get_ip_rule_by_id_not_found(self, repo):
-        """测试 get_ip_rule_by_id 未找到返回 None。"""
-        repo._crud.get = AsyncMock(return_value=None)
+    async def test_get_by_id_not_found(self, repo, mock_session):
+        """测试 get_by_id 未找到返回 None。"""
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await repo.get_ip_rule_by_id("not-exist")
+        result = await repo.get_by_id("not-exist")
 
         assert result is None
 
@@ -183,10 +186,9 @@ class TestIPRuleRepository:
         """测试 get_ip_rules 仅按类型筛选。"""
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec = AsyncMock(return_value=mock_result)
-        mock_count = MagicMock()
-        mock_count.one.return_value = 0
-        mock_session.exec.return_value = mock_count
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 0
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count_result])
 
         rules, total = await repo.get_ip_rules(rule_type="whitelist")
 
@@ -198,10 +200,9 @@ class TestIPRuleRepository:
         """测试 get_ip_rules 仅按启用状态筛选。"""
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec = AsyncMock(return_value=mock_result)
-        mock_count = MagicMock()
-        mock_count.one.return_value = 0
-        mock_session.exec.return_value = mock_count
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 0
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count_result])
 
         rules, total = await repo.get_ip_rules(is_active=1)
 
@@ -213,10 +214,9 @@ class TestIPRuleRepository:
         """测试 get_ip_rules 仅按开始时间筛选。"""
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec = AsyncMock(return_value=mock_result)
-        mock_count = MagicMock()
-        mock_count.one.return_value = 0
-        mock_session.exec.return_value = mock_count
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 0
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count_result])
 
         rules, total = await repo.get_ip_rules(start_time=datetime(2024, 1, 1))
 
@@ -228,10 +228,9 @@ class TestIPRuleRepository:
         """测试 get_ip_rules 仅按结束时间筛选。"""
         mock_result = MagicMock()
         mock_result.all.return_value = []
-        mock_session.exec = AsyncMock(return_value=mock_result)
-        mock_count = MagicMock()
-        mock_count.one.return_value = 0
-        mock_session.exec.return_value = mock_count
+        mock_count_result = MagicMock()
+        mock_count_result.one.return_value = 0
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count_result])
 
         rules, total = await repo.get_ip_rules(end_time=datetime(2024, 12, 31))
 

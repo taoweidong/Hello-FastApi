@@ -2,7 +2,15 @@
 
 import pytest
 
-from src.application.validators import empty_str_or_zero_to_none, empty_str_to_none, normalize_optional_id, parse_status, parse_time_range, validate_password_strength, validate_username
+from src.application.validators import (
+    empty_str_or_zero_to_none,
+    empty_str_to_none,
+    normalize_optional_id,
+    parse_status,
+    parse_time_range,
+    validate_password_strength,
+    validate_username,
+)
 from src.domain.exceptions import ValidationError
 
 

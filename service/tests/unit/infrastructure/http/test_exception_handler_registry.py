@@ -1,16 +1,12 @@
 """ExceptionHandlerRegistry 单元测试。"""
 
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 
-from src.domain.exceptions import AppError, NotFoundError, ConflictError
-from src.infrastructure.http.exception_handler_registry import (
-    ExceptionHandlerRegistry,
-    register_exception_handlers,
-)
+from src.domain.exceptions import AppError, ConflictError, NotFoundError
+from src.infrastructure.http.exception_handler_registry import ExceptionHandlerRegistry, register_exception_handlers
 
 
 def _make_mock_request() -> Request:

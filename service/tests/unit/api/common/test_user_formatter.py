@@ -1,6 +1,7 @@
 """user_formatter 工具函数的单元测试。"""
 
 import pytest
+
 from src.api.common.user_formatter import format_user_list_row
 
 

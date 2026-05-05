@@ -3,7 +3,6 @@
 测试 DepartmentRepositoryInterface 抽象基类的方法签名和返回类型。
 """
 
-from unittest.mock import AsyncMock
 
 import pytest
 

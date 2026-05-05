@@ -1,6 +1,5 @@
 """认证服务的单元测试。"""
 
-from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -14,7 +13,6 @@ from src.domain.entities.user import UserEntity
 from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
-
 
 TEST_SECRET_KEY = "test-secret-key-for-auth-testing"
 TEST_ALGORITHM = "HS256"
@@ -360,7 +358,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_refresh_token_no_sub_claim(self, auth_service, mock_user_repo, token_service):
         """测试刷新令牌时 payload 缺少 sub。"""
-        import jwt as pyjwt
+        from jose import jwt as pyjwt
         # Forge a refresh token with no "sub" claim but valid structure
         forged = pyjwt.encode({"type": "refresh", "exp": 9999999999}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
         with pytest.raises(UnauthorizedError):
@@ -369,7 +367,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_logout_token_no_exp_claim(self, auth_service, mock_cache_service, token_service):
         """测试登出时 token 无 exp 声明。"""
-        import jwt as pyjwt
+        from jose import jwt as pyjwt
         forged = pyjwt.encode({"sub": "user-1", "type": "access"}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
         result = await auth_service.logout(forged)
         assert result is True

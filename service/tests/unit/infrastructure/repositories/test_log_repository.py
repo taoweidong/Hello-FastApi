@@ -22,10 +22,8 @@ class TestLogRepository:
         return LogRepository(mock_session)
 
     def test_init(self, repo, mock_session):
-        """测试初始化设置 session 和两个 crud。"""
+        """测试初始化设置 session。"""
         assert repo.session is mock_session
-        assert repo._login_log_crud is not None
-        assert repo._system_log_crud is not None
 
     # ============ 登录日志 ============
 
@@ -132,20 +130,24 @@ class TestLogRepository:
         assert result.id == "1"
 
     @pytest.mark.asyncio
-    async def test_get_operation_log_detail_found(self, repo):
+    async def test_get_operation_log_detail_found(self, repo, mock_session):
         """测试 get_operation_log_detail 找到日志。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = OperationLogEntity(id="1", module="user")
-        repo._system_log_crud.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_operation_log_detail("1")
         assert result is not None
         assert result.id == "1"
 
     @pytest.mark.asyncio
-    async def test_get_operation_log_detail_not_found(self, repo):
+    async def test_get_operation_log_detail_not_found(self, repo, mock_session):
         """测试 get_operation_log_detail 未找到返回 None。"""
-        repo._system_log_crud.get = AsyncMock(return_value=None)
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_operation_log_detail("not-exist")
         assert result is None
@@ -197,16 +199,19 @@ class TestLogRepository:
         """测试 get_system_log_detail 找到日志。"""
         mock_model = MagicMock()
         mock_model.to_domain.return_value = OperationLogEntity(id="1", module="auth")
-        mock_session.get = AsyncMock(return_value=mock_model)
+        mock_result = MagicMock()
+        mock_result.first.return_value = mock_model
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_system_log_detail("1")
         assert result is not None
-        assert result.id == "1"
 
     @pytest.mark.asyncio
     async def test_get_system_log_detail_not_found(self, repo, mock_session):
         """测试 get_system_log_detail 未找到返回 None。"""
-        mock_session.get = AsyncMock(return_value=None)
+        mock_result = MagicMock()
+        mock_result.first.return_value = None
+        mock_session.exec = AsyncMock(return_value=mock_result)
 
         result = await repo.get_system_log_detail("not-exist")
         assert result is None

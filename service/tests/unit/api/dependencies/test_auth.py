@@ -1,7 +1,8 @@
 """认证依赖项测试。"""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
 

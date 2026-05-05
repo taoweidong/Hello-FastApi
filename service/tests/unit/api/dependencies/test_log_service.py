@@ -1,7 +1,8 @@
 """日志应用服务工厂测试。"""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.mark.unit

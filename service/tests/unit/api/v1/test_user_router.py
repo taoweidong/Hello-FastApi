@@ -1,7 +1,8 @@
 """用户管理路由模块单元测试。"""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -43,7 +44,7 @@ class TestUserRouter:
 
     @pytest.fixture
     def client(self, app, mock_user, mock_user_service):
-        from src.api.dependencies import get_user_service, get_current_active_user, get_current_user_id
+        from src.api.dependencies import get_current_active_user, get_current_user_id, get_user_service
         app.dependency_overrides[get_current_active_user] = lambda: mock_user
         app.dependency_overrides[get_current_user_id] = lambda: "1"
         app.dependency_overrides[get_user_service] = lambda: mock_user_service

@@ -5,12 +5,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from src.application.dto.menu_dto import (
-    MenuCreateDTO,
-    MenuMetaDTO,
-    MenuResponseDTO,
-    MenuUpdateDTO,
-)
+from src.application.dto.menu_dto import MenuCreateDTO, MenuMetaDTO, MenuResponseDTO, MenuUpdateDTO
 
 
 @pytest.mark.unit

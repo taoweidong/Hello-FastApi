@@ -1,7 +1,8 @@
 """认证路由模块单元测试。"""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -81,7 +82,13 @@ class TestAuthRouter:
 
     @pytest.fixture
     def client(self, app, mock_user, mock_auth_service, mock_menu_repo, mock_role_repo, mock_user_repo):
-        from src.api.dependencies import get_auth_service, get_current_active_user, get_menu_repository, get_role_repository, get_user_repository
+        from src.api.dependencies import (
+            get_auth_service,
+            get_current_active_user,
+            get_menu_repository,
+            get_role_repository,
+            get_user_repository,
+        )
         app.dependency_overrides[get_current_active_user] = lambda: mock_user
         app.dependency_overrides[get_auth_service] = lambda: mock_auth_service
         app.dependency_overrides[get_menu_repository] = lambda: mock_menu_repo

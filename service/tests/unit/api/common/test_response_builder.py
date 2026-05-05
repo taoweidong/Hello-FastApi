@@ -1,12 +1,8 @@
 """response_builder 工具函数的单元测试。"""
 
 import pytest
-from src.api.common.response_builder import (
-    error_response,
-    list_response,
-    page_response,
-    success_response,
-)
+
+from src.api.common.response_builder import error_response, list_response, page_response, success_response
 
 
 @pytest.mark.unit

@@ -1,7 +1,8 @@
 """系统配置路由模块单元测试。"""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -41,7 +42,7 @@ class TestSystemConfigRouter:
 
     @pytest.fixture
     def client(self, app, mock_user, mock_config_service):
-        from src.api.dependencies import get_system_config_service, get_current_active_user
+        from src.api.dependencies import get_current_active_user, get_system_config_service
         app.dependency_overrides[get_current_active_user] = lambda: mock_user
         app.dependency_overrides[get_system_config_service] = lambda: mock_config_service
         return TestClient(app, raise_server_exceptions=False)

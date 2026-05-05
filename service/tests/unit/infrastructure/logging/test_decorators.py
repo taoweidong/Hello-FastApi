@@ -3,8 +3,9 @@
 测试装饰器在异步函数正常执行和异常抛出时的日志记录行为。
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.infrastructure.logging.decorators import log_execution
 

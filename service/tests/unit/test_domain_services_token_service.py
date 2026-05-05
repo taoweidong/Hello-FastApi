@@ -10,7 +10,6 @@ import pytest
 
 from src.domain.services.token_service import TokenService
 
-
 TEST_SECRET_KEY = "test-secret-key"
 TEST_ALGORITHM = "HS256"
 
@@ -183,7 +182,6 @@ class TestTokenService:
             mock_now = datetime(2020, 1, 1, tzinfo=timezone.utc)
             mock_datetime.now.return_value = mock_now
             # 过期时间是 -1 秒前（已过期）
-            import time
             with patch("time.time") as mock_time:
                 # 当前时间设为 2020-01-01
                 base_time = datetime(2020, 1, 1, tzinfo=timezone.utc).timestamp()

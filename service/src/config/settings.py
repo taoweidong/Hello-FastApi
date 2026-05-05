@@ -131,7 +131,7 @@ class ProductionSettings(Settings):
     LOG_LEVEL: str = "WARNING"
 
 
-class TestEnvSettings(Settings):
+class QaEnvSettings(Settings):
     """测试环境配置。"""
 
     model_config = SettingsConfigDict(
@@ -178,7 +178,7 @@ def get_settings() -> Settings:
     settings_map: dict[str, type[Settings]] = {
         "development": DevelopmentSettings,
         "production": ProductionSettings,
-        "testing": TestEnvSettings,
+        "testing": QaEnvSettings,
     }
 
     settings_class = settings_map.get(env, DevelopmentSettings)

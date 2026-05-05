@@ -1,7 +1,8 @@
 """字典管理路由模块单元测试。"""
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -40,7 +41,7 @@ class TestDictionaryRouter:
 
     @pytest.fixture
     def client(self, app, mock_user, mock_dict_service):
-        from src.api.dependencies import get_dictionary_service, get_current_active_user
+        from src.api.dependencies import get_current_active_user, get_dictionary_service
         app.dependency_overrides[get_current_active_user] = lambda: mock_user
         app.dependency_overrides[get_dictionary_service] = lambda: mock_dict_service
         return TestClient(app, raise_server_exceptions=False)

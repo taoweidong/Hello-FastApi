@@ -7,7 +7,7 @@ import json
 import time
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright, Page, expect
+from playwright.sync_api import Page, expect, sync_playwright
 
 BASE_URL = "http://localhost:8848"
 API_URL = "http://localhost:8000"
@@ -420,28 +420,28 @@ def test_api_endpoints(page: Page):
     # 测试部门列表API
     resp = page.request.get(f"{API_URL}/api/system/dept?currentPage=1&pageSize=10", headers=headers)
     if resp.ok:
-        print(f"  部门列表API: 成功")
+        print("  部门列表API: 成功")
     else:
         record_issue(page, "后端", "API", f"部门列表API失败: {resp.status}", "functional")
 
     # 测试字典列表API
     resp = page.request.get(f"{API_URL}/api/system/dict?currentPage=1&pageSize=10", headers=headers)
     if resp.ok:
-        print(f"  字典列表API: 成功")
+        print("  字典列表API: 成功")
     else:
         record_issue(page, "后端", "API", f"字典列表API失败: {resp.status}", "functional")
 
     # 测试IP规则API
     resp = page.request.get(f"{API_URL}/api/system/ip-rules?currentPage=1&pageSize=10", headers=headers)
     if resp.ok:
-        print(f"  IP规则API: 成功")
+        print("  IP规则API: 成功")
     else:
         record_issue(page, "后端", "API", f"IP规则API失败: {resp.status}", "functional")
 
     # 测试系统配置API
     resp = page.request.get(f"{API_URL}/api/system/config?currentPage=1&pageSize=10", headers=headers)
     if resp.ok:
-        print(f"  系统配置API: 成功")
+        print("  系统配置API: 成功")
     else:
         record_issue(page, "后端", "API", f"系统配置API失败: {resp.status}", "functional")
 
@@ -457,7 +457,7 @@ def test_api_endpoints(page: Page):
     # 测试操作日志API
     resp = page.request.get(f"{API_URL}/api/system/log/operation?currentPage=1&pageSize=10", headers=headers)
     if resp.ok:
-        print(f"  操作日志API: 成功")
+        print("  操作日志API: 成功")
     else:
         record_issue(page, "后端", "API", f"操作日志API失败: {resp.status}", "functional")
 

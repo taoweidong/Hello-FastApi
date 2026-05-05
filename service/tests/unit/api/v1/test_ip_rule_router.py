@@ -1,9 +1,9 @@
 """IP 规则管理路由模块单元测试。"""
 
 from datetime import datetime
+from unittest.mock import AsyncMock
 
 import pytest
-from unittest.mock import AsyncMock
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -52,8 +52,8 @@ class TestIPRuleRouter:
 
     @pytest.fixture
     def client(self, app, mock_user, mock_ip_rule_service):
-        from src.api.dependencies.ip_rule_service import get_ip_rule_service
         from src.api.dependencies import get_current_active_user
+        from src.api.dependencies.ip_rule_service import get_ip_rule_service
         app.dependency_overrides[get_current_active_user] = lambda: mock_user
         app.dependency_overrides[get_ip_rule_service] = lambda: mock_ip_rule_service
         return TestClient(app, raise_server_exceptions=False)

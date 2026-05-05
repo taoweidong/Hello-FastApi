@@ -168,7 +168,7 @@ class TestIPRuleService:
     @pytest.mark.asyncio
     async def test_create_ip_rule_full_params(self, ip_rule_service, mock_ip_rule_repo):
         """测试创建IP规则所有参数。"""
-        from datetime import datetime, timedelta
+        from datetime import datetime
         expires = datetime.now() + timedelta(days=7)
         created = IPRuleEntity(id="1", ip_address="10.0.0.1", rule_type="whitelist", reason="测试", is_active=1, expires_at=expires)
         mock_ip_rule_repo.create_ip_rule = AsyncMock(return_value=created)

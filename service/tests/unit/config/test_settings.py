@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from src.config.settings import DevelopmentSettings, ProductionSettings, Settings, TestEnvSettings, get_settings
+from src.config.settings import DevelopmentSettings, ProductionSettings, Settings, QaEnvSettings, get_settings
 
 
 @pytest.mark.unit
@@ -145,12 +145,12 @@ class TestProductionSettings:
 
 
 @pytest.mark.unit
-class TestTestEnvSettings:
-    """TestEnvSettings 验证测试。"""
+class TestQaEnvSettings:
+    """QaEnvSettings 验证测试。"""
 
     def test_default_values(self):
         """测试测试环境默认值。"""
-        settings = TestEnvSettings(_env_file=None, APP_ENV="development")
+        settings = QaEnvSettings(_env_file=None, APP_ENV="development")
         assert settings.DEBUG is True
         assert settings.DATABASE_URL == "sqlite+aiosqlite:///./sql/test.db"
         assert settings.LOG_LEVEL == "DEBUG"
@@ -178,7 +178,7 @@ class TestGetSettings:
         """测试测试环境。"""
         with patch.dict(os.environ, {"APP_ENV": "testing"}, clear=True):
             settings = get_settings()
-            assert isinstance(settings, TestEnvSettings)
+            assert isinstance(settings, QaEnvSettings)
 
     def test_env_development(self):
         """测试开发环境。"""

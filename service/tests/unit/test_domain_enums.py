@@ -5,11 +5,7 @@
 
 import pytest
 
-from src.domain.enums import (
-    LoginStatusEnum,
-    MenuTypeEnum,
-    StatusEnum,
-)
+from src.domain.enums import LoginStatusEnum, MenuTypeEnum, StatusEnum
 
 
 @pytest.mark.unit

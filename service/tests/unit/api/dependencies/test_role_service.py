@@ -1,7 +1,8 @@
 """角色应用服务和仓储工厂测试。"""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.mark.unit

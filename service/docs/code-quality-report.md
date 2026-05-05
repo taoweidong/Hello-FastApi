@@ -72,7 +72,7 @@
 | # | 问题 | 修复方案 | 涉及文件 |
 |---|------|----------|----------|
 | 1 | `mypy.ini` 未使用段 | 移除 3 个无效配置段 | `mypy.ini` |
-| 2 | `TestingSettings` 命名冲突 | 重命名为 `TestEnvSettings` | `settings.py`, `test_settings.py` |
+| 2 | `TestingSettings` 命名冲突 | 重命名为 `QaEnvSettings` | `settings.py`, `test_settings.py` |
 | 3 | Pytest 警告过滤 | 添加 `filterwarnings` 配置 | `pyproject.toml` |
 | 4 | Redis 弃用警告 | `close()` → `aclose()` | `redis_manager.py`, `test_redis_manager.py` |
 | 5 | SQLAlchemy 弃用警告 | `session.execute()` → `session.exec()` | 所有 repository 文件 |

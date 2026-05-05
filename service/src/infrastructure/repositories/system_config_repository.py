@@ -1,58 +1,59 @@
-"""使用 SQLModel 和 FastCRUD 实现的系统配置仓库。"""
+"""使用 SQLModel 原生 API 实现的系统配置仓库。"""
 
-from fastcrud import FastCRUD
-from sqlalchemy import func as sa_func
+from typing import Any
+
+from sqlalchemy import delete as sa_delete
+from sqlalchemy import update as sa_update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.system_config import SystemConfigEntity
 from src.domain.repositories.system_config_repository import SystemConfigRepositoryInterface
 from src.infrastructure.database.models import SystemConfig
+from src.infrastructure.repositories.base import GenericRepository
 
 
-class SystemConfigRepository(SystemConfigRepositoryInterface):
-    """系统配置仓储的 SQLModel 实现。"""
+class SystemConfigRepository(GenericRepository[SystemConfig, SystemConfigEntity], SystemConfigRepositoryInterface):
+    """系统配置仓储的 SQLModel 原生实现。"""
 
     def __init__(self, session: AsyncSession) -> None:
-        self.session = session
-        self._crud = FastCRUD(SystemConfig)
+        super().__init__(session)
+
+    @property
+    def _model_class(self) -> type[SystemConfig]:
+        return SystemConfig
+
+    def _to_domain(self, model: SystemConfig) -> SystemConfigEntity:
+        return model.to_domain()
+
+    def _from_domain(self, entity: SystemConfigEntity) -> SystemConfig:
+        return SystemConfig.from_domain(entity)
 
     async def get_all(
         self, page_num: int = 1, page_size: int = 10, key: str | None = None, is_active: int | None = None
     ) -> list[SystemConfigEntity]:
-        """获取配置列表（支持分页和筛选）。"""
-        offset = (page_num - 1) * page_size
-        query = select(SystemConfig)
-
+        """获取配置列表（分页和筛选）。"""
+        filters: dict[str, Any] = {}
         if key:
-            query = query.where(SystemConfig.key.contains(key))
+            filters["key"] = key
         if is_active is not None:
-            query = query.where(SystemConfig.is_active == is_active)
-
-        query = query.offset(offset).limit(page_size)
-        result = await self.session.exec(query)
-        return [m.to_domain() for m in result.all()]
+            filters["is_active"] = is_active
+        return await super().get_all(page_num, page_size, **filters)
 
     async def count(self, key: str | None = None, is_active: int | None = None) -> int:
         """统计配置数量（支持筛选）。"""
-        count_query = select(sa_func.count()).select_from(SystemConfig)
-
+        filters: dict[str, Any] = {}
         if key:
-            count_query = count_query.where(SystemConfig.key.contains(key))
+            filters["key"] = key
         if is_active is not None:
-            count_query = count_query.where(SystemConfig.is_active == is_active)
-
-        result = await self.session.exec(count_query)
-        return result.one()
-
-    async def get_by_id(self, config_id: str) -> SystemConfigEntity | None:
-        """根据 ID 获取配置。"""
-        model = await self._crud.get(self.session, id=config_id, schema_to_select=SystemConfig, return_as_model=True)
-        return model.to_domain() if model else None
+            filters["is_active"] = is_active
+        return await super().count(**filters)
 
     async def get_by_key(self, key: str) -> SystemConfigEntity | None:
         """根据 key 获取配置。"""
-        model = await self._crud.get(self.session, key=key, schema_to_select=SystemConfig, return_as_model=True)
+        stmt = select(SystemConfig).where(SystemConfig.key == key)
+        result = await self.session.exec(stmt)
+        model = result.first()
         return model.to_domain() if model else None
 
     async def create(self, config: SystemConfigEntity) -> SystemConfigEntity:
@@ -60,14 +61,12 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
         model = SystemConfig.from_domain(config)
         self.session.add(model)
         await self.session.flush()
-        # 读回以获取自动生成的字段
+        await self.session.refresh(model)
         loaded = await self.get_by_id(model.id)
         return loaded  # type: ignore[return-value]
 
     async def update(self, config: SystemConfigEntity) -> SystemConfigEntity:
         """更新配置。"""
-        from sqlalchemy import update as sa_update
-
         stmt = (
             sa_update(SystemConfig)
             .where(SystemConfig.id == config.id)
@@ -89,8 +88,6 @@ class SystemConfigRepository(SystemConfigRepositoryInterface):
 
     async def delete(self, config_id: str) -> bool:
         """删除配置。"""
-        from sqlalchemy import delete as sa_delete
-
         stmt = sa_delete(SystemConfig).where(SystemConfig.id == config_id)
         result = await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()

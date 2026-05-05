@@ -4,10 +4,10 @@
 所有操作，包括正常路径、降级路径（Redis 不可用）、异常路径等。
 """
 
-import json
 import hashlib
+import json
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -593,7 +593,7 @@ class TestInternalHelpers:
         """测试黑名单 Key 使用 SHA-256 哈希前缀。"""
         svc = CacheService()
         key = svc._blacklist_key("my-secret-token")
-        expected_hash = hashlib.sha256("my-secret-token".encode()).hexdigest()[:32]
+        expected_hash = hashlib.sha256(b"my-secret-token").hexdigest()[:32]
         assert key == f"token:blacklist:{expected_hash}"
 
     def test_blacklist_key_returns_string(self):

@@ -4,10 +4,10 @@
 和辅助日志记录函数。
 """
 
-from datetime import datetime
+
+from unittest.mock import MagicMock, patch
 
 import pytest
-from unittest.mock import MagicMock, patch
 
 from src.infrastructure.logging.logging_manager import (
     LoggingManager,

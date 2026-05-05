@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.infrastructure.common.utils import get_utc_now, is_valid_email, is_strong_password
+from src.infrastructure.common.utils import get_utc_now, is_strong_password, is_valid_email
 
 
 @pytest.mark.unit

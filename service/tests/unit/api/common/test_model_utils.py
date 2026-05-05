@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 from pydantic import BaseModel
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, SQLModel
 
 from src.api.common.model_utils import (
     datetime_to_isoformat,
