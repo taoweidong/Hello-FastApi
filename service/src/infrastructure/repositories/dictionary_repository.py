@@ -32,7 +32,7 @@ class DictionaryRepository(GenericRepository[Dictionary, DictionaryEntity], Dict
         """获取所有字典，按排序号升序排列。"""
         stmt = select(Dictionary).order_by(Dictionary.sort)
         result = await self.session.exec(stmt)
-        return [self._to_domain(m) for m in result.scalars().all()]
+        return [self._to_domain(m) for m in result.all()]
 
     async def get_by_name(self, name: str) -> DictionaryEntity | None:
         """根据名称获取字典。"""
@@ -45,7 +45,7 @@ class DictionaryRepository(GenericRepository[Dictionary, DictionaryEntity], Dict
         """根据父字典 ID 获取子字典，按排序号升序排列。"""
         stmt = select(Dictionary).where(Dictionary.parent_id == parent_id).order_by(Dictionary.sort)
         result = await self.session.exec(stmt)
-        return [self._to_domain(m) for m in result.scalars().all()]
+        return [self._to_domain(m) for m in result.all()]
 
     async def get_max_sort(self, parent_id: str | None) -> int:
         """获取同级最大排序值。"""
@@ -99,4 +99,4 @@ class DictionaryRepository(GenericRepository[Dictionary, DictionaryEntity], Dict
         stmt = stmt.order_by(Dictionary.sort)
 
         result = await self.session.exec(stmt)
-        return [self._to_domain(m) for m in result.scalars().all()]
+        return [self._to_domain(m) for m in result.all()]

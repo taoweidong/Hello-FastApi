@@ -79,6 +79,7 @@ Hello-FastApi/
 
 | 时间 | 修改人 | 主要修改内容 |
 |------|--------|-------------|
+| 2026-05-05 20:52 | Taowd | 统一换行符为 LF；开发环境数据库切换为 SQLite；修复字典仓库查询方法；修复 Alembic 测试编码和空输出问题；修复前端操作日志缩进 |
 | 2026-04-30 | Taowd | P0 基础设施完善：集成 Alembic 数据库迁移、完善限流中间件（Redis 存储）、补全 Docker Compose（PostgreSQL + Redis）、添加 Jenkins CI/CD Pipeline |
 | 2026-04-30 | Taowd | 重构 HTTP 限流模块：使用 SlowAPIMiddleware 全局中间件替代 @limiter.limit 装饰器 |
 | 2026-04-26 09:38 | Taowd | 重构 .opencode 目录结构；agent-browser 技能迁移 |

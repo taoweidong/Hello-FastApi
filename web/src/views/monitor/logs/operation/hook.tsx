@@ -48,7 +48,7 @@ export function useOperationLog(tableRef: Ref) {
       prop: "module",
       minWidth: 120
     },
-        {
+    {
       label: "请求地址",
       prop: "path",
       minWidth: 120
