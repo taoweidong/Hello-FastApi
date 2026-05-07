@@ -146,7 +146,11 @@ def test_user_management(page: Page):
         record_issue(page, "前端", "用户管理", "新增用户按钮未找到", "functional")
 
     # 测试搜索
-    search_input = page.locator('.el-table__header-wrapper input, input[placeholder*="搜索"], input[placeholder*="用户名"]').first
+    search_input = page.locator(
+        '.el-table__header-wrapper input, '
+        'input[placeholder*="搜索"], '
+        'input[placeholder*="用户名"]'
+    ).first
     if search_input.count() > 0:
         search_input.fill("admin")
         time.sleep(1)

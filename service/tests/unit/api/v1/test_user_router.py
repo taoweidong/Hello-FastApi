@@ -29,7 +29,16 @@ class TestUserRouter:
     def mock_user_service(self):
         svc = AsyncMock()
         _mock_user_obj = MagicMock()
-        _mock_user_obj.model_dump.return_value = {"id": "1", "username": "admin", "nickname": "", "email": "", "phone": "", "avatar": "", "description": "", "dept_id": None}
+        _mock_user_obj.model_dump.return_value = {
+            "id": "1",
+            "username": "admin",
+            "nickname": "",
+            "email": "",
+            "phone": "",
+            "avatar": "",
+            "description": "",
+            "dept_id": None,
+        }
         svc.get_users.return_value = ([_mock_user_obj], 1)
         svc.create_user.return_value = {"id": "2", "username": "newuser"}
         svc.get_user.return_value = {"id": "1", "username": "admin", "email": "admin@test.com"}

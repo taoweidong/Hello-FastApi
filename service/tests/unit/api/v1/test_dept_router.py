@@ -32,7 +32,7 @@ class TestDeptRouter:
             {"id": "d1", "name": "技术部", "code": "tech", "isActive": 1, "parentId": None},
             {"id": "d2", "name": "开发组", "code": "dev", "isActive": 1, "parentId": "d1"},
         ]
-        svc.get_departments.return_value = [type("Dept", (), {"model_dump": lambda self: d})() for d in depts]
+        svc.get_departments.return_value = [type("Dept", (), {"model_dump": lambda self, d=d: d})() for d in depts]
         svc.create_department.return_value = type("Dept", (), {"id": "d3", "name": "测试部"})()
         svc.update_department.return_value = type("Dept", (), {"id": "d1", "name": "更新部"})()
         svc.delete_department.return_value = None

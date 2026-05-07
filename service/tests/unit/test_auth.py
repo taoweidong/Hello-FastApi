@@ -15,7 +15,12 @@ TEST_REFRESH_EXPIRE_DAYS = 7
 @pytest.fixture
 def token_service() -> TokenService:
     """提供测试用的 TokenService 实例。"""
-    return TokenService(secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=TEST_ACCESS_EXPIRE_MINUTES, refresh_expire_days=TEST_REFRESH_EXPIRE_DAYS)
+    return TokenService(
+        secret_key=TEST_SECRET_KEY,
+        algorithm=TEST_ALGORITHM,
+        access_expire_minutes=TEST_ACCESS_EXPIRE_MINUTES,
+        refresh_expire_days=TEST_REFRESH_EXPIRE_DAYS,
+    )
 
 
 class TestPasswordService:

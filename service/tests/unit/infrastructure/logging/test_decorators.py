@@ -40,9 +40,11 @@ class TestLogExecution:
             msg = "出错了"
             raise ValueError(msg)
 
-        with patch("src.infrastructure.logging.decorators.logger", mock_logger):
-            with pytest.raises(ValueError, match="出错了"):
-                await failing_func()
+        with (
+            patch("src.infrastructure.logging.decorators.logger", mock_logger),
+            pytest.raises(ValueError, match="出错了"),
+        ):
+            await failing_func()
 
         mock_logger.debug.assert_any_call("开始执行: failing_func")
         mock_logger.error.assert_called_once()

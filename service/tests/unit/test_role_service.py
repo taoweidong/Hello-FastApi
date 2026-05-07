@@ -84,7 +84,7 @@ class TestRoleService:
         mock_role_repo.get_role_menu_ids = AsyncMock(return_value=["menu-1", "menu-2"])
 
         dto = RoleCreateDTO(name="测试角色", code="test_role", menuIds=["menu-1", "menu-2"])
-        result = await role_service.create_role(dto)
+        await role_service.create_role(dto)
 
         mock_role_repo.assign_menus_to_role.assert_called_once_with("role-id-1", ["menu-1", "menu-2"])
 
@@ -298,7 +298,17 @@ class TestRoleService:
     def test_role_to_response_with_menus(self, role_service):
         """测试 _role_to_response_with_menus 静态方法。"""
         from datetime import datetime
-        role = RoleEntity(id="r1", name="管理员", code="admin", is_active=1, creator_id="u1", modifier_id="u2", created_time=datetime.now(), updated_time=datetime.now(), description="描述")
+        role = RoleEntity(
+            id="r1",
+            name="管理员",
+            code="admin",
+            is_active=1,
+            creator_id="u1",
+            modifier_id="u2",
+            created_time=datetime.now(),
+            updated_time=datetime.now(),
+            description="描述",
+        )
         result = role_service._role_to_response_with_menus(role, ["m1", "m2"])
         assert result.id == "r1"
         assert result.name == "管理员"

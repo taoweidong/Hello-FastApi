@@ -73,7 +73,18 @@ class TestLoginLogResponseDTO:
     def test_with_all_fields(self):
         """测试所有字段。"""
         now = datetime.now()
-        dto = LoginLogResponseDTO(id="1", status=0, ipaddress="127.0.0.1", browser="Chrome", system="Windows", agent="Mozilla/5.0", loginType=1, creatorId="u1", createdTime=now, updatedTime=now)
+        dto = LoginLogResponseDTO(
+            id="1",
+            status=0,
+            ipaddress="127.0.0.1",
+            browser="Chrome",
+            system="Windows",
+            agent="Mozilla/5.0",
+            loginType=1,
+            creatorId="u1",
+            createdTime=now,
+            updatedTime=now,
+        )
         assert dto.status == 0
         assert dto.ipaddress == "127.0.0.1"
         assert dto.loginType == 1
@@ -122,7 +133,22 @@ class TestOperationLogResponseDTO:
     def test_with_all_fields(self):
         """测试所有字段。"""
         now = datetime.now()
-        dto = OperationLogResponseDTO(id="1", module="user", path="/api/user", body='{"key": "val"}', method="POST", ipaddress="127.0.0.1", browser="Chrome", system="Windows", responseCode=200, responseResult="success", statusCode=0, creatorId="u1", createdTime=now, updatedTime=now)
+        dto = OperationLogResponseDTO(
+            id="1",
+            module="user",
+            path="/api/user",
+            body='{"key": "val"}',
+            method="POST",
+            ipaddress="127.0.0.1",
+            browser="Chrome",
+            system="Windows",
+            responseCode=200,
+            responseResult="success",
+            statusCode=0,
+            creatorId="u1",
+            createdTime=now,
+            updatedTime=now,
+        )
         assert dto.module == "user"
         assert dto.method == "POST"
         assert dto.responseCode == 200

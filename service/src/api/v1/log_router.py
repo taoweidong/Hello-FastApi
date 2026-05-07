@@ -5,6 +5,8 @@
 路由直接挂在 /api/system 路径下（无额外前缀）。
 """
 
+from typing import Any
+
 from classy_fastapi import Routable, post
 from fastapi import Body, Depends
 
@@ -17,6 +19,41 @@ from src.application.dto.log_dto import (
     SystemLogListQueryDTO,
 )
 from src.application.services.log_service import LogService
+from src.domain.entities.log import LoginLogEntity, OperationLogEntity
+
+
+def _format_login_log(log: LoginLogEntity) -> dict[str, Any]:
+    """将登录日志实体转为响应字典。"""
+    return {
+        "id": log.id,
+        "status": log.status,
+        "ipaddress": log.ipaddress or "",
+        "browser": log.browser or "",
+        "system": log.system or "",
+        "agent": log.agent or "",
+        "loginType": log.login_type,
+        "creatorId": log.creator_id or "",
+        "createdTime": log.created_time.isoformat() if log.created_time else None,
+    }
+
+
+def _format_operation_log(log: OperationLogEntity) -> dict[str, Any]:
+    """将操作/系统日志实体转为响应字典。"""
+    return {
+        "id": log.id,
+        "module": log.module or "",
+        "path": log.path or "",
+        "body": log.body or "",
+        "method": log.method or "",
+        "ipaddress": log.ipaddress or "",
+        "browser": log.browser or "",
+        "system": log.system or "",
+        "responseCode": log.response_code,
+        "responseResult": log.response_result or "",
+        "statusCode": log.status_code,
+        "creatorId": log.creator_id or "",
+        "createdTime": log.created_time.isoformat() if log.created_time else None,
+    }
 
 
 class LogRouter(Routable):
@@ -33,21 +70,7 @@ class LogRouter(Routable):
     ) -> dict:
         """获取登录日志列表。"""
         logs, total = await service.get_login_logs(query)
-        log_list = []
-        for log in logs:
-            log_list.append(
-                {
-                    "id": log.id,
-                    "status": log.status,
-                    "ipaddress": log.ipaddress or "",
-                    "browser": log.browser or "",
-                    "system": log.system or "",
-                    "agent": log.agent or "",
-                    "loginType": log.login_type,
-                    "creatorId": log.creator_id or "",
-                    "createdTime": log.created_time.isoformat() if log.created_time else None,
-                }
-            )
+        log_list = [_format_login_log(log) for log in logs]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/login-logs/batch-delete")
@@ -80,25 +103,7 @@ class LogRouter(Routable):
     ) -> dict:
         """获取操作日志列表。"""
         logs, total = await service.get_operation_logs(query)
-        log_list = []
-        for log in logs:
-            log_list.append(
-                {
-                    "id": log.id,
-                    "module": log.module or "",
-                    "path": log.path or "",
-                    "body": log.body or "",
-                    "method": log.method or "",
-                    "ipaddress": log.ipaddress or "",
-                    "browser": log.browser or "",
-                    "system": log.system or "",
-                    "responseCode": log.response_code,
-                    "responseResult": log.response_result or "",
-                    "statusCode": log.status_code,
-                    "creatorId": log.creator_id or "",
-                    "createdTime": log.created_time.isoformat() if log.created_time else None,
-                }
-            )
+        log_list = [_format_operation_log(log) for log in logs]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/operation-logs/batch-delete")
@@ -131,25 +136,7 @@ class LogRouter(Routable):
     ) -> dict:
         """获取系统日志列表。"""
         logs, total = await service.get_system_logs(query)
-        log_list = []
-        for log in logs:
-            log_list.append(
-                {
-                    "id": log.id,
-                    "module": log.module or "",
-                    "path": log.path or "",
-                    "body": log.body or "",
-                    "method": log.method or "",
-                    "ipaddress": log.ipaddress or "",
-                    "browser": log.browser or "",
-                    "system": log.system or "",
-                    "responseCode": log.response_code,
-                    "responseResult": log.response_result or "",
-                    "statusCode": log.status_code,
-                    "creatorId": log.creator_id or "",
-                    "createdTime": log.created_time.isoformat() if log.created_time else None,
-                }
-            )
+        log_list = [_format_operation_log(log) for log in logs]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/system-logs-detail")
@@ -166,20 +153,4 @@ class LogRouter(Routable):
         log = await service.get_system_log_detail(log_id)
         if log is None:
             return success_response(data=None, message="日志不存在")
-        return success_response(
-            data={
-                "id": log.id,
-                "module": log.module or "",
-                "path": log.path or "",
-                "body": log.body or "",
-                "method": log.method or "",
-                "ipaddress": log.ipaddress or "",
-                "browser": log.browser or "",
-                "system": log.system or "",
-                "responseCode": log.response_code,
-                "responseResult": log.response_result or "",
-                "statusCode": log.status_code,
-                "creatorId": log.creator_id or "",
-                "createdTime": log.created_time.isoformat() if log.created_time else None,
-            }
-        )
+        return success_response(data=_format_operation_log(log))

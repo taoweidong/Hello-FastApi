@@ -133,7 +133,16 @@ class TestRoleResponseDTO:
         """测试所有字段。"""
         now = datetime.now()
         dto = RoleResponseDTO(
-            id="1", name="管理员", code="admin", isActive=0, menus=[{"id": "m1", "name": "用户管理"}], creatorId="u1", modifierId="u2", createdTime=now, updatedTime=now, description="描述"
+            id="1",
+            name="管理员",
+            code="admin",
+            isActive=0,
+            menus=[{"id": "m1", "name": "用户管理"}],
+            creatorId="u1",
+            modifierId="u2",
+            createdTime=now,
+            updatedTime=now,
+            description="描述",
         )
         assert dto.isActive == 0
         assert len(dto.menus) == 1

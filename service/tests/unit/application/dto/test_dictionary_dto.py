@@ -30,7 +30,15 @@ class TestDictionaryCreateDTO:
 
     def test_valid_input_all_fields(self):
         """测试所有字段。"""
-        dto = DictionaryCreateDTO(name="gender", label="性别", value="1", parentId="123", sort=1, isActive=0, description="性别字典")
+        dto = DictionaryCreateDTO(
+            name="gender",
+            label="性别",
+            value="1",
+            parentId="123",
+            sort=1,
+            isActive=0,
+            description="性别字典",
+        )
         assert dto.label == "性别"
         assert dto.value == "1"
         assert dto.sort == 1
@@ -159,7 +167,18 @@ class TestDictionaryResponseDTO:
     def test_with_all_fields(self):
         """测试所有字段。"""
         now = datetime.now()
-        dto = DictionaryResponseDTO(id="1", parentId="0", name="gender", label="性别", value="1", sort=1, isActive=1, createdTime=now, updatedTime=now, description="描述")
+        dto = DictionaryResponseDTO(
+            id="1",
+            parentId="0",
+            name="gender",
+            label="性别",
+            value="1",
+            sort=1,
+            isActive=1,
+            createdTime=now,
+            updatedTime=now,
+            description="描述",
+        )
         assert dto.value == "1"
         assert dto.sort == 1
         assert dto.createdTime == now

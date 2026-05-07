@@ -66,7 +66,13 @@ class TestIPRuleEntity:
     def test_is_effective_when_active_and_not_expired(self):
         """测试 is_effective 属性（启用且未过期）。"""
         future = datetime.now(timezone.utc) + timedelta(days=1)
-        rule = IPRuleEntity(id="rule-1", ip_address="192.168.1.1", rule_type="blacklist", is_active=1, expires_at=future)
+        rule = IPRuleEntity(
+            id="rule-1",
+            ip_address="192.168.1.1",
+            rule_type="blacklist",
+            is_active=1,
+            expires_at=future,
+        )
         assert rule.is_effective is True
 
     def test_is_effective_when_inactive(self):

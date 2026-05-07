@@ -92,7 +92,16 @@ class TestLogService:
         """测试带时间范围获取登录日志。"""
         mock_log_repo.get_login_logs = AsyncMock(return_value=([], 0))
 
-        query = type("Query", (), {"createdTime": ["2024-01-01T00:00:00", "2024-12-31T23:59:59"], "status": None, "pageNum": 1, "pageSize": 10})()
+        query = type(
+            "Query",
+            (),
+            {
+                "createdTime": ["2024-01-01T00:00:00", "2024-12-31T23:59:59"],
+                "status": None,
+                "pageNum": 1,
+                "pageSize": 10,
+            },
+        )()
         await log_service.get_login_logs(query)
         call_kwargs = mock_log_repo.get_login_logs.call_args[1]
         assert call_kwargs["start_time"] is not None
@@ -164,20 +173,20 @@ class TestLogService:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_login_logs_with_time_range(self, log_service, mock_log_repo):
-        """测试带时间范围获取登录日志。"""
-        mock_log_repo.get_login_logs = AsyncMock(return_value=([], 0))
-        query = type("Query", (), {"createdTime": ["2024-01-01T00:00:00", "2024-12-31T23:59:59"], "status": None, "pageNum": 1, "pageSize": 10})()
-        await log_service.get_login_logs(query)
-        call_kwargs = mock_log_repo.get_login_logs.call_args[1]
-        assert call_kwargs["start_time"] is not None
-        assert call_kwargs["end_time"] is not None
-
-    @pytest.mark.asyncio
     async def test_get_operation_logs_with_status_and_module(self, log_service, mock_log_repo):
         """测试带状态和模块筛选获取操作日志。"""
         mock_log_repo.get_operation_logs = AsyncMock(return_value=([], 0))
-        query = type("Query", (), {"createdTime": None, "status": "200", "module": "用户管理", "pageNum": 1, "pageSize": 10})()
+        query = type(
+            "Query",
+            (),
+            {
+                "createdTime": None,
+                "status": "200",
+                "module": "用户管理",
+                "pageNum": 1,
+                "pageSize": 10,
+            },
+        )()
         await log_service.get_operation_logs(query)
         call_kwargs = mock_log_repo.get_operation_logs.call_args[1]
         assert call_kwargs["status_code"] == 200
@@ -187,7 +196,17 @@ class TestLogService:
     async def test_get_operation_logs_with_time_range(self, log_service, mock_log_repo):
         """测试带时间范围获取操作日志。"""
         mock_log_repo.get_operation_logs = AsyncMock(return_value=([], 0))
-        query = type("Query", (), {"createdTime": ["2024-01-01T00:00:00", "2024-12-31T23:59:59"], "status": None, "module": None, "pageNum": 1, "pageSize": 10})()
+        query = type(
+            "Query",
+            (),
+            {
+                "createdTime": ["2024-01-01T00:00:00", "2024-12-31T23:59:59"],
+                "status": None,
+                "module": None,
+                "pageNum": 1,
+                "pageSize": 10,
+            },
+        )()
         await log_service.get_operation_logs(query)
         call_kwargs = mock_log_repo.get_operation_logs.call_args[1]
         assert call_kwargs["start_time"] is not None
@@ -197,7 +216,17 @@ class TestLogService:
     async def test_get_system_logs_with_status_and_module(self, log_service, mock_log_repo):
         """测试带状态和模块筛选获取系统日志。"""
         mock_log_repo.get_system_logs = AsyncMock(return_value=([], 0))
-        query = type("Query", (), {"createdTime": None, "status": "500", "module": "系统", "pageNum": 1, "pageSize": 10})()
+        query = type(
+            "Query",
+            (),
+            {
+                "createdTime": None,
+                "status": "500",
+                "module": "系统",
+                "pageNum": 1,
+                "pageSize": 10,
+            },
+        )()
         await log_service.get_system_logs(query)
         call_kwargs = mock_log_repo.get_system_logs.call_args[1]
         assert call_kwargs["status_code"] == 500
@@ -207,7 +236,17 @@ class TestLogService:
     async def test_get_system_logs_with_time_range(self, log_service, mock_log_repo):
         """测试带时间范围获取系统日志。"""
         mock_log_repo.get_system_logs = AsyncMock(return_value=([], 0))
-        query = type("Query", (), {"createdTime": ["2024-01-01T00:00:00", "2024-12-31T23:59:59"], "status": None, "module": None, "pageNum": 1, "pageSize": 10})()
+        query = type(
+            "Query",
+            (),
+            {
+                "createdTime": ["2024-01-01T00:00:00", "2024-12-31T23:59:59"],
+                "status": None,
+                "module": None,
+                "pageNum": 1,
+                "pageSize": 10,
+            },
+        )()
         await log_service.get_system_logs(query)
         call_kwargs = mock_log_repo.get_system_logs.call_args[1]
         assert call_kwargs["start_time"] is not None

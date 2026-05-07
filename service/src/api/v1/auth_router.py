@@ -19,7 +19,6 @@ from src.api.dependencies import (
 )
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
-from src.domain.entities.menu import MenuEntity
 from src.domain.exceptions import UnauthorizedError
 from src.infrastructure.repositories.menu_repository import MenuRepository
 from src.infrastructure.repositories.role_repository import RoleRepository
@@ -91,17 +90,10 @@ class AuthRouter(Routable):
     async def get_async_routes(
         self,
         current_user: dict = Depends(get_current_active_user),
-        menu_repo: MenuRepository = Depends(get_menu_repository),
+        service: AuthService = Depends(get_auth_service),
     ) -> dict:
-        """获取当前用户可访问的动态路由配置。
-
-        从数据库读取菜单数据，构建前端路由结构。
-        menu_type: 0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限
-        """
-        all_menus = await menu_repo.get_all()
-        # 过滤掉 PERMISSION 类型（menu_type=2），仅返回目录和页面路由
-        route_menus = [m for m in all_menus if m.menu_type != MenuEntity.PERMISSION]
-        tree = self._build_route_tree(route_menus, None)
+        """获取当前用户可访问的动态路由配置。"""
+        tree = await service.get_async_routes(current_user["id"])
         return success_response(data=tree)
 
     @get("/list-all-role")
@@ -118,15 +110,15 @@ class AuthRouter(Routable):
     async def list_role_ids(
         self,
         data: dict,
-        role_repo: RoleRepository = Depends(get_role_repository),
+        service: AuthService = Depends(get_auth_service),
         current_user: dict = Depends(get_current_active_user),
     ) -> dict:
         """根据用户ID获取对应角色ID列表。"""
         user_id = data.get("userId")
         if not user_id:
             return {"code": 10001, "message": "请求参数缺失或格式不正确", "data": []}
-        roles = await role_repo.get_user_roles(str(user_id))
-        return success_response(data=[r.id for r in roles])
+        role_ids = await service.get_user_role_ids(str(user_id))
+        return success_response(data=role_ids)
 
     @post("/role-menu")
     async def get_role_menu(
@@ -153,75 +145,12 @@ class AuthRouter(Routable):
     async def get_role_menu_ids(
         self,
         data: dict,
+        service: AuthService = Depends(get_auth_service),
         current_user: dict = Depends(get_current_active_user),
-        menu_repo: MenuRepository = Depends(get_menu_repository),
-        role_repo: RoleRepository = Depends(get_role_repository),
     ) -> dict:
         """根据角色ID获取菜单ID列表。"""
         role_id = data.get("id")
         if not role_id:
             return success_response(data=[])
-        role = await role_repo.get_by_id(str(role_id))
-        if role and role.code == "admin":
-            all_menus = await menu_repo.get_all()
-            menu_ids = [m.id for m in all_menus]
-            return success_response(data=menu_ids)
-        menu_ids = await role_repo.get_role_menu_ids(str(role_id))
+        menu_ids = await service.get_role_menu_ids(str(role_id))
         return success_response(data=menu_ids)
-
-    def _build_route_tree(self, menus: list, parent_id: str | None) -> list[dict]:
-        """根据菜单数据构建前端路由树结构。
-
-        将 Menu+MenuMeta 组合为前端 get-async-routes 需要的格式。
-        menu_type=0 为目录，menu_type=1 为页面。
-        """
-        tree = []
-        for menu in menus:
-            if menu.parent_id == parent_id:
-                node = {
-                    "path": menu.path or "",
-                    "name": menu.name or "",
-                    "rank": menu.rank,
-                    "meta": self._build_meta(menu),
-                }
-                if menu.component:
-                    node["component"] = menu.component
-                children = self._build_route_tree(menus, menu.id)
-                if children:
-                    node["children"] = children
-                tree.append(node)
-        return tree
-
-    def _build_meta(self, menu) -> dict:
-        """从 Menu 的 meta 关系构建 meta 字典。"""
-        meta = {"title": menu.name or ""}
-        # 如果有 MenuMeta 关联数据
-        if menu.meta:
-            m = menu.meta
-            if m.title:
-                meta["title"] = m.title
-            if m.icon:
-                meta["icon"] = m.icon
-            if m.r_svg_name:
-                meta["rSvgName"] = m.r_svg_name
-            if m.is_show_menu == 0:
-                meta["showLink"] = False
-            if m.is_show_parent == 1:
-                meta["showParent"] = True
-            if m.is_keepalive == 1:
-                meta["keepAlive"] = True
-            if m.frame_url:
-                meta["frameSrc"] = m.frame_url
-            if m.frame_loading == 0:
-                meta["frameLoading"] = False
-            if m.transition_enter:
-                meta["enterTransition"] = m.transition_enter
-            if m.transition_leave:
-                meta["leaveTransition"] = m.transition_leave
-            if m.is_hidden_tag == 1:
-                meta["hiddenTag"] = True
-            if m.fixed_tag == 1:
-                meta["fixedTag"] = True
-            if m.dynamic_level > 0:
-                meta["dynamicLevel"] = m.dynamic_level
-        return meta

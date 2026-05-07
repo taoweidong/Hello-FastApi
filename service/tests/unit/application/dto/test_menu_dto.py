@@ -27,7 +27,22 @@ class TestMenuMetaDTO:
 
     def test_with_all_fields(self):
         """测试所有字段。"""
-        dto = MenuMetaDTO(id="1", title="用户管理", icon="user", rSvgName="user-svg", isShowMenu=1, isShowParent=1, isKeepalive=1, frameUrl="https://example.com", frameLoading=0, transitionEnter="fade-in", transitionLeave="fade-out", isHiddenTag=1, fixedTag=1, dynamicLevel=2)
+        dto = MenuMetaDTO(
+            id="1",
+            title="用户管理",
+            icon="user",
+            rSvgName="user-svg",
+            isShowMenu=1,
+            isShowParent=1,
+            isKeepalive=1,
+            frameUrl="https://example.com",
+            frameLoading=0,
+            transitionEnter="fade-in",
+            transitionLeave="fade-out",
+            isHiddenTag=1,
+            fixedTag=1,
+            dynamicLevel=2,
+        )
         assert dto.title == "用户管理"
         assert dto.icon == "user"
         assert dto.dynamicLevel == 2

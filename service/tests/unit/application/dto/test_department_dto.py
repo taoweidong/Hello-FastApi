@@ -32,7 +32,14 @@ class TestDepartmentCreateDTO:
     def test_valid_input_all_fields(self):
         """测试所有字段。"""
         dto = DepartmentCreateDTO(
-            name="技术部", parentId="123", modeType=1, code="dept-001", rank=1, autoBind=1, isActive=0, description="技术部门"
+            name="技术部",
+            parentId="123",
+            modeType=1,
+            code="dept-001",
+            rank=1,
+            autoBind=1,
+            isActive=0,
+            description="技术部门",
         )
         assert dto.parentId == "123"
         assert dto.modeType == 1

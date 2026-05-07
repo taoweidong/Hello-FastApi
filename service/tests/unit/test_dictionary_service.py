@@ -236,7 +236,18 @@ class TestDictionaryService:
         """测试 _to_response 静态方法。"""
         from datetime import datetime
         now = datetime.now()
-        d = DictionaryEntity(id="1", name="status", label="状态", value="1", sort=1, is_active=1, parent_id="0", created_time=now, updated_time=now, description="描述")
+        d = DictionaryEntity(
+            id="1",
+            name="status",
+            label="状态",
+            value="1",
+            sort=1,
+            is_active=1,
+            parent_id="0",
+            created_time=now,
+            updated_time=now,
+            description="描述",
+        )
         result = dict_service._to_response(d)
         assert result.id == "1"
         assert result.name == "status"

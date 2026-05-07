@@ -1,5 +1,8 @@
 """认证依赖项：当前用户、权限检查。"""
 
+from collections.abc import Awaitable, Callable
+from typing import Any
+
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -74,7 +77,7 @@ async def get_current_active_user(
     return user_info
 
 
-def require_permission(code: str):
+def require_permission(code: str) -> Callable[..., Awaitable[dict[str, Any]]]:
     """依赖工厂：要求特定菜单权限（基于menu.name检查按钮权限）。
 
     新RBAC方案：权限不再使用独立Permission表，而是通过Menu的menu_type=2(PERMISSION)
@@ -122,7 +125,7 @@ def require_permission(code: str):
     return permission_checker
 
 
-def require_menu_permission(path: str, method: str):
+def require_menu_permission(path: str, method: str) -> Callable[..., Awaitable[dict[str, Any]]]:
     """依赖工厂：要求特定API路径和方法的菜单权限。
 
     基于Menu.path和Menu.method检查API级权限。
@@ -169,7 +172,7 @@ def require_menu_permission(path: str, method: str):
     return permission_checker
 
 
-def require_superuser():
+def require_superuser() -> Callable[..., Awaitable[dict[str, Any]]]:
     """依赖项：要求超级用户角色。"""
 
     async def superuser_checker(current_user: dict = Depends(get_current_active_user)) -> dict:

@@ -1,11 +1,10 @@
 """限流模块测试。"""
 
 import sys
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
 from src.infrastructure.http.limiter import get_limiter, get_real_ip, rate_limit_exceeded_handler

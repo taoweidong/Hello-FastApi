@@ -57,7 +57,16 @@ class TestUserCreateDTO:
 
     def test_empty_str_converts_to_none(self):
         """测试空字符串转换为 None。"""
-        dto = UserCreateDTO(username="testuser", password="TestPass123", nickname="", email="", phone="", avatar="", description="", isActive=True)
+        dto = UserCreateDTO(
+            username="testuser",
+            password="TestPass123",
+            nickname="",
+            email="",
+            phone="",
+            avatar="",
+            description="",
+            isActive=True,
+        )
         assert dto.nickname is None
         assert dto.email is None
         assert dto.phone is None
@@ -274,7 +283,15 @@ class TestUserListQueryDTO:
 
     def test_custom_values(self):
         """测试自定义值。"""
-        dto = UserListQueryDTO(pageNum=2, pageSize=20, username="test", phone="138", email="test@", isActive=1, deptId="dept-001")
+        dto = UserListQueryDTO(
+            pageNum=2,
+            pageSize=20,
+            username="test",
+            phone="138",
+            email="test@",
+            isActive=1,
+            deptId="dept-001",
+        )
         assert dto.pageNum == 2
         assert dto.username == "test"
         assert dto.isActive == 1

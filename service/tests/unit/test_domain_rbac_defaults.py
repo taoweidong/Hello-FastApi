@@ -128,11 +128,8 @@ class TestUserMenuNames:
             # 或者不应该存在
             for name in matching:
                 menu = next((m for m in rbac_defaults.DEFAULT_MENUS if m["name"] == name), None)
-                if menu:
-                    # 目录和菜单类型可以有 view 权限包含 add/edit/delete（表示可见）
-                    # 但 PERMISSION 类型的 user:add, user:edit 等不应该在 user 角色中
-                    if menu["menu_type"] == 2:  # PERMISSION
-                        assert perm not in ["add", "edit", "delete", "manage"], f"user 角色不应该有 {name} 权限"
+                if menu and menu["menu_type"] == 2:  # PERMISSION
+                    assert perm not in ["add", "edit", "delete", "manage"], f"user 角色不应该有 {name} 权限"
 
 
 @pytest.mark.unit

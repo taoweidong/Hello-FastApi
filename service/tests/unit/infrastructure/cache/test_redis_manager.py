@@ -201,9 +201,11 @@ class TestRedisManagerGetClientEdgeCases:
     async def test_get_client_from_url_error(self):
         """测试 redis.from_url 抛出异常。"""
         mgr = RedisManager(redis_url="redis://invalid:6379/0")
-        with patch("src.infrastructure.cache.redis_manager.redis.from_url", side_effect=Exception("连接失败")):
-            with pytest.raises(Exception):
-                await mgr.get_client()
+        with (
+            patch("src.infrastructure.cache.redis_manager.redis.from_url", side_effect=Exception("连接失败")),
+            pytest.raises(Exception),  # noqa: B017
+        ):
+            await mgr.get_client()
 
 
 @pytest.mark.unit
@@ -218,5 +220,5 @@ class TestRedisManagerCloseEdgeCases:
         mock_client.aclose = AsyncMock(side_effect=Exception("关闭失败"))
         mgr._client = mock_client
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="关闭失败"):  # noqa: B017
             await mgr.close()

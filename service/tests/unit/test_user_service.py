@@ -44,14 +44,27 @@ class TestUserService:
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(return_value=None)
 
-        test_user = UserEntity(id="test-id", username="testuser", email="test@example.com", password="hashed", nickname="测试用户", is_active=1)
+        test_user = UserEntity(
+            id="test-id",
+            username="testuser",
+            email="test@example.com",
+            password="hashed",
+            nickname="测试用户",
+            is_active=1,
+        )
         mock_user_repo.create = AsyncMock(return_value=test_user)
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
         mock_role_repo = user_service.role_repo
         mock_role_repo.get_user_roles = AsyncMock(return_value=[])
 
         with patch.object(user_service, "repo", mock_user_repo):
-            dto = UserCreateDTO(username="testuser", password="TestPass123", nickname="测试用户", email="test@example.com", isActive=True)
+            dto = UserCreateDTO(
+                username="testuser",
+                password="TestPass123",
+                nickname="测试用户",
+                email="test@example.com",
+                isActive=True,
+            )
             result = await user_service.create_user(dto)
 
         assert result.username == "testuser"
@@ -157,7 +170,10 @@ class TestUserService:
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
         mock_role_repo.get_user_roles = AsyncMock(return_value=[])
 
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             result = await user_service.get_user("test-id")
         assert result.username == "testuser"
         assert result.nickname == "测试用户"
@@ -189,7 +205,10 @@ class TestUserService:
         mock_role_repo.get_users_roles_batch = AsyncMock(return_value={"1": []})
 
         query = UserListQueryDTO(pageNum=1, pageSize=10, username="user1", isActive=1)
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             results, total = await user_service.get_users(query)
         assert total == 1
         assert len(results) == 1
@@ -203,7 +222,10 @@ class TestUserService:
         mock_role_repo.get_users_roles_batch = AsyncMock(return_value={})
 
         query = UserListQueryDTO(pageNum=1, pageSize=10)
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             results, total = await user_service.get_users(query)
         assert total == 0
         assert results == []
@@ -216,7 +238,10 @@ class TestUserService:
         mock_role_repo.get_users_roles_batch = AsyncMock(return_value={})
 
         query = UserListQueryDTO(pageNum=1, pageSize=10, deptId="0")
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             await user_service.get_users(query)
         call_kwargs = mock_user_repo.get_all.call_args[1]
         assert call_kwargs["dept_id"] is None
@@ -231,7 +256,10 @@ class TestUserService:
         mock_role_repo.get_user_roles = AsyncMock(return_value=[])
 
         dto = UserUpdateDTO(nickname="新昵称")
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             result = await user_service.update_user("test-id", dto)
         assert result.nickname == "新昵称"
 
@@ -289,7 +317,10 @@ class TestUserService:
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
         mock_role_repo.assign_roles_to_user = AsyncMock()
 
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             result = await user_service.assign_roles("test-id", ["role-1", "role-2"])
         assert result is True
         mock_role_repo.assign_roles_to_user.assert_called_once_with("test-id", ["role-1", "role-2"])
@@ -310,7 +341,10 @@ class TestUserService:
         mock_role_repo.get_users_roles_batch = AsyncMock(return_value={})
 
         query = UserListQueryDTO(pageNum=1, pageSize=10, deptId="")
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             await user_service.get_users(query)
         call_kwargs = mock_user_repo.get_all.call_args[1]
         assert call_kwargs["dept_id"] is None
@@ -318,7 +352,9 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_create_superuser_duplicate_username(self, user_service, mock_user_repo):
         """测试创建超级用户时用户名重复。"""
-        mock_user_repo.get_by_username = AsyncMock(return_value=UserEntity(id="ex-id", username="admin", password="hash"))
+        mock_user_repo.get_by_username = AsyncMock(
+            return_value=UserEntity(id="ex-id", username="admin", password="hash")
+        )
         dto = UserCreateDTO(username="admin", password="Admin123456", isActive=True)
         with patch.object(user_service, "repo", mock_user_repo), pytest.raises(ConflictError):
             await user_service.create_superuser(dto)
@@ -327,7 +363,14 @@ class TestUserService:
     async def test_create_superuser_duplicate_email(self, user_service, mock_user_repo):
         """测试创建超级用户时邮箱重复。"""
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
-        mock_user_repo.get_by_email = AsyncMock(return_value=UserEntity(id="ex-id", username="other", password="hash", email="dup@test.com"))
+        mock_user_repo.get_by_email = AsyncMock(
+            return_value=UserEntity(
+                id="ex-id",
+                username="other",
+                password="hash",
+                email="dup@test.com",
+            )
+        )
         dto = UserCreateDTO(username="newadmin", password="Admin123456", email="dup@test.com", isActive=True)
         with patch.object(user_service, "repo", mock_user_repo), pytest.raises(ConflictError):
             await user_service.create_superuser(dto)
@@ -343,7 +386,10 @@ class TestUserService:
         mock_role_repo.get_user_roles = AsyncMock(return_value=[])
 
         dto = UserCreateDTO(username="superadmin", password="Admin123", isActive=True)
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             result = await user_service.create_superuser(dto)
         assert result.username == "superadmin"
 
@@ -361,7 +407,10 @@ class TestUserService:
         mock_role_repo.get_user_roles = AsyncMock(return_value=[admin_role])
 
         dto = UserCreateDTO(username="superadmin", password="Admin123", isActive=True)
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             result = await user_service.create_superuser(dto)
         assert result.username == "superadmin"
         mock_role_repo.assign_role_to_user.assert_called_once_with(created.id, admin_role.id)
@@ -370,7 +419,14 @@ class TestUserService:
     async def test_create_user_email_conflict(self, user_service, mock_user_repo):
         """测试创建用户时邮箱重复。"""
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
-        mock_user_repo.get_by_email = AsyncMock(return_value=UserEntity(id="ex-id", username="existing", password="hash", email="dup@test.com"))
+        mock_user_repo.get_by_email = AsyncMock(
+            return_value=UserEntity(
+                id="ex-id",
+                username="existing",
+                password="hash",
+                email="dup@test.com",
+            )
+        )
 
         dto = UserCreateDTO(username="newuser", password="Pass123456", email="dup@test.com", isActive=True)
         with patch.object(user_service, "repo", mock_user_repo), pytest.raises(ConflictError) as exc_info:
@@ -391,7 +447,12 @@ class TestUserService:
         """测试删除用户时缓存失效。"""
         mock_user_repo.delete = AsyncMock(return_value=True)
         cache_service = AsyncMock()
-        service = UserService(repo=mock_user_repo, password_service=user_service.password_service, role_repo=mock_role_repo, cache_service=cache_service)
+        service = UserService(
+            repo=mock_user_repo,
+            password_service=user_service.password_service,
+            role_repo=mock_role_repo,
+            cache_service=cache_service,
+        )
         with patch.object(service, "repo", mock_user_repo):
             result = await service.delete_user("test-id")
         assert result is True
@@ -403,7 +464,10 @@ class TestUserService:
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
         mock_user_repo.update = AsyncMock(return_value=test_user)
 
-        with patch.object(user_service, "repo", mock_user_repo), patch.object(user_service, "role_repo", mock_role_repo):
+        with (
+            patch.object(user_service, "repo", mock_user_repo),
+            patch.object(user_service, "role_repo", mock_role_repo),
+        ):
             result = await user_service.update_status("test-id", 1)
         assert result is True
         assert test_user.is_active == 1

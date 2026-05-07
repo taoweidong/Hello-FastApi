@@ -61,7 +61,20 @@ class TestUserEntity:
     def test_update_profile_all_fields(self):
         """测试更新所有用户档案字段。"""
         user = UserEntity(id="1", username="user", password="hash")
-        user.update_profile(email="e@t.com", nickname="nick", first_name="F", last_name="L", phone="123", gender=1, avatar="a.png", is_active=0, is_staff=1, mode_type=1, dept_id="d1", description="desc")
+        user.update_profile(
+            email="e@t.com",
+            nickname="nick",
+            first_name="F",
+            last_name="L",
+            phone="123",
+            gender=1,
+            avatar="a.png",
+            is_active=0,
+            is_staff=1,
+            mode_type=1,
+            dept_id="d1",
+            description="desc",
+        )
         assert user.email == "e@t.com"
         assert user.nickname == "nick"
         assert user.first_name == "F"
@@ -179,7 +192,17 @@ class TestMenuEntity:
     def test_update_info(self):
         """测试更新菜单信息。"""
         menu = MenuEntity(id="1", name="old", path="/old")
-        menu.update_info(name="new", path="/new", menu_type=1, component="comp", rank=5, is_active=0, method="POST", parent_id="p1", description="desc")
+        menu.update_info(
+            name="new",
+            path="/new",
+            menu_type=1,
+            component="comp",
+            rank=5,
+            is_active=0,
+            method="POST",
+            parent_id="p1",
+            description="desc",
+        )
         assert menu.name == "new"
         assert menu.path == "/new"
         assert menu.menu_type == 1
@@ -192,7 +215,13 @@ class TestMenuEntity:
 
     def test_create_new(self):
         """测试工厂方法创建菜单。"""
-        menu = MenuEntity.create_new(name="test_menu", menu_type=1, path="/test", component="TestComp", rank=3)
+        menu = MenuEntity.create_new(
+            name="test_menu",
+            menu_type=1,
+            path="/test",
+            component="TestComp",
+            rank=3,
+        )
         assert len(menu.id) == 32
         assert menu.name == "test_menu"
         assert menu.menu_type == 1
@@ -206,7 +235,22 @@ class TestMenuMetaEntity:
     def test_update_info(self):
         """测试更新菜单元数据。"""
         meta = MenuMetaEntity(id="1", title="旧标题")
-        meta.update_info(title="新标题", icon="home", r_svg_name="ri-home", is_show_menu=0, is_show_parent=1, is_keepalive=1, frame_url="http://x.com", frame_loading=0, transition_enter="fade", transition_leave="slide", is_hidden_tag=1, fixed_tag=1, dynamic_level=3, description="desc")
+        meta.update_info(
+            title="新标题",
+            icon="home",
+            r_svg_name="ri-home",
+            is_show_menu=0,
+            is_show_parent=1,
+            is_keepalive=1,
+            frame_url="http://x.com",
+            frame_loading=0,
+            transition_enter="fade",
+            transition_leave="slide",
+            is_hidden_tag=1,
+            fixed_tag=1,
+            dynamic_level=3,
+            description="desc",
+        )
         assert meta.title == "新标题"
         assert meta.icon == "home"
         assert meta.r_svg_name == "ri-home"
@@ -356,7 +400,14 @@ class TestIPRuleEntity:
         """测试更新IP规则信息。"""
         rule = IPRuleEntity(id="1", ip_address="1.1.1.1", rule_type="blacklist")
         new_expires = datetime.now() + timedelta(days=1)
-        rule.update_info(ip_address="2.2.2.2", rule_type="whitelist", reason="测试", is_active=0, expires_at=new_expires, description="desc")
+        rule.update_info(
+            ip_address="2.2.2.2",
+            rule_type="whitelist",
+            reason="测试",
+            is_active=0,
+            expires_at=new_expires,
+            description="desc",
+        )
         assert rule.ip_address == "2.2.2.2"
         assert rule.rule_type == "whitelist"
         assert rule.reason == "测试"
@@ -380,7 +431,14 @@ class TestSystemConfigEntity:
     def test_update_info(self):
         """测试更新系统配置信息。"""
         config = SystemConfigEntity(id="1", key="old_key", value="old_val")
-        config.update_info(value="new_val", is_active=0, access=1, key="new_key", inherit=1, description="desc")
+        config.update_info(
+            value="new_val",
+            is_active=0,
+            access=1,
+            key="new_key",
+            inherit=1,
+            description="desc",
+        )
         assert config.value == "new_val"
         assert config.is_active == 0
         assert config.access == 1
@@ -409,7 +467,15 @@ class TestLoginLogEntity:
 
     def test_create_new(self):
         """测试工厂方法创建登录日志。"""
-        log = LoginLogEntity.create_new(status=1, ipaddress="127.0.0.1", browser="Chrome", system="Windows", agent="Mozilla/5.0", login_type=0, description="测试")
+        log = LoginLogEntity.create_new(
+            status=1,
+            ipaddress="127.0.0.1",
+            browser="Chrome",
+            system="Windows",
+            agent="Mozilla/5.0",
+            login_type=0,
+            description="测试",
+        )
         assert len(log.id) == 32
         assert log.status == 1
         assert log.ipaddress == "127.0.0.1"
@@ -421,7 +487,18 @@ class TestOperationLogEntity:
 
     def test_create_new(self):
         """测试工厂方法创建操作日志。"""
-        log = OperationLogEntity.create_new(module="用户管理", path="/api/users", method="POST", ipaddress="127.0.0.1", browser="Chrome", system="Windows", response_code=200, response_result="success", status_code=0, description="测试")
+        log = OperationLogEntity.create_new(
+            module="用户管理",
+            path="/api/users",
+            method="POST",
+            ipaddress="127.0.0.1",
+            browser="Chrome",
+            system="Windows",
+            response_code=200,
+            response_result="success",
+            status_code=0,
+            description="测试",
+        )
         assert len(log.id) == 32
         assert log.module == "用户管理"
         assert log.path == "/api/users"

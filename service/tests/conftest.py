@@ -74,7 +74,20 @@ async def client(db_session: AsyncSession, test_app) -> AsyncGenerator[AsyncClie
 @pytest_asyncio.fixture
 async def test_user_data() -> dict:
     """提供测试用户数据（使用新字段格式）。"""
-    return {"username": "testuser", "password": "TestPass123", "nickname": "测试用户", "email": "test@example.com", "phone": "13800138000", "gender": 0, "isActive": 1, "isStaff": 0, "modeType": 0, "avatar": None, "deptId": None, "description": "测试备注"}
+    return {
+        "username": "testuser",
+        "password": "TestPass123",
+        "nickname": "测试用户",
+        "email": "test@example.com",
+        "phone": "13800138000",
+        "gender": 0,
+        "isActive": 1,
+        "isStaff": 0,
+        "modeType": 0,
+        "avatar": None,
+        "deptId": None,
+        "description": "测试备注",
+    }
 
 
 @pytest_asyncio.fixture
@@ -92,11 +105,24 @@ async def auth_headers(client: AsyncClient, db_session: AsyncSession) -> AsyncGe
     role_repo = RoleRepository(db_session)
     password_service = PasswordService()
     service = UserService(repo=user_repo, password_service=password_service, role_repo=role_repo)
-    user = await service.create_superuser(UserCreateDTO(username="authtestuser", password="TestPass123", nickname="认证测试用户", email="auth@example.com", isActive=1))
+    user = await service.create_superuser(
+        UserCreateDTO(
+            username="authtestuser",
+            password="TestPass123",
+            nickname="认证测试用户",
+            email="auth@example.com",
+            isActive=1,
+        )
+    )
     await db_session.commit()
 
     settings = get_settings()
-    token_service = TokenService(secret_key=settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM, access_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES, refresh_expire_days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    token_service = TokenService(
+        secret_key=settings.JWT_SECRET_KEY,
+        algorithm=settings.JWT_ALGORITHM,
+        access_expire_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
+        refresh_expire_days=settings.REFRESH_TOKEN_EXPIRE_DAYS,
+    )
     token = token_service.create_access_token({"sub": user.id, "username": user.username})
 
     yield {"Authorization": f"Bearer {token}"}

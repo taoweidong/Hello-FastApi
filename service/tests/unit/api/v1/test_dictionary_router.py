@@ -32,8 +32,10 @@ class TestDictionaryRouter:
             {"id": "d1", "name": "性别", "label": "男", "value": "1", "isActive": 1},
             {"id": "d2", "name": "性别", "label": "女", "value": "2", "isActive": 1},
         ]
-        svc.get_dictionaries.return_value = [type("Dict", (), {"model_dump": lambda self: d})() for d in dicts]
-        svc.get_dictionary_by_name.return_value = [type("Dict", (), {"model_dump": lambda self: d})() for d in dicts]
+        svc.get_dictionaries.return_value = [type("Dict", (), {"model_dump": lambda self, d=d: d})() for d in dicts]
+        svc.get_dictionary_by_name.return_value = [
+            type("Dict", (), {"model_dump": lambda self, d=d: d})() for d in dicts
+        ]
         svc.create_dictionary.return_value = type("Dict", (), {"id": "d3", "name": "状态"})()
         svc.update_dictionary.return_value = type("Dict", (), {"id": "d1", "name": "更新字典"})()
         svc.delete_dictionary.return_value = None

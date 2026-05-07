@@ -27,14 +27,28 @@ class TestAuthRealFlow:
         r = await flow_client.post("/api/system/logout", headers=h)
         assert r.status_code == 200
 
-        login = await flow_client.post("/api/system/login", json={"username": flow_seed.super_username, "password": flow_seed.super_password})
+        login = await flow_client.post(
+            "/api/system/login",
+            json={
+                "username": flow_seed.super_username,
+                "password": flow_seed.super_password,
+            },
+        )
         refresh = login.json()["data"]["refreshToken"]
         r = await flow_client.post("/api/system/refresh-token", json={"refreshToken": refresh})
         assert r.status_code == 200
         assert r.json()["data"]["accessToken"]
 
     async def test_register_then_login(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
-        r = await flow_client.post("/api/system/register", json={"username": "flow_registered", "password": "RegPass123!", "nickname": "注册用户", "email": "reg@flow.test"})
+        r = await flow_client.post(
+            "/api/system/register",
+            json={
+                "username": "flow_registered",
+                "password": "RegPass123!",
+                "nickname": "注册用户",
+                "email": "reg@flow.test",
+            },
+        )
         assert r.status_code == 200
         assert r.json()["data"]["username"] == "flow_registered"
 
@@ -46,7 +60,17 @@ class TestAuthRealFlow:
 class TestRbacRealFlow:
     async def test_operator_can_list_user_cannot_delete(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h_super = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
-        r = await flow_client.post("/api/system/user/create", headers=h_super, json={"username": "victim_user", "password": "VictimPass123!", "nickname": "待删", "email": "victim@flow.test", "isActive": True})
+        r = await flow_client.post(
+            "/api/system/user/create",
+            headers=h_super,
+            json={
+                "username": "victim_user",
+                "password": "VictimPass123!",
+                "nickname": "待删",
+                "email": "victim@flow.test",
+                "isActive": True,
+            },
+        )
         assert r.status_code == 201
         victim_id = r.json()["data"]["id"]
 
@@ -67,7 +91,17 @@ class TestUserManagementRealFlow:
     async def test_user_crud_and_change_password(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
-        r = await flow_client.post("/api/system/user/create", headers=h, json={"username": "crud_user", "password": "CrudPass123!", "nickname": "CRUD", "email": "crud@flow.test", "isActive": True})
+        r = await flow_client.post(
+            "/api/system/user/create",
+            headers=h,
+            json={
+                "username": "crud_user",
+                "password": "CrudPass123!",
+                "nickname": "CRUD",
+                "email": "crud@flow.test",
+                "isActive": True,
+            },
+        )
         assert r.status_code == 201
         uid = r.json()["data"]["id"]
 
@@ -75,12 +109,23 @@ class TestUserManagementRealFlow:
         assert r.status_code == 200
         assert r.json()["data"]["username"] == "crud_user"
 
-        r = await flow_client.put(f"/api/system/user/{uid}", headers=h, json={"nickname": "已更新", "description": "备注"})
+        r = await flow_client.put(
+            f"/api/system/user/{uid}",
+            headers=h,
+            json={"nickname": "已更新", "description": "备注"},
+        )
         assert r.status_code == 200
         assert r.json()["data"]["nickname"] == "已更新"
 
         h_user = await _login_headers(flow_client, "crud_user", "CrudPass123!")
-        r = await flow_client.post("/api/system/user/change-password", headers=h_user, json={"oldPassword": "CrudPass123!", "newPassword": "NewCrudPass123!"})
+        r = await flow_client.post(
+            "/api/system/user/change-password",
+            headers=h_user,
+            json={
+                "oldPassword": "CrudPass123!",
+                "newPassword": "NewCrudPass123!",
+            },
+        )
         assert r.status_code == 200
 
         r = await flow_client.post("/api/system/login", json={"username": "crud_user", "password": "NewCrudPass123!"})
@@ -96,7 +141,16 @@ class TestRoleMenuRealFlow:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         # 创建角色（使用 menuIds 替代 permissionIds）
-        r = await flow_client.post("/api/system/role/create", headers=h, json={"name": "流程新角色", "code": "flow_new_role", "isActive": True, "menuIds": []})
+        r = await flow_client.post(
+            "/api/system/role/create",
+            headers=h,
+            json={
+                "name": "流程新角色",
+                "code": "flow_new_role",
+                "isActive": True,
+                "menuIds": [],
+            },
+        )
         assert r.status_code == 200
         rid = r.json()["data"]["id"]
 
@@ -104,20 +158,53 @@ class TestRoleMenuRealFlow:
         assert r.status_code == 200
 
         # 分配菜单给角色
-        r = await flow_client.post(f"/api/system/role/{rid}/menu", headers=h, json={"menuIds": [flow_seed.menu_root_id, flow_seed.menu_perm_id]})
+        r = await flow_client.post(
+            f"/api/system/role/{rid}/menu",
+            headers=h,
+            json={"menuIds": [flow_seed.menu_root_id, flow_seed.menu_perm_id]},
+        )
         assert r.status_code == 200
 
         # 创建菜单
-        r = await flow_client.post("/api/system/menu/create", headers=h, json={"name": "api_created_menu", "menuType": 1, "rank": 1, "path": "/flow-menu", "component": "flow/index", "isActive": True, "meta": {"title": "接口建菜单", "isShowMenu": True, "isKeepalive": True}})
+        r = await flow_client.post(
+            "/api/system/menu/create",
+            headers=h,
+            json={
+                "name": "api_created_menu",
+                "menuType": 1,
+                "rank": 1,
+                "path": "/flow-menu",
+                "component": "flow/index",
+                "isActive": True,
+                "meta": {
+                    "title": "接口建菜单",
+                    "isShowMenu": True,
+                    "isKeepalive": True,
+                },
+            },
+        )
         assert r.status_code == 200
         mid = r.json()["data"]["id"]
 
         # 分配新建菜单给角色
-        r = await flow_client.post(f"/api/system/role/{rid}/menu", headers=h, json={"menuIds": [mid, flow_seed.menu_root_id]})
+        r = await flow_client.post(
+            f"/api/system/role/{rid}/menu",
+            headers=h,
+            json={"menuIds": [mid, flow_seed.menu_root_id]},
+        )
         assert r.status_code == 200
 
         # 创建部门（使用新字段）
-        r = await flow_client.post("/api/system/dept/create", headers=h, json={"name": "接口部门", "rank": 1, "isActive": True, "code": "API_DEPT"})
+        r = await flow_client.post(
+            "/api/system/dept/create",
+            headers=h,
+            json={
+                "name": "接口部门",
+                "rank": 1,
+                "isActive": True,
+                "code": "API_DEPT",
+            },
+        )
         assert r.status_code == 200
 
         # 查看所有角色
@@ -153,7 +240,11 @@ class TestSystemLogsRealFlow:
         assert r.status_code == 200
 
         # 删除登录日志
-        r = await flow_client.post("/api/system/login-logs/batch-delete", headers=h, json={"ids": [flow_seed.login_log_id]})
+        r = await flow_client.post(
+            "/api/system/login-logs/batch-delete",
+            headers=h,
+            json={"ids": [flow_seed.login_log_id]},
+        )
         assert r.status_code == 200
 
         # 部门列表
@@ -166,7 +257,11 @@ class TestSystemLogsRealFlow:
 class TestStubRoutesRealFlow:
     async def test_stub_routes_with_auth(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
-        for method, path, kw in (("GET", "/api/system/get-async-routes", {}), ("GET", "/api/system/mine-logs", {}), ("POST", "/api/system/online-logs", {"json": {}})):
+        for method, path, kw in (
+            ("GET", "/api/system/get-async-routes", {}),
+            ("GET", "/api/system/mine-logs", {}),
+            ("POST", "/api/system/online-logs", {"json": {}}),
+        ):
             if method == "GET":
                 r = await flow_client.get(path, headers=h)
             else:

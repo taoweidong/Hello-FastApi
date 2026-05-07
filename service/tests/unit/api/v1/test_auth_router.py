@@ -158,7 +158,11 @@ class TestAuthRouter:
         assert len(resp.json()["data"]) == 2
 
     def test_list_role_ids_success(self, client):
-        resp = client.post("/api/system/list-role-ids", json={"userId": "1"}, headers={"Authorization": "Bearer test_token"})
+        resp = client.post(
+            "/api/system/list-role-ids",
+            json={"userId": "1"},
+            headers={"Authorization": "Bearer test_token"},
+        )
         assert resp.status_code == 200
         assert len(resp.json()["data"]) == 1
 
@@ -173,7 +177,11 @@ class TestAuthRouter:
         assert len(resp.json()["data"]) == 2
 
     def test_get_role_menu_ids_success(self, client):
-        resp = client.post("/api/system/role-menu-ids", json={"id": "r1"}, headers={"Authorization": "Bearer test_token"})
+        resp = client.post(
+            "/api/system/role-menu-ids",
+            json={"id": "r1"},
+            headers={"Authorization": "Bearer test_token"},
+        )
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert "1" in data

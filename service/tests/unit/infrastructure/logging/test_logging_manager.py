@@ -77,7 +77,7 @@ class TestLoggingManagerConfigure:
             "src.infrastructure.logging.logging_manager.logging.getLogger",
             return_value=mock_sa_logger,
         ), patch.object(LoggingManager, "_configure") as mock_configure:
-            mgr = LoggingManager(log_level="DEBUG", logs_dir="/tmp/logs")
+            LoggingManager(log_level="DEBUG", logs_dir="/tmp/logs")
             mock_configure.assert_called_once()
 
     def test_configure_adds_stdout_handler(self):

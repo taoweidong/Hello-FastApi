@@ -33,7 +33,7 @@ class TestSystemConfigRouter:
             {"id": "c2", "key": "site_desc", "value": '"A FastAPI project"', "isActive": 1, "access": 0},
         ]
         svc.get_configs.return_value = (
-            [type("Config", (), {"model_dump": lambda self: c})() for c in configs], 2)
+            [type("Config", (), {"model_dump": lambda self, c=c: c})() for c in configs], 2)
         svc.create_config.return_value = {"id": "c3", "key": "new_key", "value": '"new_val"'}
         svc.get_config.return_value = {"id": "c1", "key": "site_name", "value": '"Hello-FastApi"'}
         svc.update_config.return_value = {"id": "c1", "key": "site_name", "value": '"Updated"'}

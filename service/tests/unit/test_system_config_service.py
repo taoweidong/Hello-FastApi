@@ -67,7 +67,10 @@ class TestSystemConfigService:
     @pytest.mark.asyncio
     async def test_get_configs_with_pagination(self, config_service, mock_config_repo):
         """测试获取配置列表（分页+筛选）。"""
-        configs = [SystemConfigEntity(id="1", key="site_name", value="站点A", is_active=1), SystemConfigEntity(id="2", key="site_desc", value="描述", is_active=1)]
+        configs = [
+            SystemConfigEntity(id="1", key="site_name", value="站点A", is_active=1),
+            SystemConfigEntity(id="2", key="site_desc", value="描述", is_active=1),
+        ]
         mock_config_repo.count = AsyncMock(return_value=2)
         mock_config_repo.get_all = AsyncMock(return_value=configs)
 
@@ -191,7 +194,19 @@ class TestSystemConfigService:
         """测试 _to_response 静态方法。"""
         from datetime import datetime
         now = datetime.now()
-        config = SystemConfigEntity(id="cfg-1", key="test_key", value="test_val", is_active=1, access=1, inherit=0, creator_id="u1", modifier_id="u2", created_time=now, updated_time=now, description="测试配置")
+        config = SystemConfigEntity(
+            id="cfg-1",
+            key="test_key",
+            value="test_val",
+            is_active=1,
+            access=1,
+            inherit=0,
+            creator_id="u1",
+            modifier_id="u2",
+            created_time=now,
+            updated_time=now,
+            description="测试配置",
+        )
         result = config_service._to_response(config)
         assert result.id == "cfg-1"
         assert result.key == "test_key"

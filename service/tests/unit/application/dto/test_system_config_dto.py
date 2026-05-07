@@ -29,7 +29,14 @@ class TestSystemConfigCreateDTO:
 
     def test_valid_input_all_fields(self):
         """测试所有字段。"""
-        dto = SystemConfigCreateDTO(key="site_name", value='"Hello-FastApi"', isActive=0, access=1, inherit=1, description="网站名称")
+        dto = SystemConfigCreateDTO(
+            key="site_name",
+            value='"Hello-FastApi"',
+            isActive=0,
+            access=1,
+            inherit=1,
+            description="网站名称",
+        )
         assert dto.isActive == 0
         assert dto.access == 1
         assert dto.inherit == 1
@@ -127,7 +134,19 @@ class TestSystemConfigResponseDTO:
     def test_with_all_fields(self):
         """测试所有字段。"""
         now = datetime.now()
-        dto = SystemConfigResponseDTO(id="1", key="site_name", value='"val"', isActive=0, access=1, inherit=1, creatorId="u1", modifierId="u2", createdTime=now, updatedTime=now, description="描述")
+        dto = SystemConfigResponseDTO(
+            id="1",
+            key="site_name",
+            value='"val"',
+            isActive=0,
+            access=1,
+            inherit=1,
+            creatorId="u1",
+            modifierId="u2",
+            createdTime=now,
+            updatedTime=now,
+            description="描述",
+        )
         assert dto.isActive == 0
         assert dto.access == 1
         assert dto.createdTime == now

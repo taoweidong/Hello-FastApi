@@ -3,7 +3,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, SQLModel
 
 from src.infrastructure.repositories.base import GenericRepository
 
@@ -15,8 +15,8 @@ class TestModel(SQLModel, table=True):
 
 
 class TestEntity:
-    def __init__(self, id: str, name: str) -> None:
-        self.id = id
+    def __init__(self, entity_id: str, name: str) -> None:
+        self.id = entity_id
         self.name = name
 
 

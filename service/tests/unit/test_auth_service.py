@@ -36,7 +36,12 @@ class TestAuthService:
 
     @pytest.fixture
     def token_service(self):
-        return TokenService(secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=30, refresh_expire_days=7)
+        return TokenService(
+            secret_key=TEST_SECRET_KEY,
+            algorithm=TEST_ALGORITHM,
+            access_expire_minutes=30,
+            refresh_expire_days=7,
+        )
 
     @pytest.fixture
     def mock_password_service(self):
@@ -50,13 +55,35 @@ class TestAuthService:
         return AsyncMock()
 
     @pytest.fixture
-    def auth_service(self, mock_user_repo, mock_role_repo, mock_menu_repo, token_service, mock_password_service, mock_cache_service):
-        return AuthService(user_repo=mock_user_repo, role_repo=mock_role_repo, menu_repo=mock_menu_repo, token_service=token_service, password_service=mock_password_service, cache_service=mock_cache_service)
+    def auth_service(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+    ):
+        return AuthService(
+            user_repo=mock_user_repo,
+            role_repo=mock_role_repo,
+            menu_repo=mock_menu_repo,
+            token_service=token_service,
+            password_service=mock_password_service,
+            cache_service=mock_cache_service,
+        )
 
     @pytest.mark.asyncio
     async def test_login_success(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo):
         """测试登录成功。"""
-        user = UserEntity(id="user-1", username="testuser", password="hashed", is_active=1, nickname="测试", avatar="a.png")
+        user = UserEntity(
+            id="user-1",
+            username="testuser",
+            password="hashed",
+            is_active=1,
+            nickname="测试",
+            avatar="a.png",
+        )
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         mock_role_repo.get_user_roles = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
         mock_menu_repo.get_all = AsyncMock(return_value=[])
@@ -104,9 +131,22 @@ class TestAuthService:
         assert "禁用" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_login_superuser(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service):
+    async def test_login_superuser(
+        self,
+        auth_service,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        mock_cache_service,
+    ):
         """测试超级用户登录。"""
-        user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=1)
+        user = UserEntity(
+            id="su-1",
+            username="admin",
+            password="hashed",
+            is_active=1,
+            is_superuser=1,
+        )
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         # get_all 返回 list[RoleEntity]
         mock_role_repo.get_all = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
@@ -123,10 +163,24 @@ class TestAuthService:
     async def test_register_success(self, auth_service, mock_user_repo, mock_password_service):
         """测试注册成功。"""
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
-        created = UserEntity(id="new-1", username="newuser", password="hashed", nickname="新用户", email="new@test.com", phone="123456", is_active=1)
+        created = UserEntity(
+            id="new-1",
+            username="newuser",
+            password="hashed",
+            nickname="新用户",
+            email="new@test.com",
+            phone="123456",
+            is_active=1,
+        )
         mock_user_repo.create = AsyncMock(return_value=created)
 
-        dto = RegisterDTO(username="newuser", password="TestPass123", nickname="新用户", email="new@test.com", phone="123456")
+        dto = RegisterDTO(
+            username="newuser",
+            password="TestPass123",
+            nickname="新用户",
+            email="new@test.com",
+            phone="123456",
+        )
         result = await auth_service.register(dto)
 
         assert result["username"] == "newuser"
@@ -190,9 +244,23 @@ class TestAuthService:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_logout_without_cache(self, mock_user_repo, mock_role_repo, mock_menu_repo, token_service, mock_password_service):
+    async def test_logout_without_cache(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+    ):
         """测试登出（无缓存服务）。"""
-        service = AuthService(user_repo=mock_user_repo, role_repo=mock_role_repo, menu_repo=mock_menu_repo, token_service=token_service, password_service=mock_password_service, cache_service=None)
+        service = AuthService(
+            user_repo=mock_user_repo,
+            role_repo=mock_role_repo,
+            menu_repo=mock_menu_repo,
+            token_service=token_service,
+            password_service=mock_password_service,
+            cache_service=None,
+        )
 
         result = await service.logout("any-token")
         assert result is True
@@ -226,8 +294,23 @@ class TestAuthService:
         meta1 = MenuMetaEntity(id="m1", title="根菜单", icon="home")
         meta2 = MenuMetaEntity(id="m2", title="子菜单", icon="user")
         menus = [
-            MenuEntity(id="1", name="root", menu_type=0, path="/root", rank=1, meta=meta1),
-            MenuEntity(id="2", name="child", menu_type=1, path="/child", rank=2, parent_id="1", meta=meta2),
+            MenuEntity(
+                id="1",
+                name="root",
+                menu_type=0,
+                path="/root",
+                rank=1,
+                meta=meta1,
+            ),
+            MenuEntity(
+                id="2",
+                name="child",
+                menu_type=1,
+                path="/child",
+                rank=2,
+                parent_id="1",
+                meta=meta2,
+            ),
         ]
         tree = auth_service._build_route_tree(menus)
         assert len(tree) == 1
@@ -237,7 +320,22 @@ class TestAuthService:
 
     def test_build_meta_with_meta(self, auth_service):
         """测试构建meta对象（有meta数据）。"""
-        meta = MenuMetaEntity(id="m1", title="测试", icon="home", r_svg_name="ri-home", is_show_menu=1, is_show_parent=1, is_keepalive=1, frame_url="http://x.com", frame_loading=1, transition_enter="fade", transition_leave="slide", is_hidden_tag=1, fixed_tag=1, dynamic_level=2)
+        meta = MenuMetaEntity(
+            id="m1",
+            title="测试",
+            icon="home",
+            r_svg_name="ri-home",
+            is_show_menu=1,
+            is_show_parent=1,
+            is_keepalive=1,
+            frame_url="http://x.com",
+            frame_loading=1,
+            transition_enter="fade",
+            transition_leave="slide",
+            is_hidden_tag=1,
+            fixed_tag=1,
+            dynamic_level=2,
+        )
         menu = MenuEntity(id="1", name="test", meta=meta)
         result = auth_service._build_meta(menu)
 
@@ -277,8 +375,14 @@ class TestAuthService:
     async def test_logout_token_no_exp(self, auth_service, mock_cache_service, token_service):
         """测试登出时 token 没有 exp。"""
         from src.domain.services.token_service import TokenService
+
         # Create a token with zero expiry to avoid 'exp' claim
-        minimal_service = TokenService(secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=0, refresh_expire_days=0)
+        minimal_service = TokenService(
+            secret_key=TEST_SECRET_KEY,
+            algorithm=TEST_ALGORITHM,
+            access_expire_minutes=0,
+            refresh_expire_days=0,
+        )
         token = minimal_service.create_access_token({"sub": "user-1"})
         # token has no 'exp' -> should return True without calling cache
         mock_cache_service.add_token_to_blacklist = AsyncMock(return_value=True)
@@ -286,16 +390,31 @@ class TestAuthService:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_get_async_routes_superuser_cached(self, auth_service, mock_user_repo, mock_cache_service):
-        """测试超级用户获取动态路由（命中缓存）。"""
-        user = UserEntity(id="su-1", username="admin", password="hash", is_superuser=1)
+    async def test_get_async_routes_user(
+        self,
+        auth_service,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        mock_cache_service,
+    ):
+        """测试普通用户获取动态路由。"""
+        user = UserEntity(id="u1", username="testuser", password="hash", is_active=1)
         mock_user_repo.get_by_id = AsyncMock(return_value=user)
-        cached_menus = [
-            {"id": "1", "menu_type": 0, "name": "home", "rank": 1, "path": "/home", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": "m1", "created_time": None, "updated_time": None, "description": None, "meta": {"id": "m1", "title": "首页", "icon": "", "r_svg_name": "", "is_show_menu": 1, "is_show_parent": 0, "is_keepalive": 0, "frame_url": "", "frame_loading": 1, "transition_enter": "", "transition_leave": "", "is_hidden_tag": 0, "fixed_tag": 0, "dynamic_level": 0}},
+        meta = MenuMetaEntity(id="m1", title="首页", is_show_menu=1, is_keepalive=1)
+        menus = [
+            MenuEntity(
+                id="1",
+                name="home",
+                menu_type=0,
+                path="/home",
+                rank=0,
+                meta=meta,
+            )
         ]
-        mock_cache_service.get_all_menus = AsyncMock(return_value=cached_menus)
+        mock_role_repo.get_user_all_menus = AsyncMock(return_value=menus)
 
-        routes = await auth_service.get_async_routes("su-1")
+        routes = await auth_service.get_async_routes("u1")
         assert len(routes) == 1
         assert routes[0]["name"] == "home"
 
@@ -325,8 +444,38 @@ class TestAuthService:
 
     def test_menu_entity_to_dict_with_meta(self, auth_service):
         """测试 _menu_entity_to_dict 含 meta。"""
-        meta = MenuMetaEntity(id="m1", title="测试", icon="home", r_svg_name="ri-home", is_show_menu=1, is_show_parent=0, is_keepalive=1, frame_url="", frame_loading=1, transition_enter="", transition_leave="", is_hidden_tag=0, fixed_tag=0, dynamic_level=0)
-        menu = MenuEntity(id="1", name="test", menu_type=0, path="/test", rank=1, is_active=1, component="", method="", creator_id=None, modifier_id=None, parent_id=None, meta_id="m1", description=None, meta=meta)
+        meta = MenuMetaEntity(
+            id="m1",
+            title="测试",
+            icon="home",
+            r_svg_name="ri-home",
+            is_show_menu=1,
+            is_show_parent=0,
+            is_keepalive=1,
+            frame_url="",
+            frame_loading=1,
+            transition_enter="",
+            transition_leave="",
+            is_hidden_tag=0,
+            fixed_tag=0,
+            dynamic_level=0,
+        )
+        menu = MenuEntity(
+            id="1",
+            name="test",
+            menu_type=0,
+            path="/test",
+            rank=1,
+            is_active=1,
+            component="",
+            method="",
+            creator_id=None,
+            modifier_id=None,
+            parent_id=None,
+            meta_id="m1",
+            description=None,
+            meta=meta,
+        )
         result = auth_service._menu_entity_to_dict(menu)
         assert result["id"] == "1"
         assert result["name"] == "test"
@@ -342,7 +491,39 @@ class TestAuthService:
 
     def test_menu_dict_to_entity_with_meta(self, auth_service):
         """测试 _menu_dict_to_entity 含 meta。"""
-        data = {"id": "1", "menu_type": 0, "name": "test", "rank": 1, "path": "/test", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": "m1", "created_time": None, "updated_time": None, "description": None, "meta": {"id": "m1", "title": "测试", "icon": "home", "r_svg_name": "", "is_show_menu": 1, "is_show_parent": 0, "is_keepalive": 0, "frame_url": "", "frame_loading": 1, "transition_enter": "", "transition_leave": "", "is_hidden_tag": 0, "fixed_tag": 0, "dynamic_level": 0}}
+        data = {
+            "id": "1",
+            "menu_type": 0,
+            "name": "test",
+            "rank": 1,
+            "path": "/test",
+            "component": "",
+            "is_active": 1,
+            "method": "",
+            "creator_id": None,
+            "modifier_id": None,
+            "parent_id": None,
+            "meta_id": "m1",
+            "created_time": None,
+            "updated_time": None,
+            "description": None,
+            "meta": {
+                "id": "m1",
+                "title": "测试",
+                "icon": "home",
+                "r_svg_name": "",
+                "is_show_menu": 1,
+                "is_show_parent": 0,
+                "is_keepalive": 0,
+                "frame_url": "",
+                "frame_loading": 1,
+                "transition_enter": "",
+                "transition_leave": "",
+                "is_hidden_tag": 0,
+                "fixed_tag": 0,
+                "dynamic_level": 0,
+            },
+        }
         entity = auth_service._menu_dict_to_entity(data)
         assert entity.id == "1"
         assert entity.meta is not None
@@ -350,7 +531,23 @@ class TestAuthService:
 
     def test_menu_dict_to_entity_without_meta(self, auth_service):
         """测试 _menu_dict_to_entity 不含 meta。"""
-        data = {"id": "1", "menu_type": 0, "name": "test", "rank": 1, "path": "/test", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": None, "created_time": None, "updated_time": None, "description": None}
+        data = {
+            "id": "1",
+            "menu_type": 0,
+            "name": "test",
+            "rank": 1,
+            "path": "/test",
+            "component": "",
+            "is_active": 1,
+            "method": "",
+            "creator_id": None,
+            "modifier_id": None,
+            "parent_id": None,
+            "meta_id": None,
+            "created_time": None,
+            "updated_time": None,
+            "description": None,
+        }
         entity = auth_service._menu_dict_to_entity(data)
         assert entity.id == "1"
         assert entity.meta is None
@@ -382,13 +579,36 @@ class TestAuthService:
         assert result["transition"] == {}
 
     @pytest.mark.asyncio
-    async def test_login_superuser_cached_menus(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service):
+    async def test_login_superuser_cached_menus(
+        self,
+        auth_service,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        mock_cache_service,
+    ):
         """测试超级用户登录时菜单从缓存读取。"""
         user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=1)
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         mock_role_repo.get_all = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
         cached_menus = [
-            {"id": "1", "menu_type": 2, "name": "btn:add", "rank": 1, "path": "", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": "p1", "meta_id": None, "created_time": None, "updated_time": None, "description": None}
+            {
+                "id": "1",
+                "menu_type": 2,
+                "name": "btn:add",
+                "rank": 1,
+                "path": "",
+                "component": "",
+                "is_active": 1,
+                "method": "",
+                "creator_id": None,
+                "modifier_id": None,
+                "parent_id": "p1",
+                "meta_id": None,
+                "created_time": None,
+                "updated_time": None,
+                "description": None,
+            }
         ]
         mock_cache_service.get_all_menus = AsyncMock(return_value=cached_menus)
 

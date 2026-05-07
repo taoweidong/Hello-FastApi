@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from src.config.settings import DevelopmentSettings, ProductionSettings, Settings, QaEnvSettings, get_settings
+from src.config.settings import DevelopmentSettings, ProductionSettings, QaEnvSettings, Settings, get_settings
 
 
 @pytest.mark.unit
@@ -27,8 +27,15 @@ class TestSettings:
 
     def test_cors_origins_list_property(self):
         """测试 cors_origins_list 属性。"""
-        settings = Settings(_env_file=None, CORS_ORIGINS="http://localhost:3000,http://localhost:8080", APP_ENV="development")
-        assert settings.cors_origins_list == ["http://localhost:3000", "http://localhost:8080"]
+        settings = Settings(
+            _env_file=None,
+            CORS_ORIGINS="http://localhost:3000,http://localhost:8080",
+            APP_ENV="development",
+        )
+        assert settings.cors_origins_list == [
+            "http://localhost:3000",
+            "http://localhost:8080",
+        ]
 
     def test_cors_origins_list_empty(self):
         """测试空的 CORS 源列表。"""

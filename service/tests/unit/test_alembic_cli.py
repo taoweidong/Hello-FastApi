@@ -13,7 +13,10 @@ def test_migrate_command_runs():
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env={**__import__("os").environ, "PYTHONPATH": str(project_root)},
+        env={
+            **__import__("os").environ,
+            "PYTHONPATH": str(project_root),
+        },
     )
     assert (
         result.returncode == 0
@@ -31,9 +34,18 @@ def test_rollback_command_exists():
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env={**__import__("os").environ, "PYTHONPATH": str(project_root)},
+        env={
+            **__import__("os").environ,
+            "PYTHONPATH": str(project_root),
+        },
     )
-    assert result.stdout and "回滚" in result.stdout or result.stderr and "回滚" in result.stderr or result.returncode == 0
+    assert (
+        result.stdout
+        and "回滚" in result.stdout
+        or result.stderr
+        and "回滚" in result.stderr
+        or result.returncode == 0
+    )
 
 
 def test_stamp_command_exists():
@@ -45,6 +57,15 @@ def test_stamp_command_exists():
         capture_output=True,
         text=True,
         encoding="utf-8",
-        env={**__import__("os").environ, "PYTHONPATH": str(project_root)},
+        env={
+            **__import__("os").environ,
+            "PYTHONPATH": str(project_root),
+        },
     )
-    assert result.returncode == 0 or result.stdout and "标记" in result.stdout or result.stderr and "标记" in result.stderr
+    assert (
+        result.returncode == 0
+        or result.stdout
+        and "标记" in result.stdout
+        or result.stderr
+        and "标记" in result.stderr
+    )

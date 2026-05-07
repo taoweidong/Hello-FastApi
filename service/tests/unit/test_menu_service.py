@@ -43,7 +43,16 @@ class TestMenuService:
 
         # 模拟 create_meta 和 create 的返回
         created_meta = MenuMetaEntity(id="meta-id-1", title="测试菜单", icon="menu", is_show_menu=1, is_keepalive=1)
-        created_menu = MenuEntity(id="menu-id-1", name="test_menu", menu_type=0, path="/test", rank=0, is_active=1, meta_id="meta-id-1", meta=created_meta)
+        created_menu = MenuEntity(
+            id="menu-id-1",
+            name="test_menu",
+            menu_type=0,
+            path="/test",
+            rank=0,
+            is_active=1,
+            meta_id="meta-id-1",
+            meta=created_meta,
+        )
         mock_menu_repo.create_meta = AsyncMock(return_value=created_meta)
         mock_menu_repo.create = AsyncMock(return_value=created_menu)
         mock_menu_repo.get_by_id = AsyncMock(return_value=created_menu)
@@ -81,9 +90,27 @@ class TestMenuService:
     async def test_update_menu_success(self, menu_service, mock_menu_repo):
         """测试更新菜单成功。"""
         meta = MenuMetaEntity(id="meta-id-1", title="旧标题", icon="menu", is_show_menu=1, is_keepalive=1)
-        existing_menu = MenuEntity(id="menu-id-1", name="test_menu", menu_type=0, path="/test", rank=0, is_active=1, meta_id="meta-id-1", meta=meta)
+        existing_menu = MenuEntity(
+            id="menu-id-1",
+            name="test_menu",
+            menu_type=0,
+            path="/test",
+            rank=0,
+            is_active=1,
+            meta_id="meta-id-1",
+            meta=meta,
+        )
         # get_by_id called: first for fetch, second for re-read after update
-        updated_menu = MenuEntity(id="menu-id-1", name="updated_menu", menu_type=0, path="/test", rank=0, is_active=1, meta_id="meta-id-1", meta=meta)
+        updated_menu = MenuEntity(
+            id="menu-id-1",
+            name="updated_menu",
+            menu_type=0,
+            path="/test",
+            rank=0,
+            is_active=1,
+            meta_id="meta-id-1",
+            meta=meta,
+        )
         mock_menu_repo.get_by_id = AsyncMock(side_effect=[existing_menu, updated_menu])
         mock_menu_repo.get_by_name = AsyncMock(return_value=None)
         mock_menu_repo.update = AsyncMock()
@@ -148,7 +175,24 @@ class TestMenuService:
         """测试获取菜单树。"""
         meta1 = MenuMetaEntity(id="m1", title="根菜单")
         meta2 = MenuMetaEntity(id="m2", title="子菜单")
-        menus = [MenuEntity(id="1", name="root", menu_type=0, parent_id=None, rank=0, meta=meta1), MenuEntity(id="2", name="child", menu_type=1, parent_id="1", rank=0, meta=meta2)]
+        menus = [
+            MenuEntity(
+                id="1",
+                name="root",
+                menu_type=0,
+                parent_id=None,
+                rank=0,
+                meta=meta1,
+            ),
+            MenuEntity(
+                id="2",
+                name="child",
+                menu_type=1,
+                parent_id="1",
+                rank=0,
+                meta=meta2,
+            ),
+        ]
         mock_menu_repo.get_all = AsyncMock(return_value=menus)
 
         tree = await menu_service.get_menu_tree()
@@ -190,7 +234,41 @@ class TestMenuService:
     async def test_get_all_menus_from_cache(self, mock_menu_repo):
         """测试从缓存获取菜单。"""
         cache = AsyncMock()
-        cached = [{"id": "1", "menu_type": 0, "name": "cached", "rank": 1, "path": "/cached", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": "m1", "created_time": None, "updated_time": None, "description": None, "meta": {"id": "m1", "title": "缓存菜单", "icon": "", "r_svg_name": "", "is_show_menu": 1, "is_show_parent": 0, "is_keepalive": 0, "frame_url": "", "frame_loading": 1, "transition_enter": "", "transition_leave": "", "is_hidden_tag": 0, "fixed_tag": 0, "dynamic_level": 0}}]
+        cached = [
+            {
+                "id": "1",
+                "menu_type": 0,
+                "name": "cached",
+                "rank": 1,
+                "path": "/cached",
+                "component": "",
+                "is_active": 1,
+                "method": "",
+                "creator_id": None,
+                "modifier_id": None,
+                "parent_id": None,
+                "meta_id": "m1",
+                "created_time": None,
+                "updated_time": None,
+                "description": None,
+                "meta": {
+                    "id": "m1",
+                    "title": "缓存菜单",
+                    "icon": "",
+                    "r_svg_name": "",
+                    "is_show_menu": 1,
+                    "is_show_parent": 0,
+                    "is_keepalive": 0,
+                    "frame_url": "",
+                    "frame_loading": 1,
+                    "transition_enter": "",
+                    "transition_leave": "",
+                    "is_hidden_tag": 0,
+                    "fixed_tag": 0,
+                    "dynamic_level": 0,
+                },
+            }
+        ]
         cache.get_all_menus = AsyncMock(return_value=cached)
         service = MenuService(menu_repo=mock_menu_repo, cache_service=cache)
 
@@ -280,14 +358,62 @@ class TestMenuService:
 
     def test_dict_to_entity_with_meta(self, menu_service):
         """测试 _dict_to_entity 含 meta。"""
-        data = {"id": "1", "menu_type": 0, "name": "test", "rank": 1, "path": "/test", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": "m1", "created_time": None, "updated_time": None, "description": None, "meta": {"id": "m1", "title": "测试", "icon": "home", "r_svg_name": "", "is_show_menu": 1, "is_show_parent": 0, "is_keepalive": 0, "frame_url": "", "frame_loading": 1, "transition_enter": "", "transition_leave": "", "is_hidden_tag": 0, "fixed_tag": 0, "dynamic_level": 0}}
+        data = {
+            "id": "1",
+            "menu_type": 0,
+            "name": "test",
+            "rank": 1,
+            "path": "/test",
+            "component": "",
+            "is_active": 1,
+            "method": "",
+            "creator_id": None,
+            "modifier_id": None,
+            "parent_id": None,
+            "meta_id": "m1",
+            "created_time": None,
+            "updated_time": None,
+            "description": None,
+            "meta": {
+                "id": "m1",
+                "title": "测试",
+                "icon": "home",
+                "r_svg_name": "",
+                "is_show_menu": 1,
+                "is_show_parent": 0,
+                "is_keepalive": 0,
+                "frame_url": "",
+                "frame_loading": 1,
+                "transition_enter": "",
+                "transition_leave": "",
+                "is_hidden_tag": 0,
+                "fixed_tag": 0,
+                "dynamic_level": 0,
+            },
+        }
         entity = menu_service._dict_to_entity(data)
         assert entity.id == "1"
         assert entity.meta.title == "测试"
 
     def test_dict_to_entity_without_meta(self, menu_service):
         """测试 _dict_to_entity 不含 meta。"""
-        data = {"id": "1", "menu_type": 0, "name": "test", "rank": 1, "path": "/test", "component": "", "is_active": 1, "method": "", "creator_id": None, "modifier_id": None, "parent_id": None, "meta_id": None, "created_time": None, "updated_time": None, "description": None}
+        data = {
+            "id": "1",
+            "menu_type": 0,
+            "name": "test",
+            "rank": 1,
+            "path": "/test",
+            "component": "",
+            "is_active": 1,
+            "method": "",
+            "creator_id": None,
+            "modifier_id": None,
+            "parent_id": None,
+            "meta_id": None,
+            "created_time": None,
+            "updated_time": None,
+            "description": None,
+        }
         entity = menu_service._dict_to_entity(data)
         assert entity.id == "1"
         assert entity.meta is None
@@ -371,7 +497,22 @@ class TestMenuService:
 
     def test_to_response_dto_with_meta_all_fields(self, menu_service):
         """测试 _to_response_dto 包含 meta 所有字段。"""
-        meta = MenuMetaEntity(id="m1", title="测试", icon="home", r_svg_name="ri-home", is_show_menu=1, is_show_parent=0, is_keepalive=1, frame_url="http://x.com", frame_loading=1, transition_enter="fade", transition_leave="slide", is_hidden_tag=0, fixed_tag=1, dynamic_level=2)
+        meta = MenuMetaEntity(
+            id="m1",
+            title="测试",
+            icon="home",
+            r_svg_name="ri-home",
+            is_show_menu=1,
+            is_show_parent=0,
+            is_keepalive=1,
+            frame_url="http://x.com",
+            frame_loading=1,
+            transition_enter="fade",
+            transition_leave="slide",
+            is_hidden_tag=0,
+            fixed_tag=1,
+            dynamic_level=2,
+        )
         menu = MenuEntity(id="1", name="test", menu_type=0, meta=meta)
         result = menu_service._to_response_dto(menu)
         assert result.meta.title == "测试"
@@ -404,12 +545,35 @@ class TestMenuService:
         """测试创建菜单包含所有可选参数。"""
         mock_menu_repo.get_by_name = AsyncMock(return_value=None)
         created_meta = MenuMetaEntity(id="meta-id-1", title="完整菜单", icon="setting", is_show_menu=1, is_keepalive=0)
-        created_menu = MenuEntity(id="menu-id-1", name="full_menu", menu_type=1, path="/full", component="Full", rank=5, is_active=1, method="GET", meta_id="meta-id-1", meta=created_meta)
+        created_menu = MenuEntity(
+            id="menu-id-1",
+            name="full_menu",
+            menu_type=1,
+            path="/full",
+            component="Full",
+            rank=5,
+            is_active=1,
+            method="GET",
+            meta_id="meta-id-1",
+            meta=created_meta,
+        )
         mock_menu_repo.create_meta = AsyncMock(return_value=created_meta)
         mock_menu_repo.create = AsyncMock(return_value=created_menu)
         mock_menu_repo.get_by_id = AsyncMock(return_value=created_menu)
 
-        dto = MenuCreateDTO(name="full_menu", menuType=1, path="/full", component="Full", rank=5, isActive=1, method="GET", title="完整菜单", icon="setting", isShowMenu=1, isKeepalive=0)
+        dto = MenuCreateDTO(
+            name="full_menu",
+            menuType=1,
+            path="/full",
+            component="Full",
+            rank=5,
+            isActive=1,
+            method="GET",
+            title="完整菜单",
+            icon="setting",
+            isShowMenu=1,
+            isKeepalive=0,
+        )
         result = await menu_service.create_menu(dto)
         assert result.name == "full_menu"
         assert result.menuType == 1
