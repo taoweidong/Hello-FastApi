@@ -8,7 +8,7 @@ from classy_fastapi import Routable, get, post
 from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials
 
-from src.api.common import success_response
+from src.api.common import list_response, success_response
 from src.api.dependencies import (
     get_auth_service,
     get_current_active_user,
@@ -84,7 +84,7 @@ class AuthRouter(Routable):
     @get("/mine-logs")
     async def get_mine_logs(self, current_user: dict = Depends(get_current_active_user)) -> dict:
         """获取当前用户的安全日志（stub 数据）。"""
-        return success_response(data={"list": [], "total": 0, "pageSize": 10, "currentPage": 1})
+        return list_response(list_data=[], total=0)
 
     @get("/get-async-routes")
     async def get_async_routes(

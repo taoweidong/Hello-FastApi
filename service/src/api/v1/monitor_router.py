@@ -10,7 +10,7 @@ from typing import Any
 from classy_fastapi import Routable, get, post
 from fastapi import Body, Depends
 
-from src.api.common import success_response
+from src.api.common import list_response, success_response
 from src.api.dependencies import require_permission
 
 
@@ -45,7 +45,7 @@ class MonitorRouter(Routable):
         username = data.get("username", "")
         if username:
             list_data = [item for item in list_data if username in item["username"]]
-        return success_response(data={"list": list_data, "total": len(list_data), "pageSize": 10, "currentPage": 1})
+        return list_response(list_data=list_data, total=len(list_data))
 
     @post("/online-logs/force-offline")
     async def force_offline(
