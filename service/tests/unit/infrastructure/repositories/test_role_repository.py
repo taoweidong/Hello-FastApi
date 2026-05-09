@@ -270,11 +270,20 @@ class TestRoleRepository:
         mock_result.all.return_value = [(mock_role, "user-1")]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await repo.get_users_roles_batch(["user-1", "user-2"])
+        result = await repo.get_users_roles_batch(["user-1"])
         assert "user-1" in result
-        assert "user-2" in result
         assert len(result["user-1"]) == 1
-        assert len(result["user-2"]) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_users_roles_batch_no_result(self, repo, mock_session):
+        """测试 get_users_roles_batch 无结果时不包含空列表。"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
+        result = await repo.get_users_roles_batch(["user-1", "user-2"])
+        assert "user-1" not in result
+        assert "user-2" not in result
 
     @pytest.mark.asyncio
     async def test_get_users_roles_batch_empty(self, repo):
@@ -292,10 +301,19 @@ class TestRoleRepository:
         mock_result.all.return_value = [mock_link]
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await repo.get_roles_menu_ids_batch(["role-1", "role-2"])
+        result = await repo.get_roles_menu_ids_batch(["role-1"])
         assert "role-1" in result
-        assert "role-2" in result
         assert len(result["role-1"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_roles_menu_ids_batch_no_result(self, repo, mock_session):
+        """测试 get_roles_menu_ids_batch 无结果时返回空字典。"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
+        result = await repo.get_roles_menu_ids_batch(["role-1", "role-2"])
+        assert result == {}
 
     @pytest.mark.asyncio
     async def test_get_roles_menu_ids_batch_empty(self, repo):

@@ -7,6 +7,28 @@ from pydantic import BaseModel, Field, field_validator
 from src.application.validators import empty_str_to_none, normalize_optional_id
 
 
+class MenuStringValidator:
+    """菜单字符串字段验证器 Mixin"""
+
+    @field_validator(
+        "name",
+        "path",
+        "component",
+        "method",
+        "description",
+        "title",
+        "icon",
+        "rSvgName",
+        "frameUrl",
+        "transitionEnter",
+        "transitionLeave",
+        mode="before",
+    )
+    @classmethod
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        return empty_str_to_none(v)
+
+
 class MenuMetaDTO(BaseModel):
     """菜单元数据响应（嵌套在 MenuResponseDTO 中）"""
 
@@ -28,15 +50,14 @@ class MenuMetaDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class MenuCreateDTO(BaseModel):
+class MenuCreateDTO(BaseModel, MenuStringValidator):
     """创建菜单请求"""
 
-    parentId: str | int | None = None  # 父菜单ID，None、空字符串或0表示顶级菜单
+    parentId: str | int | None = None
 
     @field_validator("parentId", mode="before")
     @classmethod
     def validate_parent_id(cls, v) -> str | None:
-        """将 parentId 统一处理：int 0、空字符串、None 都转换为 None 表示顶级菜单。"""
         return normalize_optional_id(v)
 
     menuType: int = Field(default=0, description="菜单类型(0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限)")
@@ -47,8 +68,6 @@ class MenuCreateDTO(BaseModel):
     isActive: int = Field(default=1, description="是否启用")
     method: str | None = Field(default=None, max_length=10, description="HTTP方法，用于PERMISSION类型")
     description: str | None = Field(default=None, max_length=256)
-
-    # 菜单元数据字段（创建时一起提交）
     title: str | None = Field(default=None, max_length=255, description="菜单显示标题")
     icon: str | None = Field(default=None, max_length=255, description="菜单图标")
     rSvgName: str | None = Field(default=None, max_length=255, description="SVG图标名称")
@@ -63,35 +82,15 @@ class MenuCreateDTO(BaseModel):
     fixedTag: int = Field(default=0, description="固定标签页")
     dynamicLevel: int = Field(default=0, description="动态路由层级")
 
-    @field_validator(
-        "name",
-        "path",
-        "component",
-        "method",
-        "description",
-        "title",
-        "icon",
-        "rSvgName",
-        "frameUrl",
-        "transitionEnter",
-        "transitionLeave",
-        mode="before",
-    )
-    @classmethod
-    def validate_empty_str(cls, v: str | None) -> str | None:
-        """将空字符串转换为 None。"""
-        return empty_str_to_none(v)
 
-
-class MenuUpdateDTO(BaseModel):
+class MenuUpdateDTO(BaseModel, MenuStringValidator):
     """更新菜单请求"""
 
-    parentId: str | int | None = None  # 父菜单ID，None、空字符串或0表示顶级菜单
+    parentId: str | int | None = None
 
     @field_validator("parentId", mode="before")
     @classmethod
     def validate_parent_id(cls, v: str | int | None) -> str | None:
-        """将 parentId 统一处理：int 0、空字符串、None 都转换为 None 表示顶级菜单。"""
         return normalize_optional_id(v)
 
     menuType: int | None = Field(default=None, description="菜单类型(0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限)")
@@ -102,8 +101,6 @@ class MenuUpdateDTO(BaseModel):
     isActive: int | None = Field(default=None, description="是否启用")
     method: str | None = Field(default=None, max_length=10, description="HTTP方法，用于PERMISSION类型")
     description: str | None = Field(default=None, max_length=256)
-
-    # 菜单元数据字段
     title: str | None = Field(default=None, max_length=255, description="菜单显示标题")
     icon: str | None = Field(default=None, max_length=255, description="菜单图标")
     rSvgName: str | None = Field(default=None, max_length=255, description="SVG图标名称")
@@ -117,25 +114,6 @@ class MenuUpdateDTO(BaseModel):
     isHiddenTag: int | None = Field(default=None, description="禁止添加到标签页")
     fixedTag: int | None = Field(default=None, description="固定标签页")
     dynamicLevel: int | None = Field(default=None, description="动态路由层级")
-
-    @field_validator(
-        "name",
-        "path",
-        "component",
-        "method",
-        "description",
-        "title",
-        "icon",
-        "rSvgName",
-        "frameUrl",
-        "transitionEnter",
-        "transitionLeave",
-        mode="before",
-    )
-    @classmethod
-    def validate_empty_str(cls, v: str | None) -> str | None:
-        """将空字符串转换为 None。"""
-        return empty_str_to_none(v)
 
 
 class MenuResponseDTO(BaseModel):
@@ -162,5 +140,4 @@ class MenuResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# 解决前向引用
 MenuResponseDTO.model_rebuild()

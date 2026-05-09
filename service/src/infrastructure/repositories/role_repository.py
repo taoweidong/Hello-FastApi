@@ -98,9 +98,7 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
         """为用户批量分配角色（先清除旧角色再分配新的）。"""
         stmt = sa_delete(UserRole).where(UserRole.userinfo_id == user_id)
         await self.session.exec(stmt)  # type: ignore[arg-type]
-        for role_id in role_ids:
-            user_role = UserRole(userinfo_id=user_id, userrole_id=role_id)
-            self.session.add(user_role)
+        self.session.add_all([UserRole(userinfo_id=user_id, userrole_id=rid) for rid in role_ids])
         await self.session.flush()
         return True
 
@@ -110,9 +108,7 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
         """为角色分配菜单权限（先清除旧菜单再分配新的）。"""
         stmt = sa_delete(RoleMenuLink).where(RoleMenuLink.userrole_id == role_id)
         await self.session.exec(stmt)  # type: ignore[arg-type]
-        for menu_id in menu_ids:
-            link = RoleMenuLink(userrole_id=role_id, menu_id=menu_id)
-            self.session.add(link)
+        self.session.add_all([RoleMenuLink(userrole_id=role_id, menu_id=mid) for mid in menu_ids])
         await self.session.flush()
         return True
 
@@ -167,9 +163,6 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
         roles_map: dict[str, list[RoleEntity]] = defaultdict(list)
         for role_model, userinfo_id in rows:
             roles_map[str(userinfo_id)].append(role_model.to_domain())
-        for uid in user_ids:
-            if uid not in roles_map:
-                roles_map[uid] = []
         return dict(roles_map)
 
     async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
@@ -184,7 +177,4 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
         menu_ids_map: dict[str, list[str]] = defaultdict(list)
         for link in links:
             menu_ids_map[str(link.userrole_id)].append(str(link.menu_id))
-        for rid in role_ids:
-            if rid not in menu_ids_map:
-                menu_ids_map[rid] = []
         return dict(menu_ids_map)

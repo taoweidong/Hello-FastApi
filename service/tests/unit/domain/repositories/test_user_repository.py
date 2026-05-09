@@ -58,12 +58,6 @@ class ConcreteUserRepository(UserRepositoryInterface):
     async def batch_delete(self, user_ids: list[str]) -> int:
         return len(user_ids)
 
-    async def update_status(self, user_id: str, is_active: int) -> bool:
-        return True
-
-    async def reset_password(self, user_id: str, hashed_password: str) -> bool:
-        return True
-
 
 @pytest.mark.unit
 class TestUserRepositoryInterface:
@@ -180,21 +174,3 @@ class TestUserRepositoryInterface:
         result = await repo.batch_delete(["user-1", "user-2"])
         assert isinstance(result, int)
         assert result == 2
-
-    # ---- update_status ----
-
-    @pytest.mark.asyncio
-    async def test_update_status_returns_bool(self):
-        """测试 update_status 返回布尔值。"""
-        repo = ConcreteUserRepository()
-        result = await repo.update_status("user-1", 0)
-        assert isinstance(result, bool)
-
-    # ---- reset_password ----
-
-    @pytest.mark.asyncio
-    async def test_reset_password_returns_bool(self):
-        """测试 reset_password 返回布尔值。"""
-        repo = ConcreteUserRepository()
-        result = await repo.reset_password("user-1", "new_hashed_pwd")
-        assert isinstance(result, bool)

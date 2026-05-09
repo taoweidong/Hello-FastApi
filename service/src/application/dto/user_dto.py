@@ -7,7 +7,33 @@ from pydantic import BaseModel, Field, field_validator
 from src.application.validators import empty_str_or_zero_to_none, empty_str_to_none, normalize_optional_id
 
 
-class UserCreateDTO(BaseModel):
+class UserProfileValidator:
+    """用户档案字段验证器 Mixin"""
+
+    @field_validator("nickname", "firstName", "lastName", "email", "phone", "avatar", "description", mode="before")
+    @classmethod
+    def validate_empty_str(cls, v: str | None) -> str | None:
+        return empty_str_to_none(v)
+
+    @field_validator("gender", "isStaff", "modeType", mode="before")
+    @classmethod
+    def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
+        return empty_str_or_zero_to_none(v)
+
+    @field_validator("isActive", mode="before")
+    @classmethod
+    def validate_is_active(cls, v: int | str | None) -> int | None:
+        if v == "" or v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                return int(v)
+            except ValueError:
+                return None
+        return v
+
+
+class UserCreateDTO(BaseModel, UserProfileValidator):
     """创建用户请求"""
 
     username: str = Field(min_length=3, max_length=50)
@@ -27,39 +53,13 @@ class UserCreateDTO(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    @field_validator("nickname", "firstName", "lastName", "email", "phone", "avatar", "description", mode="before")
-    @classmethod
-    def validate_empty_str(cls, v: str | None) -> str | None:
-        """将空字符串转换为 None。"""
-        return empty_str_to_none(v)
-
-    @field_validator("gender", "isStaff", "modeType", mode="before")
-    @classmethod
-    def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
-        """将空字符串或 0 转换为 None。"""
-        return empty_str_or_zero_to_none(v)
-
-    @field_validator("isActive", mode="before")
-    @classmethod
-    def validate_is_active(cls, v: int | str | None) -> int | None:
-        """将空字符串转换为 None，保留 0 值。"""
-        if v == "" or v is None:
-            return None
-        if isinstance(v, str):
-            try:
-                return int(v)
-            except ValueError:
-                return None
-        return v
-
     @field_validator("dept_id", mode="before")
     @classmethod
     def validate_dept_id(cls, v: str | int | None) -> str | None:
-        """将 dept_id 统一处理：空字符串、0、None 转换为 None，int 转换为 str。"""
         return normalize_optional_id(v)
 
 
-class UserUpdateDTO(BaseModel):
+class UserUpdateDTO(BaseModel, UserProfileValidator):
     """更新用户请求"""
 
     nickname: str | None = Field(default=None, max_length=64)
@@ -77,35 +77,9 @@ class UserUpdateDTO(BaseModel):
 
     model_config = {"populate_by_name": True}
 
-    @field_validator("nickname", "firstName", "lastName", "email", "phone", "avatar", "description", mode="before")
-    @classmethod
-    def validate_empty_str(cls, v: str | None) -> str | None:
-        """将空字符串转换为 None。"""
-        return empty_str_to_none(v)
-
-    @field_validator("gender", "isStaff", "modeType", mode="before")
-    @classmethod
-    def validate_empty_or_zero(cls, v: int | str | None) -> int | None:
-        """将空字符串或 0 转换为 None。"""
-        return empty_str_or_zero_to_none(v)
-
-    @field_validator("isActive", mode="before")
-    @classmethod
-    def validate_is_active(cls, v: int | str | None) -> int | None:
-        """将空字符串转换为 None，保留 0 值。"""
-        if v == "" or v is None:
-            return None
-        if isinstance(v, str):
-            try:
-                return int(v)
-            except ValueError:
-                return None
-        return v
-
     @field_validator("dept_id", mode="before")
     @classmethod
     def validate_dept_id(cls, v: str | int | None) -> str | None:
-        """将 dept_id 统一处理：空字符串、0、None 转换为 None，int 转换为 str。"""
         return normalize_optional_id(v)
 
 
@@ -148,13 +122,11 @@ class UserListQueryDTO(BaseModel):
     @field_validator("isActive", mode="before")
     @classmethod
     def validate_empty(cls, v):
-        """将空字符串转换为 None。"""
         return empty_str_to_none(v)
 
     @field_validator("deptId", mode="before")
     @classmethod
     def validate_dept_id(cls, v: str | int | None) -> str | None:
-        """将 deptId 统一处理：空字符串、0、None 转换为 None，int 转换为 str。"""
         return normalize_optional_id(v)
 
 

@@ -149,11 +149,12 @@ class TestUserService:
         """测试重置密码成功。"""
         test_user = UserEntity(id="test-id", username="testuser", password="hashed")
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
-        mock_user_repo.reset_password = AsyncMock(return_value=True)
+        mock_user_repo.update = AsyncMock(return_value=test_user)
 
         with patch.object(user_service, "repo", mock_user_repo):
             result = await user_service.reset_password("test-id", "NewPass123")
             assert result is True
+            mock_user_repo.update.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_reset_password_not_found(self, user_service, mock_user_repo):

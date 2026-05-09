@@ -80,13 +80,3 @@ class UserRepositoryInterface(ABC):
     async def batch_delete(self, user_ids: list[str]) -> int:
         """批量删除用户。"""
         ...
-
-    @abstractmethod
-    async def update_status(self, user_id: str, is_active: int) -> bool:
-        """更新用户启用状态。"""
-        ...
-
-    @abstractmethod
-    async def reset_password(self, user_id: str, hashed_password: str) -> bool:
-        """重置用户密码（已哈希）。"""
-        ...

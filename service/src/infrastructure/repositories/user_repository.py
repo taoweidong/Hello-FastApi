@@ -76,24 +76,6 @@ class UserRepository(GenericRepository[User, UserEntity], UserRepositoryInterfac
         """批量删除用户。"""
         return await super().batch_delete(user_ids)
 
-    async def update_status(self, user_id: str, is_active: int) -> bool:
-        """更新用户启用状态。"""
-        user = await self.get_by_id(user_id)
-        if user is None:
-            return False
-        user.is_active = is_active
-        await self.session.flush()
-        return True
-
-    async def reset_password(self, user_id: str, hashed_password: str) -> bool:
-        """重置用户密码。"""
-        user = await self.get_by_id(user_id)
-        if user is None:
-            return False
-        user.password = hashed_password
-        await self.session.flush()
-        return True
-
     # ========== 内部辅助方法 ==========
 
     def _build_user_filters(

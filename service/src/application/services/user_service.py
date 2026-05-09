@@ -143,8 +143,8 @@ class UserService:
         if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
 
-        hashed_password = self.password_service.hash_password(new_password)
-        await self.repo.reset_password(user_id, hashed_password)
+        user.change_password(self.password_service.hash_password(new_password))
+        await self.repo.update(user)
         await self._invalidate_user_cache(user_id)
         return True
 

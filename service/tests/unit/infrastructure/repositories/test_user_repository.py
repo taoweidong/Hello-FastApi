@@ -191,53 +191,6 @@ class TestUserRepository:
         assert count == 0
 
     @pytest.mark.asyncio
-    async def test_update_status_success(self, repo, mock_session):
-        """测试 update_status 更新状态成功。"""
-        mock_user = MagicMock()
-        mock_user.is_active = 0
-        mock_result = MagicMock()
-        mock_result.first.return_value = mock_user
-        mock_session.exec = AsyncMock(return_value=mock_result)
-
-        result = await repo.update_status("user-1", 1)
-
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_update_status_not_found(self, repo, mock_session):
-        """测试 update_status 用户不存在返回 False。"""
-        mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec = AsyncMock(return_value=mock_result)
-
-        result = await repo.update_status("not-exist", 1)
-
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_reset_password_success(self, repo, mock_session):
-        """测试 reset_password 重置密码成功。"""
-        mock_user = MagicMock()
-        mock_user.password = ""
-        mock_result = MagicMock()
-        mock_result.first.return_value = mock_user
-        mock_session.exec = AsyncMock(return_value=mock_result)
-
-        result = await repo.reset_password("user-1", "new-hash")
-
-        assert result is True
-
-    @pytest.mark.asyncio
-    async def test_reset_password_not_found(self, repo, mock_session):
-        """测试 reset_password 用户不存在返回 False。"""
-        mock_result = MagicMock()
-        mock_result.first.return_value = None
-        mock_session.exec = AsyncMock(return_value=mock_result)
-
-        result = await repo.reset_password("not-exist", "hash")
-        assert result is False
-
-    @pytest.mark.asyncio
     async def test_get_by_username_not_found(self, repo, mock_session):
         """测试 get_by_username 未找到返回 None。"""
         mock_result = MagicMock()
