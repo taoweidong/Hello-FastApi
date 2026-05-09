@@ -89,7 +89,7 @@ function onFullscreen() {
       ref="formRef"
       :inline="true"
       :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-3 overflow-auto"
+      class="search-form bg-bg_color w-full pl-2 pt-2 overflow-auto"
     >
       <el-form-item label="菜单名称：" prop="title">
         <el-input
@@ -114,7 +114,7 @@ function onFullscreen() {
       </el-form-item>
     </el-form>
 
-    <div class="w-full" style="height: calc(100vh - 260px); min-height: 400px">
+    <div class="w-full" style="height: calc(100vh - 180px); min-height: 300px">
       <!-- 右侧：表格/编辑 -->
       <div class="bg-bg_color rounded-md overflow-hidden h-full">
         <PureTableBar
@@ -204,13 +204,9 @@ function onFullscreen() {
   height: 0;
 }
 
-.main-content {
-  margin: 24px 24px 0 !important;
-}
-
 .search-form {
   :deep(.el-form-item) {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
 }
 </style>

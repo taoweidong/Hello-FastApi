@@ -46,7 +46,7 @@ const getMainWidth = computed(() => {
   return isNumber(stretch.value)
     ? stretch.value + "px"
     : stretch.value
-      ? "1440px"
+      ? "100%"
       : "100%";
 });
 
@@ -210,6 +210,6 @@ const transitionMain = defineComponent({
 }
 
 .main-content {
-  margin: 24px;
+  margin: 8px;
 }
 </style>

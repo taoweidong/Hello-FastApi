@@ -149,7 +149,7 @@ const {
 }
 
 .main-content {
-  margin: 24px 24px 0 !important;
+  margin: 8px 8px 0 !important;
 }
 
 .search-form {

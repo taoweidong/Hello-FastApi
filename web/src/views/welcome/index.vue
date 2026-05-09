@@ -278,6 +278,6 @@ const optionsBasis: Array<OptionsType> = [
 }
 
 .main-content {
-  margin: 20px 20px 0 !important;
+  margin: 8px 8px 0 !important;
 }
 </style>
