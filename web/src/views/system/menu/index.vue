@@ -4,8 +4,6 @@ import { useMenu } from "./utils/hook";
 import { transformI18n } from "@/plugins/i18n";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
-import MenuTree from "./components/tree.vue";
-import MenuEdit from "./components/edit.vue";
 
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
@@ -18,7 +16,6 @@ defineOptions({
 
 const formRef = ref();
 const tableRef = ref();
-const treeRef = ref();
 const editFormRef = ref();
 
 const {
@@ -33,21 +30,12 @@ const {
   handleSelectionChange
 } = useMenu();
 
-/** 是否使用左右分栏布局 */
-const useSplitLayout = ref(true);
-/** 当前选中的菜单节点 */
-const selectedNode = ref<any>(null);
 /** 是否显示编辑面板 */
 const showEditPanel = ref(false);
 /** 编辑面板标题 */
 const editTitle = ref("新增菜单");
 /** 编辑表单数据 */
 const editFormData = ref<any>(null);
-
-/** 点击树节点 — 选中并显示详情 */
-function handleTreeSelect(node: any) {
-  selectedNode.value = node;
-}
 
 /** 从树节点新增子菜单 */
 function handleAddChild(parentNode?: any) {
@@ -126,33 +114,9 @@ function onFullscreen() {
       </el-form-item>
     </el-form>
 
-    <div
-      class="flex gap-4"
-      style="height: calc(100vh - 260px); min-height: 400px"
-    >
-      <!-- 左侧：菜单树 -->
-      <div class="w-1/4 min-w-64 bg-bg_color rounded-md p-4 overflow-auto">
-        <div class="flex-bc mb-2">
-          <span class="font-bold text-base">菜单结构</span>
-          <el-button
-            type="primary"
-            size="small"
-            :icon="useRenderIcon(AddFill)"
-            @click="handleAddChild()"
-          >
-            新增
-          </el-button>
-        </div>
-        <MenuTree
-          ref="treeRef"
-          :treeData="dataList"
-          :loading="loading"
-          @select="handleTreeSelect"
-        />
-      </div>
-
+    <div class="w-full" style="height: calc(100vh - 260px); min-height: 400px">
       <!-- 右侧：表格/编辑 -->
-      <div class="flex-1 bg-bg_color rounded-md overflow-hidden">
+      <div class="bg-bg_color rounded-md overflow-hidden h-full">
         <PureTableBar
           title="菜单管理"
           :columns="columns"
