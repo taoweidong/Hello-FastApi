@@ -127,9 +127,10 @@ const transitionMain = defineComponent({
               }"
               :view-style="{
                 display: 'flex',
-                flex: 'auto',
+                flex: '1',
                 overflow: 'hidden',
-                'flex-direction': 'column'
+                'flex-direction': 'column',
+                'min-height': '0'
               }"
             >
               <el-backtop
@@ -200,6 +201,8 @@ const transitionMain = defineComponent({
   width: 100%;
   height: 100vh;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-main-nofixed-header {
@@ -211,5 +214,6 @@ const transitionMain = defineComponent({
 
 .main-content {
   margin: 8px;
+  flex: 1;
 }
 </style>
