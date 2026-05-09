@@ -11,12 +11,7 @@ def success_response(data: T | None = None, message: str = "操作成功", code:
     return {"code": code, "message": message, "data": data}
 
 
-def list_response(
-    list_data: list[T],
-    total: int,
-    page_size: int = 10,
-    current_page: int = 1,
-) -> dict[str, Any]:
+def list_response(list_data: list[T], total: int, page_size: int = 10, current_page: int = 1) -> dict[str, Any]:
     """构建列表响应（Pure Admin 前端标准格式）。
 
     生成格式: {code: 0, message: "...", data: {list: [...], total: N, pageSize: N, currentPage: N}}

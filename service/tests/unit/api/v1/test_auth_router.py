@@ -50,6 +50,11 @@ class TestAuthRouter:
         svc.refresh_token.return_value = {
             "accessToken": "new_access", "expires": 1800, "refreshToken": "new_refresh",
         }
+        svc.get_async_routes.return_value = [
+            {"name": "sys", "path": "/sys", "component": None, "meta": {"title": "系统管理", "icon": "setting"}},
+        ]
+        svc.get_user_role_ids.return_value = ["r1"]
+        svc.get_role_menu_ids.return_value = ["1", "2"]
         return svc
 
     @pytest.fixture

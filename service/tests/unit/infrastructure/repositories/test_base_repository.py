@@ -15,8 +15,8 @@ class TestModel(SQLModel, table=True):
 
 
 class TestEntity:
-    def __init__(self, entity_id: str, name: str) -> None:
-        self.id = entity_id
+    def __init__(self, id: str, name: str) -> None:
+        self.id = id
         self.name = name
 
 

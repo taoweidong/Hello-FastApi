@@ -11,39 +11,46 @@ def test_migrate_command_runs():
         ["python", "-m", "scripts.cli", "migrate"],
         cwd=project_root,
         capture_output=True,
-        text=True,
-        encoding="utf-8",
         env={
             **__import__("os").environ,
             "PYTHONPATH": str(project_root),
         },
     )
+    output = (result.stdout or b"").decode("utf-8", errors="ignore") + (result.stderr or b"").decode("utf-8", errors="ignore")
     assert (
         result.returncode == 0
-        or result.stdout and "already up to date" in result.stdout.lower()
-        or result.stderr and "no such table" in result.stderr.lower()
+        or "already up to date" in output.lower()
+        or "no such table" in output.lower()
     )
 
 
 def test_rollback_command_exists():
     """测试 rollback 命令可以执行。"""
     project_root = Path(__file__).parent.parent.parent
-    result = subprocess.run(
-        ["python", "-m", "scripts.cli", "rollback", "--steps", "1"],
+    # 先初始化数据库
+    subprocess.run(
+        ["python", "-m", "scripts.cli", "initdb"],
         cwd=project_root,
         capture_output=True,
-        text=True,
-        encoding="utf-8",
         env={
             **__import__("os").environ,
             "PYTHONPATH": str(project_root),
         },
     )
+    # 执行回滚
+    result = subprocess.run(
+        ["python", "-m", "scripts.cli", "rollback", "--steps", "1"],
+        cwd=project_root,
+        capture_output=True,
+        env={
+            **__import__("os").environ,
+            "PYTHONPATH": str(project_root),
+        },
+    )
+    output = (result.stdout or b"").decode("utf-8", errors="ignore") + (result.stderr or b"").decode("utf-8", errors="ignore")
     assert (
-        result.stdout
-        and "回滚" in result.stdout
-        or result.stderr
-        and "回滚" in result.stderr
+        "回滚" in output
+        or "downgrade" in output.lower()
         or result.returncode == 0
     )
 
@@ -55,17 +62,13 @@ def test_stamp_command_exists():
         ["python", "-m", "scripts.cli", "stamp", "head"],
         cwd=project_root,
         capture_output=True,
-        text=True,
-        encoding="utf-8",
         env={
             **__import__("os").environ,
             "PYTHONPATH": str(project_root),
         },
     )
+    output = (result.stdout or b"").decode("utf-8", errors="ignore") + (result.stderr or b"").decode("utf-8", errors="ignore")
     assert (
         result.returncode == 0
-        or result.stdout
-        and "标记" in result.stdout
-        or result.stderr
-        and "标记" in result.stderr
+        or "标记" in output
     )

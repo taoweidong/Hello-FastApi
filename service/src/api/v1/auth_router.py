@@ -88,9 +88,7 @@ class AuthRouter(Routable):
 
     @get("/get-async-routes")
     async def get_async_routes(
-        self,
-        current_user: dict = Depends(get_current_active_user),
-        service: AuthService = Depends(get_auth_service),
+        self, current_user: dict = Depends(get_current_active_user), service: AuthService = Depends(get_auth_service)
     ) -> dict:
         """获取当前用户可访问的动态路由配置。"""
         tree = await service.get_async_routes(current_user["id"])
