@@ -7,6 +7,7 @@ from src.application.utils.menu_mapper import menu_dict_to_entity, menu_entity_t
 from src.config.settings import settings
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.user import UserEntity
+from src.domain.enums import MenuType
 from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
@@ -37,7 +38,23 @@ class AuthService:
 
     async def login(self, dto: LoginDTO) -> dict:
         """认证用户并返回完整登录信息。"""
-        # 1. 验证用户名密码
+        user = await self._authenticate_user(dto)
+        tokens = self._generate_tokens(user)
+        roles, permissions = await self._get_user_roles_and_permissions(user)
+        return self._build_login_response(user, tokens, roles, permissions)
+
+    async def _authenticate_user(self, dto: LoginDTO) -> UserEntity:
+        """验证用户名密码和用户状态。
+
+        Args:
+            dto: 登录 DTO
+
+        Returns:
+            验证通过的用户实体
+
+        Raises:
+            UnauthorizedError: 用户名密码错误或用户被禁用
+        """
         user = await self.user_repo.get_by_username(dto.username)
         if user is None:
             raise UnauthorizedError("用户名或密码错误")
@@ -45,40 +62,72 @@ class AuthService:
         if not self.password_service.verify_password(dto.password, user.password):
             raise UnauthorizedError("用户名或密码错误")
 
-        # 2. 检查用户状态
         if not user.is_active_user:
             raise UnauthorizedError("用户账号已被禁用")
 
-        # 3. 生成令牌
-        token_data = {"sub": user.id, "username": user.username}
-        access_token = self.token_service.create_access_token(token_data)
-        refresh_token = self.token_service.create_refresh_token(token_data)
+        return user
 
-        # 4. 查询用户角色和菜单权限
+    def _generate_tokens(self, user: UserEntity) -> dict[str, str]:
+        """生成访问令牌和刷新令牌。
+
+        Args:
+            user: 用户实体
+
+        Returns:
+            包含 access_token 和 refresh_token 的字典
+        """
+        token_data = {"sub": user.id, "username": user.username}
+        return {
+            "access_token": self.token_service.create_access_token(token_data),
+            "refresh_token": self.token_service.create_refresh_token(token_data),
+        }
+
+    async def _get_user_roles_and_permissions(self, user: UserEntity) -> tuple[list[str], list[str]]:
+        """获取用户角色和权限列表。
+
+        Args:
+            user: 用户实体
+
+        Returns:
+            (角色列表, 权限列表) 元组
+        """
         if user.is_superuser_user:
             user_roles = await self.role_repo.get_all(page_num=1, page_size=100)
             user_menus = await self._get_all_menus_cached()
         else:
             user_roles = await self.role_repo.get_user_roles(user.id)
-            # 一次查询获取用户所有角色关联的菜单，消除 N+1
             user_menus = await self.role_repo.get_user_all_menus(user.id)
 
-        # 5. 构建菜单名称列表（用于前端按钮权限 hasAuth 检查）
-        menu_names = [m.name for m in user_menus if m.menu_type == MenuEntity.PERMISSION]
+        role_names = [role.name for role in user_roles]
+        menu_names = [m.name for m in user_menus if m.menu_type == MenuType.PERMISSION]
 
-        # 6. 计算过期时间
+        return role_names, menu_names
+
+    def _build_login_response(
+        self, user: UserEntity, tokens: dict[str, str], roles: list[str], permissions: list[str]
+    ) -> dict:
+        """构建登录响应数据。
+
+        Args:
+            user: 用户实体
+            tokens: 令牌字典
+            roles: 角色列表
+            permissions: 权限列表
+
+        Returns:
+            登录响应字典
+        """
         expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
 
-        # 7. 构建扁平结构的登录响应
         return {
             "avatar": user.avatar or "",
             "username": user.username,
             "nickname": user.nickname or user.username,
-            "roles": [role.name for role in user_roles],
-            "permissions": menu_names,  # 用菜单name替代权限code
-            "accessToken": access_token,
-            "refreshToken": refresh_token,
+            "roles": roles,
+            "permissions": permissions,
+            "accessToken": tokens["access_token"],
+            "refreshToken": tokens["refresh_token"],
             "expires": expires_str,
         }
 
@@ -163,7 +212,7 @@ class AuthService:
             all_menus = await self.role_repo.get_user_all_menus(user.id)
 
         # 只保留DIRECTORY和MENU类型
-        route_menus = [m for m in all_menus if m.menu_type in (MenuEntity.DIRECTORY, MenuEntity.MENU_PAGE)]
+        route_menus = [m for m in all_menus if m.menu_type in (MenuType.DIRECTORY, MenuType.MENU)]
 
         # 构建树形路由
         return self._build_route_tree(route_menus)

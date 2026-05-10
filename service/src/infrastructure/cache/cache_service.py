@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 import redis.asyncio as redis
 
+from src.config.settings import settings
 from src.domain.services.cache_port import CachePort
 from src.infrastructure.logging.logger import logger
 
@@ -22,10 +23,11 @@ class CacheService(CachePort):
     _USER_INFO_PREFIX = "user:info:"
     _MENU_ALL_KEY = "menu:all"
 
-    # 缓存 TTL（秒）
-    PERMS_CACHE_TTL = 300  # 5 分钟
-    USER_INFO_CACHE_TTL = 300  # 5 分钟
-    MENU_ALL_CACHE_TTL = 600  # 10 分钟
+    # 缓存 TTL（秒）- 从配置读取
+    PERMS_CACHE_TTL = settings.CACHE_PERMISSIONS_TTL
+    USER_INFO_CACHE_TTL = settings.CACHE_USER_INFO_TTL
+    MENU_ALL_CACHE_TTL = settings.CACHE_MENU_ALL_TTL
+    TOKEN_BLACKLIST_TTL = settings.CACHE_TOKEN_BLACKLIST_TTL
 
     def __init__(self, redis_client: redis.Redis | None = None) -> None:
         self._redis = redis_client

@@ -56,6 +56,10 @@ class Settings(BaseSettings):
 
     # ============ 数据库配置 ============
     DATABASE_URL: str = "sqlite+aiosqlite:///./sql/dev.db"
+    DATABASE_POOL_SIZE: int = Field(default=10, ge=1, le=100)
+    DATABASE_MAX_OVERFLOW: int = Field(default=20, ge=0, le=100)
+    DATABASE_POOL_RECYCLE: int = Field(default=3600, ge=60)  # 1 小时回收连接
+    DATABASE_POOL_PRE_PING: bool = True  # 连接前检测有效性
 
     # ============ Redis 配置 ============
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -82,6 +86,12 @@ class Settings(BaseSettings):
 
     # ============ 日志配置 ============
     LOG_LEVEL: str = "INFO"
+
+    # ============ 缓存 TTL 配置 ============
+    CACHE_PERMISSIONS_TTL: int = Field(default=300, ge=1)  # 5 分钟
+    CACHE_USER_INFO_TTL: int = Field(default=300, ge=1)  # 5 分钟
+    CACHE_MENU_ALL_TTL: int = Field(default=600, ge=1)  # 10 分钟
+    CACHE_TOKEN_BLACKLIST_TTL: int = Field(default=86400, ge=1)  # 24 小时
 
     @field_validator("LOG_LEVEL")
     @classmethod

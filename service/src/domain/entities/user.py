@@ -10,6 +10,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
+from src.domain.enums import Gender, PermissionMode, UserRole, UserStatus
+
 
 @dataclass
 class UserEntity:
@@ -44,16 +46,16 @@ class UserEntity:
     username: str
     password: str
     last_login: datetime | None = None
-    is_superuser: int = 0
+    is_superuser: UserRole = UserRole.USER
     first_name: str = ""
     last_name: str = ""
-    is_staff: int = 0
-    is_active: int = 1
+    is_staff: UserRole = UserRole.USER
+    is_active: UserStatus = UserStatus.ACTIVE
     date_joined: datetime | None = None
-    mode_type: int = 0
+    mode_type: PermissionMode = PermissionMode.OR
     avatar: str | None = None
     nickname: str = ""
-    gender: int = 0
+    gender: Gender = Gender.UNKNOWN
     phone: str = ""
     email: str = ""
     creator_id: str | None = None
@@ -68,22 +70,22 @@ class UserEntity:
     @property
     def is_superuser_user(self) -> bool:
         """是否为超级管理员。"""
-        return self.is_superuser == 1
+        return self.is_superuser == UserRole.SUPERUSER
 
     @property
     def is_active_user(self) -> bool:
         """是否启用。"""
-        return self.is_active == 1
+        return self.is_active == UserStatus.ACTIVE
 
     # ---- 状态变更方法 ----
 
     def activate(self) -> None:
         """启用用户。"""
-        self.is_active = 1
+        self.is_active = UserStatus.ACTIVE
 
     def deactivate(self) -> None:
         """禁用用户。"""
-        self.is_active = 0
+        self.is_active = UserStatus.INACTIVE
 
     def change_password(self, hashed_password: str) -> None:
         """修改密码（传入已哈希的密码）。"""
@@ -97,11 +99,11 @@ class UserEntity:
         first_name: str | None = None,
         last_name: str | None = None,
         phone: str | None = None,
-        gender: int | None = None,
+        gender: Gender | None = None,
         avatar: str | None = None,
-        is_active: int | None = None,
-        is_staff: int | None = None,
-        mode_type: int | None = None,
+        is_active: UserStatus | None = None,
+        is_staff: UserRole | None = None,
+        mode_type: PermissionMode | None = None,
         dept_id: str | None = None,
         description: str | None = None,
     ) -> None:
@@ -143,11 +145,11 @@ class UserEntity:
         first_name: str = "",
         last_name: str = "",
         phone: str = "",
-        gender: int = 0,
+        gender: Gender = Gender.UNKNOWN,
         avatar: str | None = None,
-        is_active: int = 1,
-        is_staff: int = 0,
-        mode_type: int = 0,
+        is_active: UserStatus = UserStatus.ACTIVE,
+        is_staff: UserRole = UserRole.USER,
+        mode_type: PermissionMode = PermissionMode.OR,
         dept_id: str | None = None,
         description: str | None = None,
     ) -> UserEntity:
@@ -180,9 +182,9 @@ class UserEntity:
         first_name: str = "",
         last_name: str = "",
         phone: str = "",
-        gender: int = 0,
+        gender: Gender = Gender.UNKNOWN,
         avatar: str | None = None,
-        mode_type: int = 0,
+        mode_type: PermissionMode = PermissionMode.OR,
         dept_id: str | None = None,
         description: str | None = None,
     ) -> UserEntity:
@@ -198,9 +200,9 @@ class UserEntity:
             phone=phone,
             gender=gender,
             avatar=avatar,
-            is_active=1,
-            is_staff=1,
-            is_superuser=1,
+            is_active=UserStatus.ACTIVE,
+            is_staff=UserRole.STAFF,
+            is_superuser=UserRole.SUPERUSER,
             mode_type=mode_type,
             dept_id=dept_id,
             description=description,

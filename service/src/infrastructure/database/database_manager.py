@@ -19,12 +19,12 @@ class DatabaseManager:
         echo_flag = echo if echo is not None else settings.DEBUG
 
         # 根据数据库类型配置连接池参数
-        kwargs: dict = {"echo": echo_flag, "pool_pre_ping": True}
+        kwargs: dict = {"echo": echo_flag, "pool_pre_ping": settings.DATABASE_POOL_PRE_PING}
         if not url.startswith("sqlite"):
-            # MySQL/PostgreSQL: 配置连接池
-            kwargs["pool_size"] = 10
-            kwargs["max_overflow"] = 20
-            kwargs["pool_recycle"] = 3600  # 1 小时回收连接，防止 MySQL gone away
+            # MySQL/PostgreSQL: 从配置文件读取连接池参数
+            kwargs["pool_size"] = settings.DATABASE_POOL_SIZE
+            kwargs["max_overflow"] = settings.DATABASE_MAX_OVERFLOW
+            kwargs["pool_recycle"] = settings.DATABASE_POOL_RECYCLE
 
         self._engine = create_async_engine(url, **kwargs)
 

@@ -24,7 +24,7 @@ from src.domain.entities import (
 )
 
 # 导出枚举
-from src.domain.enums import LoginStatusEnum, MenuTypeEnum, StatusEnum
+from src.domain.enums import Gender, LoginStatus, MenuType, PermissionMode, UserStatus, UserRole
 
 # 导出仓储接口
 from src.domain.repositories import (
@@ -60,7 +60,10 @@ __all__ = [
     "PasswordService",
     "TokenService",
     # 枚举
-    "StatusEnum",
-    "MenuTypeEnum",
-    "LoginStatusEnum",
+    "UserStatus",
+    "UserRole",
+    "Gender",
+    "PermissionMode",
+    "MenuType",
+    "LoginStatus",
 ]

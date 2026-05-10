@@ -1,50 +1,51 @@
-"""领域层 - 状态枚举定义。
+"""领域层 - 枚举定义。
 
-定义系统通用状态枚举，替代魔法数字。
+定义系统中使用的枚举类型，替代魔法数字。
 """
-
-from __future__ import annotations
 
 from enum import IntEnum
 
 
-class StatusEnum(IntEnum):
-    """通用状态枚举。
-
-    使用 IntEnum 以兼容数据库存储（0/1）和 JSON 序列化。
-    """
+class UserStatus(IntEnum):
+    """用户状态枚举。"""
 
     INACTIVE = 0
     ACTIVE = 1
 
-    def to_int(self) -> int:
-        """转换为整数值，用于数据库存储。"""
-        return int(self)
 
-    @classmethod
-    def from_int(cls, value: int) -> StatusEnum:
-        """从整数值创建枚举。"""
-        if value == 0:
-            return cls.INACTIVE
-        return cls.ACTIVE
+class UserRole(IntEnum):
+    """用户角色类型枚举。"""
+
+    USER = 0
+    STAFF = 1
+    SUPERUSER = 1
 
 
-class MenuTypeEnum(IntEnum):
-    """菜单类型枚举。
+class Gender(IntEnum):
+    """性别枚举。"""
 
-    menu_type: 0-DIRECTORY目录, 1-MENU页面, 2-PERMISSION权限
-    """
+    UNKNOWN = 0
+    MALE = 1
+    FEMALE = 2
+
+
+class PermissionMode(IntEnum):
+    """权限模式枚举。"""
+
+    OR = 0  # 满足任一角色即可
+    AND = 1  # 必须满足所有角色
+
+
+class MenuType(IntEnum):
+    """菜单类型枚举。"""
 
     DIRECTORY = 0
     MENU = 1
     PERMISSION = 2
 
 
-class LoginStatusEnum(IntEnum):
-    """登录状态枚举。
-
-    status: 0-失败, 1-成功
-    """
+class LoginStatus(IntEnum):
+    """登录状态枚举。"""
 
     FAILED = 0
     SUCCESS = 1

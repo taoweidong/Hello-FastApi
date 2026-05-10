@@ -7,6 +7,7 @@ from src.application.dto.user_dto import (
     UserResponseDTO,
     UserUpdateDTO,
 )
+from src.application.mappers.user_mapper import UserMapper
 from src.domain.entities.user import UserEntity
 from src.domain.exceptions import ConflictError, NotFoundError, UnauthorizedError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
@@ -54,14 +55,16 @@ class UserService:
             description=dto.description,
         )
         created_user = await self.repo.create(user_entity)
-        return await self._to_response(created_user)
+        return UserMapper.to_response(created_user)
 
     async def get_user(self, user_id: str) -> UserResponseDTO:
         """根据 ID 获取用户。"""
         user = await self.repo.get_by_id(user_id)
         if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
-        return await self._to_response(user)
+        # 获取用户角色
+        user_roles = await self.role_repo.get_user_roles(user.id)
+        return UserMapper.to_response(user, user_roles)
 
     async def get_user_by_username(self, username: str) -> UserEntity | None:
         """根据用户名获取用户实体。"""
@@ -91,7 +94,7 @@ class UserService:
         user_ids = [u.id for u in users]
         roles_map = await self.role_repo.get_users_roles_batch(user_ids)
 
-        user_responses = [self._to_response_with_roles(u, roles_map.get(u.id, [])) for u in users]
+        user_responses = [UserMapper.to_response_with_roles(u, roles_map.get(u.id, [])) for u in users]
         return user_responses, total
 
     async def update_user(self, user_id: str, dto: UserUpdateDTO) -> UserResponseDTO:
@@ -121,7 +124,8 @@ class UserService:
         )
         updated_user = await self.repo.update(user)
         await self._invalidate_user_cache(user_id)
-        return await self._to_response(updated_user)
+        user_roles = await self.role_repo.get_user_roles(updated_user.id)
+        return UserMapper.to_response(updated_user, user_roles)
 
     async def delete_user(self, user_id: str) -> bool:
         """删除用户。"""
@@ -197,14 +201,16 @@ class UserService:
             dept_id=dto.dept_id,
             description=dto.description,
         )
+
+        # 创建用户和分配角色（事务由外部 session 管理）
         created_user = await self.repo.create(user_entity)
 
-        # 自动分配 admin 角色，确保拥有所有菜单权限
         admin_role = await self.role_repo.get_by_name("admin")
         if admin_role:
             await self.role_repo.assign_role_to_user(created_user.id, admin_role.id)
 
-        return await self._to_response(created_user)
+        user_roles = await self.role_repo.get_user_roles(created_user.id)
+        return UserMapper.to_response(created_user, user_roles)
 
     async def assign_roles(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户分配角色。"""
@@ -221,56 +227,7 @@ class UserService:
             await self.cache_service.invalidate_user_info(user_id)
             await self.cache_service.invalidate_user_permissions(user_id)
 
-    async def _to_response(self, user: UserEntity) -> UserResponseDTO:
-        """将用户实体转换为响应 DTO。"""
-        # 构建角色列表
-        roles: list[dict] = []
-        user_roles = await self.role_repo.get_user_roles(user.id)
-        for role in user_roles:
-            roles.append({"id": role.id, "name": role.name})
-
-        return UserResponseDTO(
-            id=user.id,
-            username=user.username,
-            nickname=user.nickname,
-            firstName=user.first_name,
-            lastName=user.last_name,
-            avatar=user.avatar,
-            email=user.email,
-            phone=user.phone,
-            gender=user.gender,
-            isActive=user.is_active,
-            isStaff=user.is_staff,
-            modeType=user.mode_type,
-            roles=roles,
-            creatorId=user.creator_id,
-            modifierId=user.modifier_id,
-            createdTime=user.created_time,
-            updatedTime=user.updated_time,
-            description=user.description,
-        )
-
     @staticmethod
     def _to_response_with_roles(user: UserEntity, roles: list) -> UserResponseDTO:
-        """将用户实体和预加载的角色列表转换为响应 DTO。"""
-        role_list = [{"id": role.id, "name": role.name} for role in roles]
-        return UserResponseDTO(
-            id=user.id,
-            username=user.username,
-            nickname=user.nickname,
-            firstName=user.first_name,
-            lastName=user.last_name,
-            avatar=user.avatar,
-            email=user.email,
-            phone=user.phone,
-            gender=user.gender,
-            isActive=user.is_active,
-            isStaff=user.is_staff,
-            modeType=user.mode_type,
-            roles=role_list,
-            creatorId=user.creator_id,
-            modifierId=user.modifier_id,
-            createdTime=user.created_time,
-            updatedTime=user.updated_time,
-            description=user.description,
-        )
+        """将用户实体和预加载的角色列表转换为响应 DTO（保持向后兼容）。"""
+        return UserMapper.to_response_with_roles(user, roles)
