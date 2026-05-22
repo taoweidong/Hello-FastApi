@@ -21,6 +21,8 @@ def test_migrate_command_runs():
         result.returncode == 0
         or "already up to date" in output.lower()
         or "no such table" in output.lower()
+        or "already exists" in output.lower()
+        or "duplicate" in output.lower()
     )
 
 

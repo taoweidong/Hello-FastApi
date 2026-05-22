@@ -116,6 +116,11 @@ class RoleService:
         roles = await self.role_repo.get_user_roles(user_id)
         return [await self._role_to_response(r) for r in roles]
 
+    async def get_all_simple_roles(self) -> list[dict]:
+        """获取所有角色简单列表，供 auth_router 使用。"""
+        roles = await self.role_repo.get_all(page_num=1, page_size=1000)
+        return [{"id": r.id, "name": r.name} for r in roles]
+
     async def _role_to_response(self, role: RoleEntity) -> RoleResponseDTO:
         """将角色实体转换为响应DTO。"""
         # 获取角色的菜单ID列表

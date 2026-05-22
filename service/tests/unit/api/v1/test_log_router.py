@@ -7,6 +7,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 from src.infrastructure.http.exception_handler_registry import register_exception_handlers
 
 
@@ -41,6 +43,10 @@ class TestLogRouter:
         return {"id": "1", "username": "admin", "is_superuser": True, "is_active": 1}
 
     @pytest.fixture
+    def mock_user_entity(self):
+        return UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
+
+    @pytest.fixture
     def mock_log_service(self):
         svc = AsyncMock()
         login_log = _make_log_entity("l1")
@@ -58,9 +64,9 @@ class TestLogRouter:
         return svc
 
     @pytest.fixture
-    def client(self, app, mock_user, mock_log_service):
+    def client(self, app, mock_user_entity, mock_log_service):
         from src.api.dependencies import get_current_active_user, get_log_service
-        app.dependency_overrides[get_current_active_user] = lambda: mock_user
+        app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_log_service] = lambda: mock_log_service
         return TestClient(app, raise_server_exceptions=False)
 

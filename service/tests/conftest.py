@@ -1,16 +1,16 @@
 """测试配置和固件。"""
 
+import asyncio
 import os
+from collections.abc import AsyncGenerator, Generator
+from pathlib import Path
 
 os.environ.setdefault("APP_ENV", "testing")
-
-import asyncio
-from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -18,10 +18,47 @@ from src.infrastructure.database import get_db
 from src.infrastructure.lifecycle import empty_lifespan
 from src.main import create_app
 
-# 测试数据库 URL - 使用共享内存 SQLite
-TEST_DATABASE_URL = "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true"
+# ── 为每个 xdist worker 创建独立数据库 ────────────────────────────── #
+# xdist 每个 worker 是独立进程，无法共享 :memory: SQLite。
+# 通过 pytest_configure 延迟确定 DB URL（模块导入时 pytest.config 不可用）。
 
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+_DIST_DB_URL = "sqlite+aiosqlite:///file::memory:?cache=shared&uri=true"
+_DIST_DB_PATH: str | None = None
+test_engine: AsyncEngine
+
+
+def _get_db_url_from_config(config) -> str:
+    """在 pytest_configure 阶段确定 DB URL。"""
+    global _DIST_DB_URL, _DIST_DB_PATH
+    workerinput = getattr(config, "workerinput", None)
+    if not workerinput:
+        return _DIST_DB_URL
+    # xdist worker 模式：每个 worker 使用独立的临时文件数据库
+    worker_id = workerinput.workerid
+    tmpdir = Path("./__pytest_xdist_tmp__")
+    tmpdir.mkdir(exist_ok=True)
+    _DIST_DB_PATH = str(tmpdir / f"{worker_id}.db")
+    _DIST_DB_URL = f"sqlite+aiosqlite:///{_DIST_DB_PATH}"
+    return _DIST_DB_URL
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_configure(config):
+    global test_engine
+    url = _get_db_url_from_config(config)
+    test_engine = create_async_engine(
+        url, echo=False, connect_args={"check_same_thread": False}
+    )
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):
+    """清理 xdist 临时数据库文件。"""
+    if _DIST_DB_PATH and os.path.exists(_DIST_DB_PATH):
+        os.remove(_DIST_DB_PATH)
+
+
+# ── Fixtures ───────────────────────────────────────────────────────── #
 
 
 @pytest.fixture(scope="session")
@@ -31,7 +68,7 @@ def test_app():
 
 
 @pytest.fixture(scope="session")
-def event_loop():
+def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
     """为测试会话创建事件循环。"""
     loop = asyncio.new_event_loop()
     yield loop

@@ -14,7 +14,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -119,80 +119,72 @@ class Settings(BaseSettings):
         return self.APP_ENV == "testing"
 
 
-class DevelopmentSettings(Settings):
-    """开发环境配置。"""
+# 各环境的覆盖配置
+_ENV_OVERRIDES: dict[str, dict[str, Any]] = {
+    "development": {},
+    "production": {"DEBUG": False, "LOG_LEVEL": "WARNING"},
+    "testing": {"DEBUG": True, "DATABASE_URL": "sqlite+aiosqlite:///./sql/test.db", "LOG_LEVEL": "DEBUG"},
+}
 
-    model_config = SettingsConfigDict(
-        env_file=[".env", ".env.development"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
-    )
-
-    DEBUG: bool = True
-    LOG_LEVEL: str = "DEBUG"
-
-
-class ProductionSettings(Settings):
-    """生产环境配置。"""
-
-    model_config = SettingsConfigDict(
-        env_file=[".env", ".env.production"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
-    )
-
-    DEBUG: bool = False
-    LOG_LEVEL: str = "WARNING"
+_ENV_FILES: dict[str, list[str]] = {
+    "development": [".env", ".env.development"],
+    "production": [".env", ".env.production"],
+    "testing": [".env", ".env.testing"],
+}
 
 
-class QaEnvSettings(Settings):
-    """测试环境配置。"""
-
-    model_config = SettingsConfigDict(
-        env_file=[".env", ".env.testing"], env_file_encoding="utf-8", extra="ignore", case_sensitive=True
-    )
-
-    DEBUG: bool = True
-    DATABASE_URL: str = "sqlite+aiosqlite:///./sql/test.db"
-    LOG_LEVEL: str = "DEBUG"
-
-
-def get_settings() -> Settings:
-    """根据 APP_ENV 环境变量获取对应的配置实例。
-
-    配置加载顺序：
-    1. 系统环境变量
-    2. .env.{environment} 环境配置文件
-    3. .env 通用配置文件
-    4. 默认值
+def _detect_env() -> str:
+    """从环境变量或 .env 文件中检测运行环境。
 
     Returns:
-        Settings: 配置实例
+        str: detection environment name (development/production/testing)
     """
-    # 首先尝试从环境变量获取 APP_ENV
-    env = os.getenv("APP_ENV", "development")
+    env = os.getenv("APP_ENV")
+    if env in ("development", "production", "testing"):
+        return env
 
-    # 如果环境变量中没有，尝试从 .env 文件读取
-    if env == "development":
-        env_file = BASE_DIR / ".env"
-        if env_file.exists():
-            with open(env_file, encoding="utf-8") as f:
+    env_file_path = BASE_DIR / ".env"
+    if env_file_path.exists():
+        try:
+            with open(env_file_path, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if line.startswith("APP_ENV="):
-                        env = line.split("=", 1)[1].strip()
+                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if val in ("development", "production", "testing"):
+                            return val
                         break
+        except OSError:
+            pass
 
-    # 验证环境值
-    valid_envs = {"development", "production", "testing"}
+    return "development"
+
+
+def get_settings(env: str | None = None) -> Settings:
+    """根据运行环境获取配置实例。
+
+    When *env* is ``None`` the function auto-detects the environment via
+    :func:`_detect_env` and loads the matching overrides + env-file chain.
+
+    Args:
+        env: explicit environment name (development/production/testing).
+             When ``None`` auto-detection kicks in.
+
+    Configuration value precedence (highest to lowest)::
+
+        constructor kwargs  >  .env.{environment}  >  .env  >  model defaults
+
+    Returns:
+        Settings: configuration instance
+    """
+    if env is None:
+        env = _detect_env()
+
+    valid_envs = ("development", "production", "testing")
     if env not in valid_envs:
         env = "development"
 
-    # 返回对应环境的配置
-    settings_map: dict[str, type[Settings]] = {
-        "development": DevelopmentSettings,
-        "production": ProductionSettings,
-        "testing": QaEnvSettings,
-    }
-
-    settings_class = settings_map.get(env, DevelopmentSettings)
-    return settings_class()
+    return Settings(env_file=_ENV_FILES[env], **_ENV_OVERRIDES[env])  # type: ignore[call-arg]
 
 
 @lru_cache

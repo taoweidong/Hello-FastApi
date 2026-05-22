@@ -136,6 +136,7 @@ class MenuEntity:
         method: str | None = None,
         parent_id: str | None = None,
         description: str | None = None,
+        meta: MenuMetaEntity | None = None,
     ) -> MenuEntity:
         """创建新菜单实体的工厂方法。"""
         return cls(
@@ -149,4 +150,5 @@ class MenuEntity:
             method=method,
             parent_id=parent_id,
             description=description,
+            meta=meta,
         )

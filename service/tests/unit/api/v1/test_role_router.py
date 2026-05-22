@@ -6,6 +6,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 from src.infrastructure.http.exception_handler_registry import register_exception_handlers
 
 
@@ -24,6 +26,10 @@ class TestRoleRouter:
     @pytest.fixture
     def mock_user(self):
         return {"id": "1", "username": "admin", "is_superuser": True, "is_active": 1}
+
+    @pytest.fixture
+    def mock_user_entity(self):
+        return UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
 
     @pytest.fixture
     def mock_role_service(self):
@@ -53,10 +59,10 @@ class TestRoleRouter:
         return session
 
     @pytest.fixture
-    def client(self, app, mock_user, mock_role_service, mock_role_repo, mock_db_session):
+    def client(self, app, mock_user_entity, mock_role_service, mock_role_repo, mock_db_session):
         from src.api.dependencies import get_current_active_user, get_role_repository, get_role_service
         from src.infrastructure.database import get_db
-        app.dependency_overrides[get_current_active_user] = lambda: mock_user
+        app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_role_service] = lambda: mock_role_service
         app.dependency_overrides[get_role_repository] = lambda: mock_role_repo
         app.dependency_overrides[get_db] = lambda: mock_db_session

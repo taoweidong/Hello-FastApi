@@ -8,7 +8,6 @@ from fastapi.testclient import TestClient
 
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
-from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
 from src.infrastructure.http.exception_handler_registry import register_exception_handlers
 
@@ -58,47 +57,45 @@ class TestAuthRouter:
         return svc
 
     @pytest.fixture
-    def mock_menu_repo(self):
-        repo = AsyncMock()
+    def mock_menu_service(self):
+        svc = AsyncMock()
         meta1 = MenuMetaEntity(id="m1", title="系统管理", icon="setting")
         menu1 = MenuEntity(id="1", name="sys", menu_type=0, path="/sys", rank=1, meta=meta1)
         menu2 = MenuEntity(id="2", name="users", menu_type=1, path="/sys/users",
                            component="sys/users.vue", parent_id="1", rank=2,
                            meta=MenuMetaEntity(id="m2", title="用户管理"))
-        repo.get_all.return_value = [menu1, menu2]
-        return repo
+        svc.get_all_menus_raw.return_value = [menu1, menu2]
+        return svc
 
     @pytest.fixture
-    def mock_role_repo(self):
-        repo = AsyncMock()
-        role1 = RoleEntity(id="r1", name="管理员", code="admin", is_active=1)
-        role2 = RoleEntity(id="r2", name="普通用户", code="user", is_active=1)
-        repo.get_all.return_value = [role1, role2]
-        repo.get_user_roles.return_value = [role1]
-        repo.get_by_id.return_value = role1
-        repo.get_role_menu_ids.return_value = ["1", "2"]
-        return repo
+    def mock_role_service(self):
+        svc = AsyncMock()
+        svc.get_all_simple_roles.return_value = [
+            {"id": "r1", "name": "管理员"},
+            {"id": "r2", "name": "普通用户"},
+        ]
+        return svc
 
     @pytest.fixture
-    def mock_user_repo(self, mock_user_entity):
-        repo = AsyncMock()
-        repo.get_by_id.return_value = mock_user_entity
-        return repo
+    def mock_user_service(self, mock_user_entity):
+        svc = AsyncMock()
+        svc.get_user_by_id.return_value = mock_user_entity
+        return svc
 
     @pytest.fixture
-    def client(self, app, mock_user, mock_auth_service, mock_menu_repo, mock_role_repo, mock_user_repo):
+    def client(self, app, mock_user, mock_user_entity, mock_auth_service, mock_menu_service, mock_role_service, mock_user_service):
         from src.api.dependencies import (
             get_auth_service,
             get_current_active_user,
-            get_menu_repository,
-            get_role_repository,
-            get_user_repository,
+            get_menu_service,
+            get_role_service,
+            get_user_service,
         )
-        app.dependency_overrides[get_current_active_user] = lambda: mock_user
+        app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_auth_service] = lambda: mock_auth_service
-        app.dependency_overrides[get_menu_repository] = lambda: mock_menu_repo
-        app.dependency_overrides[get_role_repository] = lambda: mock_role_repo
-        app.dependency_overrides[get_user_repository] = lambda: mock_user_repo
+        app.dependency_overrides[get_menu_service] = lambda: mock_menu_service
+        app.dependency_overrides[get_role_service] = lambda: mock_role_service
+        app.dependency_overrides[get_user_service] = lambda: mock_user_service
         return TestClient(app, raise_server_exceptions=False)
 
     def test_login_success(self, client, mock_auth_service):
@@ -140,8 +137,8 @@ class TestAuthRouter:
         assert data["data"]["username"] == "admin"
         assert data["data"]["nickname"] == "管理员"
 
-    def test_get_mine_missing_user(self, client, mock_user_repo):
-        mock_user_repo.get_by_id.return_value = None
+    def test_get_mine_missing_user(self, client, mock_user_service):
+        mock_user_service.get_user_by_id.return_value = None
         resp = client.get("/api/system/mine", headers={"Authorization": "Bearer test_token"})
         assert resp.status_code == 401
 

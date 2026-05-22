@@ -14,6 +14,7 @@ from src.api.common import success_response
 from src.api.dependencies import get_current_active_user, get_menu_service, require_permission
 from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
 from src.application.services.menu_service import MenuService
+from src.domain.entities.user import UserEntity
 
 
 class MenuRouter(Routable):
@@ -23,7 +24,7 @@ class MenuRouter(Routable):
     async def get_menu_list(
         self,
         menu_service: MenuService = Depends(get_menu_service),
-        current_user: dict = Depends(require_permission("menu:view")),
+        current_user: UserEntity = Depends(require_permission("menu:view")),
     ) -> dict:
         """获取菜单列表（扁平结构）。"""
         menu_list = await menu_service.get_menu_list()
@@ -33,7 +34,7 @@ class MenuRouter(Routable):
     async def get_menu_tree(
         self,
         menu_service: MenuService = Depends(get_menu_service),
-        current_user: dict = Depends(require_permission("menu:view")),
+        current_user: UserEntity = Depends(require_permission("menu:view")),
     ) -> dict:
         """获取完整菜单树。"""
         tree = await menu_service.get_menu_tree()
@@ -43,10 +44,10 @@ class MenuRouter(Routable):
     async def get_user_menus(
         self,
         menu_service: MenuService = Depends(get_menu_service),
-        current_user: dict = Depends(get_current_active_user),
+        current_user: UserEntity = Depends(get_current_active_user),
     ) -> dict:
         """获取当前用户可访问的菜单。"""
-        menus = await menu_service.get_user_menus(current_user["id"])
+        menus = await menu_service.get_user_menus(current_user.id)
         return success_response(data=menus)
 
     @post("/create")
@@ -54,7 +55,7 @@ class MenuRouter(Routable):
         self,
         dto: MenuCreateDTO,
         menu_service: MenuService = Depends(get_menu_service),
-        current_user: dict = Depends(require_permission("menu:add")),
+        current_user: UserEntity = Depends(require_permission("menu:add")),
     ) -> dict:
         """创建菜单（含元数据）。"""
         menu = await menu_service.create_menu(dto)
@@ -66,7 +67,7 @@ class MenuRouter(Routable):
         menu_id: str,
         dto: MenuUpdateDTO,
         menu_service: MenuService = Depends(get_menu_service),
-        current_user: dict = Depends(require_permission("menu:edit")),
+        current_user: UserEntity = Depends(require_permission("menu:edit")),
     ) -> dict:
         """更新菜单（含元数据）。"""
         menu = await menu_service.update_menu(menu_id, dto)
@@ -77,7 +78,7 @@ class MenuRouter(Routable):
         self,
         menu_id: str,
         menu_service: MenuService = Depends(get_menu_service),
-        current_user: dict = Depends(require_permission("menu:delete")),
+        current_user: UserEntity = Depends(require_permission("menu:delete")),
     ) -> dict:
         """删除菜单。"""
         await menu_service.delete_menu(menu_id)

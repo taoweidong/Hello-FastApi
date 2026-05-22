@@ -20,6 +20,10 @@ FROM python:3.10-slim AS runner
 
 WORKDIR /app
 
+# Install curl for healthcheck
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # 创建非 root 用户
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
@@ -43,9 +47,9 @@ ENV PYTHONUNBUFFERED=1 \
 # 暴露端口
 EXPOSE 8000
 
-# 健康检查 - 使用 Python 内置 urllib，无需额外依赖
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "from urllib.request import urlopen; urlopen('http://localhost:8000/health')" || exit 1
+# 健康检查 - 使用 curl
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # 启动命令 - 生产环境多 worker
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]

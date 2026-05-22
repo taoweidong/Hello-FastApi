@@ -24,7 +24,7 @@ from src.domain.entities import (
 )
 
 # 导出枚举
-from src.domain.enums import Gender, LoginStatus, MenuType, PermissionMode, UserStatus, UserRole
+from src.domain.enums import Gender, LoginStatus, MenuType, PermissionMode, UserRole, UserStatus
 
 # 导出仓储接口
 from src.domain.repositories import (

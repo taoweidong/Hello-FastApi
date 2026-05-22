@@ -6,7 +6,8 @@
 import pytest
 from sqlmodel import SQLModel
 
-from src.infrastructure.database.models.user import User
+from src.domain.enums import Gender, UserStatus
+from src.infrastructure.database.models.user import IntEnumColumn, User
 
 
 @pytest.mark.unit
@@ -128,3 +129,54 @@ class TestUserModel:
         assert "User" in r
         assert "user-123" in r
         assert "hello" in r
+
+
+@pytest.mark.unit
+class TestIntEnumColumn:
+    """IntEnumColumn 类型转换器测试。测试 process_bind_param 和 process_result_value。"""
+
+    @pytest.fixture
+    def user_status_col(self):
+        """基于 UserStatus 的 IntEnumColumn 实例。"""
+        return IntEnumColumn(UserStatus)
+
+    @pytest.fixture
+    def gender_col(self):
+        """基于 Gender 的 IntEnumColumn 实例。"""
+        return IntEnumColumn(Gender)
+
+    # --- process_bind_param: L36-41 ---
+
+    def test_process_bind_param_none(self, user_status_col):
+        """None 值应返回 None (L36-37)。"""
+        assert user_status_col.process_bind_param(None, None) is None
+
+    def test_process_bind_param_int_enum(self, user_status_col):
+        """IntEnum 实例应转换为 int (L38-39)。"""
+        assert user_status_col.process_bind_param(UserStatus.ACTIVE, None) == 1
+
+    def test_process_bind_param_int_enum_inactive(self, user_status_col):
+        """IntEnum INACTIVE 应转换为 0。"""
+        assert user_status_col.process_bind_param(UserStatus.INACTIVE, None) == 0
+
+    def test_process_bind_param_raw_int(self, user_status_col):
+        """原始 int 值应直接返回 int (L40-41)。"""
+        assert user_status_col.process_bind_param(1, None) == 1
+        assert user_status_col.process_bind_param(0, None) == 0
+
+    # --- process_result_value: L45-47 ---
+
+    def test_process_result_value_none(self, user_status_col):
+        """None 值应返回 None (L45-46)。"""
+        assert user_status_col.process_result_value(None, None) is None
+
+    def test_process_result_value_to_enum(self, user_status_col):
+        """int 值应转换为对应 IntEnum (L47)。"""
+        result = user_status_col.process_result_value(1, None)
+        assert result == UserStatus.ACTIVE
+
+    def test_process_result_value_to_gender(self, gender_col):
+        """Gender enum 转换。"""
+        assert gender_col.process_result_value(1, None) == Gender.MALE
+        assert gender_col.process_result_value(2, None) == Gender.FEMALE
+        assert gender_col.process_result_value(0, None) == Gender.UNKNOWN

@@ -6,6 +6,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 from src.infrastructure.http.exception_handler_registry import register_exception_handlers
 
 
@@ -24,6 +26,10 @@ class TestMenuRouter:
     @pytest.fixture
     def mock_user(self):
         return {"id": "1", "username": "admin", "is_superuser": True, "is_active": 1}
+
+    @pytest.fixture
+    def mock_user_entity(self):
+        return UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
 
     @pytest.fixture
     def mock_menu_service(self):
@@ -47,9 +53,9 @@ class TestMenuRouter:
         return svc
 
     @pytest.fixture
-    def client(self, app, mock_user, mock_menu_service):
+    def client(self, app, mock_user_entity, mock_menu_service):
         from src.api.dependencies import get_current_active_user, get_menu_service
-        app.dependency_overrides[get_current_active_user] = lambda: mock_user
+        app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_menu_service] = lambda: mock_menu_service
         return TestClient(app, raise_server_exceptions=False)
 

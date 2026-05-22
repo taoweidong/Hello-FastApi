@@ -60,7 +60,12 @@ class DatabaseManager:
                 raise
 
     async def init_tables(self) -> None:
-        """创建所有数据库表。"""
+        """创建所有数据库表。
+
+        .. deprecated::
+            Use Alembic migrations instead (`alembic upgrade head`).
+            This method is kept only for backward compatibility (e.g., CLI seed scripts).
+        """
         import src.infrastructure.database.models  # noqa: F401
 
         async with self._engine.begin() as conn:
@@ -92,7 +97,12 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
-    """创建所有数据库表。"""
+    """创建所有数据库表。
+
+    .. deprecated::
+        Use Alembic migrations instead (`alembic upgrade head`).
+        This function is kept only for backward compatibility (e.g., CLI seed scripts).
+    """
     manager = _get_db_manager()
     await manager.init_tables()
 

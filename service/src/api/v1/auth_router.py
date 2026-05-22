@@ -12,17 +12,18 @@ from src.api.common import list_response, success_response
 from src.api.dependencies import (
     get_auth_service,
     get_current_active_user,
-    get_menu_repository,
-    get_role_repository,
-    get_user_repository,
+    get_menu_service,
+    get_role_service,
+    get_user_service,
     security_scheme,
 )
 from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
 from src.application.services.auth_service import AuthService
+from src.application.services.menu_service import MenuService
+from src.application.services.role_service import RoleService
+from src.application.services.user_service import UserService
+from src.domain.entities.user import UserEntity
 from src.domain.exceptions import UnauthorizedError
-from src.infrastructure.repositories.menu_repository import MenuRepository
-from src.infrastructure.repositories.role_repository import RoleRepository
-from src.infrastructure.repositories.user_repository import UserRepository
 
 
 class AuthRouter(Routable):
@@ -45,7 +46,7 @@ class AuthRouter(Routable):
     @post("/logout")
     async def logout(
         self,
-        current_user: dict = Depends(get_current_active_user),
+        current_user: UserEntity = Depends(get_current_active_user),
         service: AuthService = Depends(get_auth_service),
         credentials: HTTPAuthorizationCredentials = Security(security_scheme),
     ) -> dict:
@@ -63,11 +64,11 @@ class AuthRouter(Routable):
     @get("/mine")
     async def get_mine(
         self,
-        current_user: dict = Depends(get_current_active_user),
-        user_repo: UserRepository = Depends(get_user_repository),
+        current_user: UserEntity = Depends(get_current_active_user),
+        user_service: UserService = Depends(get_user_service),
     ) -> dict:
         """获取当前登录用户的个人信息。"""
-        user = await user_repo.get_by_id(current_user["id"])
+        user = await user_service.get_user_by_id(current_user.id)
         if user is None:
             raise UnauthorizedError("用户不存在")
         return success_response(
@@ -82,34 +83,34 @@ class AuthRouter(Routable):
         )
 
     @get("/mine-logs")
-    async def get_mine_logs(self, current_user: dict = Depends(get_current_active_user)) -> dict:
+    async def get_mine_logs(self, current_user: UserEntity = Depends(get_current_active_user)) -> dict:
         """获取当前用户的安全日志（stub 数据）。"""
         return list_response(list_data=[], total=0)
 
     @get("/get-async-routes")
     async def get_async_routes(
-        self, current_user: dict = Depends(get_current_active_user), service: AuthService = Depends(get_auth_service)
+        self, current_user: UserEntity = Depends(get_current_active_user), service: AuthService = Depends(get_auth_service)
     ) -> dict:
         """获取当前用户可访问的动态路由配置。"""
-        tree = await service.get_async_routes(current_user["id"])
+        tree = await service.get_async_routes(current_user.id)
         return success_response(data=tree)
 
     @get("/list-all-role")
     async def list_all_roles(
         self,
-        role_repo: RoleRepository = Depends(get_role_repository),
-        current_user: dict = Depends(get_current_active_user),
+        role_service: RoleService = Depends(get_role_service),
+        current_user: UserEntity = Depends(get_current_active_user),
     ) -> dict:
         """获取所有角色简单列表。"""
-        roles = await role_repo.get_all(page_num=1, page_size=1000)
-        return success_response(data=[{"id": r.id, "name": r.name} for r in roles])
+        roles = await role_service.get_all_simple_roles()
+        return success_response(data=roles)
 
     @post("/list-role-ids")
     async def list_role_ids(
         self,
         data: dict,
         service: AuthService = Depends(get_auth_service),
-        current_user: dict = Depends(get_current_active_user),
+        current_user: UserEntity = Depends(get_current_active_user),
     ) -> dict:
         """根据用户ID获取对应角色ID列表。"""
         user_id = data.get("userId")
@@ -121,11 +122,11 @@ class AuthRouter(Routable):
     @post("/role-menu")
     async def get_role_menu(
         self,
-        current_user: dict = Depends(get_current_active_user),
-        menu_repo: MenuRepository = Depends(get_menu_repository),
+        current_user: UserEntity = Depends(get_current_active_user),
+        menu_service: MenuService = Depends(get_menu_service),
     ) -> dict:
         """获取角色菜单权限树。"""
-        all_menus = await menu_repo.get_all()
+        all_menus = await menu_service.get_all_menus_raw()
         menu_list = []
         for menu in all_menus:
             menu_dict = {
@@ -144,7 +145,7 @@ class AuthRouter(Routable):
         self,
         data: dict,
         service: AuthService = Depends(get_auth_service),
-        current_user: dict = Depends(get_current_active_user),
+        current_user: UserEntity = Depends(get_current_active_user),
     ) -> dict:
         """根据角色ID获取菜单ID列表。"""
         role_id = data.get("id")

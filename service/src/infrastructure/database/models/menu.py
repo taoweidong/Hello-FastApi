@@ -32,7 +32,7 @@ class Menu(SQLModel, table=True):
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
     parent_id: str | None = Field(
-        default=None, sa_column=Column(String(32), ForeignKey("sys_menus.id"), nullable=True)
+        default=None, sa_column=Column(String(32), ForeignKey("sys_menus.id"), index=True, nullable=True)
     )  # 父菜单ID
     meta_id: str = Field(
         sa_column=Column(String(32), ForeignKey("sys_menumeta.id"), nullable=False, unique=True)

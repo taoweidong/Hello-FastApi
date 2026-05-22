@@ -87,7 +87,7 @@ pipeline {
                 echo '运行 pytest...'
                 sh '''
                     cd service
-                    pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=80 -v
+                    pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=95 -v
                 '''
             }
         }

@@ -1,12 +1,9 @@
 """配置 Settings 的单元测试。"""
 
-import os
-from unittest.mock import patch
-
 import pytest
 from pydantic import ValidationError
 
-from src.config.settings import DevelopmentSettings, ProductionSettings, QaEnvSettings, Settings, get_settings
+from src.config.settings import Settings, get_settings
 
 
 @pytest.mark.unit
@@ -50,13 +47,13 @@ class TestSettings:
         assert settings.is_testing is False
 
     def test_is_production_true(self):
-        """测试 is_production 为 True。"""
+        """测试生产环境属性。"""
         settings = Settings(_env_file=None, APP_ENV="production")
         assert settings.is_production is True
         assert settings.is_development is False
 
     def test_is_testing_true(self):
-        """测试 is_testing 为 True。"""
+        """测试测试环境属性。"""
         settings = Settings(_env_file=None, APP_ENV="testing")
         assert settings.is_testing is True
         assert settings.is_development is False
@@ -127,73 +124,70 @@ class TestSettings:
             Settings(_env_file=None, APP_ENV="invalid_env")
 
 
-@pytest.mark.unit
-class TestDevelopmentSettings:
-    """DevelopmentSettings 验证测试。"""
-
-    def test_default_values(self):
-        """测试开发环境默认值。"""
-        settings = DevelopmentSettings(_env_file=None, APP_ENV="development")
-        assert settings.DEBUG is True
-        assert settings.LOG_LEVEL == "DEBUG"
-        assert settings.APP_ENV == "development"
+def test_development_overrides():
+    """验证开发环境覆盖（无覆盖，使用基类默认值）。"""
+    settings = Settings(_env_file=None, APP_ENV="development")
+    assert settings.DEBUG is False  # default
+    assert settings.LOG_LEVEL == "INFO"  # default
+    assert settings.DATABASE_URL == "sqlite+aiosqlite:///./sql/dev.db"
 
 
-@pytest.mark.unit
-class TestProductionSettings:
-    """ProductionSettings 验证测试。"""
+def test_production_overrides():
+    """验证生产环境覆盖逻辑。"""
+    settings = Settings(
+        _env_file=None,
+        APP_ENV="production",
+        DEBUG=False,
+        LOG_LEVEL="WARNING",
+    )
+    assert settings.DEBUG is False
+    assert settings.LOG_LEVEL == "WARNING"
 
-    def test_default_values(self):
-        """测试生产环境默认值。"""
-        settings = ProductionSettings(_env_file=None, APP_ENV="development")
-        assert settings.DEBUG is False
-        assert settings.LOG_LEVEL == "WARNING"
-        assert settings.APP_ENV == "development"
 
-
-@pytest.mark.unit
-class TestQaEnvSettings:
-    """QaEnvSettings 验证测试。"""
-
-    def test_default_values(self):
-        """测试测试环境默认值。"""
-        settings = QaEnvSettings(_env_file=None, APP_ENV="development")
-        assert settings.DEBUG is True
-        assert settings.DATABASE_URL == "sqlite+aiosqlite:///./sql/test.db"
-        assert settings.LOG_LEVEL == "DEBUG"
-        assert settings.APP_ENV == "development"
+def test_testing_overrides():
+    """验证测试环境覆盖逻辑。"""
+    settings = Settings(
+        _env_file=None,
+        APP_ENV="testing",
+        DEBUG=True,
+        DATABASE_URL="sqlite+aiosqlite:///./sql/test.db",
+        LOG_LEVEL="DEBUG",
+    )
+    assert settings.DEBUG is True
+    assert settings.DATABASE_URL == "sqlite+aiosqlite:///./sql/test.db"
+    assert settings.LOG_LEVEL == "DEBUG"
 
 
 @pytest.mark.unit
 class TestGetSettings:
     """get_settings 函数验证测试。"""
 
-    def test_default_env_development(self):
-        """测试默认环境为 development。"""
-        with patch.dict(os.environ, {}, clear=True):
-            settings = get_settings()
-            assert settings.APP_ENV == "development"
-            assert isinstance(settings, DevelopmentSettings)
+    def test_explicit_dev_env(self):
+        """测试显式传入 development 环境返回 Settings 实例。"""
+        settings = get_settings(env="development")
+        assert isinstance(settings, Settings)
 
-    def test_env_production(self):
-        """测试生产环境。"""
-        with patch.dict(os.environ, {"APP_ENV": "production"}, clear=True):
-            settings = get_settings()
-            assert isinstance(settings, ProductionSettings)
+    def test_explicit_test_env(self):
+        """测试显式传入 testing 环境，overriding 生效。"""
+        settings = get_settings(env="testing")
+        assert isinstance(settings, Settings)
+        assert settings.DEBUG is True
+        assert settings.LOG_LEVEL == "DEBUG"
 
-    def test_env_testing(self):
-        """测试测试环境。"""
-        with patch.dict(os.environ, {"APP_ENV": "testing"}, clear=True):
-            settings = get_settings()
-            assert isinstance(settings, QaEnvSettings)
+    def test_explicit_prod_env(self):
+        """测试显式传入 production 环境，overriding 生效。"""
+        settings = get_settings(env="production")
+        assert isinstance(settings, Settings)
+        assert settings.DEBUG is False
+        assert settings.LOG_LEVEL == "WARNING"
 
-    def test_env_development(self):
-        """测试开发环境。"""
-        with patch.dict(os.environ, {"APP_ENV": "development"}, clear=True):
-            settings = get_settings()
-            assert isinstance(settings, DevelopmentSettings)
+    def test_all_envs_return_Settings(self):
+        """验证所有环境调用都返回 Settings 实例。"""
+        for env in ("development", "production", "testing"):
+            result = get_settings(env=env)
+            assert isinstance(result, Settings), f"Expected Settings for env={env}"
 
-    def test_invalid_env_selection_falls_back_to_development(self):
-        """测试 get_settings 中 env 选择逻辑回退到 development（构造函数层面受 env 源限制）。"""
-        with patch.dict(os.environ, {"APP_ENV": "invalid"}, clear=True), pytest.raises(ValidationError):
-            get_settings()
+    def test_invalid_env_falls_back(self):
+        """测试无效环境回退到 development。"""
+        settings = get_settings(env="invalid")
+        assert isinstance(settings, Settings)

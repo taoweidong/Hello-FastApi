@@ -58,12 +58,8 @@ async def create_superuser(username: str, email: str, password: str, nickname: s
 
 
 async def init_database() -> None:
-    """初始化数据库表。"""
-    from src.infrastructure.database import close_db, init_db
-
-    await init_db()
-    await close_db()
-    print("数据库表创建成功")
+    """初始化数据库表（通过 Alembic 迁移）。"""
+    await asyncio.to_thread(run_migrate)
 
 
 async def seed_rbac() -> None:

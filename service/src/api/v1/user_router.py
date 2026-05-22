@@ -20,6 +20,7 @@ from src.application.dto.user_dto import (
     UserUpdateDTO,
 )
 from src.application.services.user_service import UserService
+from src.domain.entities.user import UserEntity
 
 
 class UserRouter(Routable):

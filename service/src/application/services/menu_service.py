@@ -36,6 +36,10 @@ class MenuService:
 
         return menus
 
+    async def get_all_menus_raw(self) -> list[MenuEntity]:
+        """获取所有菜单实体列表（不转换为 dict），供 auth_router 使用。"""
+        return await self._get_all_menus()
+
     async def get_menu_tree(self) -> list[dict]:
         """获取完整菜单树。"""
         all_menus = await self._get_all_menus()

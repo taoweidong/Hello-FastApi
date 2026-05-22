@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import Column, DateTime, ForeignKey, String, func
 from sqlmodel import Field, SQLModel
 
 if TYPE_CHECKING:
@@ -28,7 +28,9 @@ class Department(SQLModel, table=True):
     is_active: int = Field(default=1)  # 是否启用
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
-    parent_id: str | None = Field(default=None, foreign_key="sys_departments.id")  # 父部门ID
+    parent_id: str | None = Field(
+        default=None, sa_column=Column(String(32), ForeignKey("sys_departments.id"), index=True, nullable=True)
+    )  # 父部门ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
     updated_time: datetime | None = Field(
         default=None, sa_column=Column(DateTime(6), server_default=func.now(), onupdate=func.now())

@@ -47,3 +47,24 @@ class TestGetIpRuleService:
         )
         assert service.ip_filter_port == mock_filter_port
         assert service.logging_port == mock_logging_port
+
+
+@pytest.mark.unit
+class TestFactoryFunctions:
+    """内部工厂函数测试。"""
+
+    def test_get_ip_filter_port(self):
+        """_get_ip_filter_port 应返回 IPFilterPortAdapter 实例。"""
+        from src.api.dependencies.ip_rule_service import _get_ip_filter_port
+        from src.infrastructure.http.ip_filter_port_adapter import IPFilterPortAdapter
+
+        result = _get_ip_filter_port()
+        assert isinstance(result, IPFilterPortAdapter)
+
+    def test_get_logging_port(self):
+        """_get_logging_port 应返回 logging_adapter 实例。"""
+        from src.api.dependencies.ip_rule_service import _get_logging_port
+        from src.domain.services.logging_port import LoggingPort
+
+        result = _get_logging_port()
+        assert isinstance(result, LoggingPort)

@@ -71,7 +71,7 @@ def menu_dict_to_entity(data: dict) -> MenuEntity:
         )
     created_time = dt.fromisoformat(data["created_time"]) if data.get("created_time") else None
     updated_time = dt.fromisoformat(data["updated_time"]) if data.get("updated_time") else None
-    menu = MenuEntity(
+    return MenuEntity(
         id=data["id"],
         menu_type=data["menu_type"],
         name=data["name"],
@@ -87,6 +87,5 @@ def menu_dict_to_entity(data: dict) -> MenuEntity:
         created_time=created_time,
         updated_time=updated_time,
         description=data["description"],
+        meta=meta_entity,
     )
-    menu.meta = meta_entity
-    return menu

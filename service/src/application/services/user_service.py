@@ -1,5 +1,7 @@
 """应用层 - 用户服务。"""
 
+from typing import Any
+
 from src.application.dto.user_dto import (
     ChangePasswordDTO,
     UserCreateDTO,
@@ -8,8 +10,10 @@ from src.application.dto.user_dto import (
     UserUpdateDTO,
 )
 from src.application.mappers.user_mapper import UserMapper
+from src.domain.entities.menu import MenuEntity
 from src.domain.entities.user import UserEntity
-from src.domain.exceptions import ConflictError, NotFoundError, UnauthorizedError
+from src.domain.enums import UserRole, UserStatus
+from src.domain.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.cache_port import CachePort
@@ -226,6 +230,137 @@ class UserService:
         if self.cache_service is not None:
             await self.cache_service.invalidate_user_info(user_id)
             await self.cache_service.invalidate_user_permissions(user_id)
+
+    async def get_user_by_id(self, user_id: str) -> UserEntity | None:
+        """根据 ID 获取用户实体（不抛异常，返回 None）。"""
+        return await self.repo.get_by_id(user_id)
+
+    async def get_user_info_with_cache(self, user_id: str) -> UserEntity:
+        """从缓存或数据库获取当前活跃用户实体，供 auth.py 依赖注入使用。
+
+        复用了原 api/dependencies/auth.py 中 get_current_active_user 的逻辑。
+        """
+        if self.cache_service is not None:
+            cached_info = await self.cache_service.get_user_info(user_id)
+            if cached_info is not None:
+                if not cached_info.get("is_active", 0):
+                    raise UnauthorizedError("用户账号已被禁用")
+                return UserEntity(
+                    id=str(cached_info["id"]),
+                    username=cached_info.get("username", ""),
+                    password="",
+                    is_superuser=cached_info.get("is_superuser", UserRole.USER),
+                    is_active=cached_info.get("is_active", UserStatus.ACTIVE),
+                    email=cached_info.get("email", ""),
+                )
+
+        user = await self.repo.get_by_id(user_id)
+        if user is None:
+            raise UnauthorizedError("用户不存在")
+        if not user.is_active_user:
+            raise UnauthorizedError("用户账号已被禁用")
+
+        user_info: dict[str, Any] = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "is_superuser": user.is_superuser,
+            "is_active": user.is_active,
+        }
+        if self.cache_service is not None:
+            await self.cache_service.set_user_info(user_id, user_info)
+        return user
+
+    async def check_permission_cached_or_db(
+        self, user_id: str, is_superuser: UserRole, code: str
+    ) -> UserEntity:
+        """检查用户是否具有指定权限（缓存优先）。
+
+        复用了原 api/dependencies/auth.py 中 require_permission 的逻辑。
+        """
+        if is_superuser == UserRole.SUPERUSER:
+            return UserEntity(
+                id=user_id, username="", password="", is_superuser=UserRole.SUPERUSER
+            )
+
+        if self.cache_service is not None:
+            cached_perms = await self.cache_service.get_user_permissions(user_id)
+            if cached_perms is not None:
+                for perm in cached_perms:
+                    if perm.get("type") == "permission" and perm.get("name") == code:
+                        return UserEntity(
+                            id=user_id, username="", password="", is_superuser=UserRole.USER
+                        )
+                raise ForbiddenError(f"权限 '{code}' 是必需的")
+
+        user_menus = await self.role_repo.get_user_all_menus(user_id)
+
+        all_perms: list[dict[str, Any]] = []
+        has_permission = False
+        for menu in user_menus:
+            if menu.menu_type == MenuEntity.PERMISSION:
+                all_perms.append({"type": "permission", "name": menu.name})
+                if menu.name == code:
+                    has_permission = True
+
+        if self.cache_service is not None:
+            await self.cache_service.set_user_permissions(user_id, all_perms)
+
+        if has_permission:
+            return UserEntity(
+                id=user_id, username="", password="", is_superuser=UserRole.USER
+            )
+
+        raise ForbiddenError(f"权限 '{code}' 是必需的")
+
+    async def check_api_permission_cached_or_db(
+        self, user_id: str, is_superuser: UserRole, path: str, method: str
+    ) -> UserEntity:
+        """检查用户是否具有指定 API 路径权限（缓存优先）。
+
+        复用了原 api/dependencies/auth.py 中 require_menu_permission 的逻辑。
+        """
+        if is_superuser == UserRole.SUPERUSER:
+            return UserEntity(
+                id=user_id, username="", password="", is_superuser=UserRole.SUPERUSER
+            )
+
+        if self.cache_service is not None:
+            cached_perms = await self.cache_service.get_user_permissions(user_id)
+            if cached_perms is not None:
+                for perm in cached_perms:
+                    if perm.get("type") == "api" and perm.get("path") == path and perm.get("method") == method:
+                        return UserEntity(
+                            id=user_id, username="", password="", is_superuser=UserRole.USER
+                        )
+                raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
+
+        user_menus = await self.role_repo.get_user_all_menus(user_id)
+
+        all_perms: list[dict[str, Any]] = []
+        has_permission = False
+        for menu in user_menus:
+            if menu.menu_type == MenuEntity.PERMISSION:
+                perm_entry: dict[str, Any] = {"type": "permission", "name": menu.name}
+                if menu.path and menu.method:
+                    perm_entry = {"type": "api", "path": menu.path, "method": menu.method, "name": menu.name}
+                    if menu.path == path and menu.method == method:
+                        has_permission = True
+                all_perms.append(perm_entry)
+
+        if self.cache_service is not None:
+            await self.cache_service.set_user_permissions(user_id, all_perms)
+
+        if has_permission:
+            return UserEntity(
+                id=user_id, username="", password="", is_superuser=UserRole.USER
+            )
+
+        raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
+
+    async def get_cached_or_active_user(self, user_id: str) -> UserEntity:
+        """从缓存或数据库获取当前活跃用户实体，供 auth.py 依赖注入使用。"""
+        return await self.get_user_info_with_cache(user_id)
 
     @staticmethod
     def _to_response_with_roles(user: UserEntity, roles: list) -> UserResponseDTO:

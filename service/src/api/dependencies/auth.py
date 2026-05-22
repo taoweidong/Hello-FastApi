@@ -1,21 +1,18 @@
 """认证依赖项：当前用户、权限检查。"""
 
 from collections.abc import Awaitable, Callable
-from typing import Any
 
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.dependencies.cache_service import get_cache_service
 from src.api.dependencies.domain_services import get_token_service
-from src.domain.entities.menu import MenuEntity
+from src.api.dependencies.user_service import get_user_service
+from src.application.services.user_service import UserService
+from src.domain.entities.user import UserEntity
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
 from src.domain.services.token_service import TokenService
 from src.infrastructure.cache.cache_service import CacheService
-from src.infrastructure.database import get_db
-from src.infrastructure.repositories.role_repository import RoleRepository
-from src.infrastructure.repositories.user_repository import UserRepository
 
 security_scheme = HTTPBearer()
 
@@ -46,38 +43,13 @@ async def get_current_user_id(
 
 async def get_current_active_user(
     user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db),
-    cache_service: CacheService = Depends(get_cache_service),
-) -> dict:
-    """从缓存或数据库获取当前活跃用户。"""
-    # 优先从缓存获取
-    cached_info = await cache_service.get_user_info(user_id)
-    if cached_info is not None:
-        if not cached_info.get("is_active", 0):
-            raise UnauthorizedError("用户账号已被禁用")
-        return cached_info
-
-    # 缓存未命中，查询数据库
-    repo = UserRepository(db)
-    user = await repo.get_by_id(user_id)
-    if user is None:
-        raise UnauthorizedError("用户不存在")
-    if not user.is_active_user:
-        raise UnauthorizedError("用户账号已被禁用")
-
-    user_info = {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "is_superuser": user.is_superuser,
-        "is_active": user.is_active,
-    }
-    # 写入缓存（失败不影响主流程）
-    await cache_service.set_user_info(user_id, user_info)
-    return user_info
+    user_service: UserService = Depends(get_user_service),
+) -> UserEntity:
+    """从缓存或数据库获取当前活跃用户实体。"""
+    return await user_service.get_user_info_with_cache(user_id)
 
 
-def require_permission(code: str) -> Callable[..., Awaitable[dict[str, Any]]]:
+def require_permission(code: str) -> Callable[..., Awaitable[UserEntity]]:
     """依赖工厂：要求特定菜单权限（基于menu.name检查按钮权限）。
 
     新RBAC方案：权限不再使用独立Permission表，而是通过Menu的menu_type=2(PERMISSION)
@@ -85,98 +57,43 @@ def require_permission(code: str) -> Callable[..., Awaitable[dict[str, Any]]]:
     """
 
     async def permission_checker(
-        current_user: dict = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db),
-        cache_service: CacheService = Depends(get_cache_service),
-    ) -> dict:
-        if current_user["is_superuser"]:
-            return current_user
-
-        # 尝试从缓存获取权限
-        cached_perms = await cache_service.get_user_permissions(current_user["id"])
-        if cached_perms is not None:
-            # 缓存命中：检查权限
-            for perm in cached_perms:
-                if perm.get("type") == "permission" and perm.get("name") == code:
-                    return current_user
-            raise ForbiddenError(f"权限 '{code}' 是必需的")
-
-        # 缓存未命中：一次查询获取用户所有菜单，消除 N+1
-        role_repo = RoleRepository(db)
-        user_menus = await role_repo.get_user_all_menus(current_user["id"])
-
-        # 构建权限列表并写入缓存
-        all_perms = []
-        has_permission = False
-        for menu in user_menus:
-            if menu.menu_type == MenuEntity.PERMISSION:
-                all_perms.append({"type": "permission", "name": menu.name})
-                if menu.name == code:
-                    has_permission = True
-
-        # 写入缓存
-        await cache_service.set_user_permissions(current_user["id"], all_perms)
-
-        if has_permission:
-            return current_user
-
-        raise ForbiddenError(f"权限 '{code}' 是必需的")
+        current_user: UserEntity = Depends(get_current_active_user),
+        user_service: UserService = Depends(get_user_service),
+    ) -> UserEntity:
+        return await user_service.check_permission_cached_or_db(
+            user_id=current_user.id,
+            is_superuser=current_user.is_superuser,
+            code=code,
+        )
 
     return permission_checker
 
 
-def require_menu_permission(path: str, method: str) -> Callable[..., Awaitable[dict[str, Any]]]:
+def require_menu_permission(path: str, method: str) -> Callable[..., Awaitable[UserEntity]]:
     """依赖工厂：要求特定API路径和方法的菜单权限。
 
     基于Menu.path和Menu.method检查API级权限。
     """
 
     async def permission_checker(
-        current_user: dict = Depends(get_current_active_user),
-        db: AsyncSession = Depends(get_db),
-        cache_service: CacheService = Depends(get_cache_service),
-    ) -> dict:
-        if current_user["is_superuser"]:
-            return current_user
-
-        # 尝试从缓存获取权限
-        cached_perms = await cache_service.get_user_permissions(current_user["id"])
-        if cached_perms is not None:
-            for perm in cached_perms:
-                if perm.get("type") == "api" and perm.get("path") == path and perm.get("method") == method:
-                    return current_user
-            raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
-
-        # 缓存未命中：一次查询获取用户所有菜单，消除 N+1
-        role_repo = RoleRepository(db)
-        user_menus = await role_repo.get_user_all_menus(current_user["id"])
-
-        all_perms = []
-        has_permission = False
-        for menu in user_menus:
-            if menu.menu_type == MenuEntity.PERMISSION:
-                perm_entry = {"type": "permission", "name": menu.name}
-                if menu.path and menu.method:
-                    perm_entry = {"type": "api", "path": menu.path, "method": menu.method, "name": menu.name}
-                    if menu.path == path and menu.method == method:
-                        has_permission = True
-                all_perms.append(perm_entry)
-
-        await cache_service.set_user_permissions(current_user["id"], all_perms)
-
-        if has_permission:
-            return current_user
-
-        raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
+        current_user: UserEntity = Depends(get_current_active_user),
+        user_service: UserService = Depends(get_user_service),
+    ) -> UserEntity:
+        return await user_service.check_api_permission_cached_or_db(
+            user_id=current_user.id,
+            is_superuser=current_user.is_superuser,
+            path=path,
+            method=method,
+        )
 
     return permission_checker
 
 
-def require_superuser() -> Callable[..., Awaitable[dict[str, Any]]]:
+def require_superuser() -> Callable[..., Awaitable[UserEntity]]:
     """依赖项：要求超级用户角色。"""
 
-    async def superuser_checker(current_user: dict = Depends(get_current_active_user)) -> dict:
-        if not current_user["is_superuser"]:
+    async def superuser_checker(current_user: UserEntity = Depends(get_current_active_user)) -> UserEntity:
+        if not current_user.is_superuser_user:
             raise ForbiddenError("需要超级用户权限")
         return current_user
 

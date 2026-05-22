@@ -7,6 +7,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 from src.infrastructure.http.exception_handler_registry import register_exception_handlers
 
 
@@ -38,6 +40,10 @@ class TestIPRuleRouter:
         return {"id": "1", "username": "admin", "is_superuser": True, "is_active": 1}
 
     @pytest.fixture
+    def mock_user_entity(self):
+        return UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
+
+    @pytest.fixture
     def mock_ip_rule_service(self):
         svc = AsyncMock()
         rule1 = _make_rule_entity("r1")
@@ -51,10 +57,10 @@ class TestIPRuleRouter:
         return svc
 
     @pytest.fixture
-    def client(self, app, mock_user, mock_ip_rule_service):
+    def client(self, app, mock_user_entity, mock_ip_rule_service):
         from src.api.dependencies import get_current_active_user
         from src.api.dependencies.ip_rule_service import get_ip_rule_service
-        app.dependency_overrides[get_current_active_user] = lambda: mock_user
+        app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_ip_rule_service] = lambda: mock_ip_rule_service
         return TestClient(app, raise_server_exceptions=False)
 
@@ -100,3 +106,45 @@ class TestIPRuleRouter:
         resp = client.post("/api/system/ip-rule/clear", headers=self.auth)
         assert resp.status_code == 200
         assert "已清空" in resp.json()["message"]
+
+    def test_get_ip_rules_with_is_active_int(self, client):
+        """GET 列表 with isActive as int should hit L34: is_active = int(is_active)."""
+        resp = client.post("/api/system/ip-rule", json={"isActive": 1}, headers=self.auth)
+        assert resp.status_code == 200
+
+    def test_get_ip_rules_with_is_active_zero(self, client):
+        """GET 列表 with isActive: 0."""
+        resp = client.post("/api/system/ip-rule", json={"isActive": 0}, headers=self.auth)
+        assert resp.status_code == 200
+
+    def test_create_ip_rule_with_valid_expires_at(self, client):
+        """Create with valid ISO expiresAt should hit L95-96."""
+        resp = client.post("/api/system/ip-rule/create", json={
+            "ipAddress": "8.8.8.8", "expiresAt": "2030-01-01T00:00:00",
+        }, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 201
+
+    def test_create_ip_rule_with_invalid_expires_at(self, client):
+        """Create with invalid expiresAt should hit L95, L98 (except branch)."""
+        resp = client.post("/api/system/ip-rule/create", json={
+            "ipAddress": "9.9.9.9", "expiresAt": "not-a-date",
+        }, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 201
+
+    def test_update_ip_rule_with_valid_expires_at(self, client):
+        """Update with valid ISO expiresAt should hit L122-123."""
+        resp = client.put("/api/system/ip-rule/r1", json={
+            "expiresAt": "2030-06-15T12:00:00",
+        }, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "更新成功"
+
+    def test_update_ip_rule_with_invalid_expires_at(self, client):
+        """Update with invalid expiresAt should hit L122, L125 (except branch)."""
+        resp = client.put("/api/system/ip-rule/r1", json={
+            "expiresAt": "bad-date",
+        }, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "更新成功"

@@ -5,10 +5,47 @@
 
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from enum import IntEnum
+from typing import TYPE_CHECKING, TypeVar
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, func
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, TypeDecorator, func
 from sqlmodel import Field, Relationship, SQLModel
+
+from src.domain.enums import Gender, PermissionMode, UserRole, UserStatus
+
+E = TypeVar("E", bound=IntEnum)
+
+
+class IntEnumColumn(TypeDecorator):
+    """Custom SQLAlchemy type that stores IntEnum as integer in DB.
+
+    Stores integer values in the database column but converts to/from
+    Python IntEnum instances on read/write. This preserves existing DB
+    schema (INTEGER column) while providing type safety in Python code.
+    """
+
+    impl = Integer
+    cache_ok = True
+
+    def __init__(self, enum_class: type[E], *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.enum_class = enum_class
+
+    def process_bind_param(self, value: E | int | None, _dialect) -> int | None:
+        """Convert Python value to DB integer before INSERT/UPDATE."""
+        if value is None:
+            return None
+        if isinstance(value, IntEnum):
+            return int(value)
+        # Accept raw int values for backward compatibility
+        return int(value)
+
+    def process_result_value(self, value: int | None, _dialect) -> E | None:
+        """Convert DB integer to Python enum after SELECT."""
+        if value is None:
+            return None
+        return self.enum_class(value)
+
 
 if TYPE_CHECKING:
     from src.domain.entities.user import UserEntity
@@ -22,25 +59,27 @@ class User(SQLModel, table=True):
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
     password: str = Field(max_length=128)  # 密码哈希
     last_login: datetime | None = Field(default=None, sa_column=Column(DateTime(6), nullable=True))  # 最后登录时间
-    is_superuser: int = Field(default=0)  # 是否超级用户
+    is_superuser: UserRole = Field(default=UserRole.USER, sa_column=Column(IntEnumColumn(UserRole)))  # 是否超级用户
     username: str = Field(max_length=150, unique=True, index=True)
     first_name: str = Field(default="", max_length=150)  # 名
     last_name: str = Field(default="", max_length=150)  # 姓
-    is_staff: int = Field(default=0)  # 是否为职员
-    is_active: int = Field(default=1)  # 是否启用
+    is_staff: UserRole = Field(default=UserRole.USER, sa_column=Column(IntEnumColumn(UserRole)))  # 是否为职员
+    is_active: UserStatus = Field(default=UserStatus.ACTIVE, sa_column=Column(IntEnumColumn(UserStatus)))  # 是否启用
     date_joined: datetime | None = Field(
         default=None, sa_column=Column(DateTime(6), server_default=func.now())
     )  # 注册时间
-    mode_type: int = Field(default=0)  # 权限模式(0-OR, 1-AND)
+    mode_type: PermissionMode = Field(
+        default=PermissionMode.OR, sa_column=Column(IntEnumColumn(PermissionMode))
+    )  # 权限模式(0-OR, 1-AND)
     avatar: str | None = Field(default=None, max_length=100)  # 头像URL
     nickname: str = Field(default="", max_length=150)  # 昵称
-    gender: int = Field(default=0)  # 性别(0-未知, 1-男, 2-女)
-    phone: str = Field(default="", max_length=16)  # 手机号
-    email: str = Field(default="", max_length=254)  # 邮箱
+    gender: Gender = Field(default=Gender.UNKNOWN, sa_column=Column(IntEnumColumn(Gender)))  # 性别(0-未知, 1-男, 2-女)
+    phone: str = Field(default="", max_length=16, index=True)  # 手机号
+    email: str = Field(default="", max_length=254, index=True)  # 邮箱
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
     dept_id: str | None = Field(
-        default=None, sa_column=Column(String(32), ForeignKey("sys_departments.id"), nullable=True)
+        default=None, sa_column=Column(String(32), ForeignKey("sys_departments.id"), index=True, nullable=True)
     )  # 部门ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
     updated_time: datetime | None = Field(
