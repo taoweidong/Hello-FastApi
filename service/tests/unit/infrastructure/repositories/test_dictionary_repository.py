@@ -89,7 +89,7 @@ class TestDictionaryRepository:
     async def test_get_max_sort(self, repo, mock_session):
         """测试 get_max_sort 返回最大排序值。"""
         mock_result = MagicMock()
-        mock_result.scalar.return_value = 10
+        mock_result.one.return_value = 10
         mock_session.exec.return_value = mock_result
 
         result = await repo.get_max_sort("parent-1")
@@ -100,7 +100,7 @@ class TestDictionaryRepository:
     async def test_get_max_sort_default(self, repo, mock_session):
         """测试 get_max_sort 无数据时返回 0。"""
         mock_result = MagicMock()
-        mock_result.scalar.return_value = 0
+        mock_result.one.return_value = 0
         mock_session.exec.return_value = mock_result
 
         result = await repo.get_max_sort(None)
@@ -256,10 +256,10 @@ class TestDictionaryRepository:
         assert len(result) == 1
 
     @pytest.mark.asyncio
-    async def test_get_max_sort_scalar_none(self, repo, mock_session):
-        """测试 get_max_sort 返回 None 时默认 0。"""
+    async def test_get_max_sort_one_returns_zero(self, repo, mock_session):
+        """测试 get_max_sort coalesce 返回 0 时正确处理。"""
         mock_result = MagicMock()
-        mock_result.scalar.return_value = None
+        mock_result.one.return_value = 0
         mock_session.exec.return_value = mock_result
 
         result = await repo.get_max_sort("parent-1")

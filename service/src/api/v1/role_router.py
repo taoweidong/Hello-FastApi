@@ -41,7 +41,7 @@ class RoleRouter(Routable):
     ) -> dict:
         """创建角色接口。"""
         role = await service.create_role(dto)
-        return success_response(data=role, message="角色创建成功", code=201)
+        return success_response(data=role.model_dump(), message="角色创建成功", code=201)
 
     @get("/{role_id}", response_model=ApiResponse[dict])
     async def get_role(
@@ -52,7 +52,7 @@ class RoleRouter(Routable):
     ) -> dict:
         """获取角色详情接口。"""
         role = await service.get_role(role_id)
-        return success_response(data=role)
+        return success_response(data=role.model_dump())
 
     @put("/{role_id}", response_model=ApiResponse[dict])
     async def update_role(
@@ -64,7 +64,7 @@ class RoleRouter(Routable):
     ) -> dict:
         """更新角色接口。"""
         role = await service.update_role(role_id, dto)
-        return success_response(data=role, message="角色更新成功")
+        return success_response(data=role.model_dump(), message="角色更新成功")
 
     @delete("/{role_id}", response_model=ApiResponse[None])
     async def delete_role(

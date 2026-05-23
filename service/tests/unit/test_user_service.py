@@ -6,8 +6,10 @@ import pytest
 
 from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserListQueryDTO, UserUpdateDTO
 from src.application.services.user_service import UserService
+from src.domain.entities.menu import MenuEntity
 from src.domain.entities.user import UserEntity
-from src.domain.exceptions import ConflictError, NotFoundError, UnauthorizedError
+from src.domain.enums import UserRole, UserStatus
+from src.domain.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
 
 
@@ -809,7 +811,6 @@ class TestUserServiceCheckPermissionCachedOrDb:
         """L296-312：缓存未命中 + DB 查菜单 + 权限存在 → 写缓存 + 返回 USER。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
 
-        from src.domain.entities.menu import MenuEntity
         perm_menu = MenuEntity(
             id="m1", menu_type=MenuEntity.PERMISSION, name="user:add",
             rank=1, path=None, method=None
@@ -850,7 +851,6 @@ class TestUserServiceCheckPermissionCachedOrDb:
     @pytest.mark.asyncio
     async def test_no_cache_skip_and_db_hit(self, user_service_no_cache, mock_role_repo):
         """L296 + L306：无 cache_service → 查 DB 权限并成功返回。"""
-        from src.domain.entities.menu import MenuEntity
         perm_menu = MenuEntity(
             id="m1", menu_type=MenuEntity.PERMISSION, name="system:config",
             rank=1, path=None, method=None
@@ -955,7 +955,6 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
         """L338-357：缓存未命中 + DB 查菜单 + 匹配 API 权限 → 写缓存 + 返回 USER。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
 
-        from src.domain.entities.menu import MenuEntity
         api_menu = MenuEntity(
             id="m1", menu_type=MenuEntity.PERMISSION, name="user:list",
             rank=1, path="/api/users", method="GET"
@@ -980,7 +979,6 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
     async def test_cache_miss_db_api_perm_not_found(self, user_service_cached, mock_role_repo, mock_cache):
         """L359：缓存未命中 + DB 查菜单 + 不匹配 → 抛 ForbiddenError。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
-        from src.domain.entities.menu import MenuEntity
         api_menu = MenuEntity(
             id="m1", menu_type=MenuEntity.PERMISSION, name="user:list",
             rank=1, path="/api/users", method="GET"
@@ -1000,7 +998,6 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
     @pytest.mark.asyncio
     async def test_no_cache_skip_and_db_hit(self, user_service_no_cache, mock_role_repo):
         """L338 + L351：无 cache_service → 查 DB 权限并成功返回。"""
-        from src.domain.entities.menu import MenuEntity
         api_menu = MenuEntity(
             id="m1", menu_type=MenuEntity.PERMISSION, name="system:list",
             rank=1, path="/api/system", method="GET"
@@ -1018,7 +1015,6 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
     async def test_cache_miss_db_no_path_method(self, user_service_cached, mock_role_repo, mock_cache):
         """L343-349：缓存未命中 + DB 菜单无 path/method → fallback permission entry。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
-        from src.domain.entities.menu import MenuEntity
         perm_menu = MenuEntity(
             id="m1", menu_type=MenuEntity.PERMISSION, name="user:view",
             rank=1, path=None, method=None

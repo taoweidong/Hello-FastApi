@@ -42,7 +42,7 @@ class SystemConfigRouter(Routable):
     ) -> dict:
         """创建系统配置。"""
         config = await service.create_config(dto)
-        return success_response(data=config, message="创建成功", code=201)
+        return success_response(data=config.model_dump(), message="创建成功", code=201)
 
     @get("/{config_id}", response_model=ApiResponse[dict])
     async def get_config(
@@ -53,7 +53,7 @@ class SystemConfigRouter(Routable):
     ) -> dict:
         """获取系统配置详情。"""
         config = await service.get_config(config_id)
-        return success_response(data=config)
+        return success_response(data=config.model_dump())
 
     @put("/{config_id}", response_model=ApiResponse[dict])
     async def update_config(
@@ -65,7 +65,7 @@ class SystemConfigRouter(Routable):
     ) -> dict:
         """更新系统配置。"""
         config = await service.update_config(config_id, dto)
-        return success_response(data=config, message="更新成功")
+        return success_response(data=config.model_dump(), message="更新成功")
 
     @delete("/{config_id}", response_model=ApiResponse[None])
     async def delete_config(

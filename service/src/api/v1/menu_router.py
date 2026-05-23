@@ -60,7 +60,7 @@ class MenuRouter(Routable):
     ) -> dict:
         """创建菜单（含元数据）。"""
         menu = await menu_service.create_menu(dto)
-        return success_response(data=menu, code=201, message="创建成功")
+        return success_response(data=menu.model_dump(), code=201, message="创建成功")
 
     @put("/{menu_id}", response_model=ApiResponse[dict])
     async def update_menu(
@@ -72,7 +72,7 @@ class MenuRouter(Routable):
     ) -> dict:
         """更新菜单（含元数据）。"""
         menu = await menu_service.update_menu(menu_id, dto)
-        return success_response(data=menu, message="更新成功")
+        return success_response(data=menu.model_dump(), message="更新成功")
 
     @delete("/{menu_id}", response_model=ApiResponse[None])
     async def delete_menu(

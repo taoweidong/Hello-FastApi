@@ -47,7 +47,7 @@ class UserRouter(Routable):
     ) -> dict:
         """创建用户接口。"""
         user = await service.create_user(dto)
-        return success_response(data=user, message="创建成功", code=201)
+        return success_response(data=user.model_dump(), message="创建成功", code=201)
 
     @get("/info", response_model=ApiResponse[dict])
     async def get_current_user_info(
@@ -55,7 +55,7 @@ class UserRouter(Routable):
     ) -> dict:
         """获取当前登录用户信息接口。"""
         user = await service.get_user(user_id)
-        return success_response(data=user)
+        return success_response(data=user.model_dump())
 
     @get("/{user_id}", response_model=ApiResponse[dict])
     async def get_user_detail(
@@ -66,7 +66,7 @@ class UserRouter(Routable):
     ) -> dict:
         """获取用户详情接口。"""
         user = await service.get_user(user_id)
-        return success_response(data=user)
+        return success_response(data=user.model_dump())
 
     @put("/{user_id}", response_model=ApiResponse[dict])
     async def update_user(
@@ -78,7 +78,7 @@ class UserRouter(Routable):
     ) -> dict:
         """更新用户接口。"""
         user = await service.update_user(user_id, dto)
-        return success_response(data=user, message="更新成功")
+        return success_response(data=user.model_dump(), message="更新成功")
 
     @delete("/{user_id}", response_model=ApiResponse[None])
     async def delete_user(

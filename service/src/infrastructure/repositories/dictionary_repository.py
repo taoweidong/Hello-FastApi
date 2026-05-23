@@ -51,7 +51,7 @@ class DictionaryRepository(GenericRepository[Dictionary, DictionaryEntity], Dict
         """获取同级最大排序值。"""
         stmt = select(sa_func.coalesce(sa_func.max(Dictionary.sort), 0)).where(Dictionary.parent_id == parent_id)
         result = await self.session.exec(stmt)
-        return result.scalar() or 0
+        return result.one()
 
     async def create(self, dictionary: DictionaryEntity) -> DictionaryEntity:
         """创建新字典。"""
