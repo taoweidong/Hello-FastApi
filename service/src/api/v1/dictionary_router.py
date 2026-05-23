@@ -8,6 +8,7 @@ from classy_fastapi import Routable, delete, post, put
 from fastapi import Body, Depends
 
 from src.api.common import success_response
+from src.api.common.response_schemas import ApiResponse
 from src.api.dependencies import get_dictionary_service, require_permission
 from src.application.dto.dictionary_dto import DictionaryCreateDTO, DictionaryListQueryDTO, DictionaryUpdateDTO
 from src.application.services.dictionary_service import DictionaryService
@@ -16,7 +17,7 @@ from src.application.services.dictionary_service import DictionaryService
 class DictionaryRouter(Routable):
     """字典管理路由类，提供字典增删改查功能。"""
 
-    @post("/dictionary")
+    @post("/dictionary", response_model=ApiResponse[list[dict]])
     async def get_dictionary_list(
         self,
         data: dict = Body(default={}),
@@ -29,7 +30,7 @@ class DictionaryRouter(Routable):
         dict_list = [d.model_dump() for d in dictionaries]
         return success_response(data=dict_list)
 
-    @post("/dictionary/getByName")
+    @post("/dictionary/getByName", response_model=ApiResponse[list[dict]])
     async def get_dictionary_by_name(
         self,
         data: dict = Body(default={}),
@@ -42,7 +43,7 @@ class DictionaryRouter(Routable):
         dict_list = [d.model_dump() for d in dictionaries]
         return success_response(data=dict_list)
 
-    @post("/dictionary/create")
+    @post("/dictionary/create", response_model=ApiResponse[dict])
     async def create_dictionary(
         self,
         dto: DictionaryCreateDTO,
@@ -53,7 +54,7 @@ class DictionaryRouter(Routable):
         dictionary = await service.create_dictionary(dto)
         return success_response(data={"id": dictionary.id, "name": dictionary.name}, message="创建成功", code=201)
 
-    @put("/dictionary/{dict_id}")
+    @put("/dictionary/{dict_id}", response_model=ApiResponse[dict])
     async def update_dictionary(
         self,
         dict_id: str,
@@ -65,7 +66,7 @@ class DictionaryRouter(Routable):
         dictionary = await service.update_dictionary(dict_id, dto)
         return success_response(data={"id": dictionary.id, "name": dictionary.name}, message="更新成功")
 
-    @delete("/dictionary/{dict_id}")
+    @delete("/dictionary/{dict_id}", response_model=ApiResponse[None])
     async def delete_dictionary(
         self,
         dict_id: str,

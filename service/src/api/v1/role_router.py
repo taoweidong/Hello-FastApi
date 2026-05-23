@@ -9,6 +9,7 @@ from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.api.common import list_response, success_response
+from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import get_role_repository, get_role_service, require_permission
 from src.application.dto.role_dto import AssignMenusDTO, RoleCreateDTO, RoleListQueryDTO, RoleUpdateDTO
 from src.application.services.role_service import RoleService
@@ -19,7 +20,7 @@ from src.infrastructure.repositories.role_repository import RoleRepository
 class RoleRouter(Routable):
     """角色管理路由类，提供角色增删改查、菜单分配等功能。"""
 
-    @post("")
+    @post("", response_model=PaginatedResponse[dict])
     async def get_role_list(
         self,
         query: RoleListQueryDTO,
@@ -31,7 +32,7 @@ class RoleRouter(Routable):
         role_list = [role.model_dump() for role in roles]
         return list_response(list_data=role_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
-    @post("/create")
+    @post("/create", response_model=ApiResponse[dict])
     async def create_role(
         self,
         dto: RoleCreateDTO,
@@ -42,7 +43,7 @@ class RoleRouter(Routable):
         role = await service.create_role(dto)
         return success_response(data=role, message="角色创建成功", code=201)
 
-    @get("/{role_id}")
+    @get("/{role_id}", response_model=ApiResponse[dict])
     async def get_role(
         self,
         role_id: str,
@@ -53,7 +54,7 @@ class RoleRouter(Routable):
         role = await service.get_role(role_id)
         return success_response(data=role)
 
-    @put("/{role_id}")
+    @put("/{role_id}", response_model=ApiResponse[dict])
     async def update_role(
         self,
         role_id: str,
@@ -65,7 +66,7 @@ class RoleRouter(Routable):
         role = await service.update_role(role_id, dto)
         return success_response(data=role, message="角色更新成功")
 
-    @delete("/{role_id}")
+    @delete("/{role_id}", response_model=ApiResponse[None])
     async def delete_role(
         self,
         role_id: str,
@@ -76,7 +77,7 @@ class RoleRouter(Routable):
         await service.delete_role(role_id)
         return success_response(message="角色删除成功")
 
-    @put("/{role_id}/status")
+    @put("/{role_id}/status", response_model=ApiResponse[None])
     async def update_role_status(
         self,
         role_id: str,
@@ -92,7 +93,7 @@ class RoleRouter(Routable):
         await service.update_role(role_id, dto)
         return success_response(message="状态更新成功")
 
-    @post("/{role_id}/menus")
+    @post("/{role_id}/menus", response_model=ApiResponse[None])
     async def assign_menus(
         self,
         role_id: str,
@@ -104,7 +105,7 @@ class RoleRouter(Routable):
         await service.assign_menus(role_id, dto.menuIds)
         return success_response(message="菜单权限分配成功")
 
-    @post("/{role_id}/menu")
+    @post("/{role_id}/menu", response_model=ApiResponse[None])
     async def assign_role_menu(
         self,
         role_id: str,

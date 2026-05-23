@@ -11,13 +11,14 @@ from classy_fastapi import Routable, get, post
 from fastapi import Body, Depends
 
 from src.api.common import list_response, success_response
+from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission
 
 
 class MonitorRouter(Routable):
     """系统监控路由类，提供在线用户、地图数据、卡片列表等 stub 接口。"""
 
-    @post("/online-logs")
+    @post("/online-logs", response_model=PaginatedResponse[dict])
     async def get_online_logs(
         self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))
     ) -> dict:
@@ -47,14 +48,14 @@ class MonitorRouter(Routable):
             list_data = [item for item in list_data if username in item["username"]]
         return list_response(list_data=list_data, total=len(list_data))
 
-    @post("/online-logs/force-offline")
+    @post("/online-logs/force-offline", response_model=ApiResponse[None])
     async def force_offline(
         self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:manage"))
     ) -> dict:
         """强制下线用户（stub 实现，仅返回成功响应）。"""
         return success_response(message="强制下线成功")
 
-    @get("/get-map-info")
+    @get("/get-map-info", response_model=ApiResponse[list[dict]])
     async def get_map_info(self, _: dict = Depends(require_permission("monitor:view"))) -> dict:
         """获取地图数据（stub 数据）。"""
         map_list = []
@@ -74,7 +75,7 @@ class MonitorRouter(Routable):
             )
         return success_response(data=map_list)
 
-    @post("/get-card-list")
+    @post("/get-card-list", response_model=ApiResponse[dict])
     async def get_card_list(
         self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))
     ) -> dict:

@@ -8,6 +8,7 @@ from classy_fastapi import Routable, delete, get, post, put
 from fastapi import Depends
 
 from src.api.common import list_response, success_response
+from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import get_system_config_service, require_permission
 from src.application.dto.system_config_dto import SystemConfigCreateDTO, SystemConfigListQueryDTO, SystemConfigUpdateDTO
 from src.application.services.system_config_service import SystemConfigService
@@ -16,7 +17,7 @@ from src.application.services.system_config_service import SystemConfigService
 class SystemConfigRouter(Routable):
     """系统配置路由类，提供系统配置增删改查功能。"""
 
-    @post("")
+    @post("", response_model=PaginatedResponse[dict])
     async def get_config_list(
         self,
         query: SystemConfigListQueryDTO,
@@ -32,7 +33,7 @@ class SystemConfigRouter(Routable):
             current_page=query.pageNum,
         )
 
-    @post("/create")
+    @post("/create", response_model=ApiResponse[dict])
     async def create_config(
         self,
         dto: SystemConfigCreateDTO,
@@ -43,7 +44,7 @@ class SystemConfigRouter(Routable):
         config = await service.create_config(dto)
         return success_response(data=config, message="创建成功", code=201)
 
-    @get("/{config_id}")
+    @get("/{config_id}", response_model=ApiResponse[dict])
     async def get_config(
         self,
         config_id: str,
@@ -54,7 +55,7 @@ class SystemConfigRouter(Routable):
         config = await service.get_config(config_id)
         return success_response(data=config)
 
-    @put("/{config_id}")
+    @put("/{config_id}", response_model=ApiResponse[dict])
     async def update_config(
         self,
         config_id: str,
@@ -66,7 +67,7 @@ class SystemConfigRouter(Routable):
         config = await service.update_config(config_id, dto)
         return success_response(data=config, message="更新成功")
 
-    @delete("/{config_id}")
+    @delete("/{config_id}", response_model=ApiResponse[None])
     async def delete_config(
         self,
         config_id: str,

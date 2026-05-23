@@ -11,6 +11,7 @@ from classy_fastapi import Routable, delete, get, post, put
 from fastapi import Depends
 
 from src.api.common import success_response
+from src.api.common.response_schemas import ApiResponse
 from src.api.dependencies import get_current_active_user, get_menu_service, require_permission
 from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
 from src.application.services.menu_service import MenuService
@@ -20,7 +21,7 @@ from src.domain.entities.user import UserEntity
 class MenuRouter(Routable):
     """菜单管理路由类，提供菜单增删改查、菜单树获取、用户菜单获取等功能。"""
 
-    @post("")
+    @post("", response_model=ApiResponse[list[dict]])
     async def get_menu_list(
         self,
         menu_service: MenuService = Depends(get_menu_service),
@@ -30,7 +31,7 @@ class MenuRouter(Routable):
         menu_list = await menu_service.get_menu_list()
         return success_response(data=menu_list)
 
-    @get("/tree")
+    @get("/tree", response_model=ApiResponse[list[dict]])
     async def get_menu_tree(
         self,
         menu_service: MenuService = Depends(get_menu_service),
@@ -40,7 +41,7 @@ class MenuRouter(Routable):
         tree = await menu_service.get_menu_tree()
         return success_response(data=tree)
 
-    @get("/user-menus")
+    @get("/user-menus", response_model=ApiResponse[list[dict]])
     async def get_user_menus(
         self,
         menu_service: MenuService = Depends(get_menu_service),
@@ -50,7 +51,7 @@ class MenuRouter(Routable):
         menus = await menu_service.get_user_menus(current_user.id)
         return success_response(data=menus)
 
-    @post("/create")
+    @post("/create", response_model=ApiResponse[dict])
     async def create_menu(
         self,
         dto: MenuCreateDTO,
@@ -61,7 +62,7 @@ class MenuRouter(Routable):
         menu = await menu_service.create_menu(dto)
         return success_response(data=menu, code=201, message="创建成功")
 
-    @put("/{menu_id}")
+    @put("/{menu_id}", response_model=ApiResponse[dict])
     async def update_menu(
         self,
         menu_id: str,
@@ -73,7 +74,7 @@ class MenuRouter(Routable):
         menu = await menu_service.update_menu(menu_id, dto)
         return success_response(data=menu, message="更新成功")
 
-    @delete("/{menu_id}")
+    @delete("/{menu_id}", response_model=ApiResponse[None])
     async def delete_menu(
         self,
         menu_id: str,

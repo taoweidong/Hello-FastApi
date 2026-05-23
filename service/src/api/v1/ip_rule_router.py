@@ -8,6 +8,7 @@ from classy_fastapi import Routable, delete, get, post, put
 from fastapi import Body, Depends
 
 from src.api.common import list_response, success_response
+from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission
 from src.api.dependencies.ip_rule_service import get_ip_rule_service
 from src.application.services.ip_rule_service import IPRuleService
@@ -16,7 +17,7 @@ from src.application.services.ip_rule_service import IPRuleService
 class IPRuleRouter(Routable):
     """IP 规则管理路由类，提供 IP 黑白名单规则的增删改查功能。"""
 
-    @post("")
+    @post("", response_model=PaginatedResponse[dict])
     async def get_ip_rules(
         self,
         data: dict = Body(default={}),
@@ -55,7 +56,7 @@ class IPRuleRouter(Routable):
             )
         return list_response(list_data=rule_list, total=total, page_size=page_size, current_page=page_num)
 
-    @get("/{rule_id}")
+    @get("/{rule_id}", response_model=ApiResponse[dict])
     async def get_ip_rule(
         self,
         rule_id: str,
@@ -80,7 +81,7 @@ class IPRuleRouter(Routable):
             }
         )
 
-    @post("/create")
+    @post("/create", response_model=ApiResponse[dict])
     async def create_ip_rule(
         self,
         data: dict = Body(default={}),
@@ -106,7 +107,7 @@ class IPRuleRouter(Routable):
         )
         return success_response(data={"id": rule.id, "ipAddress": rule.ip_address}, message="创建成功", code=201)
 
-    @put("/{rule_id}")
+    @put("/{rule_id}", response_model=ApiResponse[dict])
     async def update_ip_rule(
         self,
         rule_id: str,
@@ -129,13 +130,13 @@ class IPRuleRouter(Routable):
             ip_address=data.get("ipAddress"),
             rule_type=data.get("ruleType"),
             reason=data.get("reason"),
-            is_active=int(data["isActive"]) if data.get("isActive") is not None else None,
+            is_active=int(data.get("isActive")) if data.get("isActive") is not None else None,
             expires_at=expires_at,
             description=data.get("description"),
         )
         return success_response(data={"id": rule.id, "ipAddress": rule.ip_address}, message="更新成功")
 
-    @delete("/{rule_id}")
+    @delete("/{rule_id}", response_model=ApiResponse[None])
     async def delete_ip_rule(
         self,
         rule_id: str,
@@ -146,7 +147,7 @@ class IPRuleRouter(Routable):
         await service.delete_ip_rules([rule_id])
         return success_response(message="删除成功")
 
-    @post("/batch-delete")
+    @post("/batch-delete", response_model=ApiResponse[dict])
     async def batch_delete_ip_rules(
         self,
         data: dict = Body(default={}),
@@ -158,7 +159,7 @@ class IPRuleRouter(Routable):
         count = await service.delete_ip_rules(ids)
         return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
 
-    @post("/clear")
+    @post("/clear", response_model=ApiResponse[dict])
     async def clear_ip_rules(
         self,
         service: IPRuleService = Depends(get_ip_rule_service),

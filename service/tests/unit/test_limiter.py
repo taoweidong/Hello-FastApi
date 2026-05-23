@@ -1,13 +1,27 @@
 """限流模块测试。"""
 
+import functools
 import sys
 from unittest.mock import MagicMock
 
 import pytest
+from limits import RateLimitItemPerSecond
 from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.wrappers import Limit
 from starlette.requests import Request
 
-from src.infrastructure.http.limiter import get_limiter, get_real_ip, rate_limit_exceeded_handler
+from src.infrastructure.http.limiter import (
+    _patched_check_limits,
+    _patched_check_request_limit,
+    _patched_get_route_name,
+    _unwrap_partial,
+    get_limiter,
+    get_real_ip,
+    rate_limit_exceeded_handler,
+)
+
+_limiter_mod = sys.modules["src.infrastructure.http.limiter"]
 
 
 class TestLimiterConfig:
@@ -126,30 +140,27 @@ class TestUnwrapPartial:
 
     def test_unwrap_single_partial(self):
         """测试单层 partial。"""
-        import functools
 
         def some_func(a, b):
             return a + b
 
         p = functools.partial(some_func, 1)
-        result = from_src_infrastructure_http_limiter._unwrap_partial(p)
+        result = _unwrap_partial(p)
         assert result is some_func
 
     def test_unwrap_double_nested_partial(self):
         """测试双层 partial → L31-33 (while-loop, nesting >= 2)。"""
-        import functools
 
         def some_func(a, b, c):
             return a + b + c
 
         p1 = functools.partial(some_func, 1)
         p2 = functools.partial(p1, 2)
-        result = from_src_infrastructure_http_limiter._unwrap_partial(p2)
+        result = _unwrap_partial(p2)
         assert result is some_func
 
     def test_unwrap_triple_nested_partial(self):
         """测试三层 partial → L31-33 (while-loop, nesting >= 3)。"""
-        import functools
 
         def some_func(a, b, c, d):
             return a + b + c + d
@@ -157,7 +168,7 @@ class TestUnwrapPartial:
         p1 = functools.partial(some_func, 1)
         p2 = functools.partial(p1, 2)
         p3 = functools.partial(p2, 3)
-        result = from_src_infrastructure_http_limiter._unwrap_partial(p3)
+        result = _unwrap_partial(p3)
         assert result is some_func
 
     def test_unwrap_non_partial(self):
@@ -166,7 +177,7 @@ class TestUnwrapPartial:
         def some_func():
             pass
 
-        result = from_src_infrastructure_http_limiter._unwrap_partial(some_func)
+        result = _unwrap_partial(some_func)
         assert result is some_func
 
 
@@ -175,14 +186,12 @@ class TestPatchedGetRouteName:
 
     def test_patched_get_route_name_with_partial(self):
         """测试传入 partial-wrapped handler → L45。"""
-        import functools
 
         def my_endpoint():
             return "ok"
 
         p = functools.partial(my_endpoint)
-        # _patched_get_route_name 内部调用 _original_get_route_name，需要 handler 有 __name__
-        result = from_src_infrastructure_http_limiter._patched_get_route_name(p)
+        result = _patched_get_route_name(p)
         assert "my_endpoint" in result
 
     def test_patched_get_route_name_with_regular_func(self):
@@ -191,7 +200,7 @@ class TestPatchedGetRouteName:
         def regular_handler():
             pass
 
-        result = from_src_infrastructure_http_limiter._patched_get_route_name(regular_handler)
+        result = _patched_get_route_name(regular_handler)
         assert "regular_handler" in result
 
 
@@ -200,22 +209,23 @@ class TestPatchedCheckRequestLimit:
 
     def test_patched_check_request_limit_with_partial(self):
         """测试 partial-wrapped endpoint → L58-59。"""
-        import functools
-
-        limiter_mock = MagicMock(spec=Limiter)
-        limiter_mock._check_request_limit = MagicMock(return_value=None)
 
         def my_endpoint():
             return "ok"
 
         p = functools.partial(my_endpoint)
         request = MagicMock(spec=Request)
+        limiter_instance = get_limiter()
 
-        from_src_infrastructure_http_limiter._patched_check_request_limit(limiter_mock, request, p, True)
-
-        # Verify _check_request_limit was called with the unwrapped function
-        call_args = limiter_mock._check_request_limit.call_args
-        assert call_args[0][1] is my_endpoint
+        mock_orig = MagicMock(return_value=None)
+        original = _limiter_mod._original_check_request_limit
+        _limiter_mod._original_check_request_limit = mock_orig
+        try:
+            _patched_check_request_limit(limiter_instance, request, p, True)
+            call_args = mock_orig.call_args
+            assert call_args[0][2] is my_endpoint
+        finally:
+            _limiter_mod._original_check_request_limit = original
 
 
 class TestPatchedCheckLimits:
@@ -228,7 +238,7 @@ class TestPatchedCheckLimits:
         request = MagicMock(spec=Request)
         app = MagicMock()
 
-        result = from_src_infrastructure_http_limiter._patched_check_limits(limiter_mock, request, None, app)
+        result = _patched_check_limits(limiter_mock, request, None, app)
         assert result == (None, False, None)
 
     def test_patched_check_limits_rate_limiting_complete(self):
@@ -239,7 +249,7 @@ class TestPatchedCheckLimits:
         request.state._rate_limiting_complete = True
         app = MagicMock()
 
-        result = from_src_infrastructure_http_limiter._patched_check_limits(limiter_mock, request, None, app)
+        result = _patched_check_limits(limiter_mock, request, None, app)
         assert result == (None, False, None)
 
     def test_patched_check_limits_no_exception(self):
@@ -251,23 +261,33 @@ class TestPatchedCheckLimits:
         request.state._rate_limiting_complete = False
         app = MagicMock()
 
-        result = from_src_infrastructure_http_limiter._patched_check_limits(limiter_mock, request, None, app)
+        result = _patched_check_limits(limiter_mock, request, None, app)
         assert result == (None, False, None)
 
     def test_patched_check_limits_rate_limit_exceeded(self):
         """测试 RateLimitExceeded 异常 → L79-82。"""
-        from slowapi.errors import RateLimitExceeded
+        limit = Limit(
+            RateLimitItemPerSecond(10, 1),
+            lambda r: "127.0.0.1",
+            "test",
+            per_method=False,
+            methods=None,
+            error_message="limit exceeded: 60",
+            exempt_when=None,
+            cost=1,
+            override_defaults=False,
+        )
 
         handler_func = MagicMock()
         limiter_mock = MagicMock()
         limiter_mock._auto_check = True
-        limiter_mock._check_request_limit = MagicMock(side_effect=RateLimitExceeded("limit exceeded: 60"))
+        limiter_mock._check_request_limit = MagicMock(side_effect=RateLimitExceeded(limit))
         request = MagicMock(spec=Request)
         request.state._rate_limiting_complete = False
         app = MagicMock()
         app.exception_handlers = {RateLimitExceeded: handler_func}
 
-        result = from_src_infrastructure_http_limiter._patched_check_limits(limiter_mock, request, None, app)
+        result = _patched_check_limits(limiter_mock, request, None, app)
         assert result[0] is handler_func
         assert result[1] is False
         assert isinstance(result[2], RateLimitExceeded)
@@ -281,15 +301,5 @@ class TestPatchedCheckLimits:
         request.state._rate_limiting_complete = False
         app = MagicMock()
 
-        result = from_src_infrastructure_http_limiter._patched_check_limits(limiter_mock, request, None, app)
+        result = _patched_check_limits(limiter_mock, request, None, app)
         assert result == (None, False, None)
-
-
-from src.infrastructure.http.limiter import (
-    _patched_check_limits,
-    _patched_check_request_limit,
-    _patched_get_route_name,
-    _unwrap_partial,
-)
-
-from_src_infrastructure_http_limiter = sys.modules["src.infrastructure.http.limiter"]

@@ -9,6 +9,7 @@ from fastapi import Depends, Request, Security
 from fastapi.security import HTTPAuthorizationCredentials
 
 from src.api.common import list_response, success_response
+from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import (
     get_auth_service,
     get_current_active_user,
@@ -29,13 +30,13 @@ from src.domain.exceptions import UnauthorizedError
 class AuthRouter(Routable):
     """认证管理路由类，提供登录、注册、令牌刷新、动态路由等接口。"""
 
-    @post("/login")
+    @post("/login", response_model=ApiResponse[dict])
     async def login(self, request: Request, dto: LoginDTO, service: AuthService = Depends(get_auth_service)) -> dict:
         """用户登录接口。"""
         result = await service.login(dto)
         return success_response(data=result, message="登录成功")
 
-    @post("/register")
+    @post("/register", response_model=ApiResponse[dict])
     async def register(
         self, request: Request, dto: RegisterDTO, service: AuthService = Depends(get_auth_service)
     ) -> dict:
@@ -43,7 +44,7 @@ class AuthRouter(Routable):
         result = await service.register(dto)
         return success_response(data=result, message="注册成功")
 
-    @post("/logout")
+    @post("/logout", response_model=ApiResponse[None])
     async def logout(
         self,
         current_user: UserEntity = Depends(get_current_active_user),
@@ -55,13 +56,13 @@ class AuthRouter(Routable):
         await service.logout(token)
         return success_response(message="登出成功")
 
-    @post("/refresh-token")
+    @post("/refresh-token", response_model=ApiResponse[dict])
     async def refresh_token(self, dto: RefreshTokenDTO, service: AuthService = Depends(get_auth_service)) -> dict:
         """刷新访问令牌接口。"""
         result = await service.refresh_token(dto.refreshToken)
         return success_response(data=result, message="刷新成功")
 
-    @get("/mine")
+    @get("/mine", response_model=ApiResponse[dict])
     async def get_mine(
         self,
         current_user: UserEntity = Depends(get_current_active_user),
@@ -82,20 +83,22 @@ class AuthRouter(Routable):
             }
         )
 
-    @get("/mine-logs")
+    @get("/mine-logs", response_model=PaginatedResponse[dict])
     async def get_mine_logs(self, current_user: UserEntity = Depends(get_current_active_user)) -> dict:
         """获取当前用户的安全日志（stub 数据）。"""
         return list_response(list_data=[], total=0)
 
-    @get("/get-async-routes")
+    @get("/get-async-routes", response_model=ApiResponse[list[dict]])
     async def get_async_routes(
-        self, current_user: UserEntity = Depends(get_current_active_user), service: AuthService = Depends(get_auth_service)
+        self,
+        current_user: UserEntity = Depends(get_current_active_user),
+        service: AuthService = Depends(get_auth_service),
     ) -> dict:
         """获取当前用户可访问的动态路由配置。"""
         tree = await service.get_async_routes(current_user.id)
         return success_response(data=tree)
 
-    @get("/list-all-role")
+    @get("/list-all-role", response_model=ApiResponse[list[dict]])
     async def list_all_roles(
         self,
         role_service: RoleService = Depends(get_role_service),
@@ -105,7 +108,7 @@ class AuthRouter(Routable):
         roles = await role_service.get_all_simple_roles()
         return success_response(data=roles)
 
-    @post("/list-role-ids")
+    @post("/list-role-ids", response_model=ApiResponse[list[str]])
     async def list_role_ids(
         self,
         data: dict,
@@ -119,7 +122,7 @@ class AuthRouter(Routable):
         role_ids = await service.get_user_role_ids(str(user_id))
         return success_response(data=role_ids)
 
-    @post("/role-menu")
+    @post("/role-menu", response_model=ApiResponse[list[dict]])
     async def get_role_menu(
         self,
         current_user: UserEntity = Depends(get_current_active_user),
@@ -140,7 +143,7 @@ class AuthRouter(Routable):
             menu_list.append(menu_dict)
         return success_response(data=menu_list)
 
-    @post("/role-menu-ids")
+    @post("/role-menu-ids", response_model=ApiResponse[list[str]])
     async def get_role_menu_ids(
         self,
         data: dict,

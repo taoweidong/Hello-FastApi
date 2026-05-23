@@ -9,6 +9,7 @@ from classy_fastapi import Routable, delete, get, post, put
 from fastapi import Body, Depends
 
 from src.api.common import success_response
+from src.api.common.response_schemas import ApiResponse
 from src.api.dependencies import get_department_service, require_permission
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
 from src.application.services.department_service import DepartmentService
@@ -17,7 +18,7 @@ from src.application.services.department_service import DepartmentService
 class DeptRouter(Routable):
     """部门管理路由类，提供部门增删改查功能。"""
 
-    @post("/dept")
+    @post("/dept", response_model=ApiResponse[list[dict]])
     async def get_dept_list(
         self,
         data: dict = Body(default={}),
@@ -30,7 +31,7 @@ class DeptRouter(Routable):
         dept_list = [dept.model_dump() for dept in departments]
         return success_response(data=dept_list)
 
-    @post("/dept/create")
+    @post("/dept/create", response_model=ApiResponse[dict])
     async def create_department(
         self,
         dto: DepartmentCreateDTO,
@@ -41,7 +42,7 @@ class DeptRouter(Routable):
         department = await service.create_department(dto)
         return success_response(data={"id": department.id, "name": department.name}, message="创建成功", code=201)
 
-    @put("/dept/{dept_id}")
+    @put("/dept/{dept_id}", response_model=ApiResponse[dict])
     async def update_department(
         self,
         dept_id: str,
@@ -53,7 +54,7 @@ class DeptRouter(Routable):
         department = await service.update_department(dept_id, dto)
         return success_response(data={"id": department.id, "name": department.name}, message="更新成功")
 
-    @delete("/dept/{dept_id}")
+    @delete("/dept/{dept_id}", response_model=ApiResponse[None])
     async def delete_department(
         self,
         dept_id: str,
@@ -64,7 +65,7 @@ class DeptRouter(Routable):
         await service.delete_department(dept_id)
         return success_response(message="删除成功")
 
-    @get("/dept/tree")
+    @get("/dept/tree", response_model=ApiResponse[list[dict]])
     async def get_dept_tree(
         self,
         service: DepartmentService = Depends(get_department_service),

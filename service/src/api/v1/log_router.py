@@ -11,6 +11,7 @@ from classy_fastapi import Routable, post
 from fastapi import Body, Depends
 
 from src.api.common import list_response, success_response
+from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import get_log_service, require_permission
 from src.application.dto.log_dto import (
     BatchDeleteLogDTO,
@@ -61,7 +62,7 @@ class LogRouter(Routable):
 
     # ============ 登录日志 ============
 
-    @post("/login-logs")
+    @post("/login-logs", response_model=PaginatedResponse[dict])
     async def get_login_logs(
         self,
         query: LoginLogListQueryDTO = Body(default={}),
@@ -73,7 +74,7 @@ class LogRouter(Routable):
         log_list = [_format_login_log(log) for log in logs]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
-    @post("/login-logs/batch-delete")
+    @post("/login-logs/batch-delete", response_model=ApiResponse[dict])
     async def batch_delete_login_logs(
         self,
         dto: BatchDeleteLogDTO,
@@ -84,7 +85,7 @@ class LogRouter(Routable):
         count = await service.delete_login_logs(dto)
         return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
 
-    @post("/login-logs/clear")
+    @post("/login-logs/clear", response_model=ApiResponse[dict])
     async def clear_login_logs(
         self, service: LogService = Depends(get_log_service), _: dict = Depends(require_permission("log:delete"))
     ) -> dict:
@@ -94,7 +95,7 @@ class LogRouter(Routable):
 
     # ============ 操作日志（统一日志表 sys_logs） ============
 
-    @post("/operation-logs")
+    @post("/operation-logs", response_model=PaginatedResponse[dict])
     async def get_operation_logs(
         self,
         query: OperationLogListQueryDTO = Body(default={}),
@@ -106,7 +107,7 @@ class LogRouter(Routable):
         log_list = [_format_operation_log(log) for log in logs]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
-    @post("/operation-logs/batch-delete")
+    @post("/operation-logs/batch-delete", response_model=ApiResponse[dict])
     async def batch_delete_operation_logs(
         self,
         dto: BatchDeleteLogDTO,
@@ -117,7 +118,7 @@ class LogRouter(Routable):
         count = await service.delete_operation_logs(dto)
         return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
 
-    @post("/operation-logs/clear")
+    @post("/operation-logs/clear", response_model=ApiResponse[dict])
     async def clear_operation_logs(
         self, service: LogService = Depends(get_log_service), _: dict = Depends(require_permission("log:delete"))
     ) -> dict:
@@ -127,7 +128,7 @@ class LogRouter(Routable):
 
     # ============ 系统日志（统一日志表 sys_logs，与操作日志共享模型） ============
 
-    @post("/system-logs")
+    @post("/system-logs", response_model=PaginatedResponse[dict])
     async def get_system_logs(
         self,
         query: SystemLogListQueryDTO = Body(default={}),
@@ -139,7 +140,7 @@ class LogRouter(Routable):
         log_list = [_format_operation_log(log) for log in logs]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
-    @post("/system-logs-detail")
+    @post("/system-logs-detail", response_model=ApiResponse[dict])
     async def get_system_log_detail(
         self,
         data: dict = Body(default={}),

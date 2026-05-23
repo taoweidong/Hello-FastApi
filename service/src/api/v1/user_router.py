@@ -8,6 +8,7 @@ from classy_fastapi import Routable, delete, get, post, put
 from fastapi import Depends
 
 from src.api.common import format_user_list_row, list_response, success_response
+from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import get_current_user_id, get_user_service, require_permission
 from src.application.dto.user_dto import (
     AssignRoleDTO,
@@ -20,13 +21,12 @@ from src.application.dto.user_dto import (
     UserUpdateDTO,
 )
 from src.application.services.user_service import UserService
-from src.domain.entities.user import UserEntity
 
 
 class UserRouter(Routable):
     """用户管理路由类，提供用户增删改查、密码管理、状态管理等功能。"""
 
-    @post("")
+    @post("", response_model=PaginatedResponse[dict])
     async def get_user_list(
         self,
         query: UserListQueryDTO,
@@ -38,7 +38,7 @@ class UserRouter(Routable):
         user_list = [format_user_list_row(user.model_dump()) for user in users]
         return list_response(list_data=user_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
-    @post("/create", status_code=201)
+    @post("/create", status_code=201, response_model=ApiResponse[dict])
     async def create_user(
         self,
         dto: UserCreateDTO,
@@ -49,7 +49,7 @@ class UserRouter(Routable):
         user = await service.create_user(dto)
         return success_response(data=user, message="创建成功", code=201)
 
-    @get("/info")
+    @get("/info", response_model=ApiResponse[dict])
     async def get_current_user_info(
         self, user_id: str = Depends(get_current_user_id), service: UserService = Depends(get_user_service)
     ) -> dict:
@@ -57,7 +57,7 @@ class UserRouter(Routable):
         user = await service.get_user(user_id)
         return success_response(data=user)
 
-    @get("/{user_id}")
+    @get("/{user_id}", response_model=ApiResponse[dict])
     async def get_user_detail(
         self,
         user_id: str,
@@ -68,7 +68,7 @@ class UserRouter(Routable):
         user = await service.get_user(user_id)
         return success_response(data=user)
 
-    @put("/{user_id}")
+    @put("/{user_id}", response_model=ApiResponse[dict])
     async def update_user(
         self,
         user_id: str,
@@ -80,7 +80,7 @@ class UserRouter(Routable):
         user = await service.update_user(user_id, dto)
         return success_response(data=user, message="更新成功")
 
-    @delete("/{user_id}")
+    @delete("/{user_id}", response_model=ApiResponse[None])
     async def delete_user(
         self,
         user_id: str,
@@ -91,7 +91,7 @@ class UserRouter(Routable):
         await service.delete_user(user_id)
         return success_response(message="删除成功")
 
-    @post("/batch-delete")
+    @post("/batch-delete", response_model=ApiResponse[dict])
     async def batch_delete_users(
         self,
         dto: BatchDeleteDTO,
@@ -102,7 +102,7 @@ class UserRouter(Routable):
         result = await service.batch_delete_users(dto.ids)
         return success_response(data=result, message="批量删除成功")
 
-    @put("/{user_id}/reset-password")
+    @put("/{user_id}/reset-password", response_model=ApiResponse[None])
     async def reset_user_password(
         self,
         user_id: str,
@@ -114,7 +114,7 @@ class UserRouter(Routable):
         await service.reset_password(user_id, dto.newPassword)
         return success_response(message="密码重置成功")
 
-    @put("/{user_id}/status")
+    @put("/{user_id}/status", response_model=ApiResponse[None])
     async def update_user_status(
         self,
         user_id: str,
@@ -126,7 +126,7 @@ class UserRouter(Routable):
         await service.update_status(user_id, dto.isActive)
         return success_response(message="状态更新成功")
 
-    @post("/change-password")
+    @post("/change-password", response_model=ApiResponse[None])
     async def change_password(
         self,
         dto: ChangePasswordDTO,
@@ -137,7 +137,7 @@ class UserRouter(Routable):
         await service.change_password(user_id, dto)
         return success_response(message="密码修改成功")
 
-    @post("/assign-role")
+    @post("/assign-role", response_model=ApiResponse[None])
     async def assign_role(
         self,
         dto: AssignRoleDTO,
