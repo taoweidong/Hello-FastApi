@@ -1,6 +1,6 @@
 """菜单管理路由模块单元测试。"""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -39,16 +39,20 @@ class TestMenuRouter:
                 {"id": "2", "name": "用户管理", "menuType": 1},
             ]},
         ]
-        svc.get_menu_tree.return_value = {"id": None, "children": [
+        svc.get_menu_tree.return_value = [
             {"id": "1", "name": "系统管理", "children": [
                 {"id": "2", "name": "用户管理"},
             ]},
-        ]}
+        ]
         svc.get_user_menus.return_value = [
             {"id": "1", "name": "系统管理", "menuType": 0},
         ]
-        svc.create_menu.return_value = {"id": "3", "name": "新菜单", "menuType": 1}
-        svc.update_menu.return_value = {"id": "1", "name": "更新菜单", "menuType": 1}
+        _mock_create = MagicMock()
+        _mock_create.model_dump.return_value = {"id": "3", "name": "新菜单", "menuType": 1}
+        _mock_update = MagicMock()
+        _mock_update.model_dump.return_value = {"id": "1", "name": "更新菜单", "menuType": 1}
+        svc.create_menu.return_value = _mock_create
+        svc.update_menu.return_value = _mock_update
         svc.delete_menu.return_value = None
         return svc
 
@@ -72,7 +76,7 @@ class TestMenuRouter:
     def test_get_menu_tree(self, client):
         resp = client.get("/api/system/menu/tree", headers=self.auth)
         assert resp.status_code == 200
-        assert "children" in resp.json()["data"]
+        assert len(resp.json()["data"]) >= 1
 
     def test_get_user_menus(self, client):
         resp = client.get("/api/system/menu/user-menus", headers=self.auth)

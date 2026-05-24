@@ -1,6 +1,6 @@
 """系统配置路由模块单元测试。"""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import FastAPI
@@ -40,9 +40,15 @@ class TestSystemConfigRouter:
         ]
         svc.get_configs.return_value = (
             [type("Config", (), {"model_dump": lambda self, c=c: c})() for c in configs], 2)
-        svc.create_config.return_value = {"id": "c3", "key": "new_key", "value": '"new_val"'}
-        svc.get_config.return_value = {"id": "c1", "key": "site_name", "value": '"Hello-FastApi"'}
-        svc.update_config.return_value = {"id": "c1", "key": "site_name", "value": '"Updated"'}
+        _mock_create = MagicMock()
+        _mock_create.model_dump.return_value = {"id": "c3", "key": "new_key", "value": '"new_val"'}
+        _mock_get = MagicMock()
+        _mock_get.model_dump.return_value = {"id": "c1", "key": "site_name", "value": '"Hello-FastApi"'}
+        _mock_update = MagicMock()
+        _mock_update.model_dump.return_value = {"id": "c1", "key": "site_name", "value": '"Updated"'}
+        svc.create_config.return_value = _mock_create
+        svc.get_config.return_value = _mock_get
+        svc.update_config.return_value = _mock_update
         svc.delete_config.return_value = None
         return svc
 

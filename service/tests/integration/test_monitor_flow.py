@@ -21,14 +21,14 @@ class TestMonitorFlow:
         r = await flow_client.post("/api/system/online-logs", headers=h, json={})
         assert r.status_code == 200
         assert r.json()["code"] == 0
-        assert len(r.json()["data"]["data"]) >= 1
+        assert len(r.json()["data"]["list"]) >= 1
 
     async def test_online_logs_filter_by_username(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post("/api/system/online-logs", headers=h, json={"username": "admin"})
         assert r.status_code == 200
-        assert all("admin" in item["username"] for item in r.json()["data"]["data"])
+        assert all("admin" in item["username"] for item in r.json()["data"]["list"])
 
     async def test_force_offline(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)

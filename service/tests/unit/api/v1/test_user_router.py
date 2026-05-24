@@ -45,10 +45,19 @@ class TestUserRouter:
             "description": "",
             "dept_id": None,
         }
+        # 创建用户返回的 mock 对象
+        _mock_create_obj = MagicMock()
+        _mock_create_obj.model_dump.return_value = {"id": "2", "username": "newuser"}
+        # 获取用户返回的 mock 对象
+        _mock_get_obj = MagicMock()
+        _mock_get_obj.model_dump.return_value = {"id": "1", "username": "admin", "email": "admin@test.com"}
+        # 更新用户返回的 mock 对象
+        _mock_update_obj = MagicMock()
+        _mock_update_obj.model_dump.return_value = {"id": "1", "username": "updated"}
         svc.get_users.return_value = ([_mock_user_obj], 1)
-        svc.create_user.return_value = {"id": "2", "username": "newuser"}
-        svc.get_user.return_value = {"id": "1", "username": "admin", "email": "admin@test.com"}
-        svc.update_user.return_value = {"id": "1", "username": "updated"}
+        svc.create_user.return_value = _mock_create_obj
+        svc.get_user.return_value = _mock_get_obj
+        svc.update_user.return_value = _mock_update_obj
         svc.delete_user.return_value = None
         svc.batch_delete_users.return_value = {"deleted": 2}
         svc.reset_password.return_value = None

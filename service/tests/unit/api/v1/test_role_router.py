@@ -39,9 +39,15 @@ class TestRoleRouter:
         _r2 = MagicMock()
         _r2.model_dump.return_value = {"id": "r2", "name": "普通用户", "code": "user"}
         svc.get_roles.return_value = ([_r1, _r2], 2)
-        svc.create_role.return_value = {"id": "r3", "name": "新角色", "code": "new"}
-        svc.get_role.return_value = {"id": "r1", "name": "管理员", "code": "admin"}
-        svc.update_role.return_value = {"id": "r1", "name": "更新角色", "code": "admin"}
+        _mock_create = MagicMock()
+        _mock_create.model_dump.return_value = {"id": "r3", "name": "新角色", "code": "new"}
+        _mock_get = MagicMock()
+        _mock_get.model_dump.return_value = {"id": "r1", "name": "管理员", "code": "admin"}
+        _mock_update = MagicMock()
+        _mock_update.model_dump.return_value = {"id": "r1", "name": "更新角色", "code": "admin"}
+        svc.create_role.return_value = _mock_create
+        svc.get_role.return_value = _mock_get
+        svc.update_role.return_value = _mock_update
         svc.delete_role.return_value = None
         svc.assign_menus.return_value = None
         return svc

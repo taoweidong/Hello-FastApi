@@ -19,3 +19,14 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# 运行时临时文件
+*.log
+*.pid
+.arts/
+.claude/
+.omo/
+
+# Vite 输出日志
+vite_err.txt
+vite_out.txt
