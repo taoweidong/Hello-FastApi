@@ -88,3 +88,12 @@ class BatchDeleteLogDTO(BaseModel):
     """批量删除日志请求"""
 
     ids: list[str]
+
+
+# ============ 详情查询 DTO ============
+
+
+class SystemLogDetailQueryDTO(BaseModel):
+    """系统日志详情查询请求"""
+
+    id: str = Field(min_length=1)

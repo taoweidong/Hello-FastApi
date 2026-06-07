@@ -122,8 +122,26 @@ class DictionaryListQueryDTO(BaseModel):
     name: str | None = None
     isActive: int | None = None
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, v):
+        """将空字符串转换为 None。"""
+        return empty_str_to_none(v)
+
     @field_validator("isActive", mode="before")
     @classmethod
     def validate_status(cls, v):
         """将空字符串转换为 None。"""
         return empty_str_to_none(v)
+
+
+class DictionaryNameQueryDTO(BaseModel):
+    """按名称查询字典请求"""
+
+    name: str = ""
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def validate_name(cls, v):
+        """将 None 视为空字符串。"""
+        return v if v is not None else ""

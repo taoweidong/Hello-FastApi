@@ -126,12 +126,11 @@ class TestIPRuleRouter:
         assert resp.json()["code"] == 201
 
     def test_create_ip_rule_with_invalid_expires_at(self, client):
-        """Create with invalid expiresAt should hit L95, L98 (except branch)."""
+        """Create with invalid expiresAt should be rejected by pydantic with 422."""
         resp = client.post("/api/system/ip-rule/create", json={
             "ipAddress": "9.9.9.9", "expiresAt": "not-a-date",
         }, headers=self.auth)
-        assert resp.status_code == 200
-        assert resp.json()["code"] == 201
+        assert resp.status_code == 422
 
     def test_update_ip_rule_with_valid_expires_at(self, client):
         """Update with valid ISO expiresAt should hit L122-123."""
@@ -142,9 +141,8 @@ class TestIPRuleRouter:
         assert resp.json()["message"] == "更新成功"
 
     def test_update_ip_rule_with_invalid_expires_at(self, client):
-        """Update with invalid expiresAt should hit L122, L125 (except branch)."""
+        """Update with invalid expiresAt should be rejected by pydantic with 422."""
         resp = client.put("/api/system/ip-rule/r1", json={
             "expiresAt": "bad-date",
         }, headers=self.auth)
-        assert resp.status_code == 200
-        assert resp.json()["message"] == "更新成功"
+        assert resp.status_code == 422

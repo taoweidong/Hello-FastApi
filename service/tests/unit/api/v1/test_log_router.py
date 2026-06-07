@@ -118,10 +118,9 @@ class TestLogRouter:
         assert resp.status_code == 200
         assert resp.json()["data"]["module"] == "system"
 
-    def test_get_system_log_detail_missing_id(self, client):
+    def test_get_system_log_detail_missing_id_returns_422(self, client):
         resp = client.post("/api/system/system-logs-detail", json={}, headers=self.auth)
-        assert resp.status_code == 200
-        assert resp.json()["data"] is None
+        assert resp.status_code == 422
 
     def test_get_system_log_detail_not_found(self, client, mock_log_service):
         mock_log_service.get_system_log_detail.return_value = None

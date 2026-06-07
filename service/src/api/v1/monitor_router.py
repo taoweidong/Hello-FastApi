@@ -8,11 +8,12 @@ import random
 from typing import Any
 
 from classy_fastapi import Routable, get, post
-from fastapi import Body, Depends
+from fastapi import Depends
 
 from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission
+from src.application.dto.monitor_dto import OnlineLogsQueryDTO
 
 
 class MonitorRouter(Routable):
@@ -20,7 +21,9 @@ class MonitorRouter(Routable):
 
     @post("/online-logs", response_model=PaginatedResponse[dict])
     async def get_online_logs(
-        self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))
+        self,
+        query: OnlineLogsQueryDTO,
+        _: dict = Depends(require_permission("monitor:view")),
     ) -> dict:
         """获取在线用户列表（stub 数据）。"""
         list_data: list[dict[str, Any]] = [
@@ -43,14 +46,13 @@ class MonitorRouter(Routable):
                 "loginTime": "2026-03-29T09:30:00",
             },
         ]
-        username = data.get("username", "")
-        if username:
-            list_data = [item for item in list_data if username in item["username"]]
+        if query.username:
+            list_data = [item for item in list_data if query.username in item["username"]]
         return list_response(list_data=list_data, total=len(list_data))
 
     @post("/online-logs/force-offline", response_model=ApiResponse[None])
     async def force_offline(
-        self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:manage"))
+        self, _: dict = Depends(require_permission("monitor:manage"))
     ) -> dict:
         """强制下线用户（stub 实现，仅返回成功响应）。"""
         return success_response(message="强制下线成功")
@@ -76,9 +78,7 @@ class MonitorRouter(Routable):
         return success_response(data=map_list)
 
     @post("/get-card-list", response_model=ApiResponse[dict])
-    async def get_card_list(
-        self, data: dict = Body(default={}), _: dict = Depends(require_permission("monitor:view"))
-    ) -> dict:
+    async def get_card_list(self, _: dict = Depends(require_permission("monitor:view"))) -> dict:
         """获取卡片列表（stub 数据）。"""
         card_names = ["SSL证书", "人脸识别", "CVM", "云数据库", "T-Sec 云防火墙"]
         banners = [

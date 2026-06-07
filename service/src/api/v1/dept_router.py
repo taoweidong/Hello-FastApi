@@ -6,7 +6,7 @@
 """
 
 from classy_fastapi import Routable, delete, get, post, put
-from fastapi import Body, Depends
+from fastapi import Depends
 
 from src.api.common import success_response
 from src.api.common.response_schemas import ApiResponse
@@ -21,12 +21,11 @@ class DeptRouter(Routable):
     @post("/dept", response_model=ApiResponse[list[dict]])
     async def get_dept_list(
         self,
-        data: dict = Body(default={}),
+        query: DepartmentListQueryDTO,
         service: DepartmentService = Depends(get_department_service),
         _: dict = Depends(require_permission("dept:view")),
     ) -> dict:
         """获取部门列表（扁平结构）。"""
-        query = DepartmentListQueryDTO(name=data.get("name"), isActive=data.get("isActive"))
         departments = await service.get_departments(query)
         dept_list = [dept.model_dump() for dept in departments]
         return success_response(data=dept_list)

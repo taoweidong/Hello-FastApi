@@ -5,12 +5,17 @@
 """
 
 from classy_fastapi import Routable, delete, post, put
-from fastapi import Body, Depends
+from fastapi import Depends
 
 from src.api.common import success_response
 from src.api.common.response_schemas import ApiResponse
 from src.api.dependencies import get_dictionary_service, require_permission
-from src.application.dto.dictionary_dto import DictionaryCreateDTO, DictionaryListQueryDTO, DictionaryUpdateDTO
+from src.application.dto.dictionary_dto import (
+    DictionaryCreateDTO,
+    DictionaryListQueryDTO,
+    DictionaryNameQueryDTO,
+    DictionaryUpdateDTO,
+)
 from src.application.services.dictionary_service import DictionaryService
 
 
@@ -20,12 +25,11 @@ class DictionaryRouter(Routable):
     @post("/dictionary", response_model=ApiResponse[list[dict]])
     async def get_dictionary_list(
         self,
-        data: dict = Body(default={}),
+        query: DictionaryListQueryDTO,
         service: DictionaryService = Depends(get_dictionary_service),
         _: dict = Depends(require_permission("dictionary:view")),
     ) -> dict:
         """获取字典列表（扁平结构）。"""
-        query = DictionaryListQueryDTO(name=data.get("name"), isActive=data.get("isActive"))
         dictionaries = await service.get_dictionaries(query)
         dict_list = [d.model_dump() for d in dictionaries]
         return success_response(data=dict_list)
@@ -33,13 +37,12 @@ class DictionaryRouter(Routable):
     @post("/dictionary/getByName", response_model=ApiResponse[list[dict]])
     async def get_dictionary_by_name(
         self,
-        data: dict = Body(default={}),
+        query: DictionaryNameQueryDTO,
         service: DictionaryService = Depends(get_dictionary_service),
         _: dict = Depends(require_permission("dictionary:view")),
     ) -> dict:
         """根据字典名称查询字典项。"""
-        name = data.get("name", "")
-        dictionaries = await service.get_dictionary_by_name(name)
+        dictionaries = await service.get_dictionary_by_name(query.name)
         dict_list = [d.model_dump() for d in dictionaries]
         return success_response(data=dict_list)
 

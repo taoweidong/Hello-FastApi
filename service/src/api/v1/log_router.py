@@ -17,6 +17,7 @@ from src.application.dto.log_dto import (
     BatchDeleteLogDTO,
     LoginLogListQueryDTO,
     OperationLogListQueryDTO,
+    SystemLogDetailQueryDTO,
     SystemLogListQueryDTO,
 )
 from src.application.services.log_service import LogService
@@ -143,15 +144,12 @@ class LogRouter(Routable):
     @post("/system-logs-detail", response_model=ApiResponse[dict])
     async def get_system_log_detail(
         self,
-        data: dict = Body(default={}),
+        query: SystemLogDetailQueryDTO,
         service: LogService = Depends(get_log_service),
         _: dict = Depends(require_permission("log:view")),
     ) -> dict:
         """获取系统日志详情。"""
-        log_id = data.get("id")
-        if not log_id:
-            return success_response(data=None, message="缺少日志ID")
-        log = await service.get_system_log_detail(log_id)
+        log = await service.get_system_log_detail(query.id)
         if log is None:
             return success_response(data=None, message="日志不存在")
         return success_response(data=_format_operation_log(log))

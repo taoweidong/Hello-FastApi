@@ -5,13 +5,38 @@
 """
 
 from classy_fastapi import Routable, delete, get, post, put
-from fastapi import Body, Depends
+from fastapi import Depends
 
 from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission
 from src.api.dependencies.ip_rule_service import get_ip_rule_service
+from src.application.dto.ip_rule_dto import (
+    IPRuleBatchDeleteDTO,
+    IPRuleCreateDTO,
+    IPRuleListQueryDTO,
+    IPRuleResponseDTO,
+    IPRuleUpdateDTO,
+)
 from src.application.services.ip_rule_service import IPRuleService
+from src.domain.entities.ip_rule import IPRuleEntity
+
+
+def _to_response(rule: IPRuleEntity) -> dict:
+    """将 IPRuleEntity 转为响应字典。"""
+    return IPRuleResponseDTO(
+        id=rule.id,
+        ipAddress=rule.ip_address,
+        ruleType=rule.rule_type,
+        reason=rule.reason or "",
+        isActive=rule.is_active,
+        creatorId=rule.creator_id,
+        modifierId=rule.modifier_id,
+        createdTime=rule.created_time,
+        updatedTime=rule.updated_time,
+        expiresAt=rule.expires_at,
+        description=rule.description or "",
+    ).model_dump(mode="json")
 
 
 class IPRuleRouter(Routable):
@@ -20,41 +45,22 @@ class IPRuleRouter(Routable):
     @post("", response_model=PaginatedResponse[dict])
     async def get_ip_rules(
         self,
-        data: dict = Body(default={}),
+        query: IPRuleListQueryDTO,
         service: IPRuleService = Depends(get_ip_rule_service),
         _: dict = Depends(require_permission("ip-rule:view")),
     ) -> dict:
         """获取 IP 规则列表（分页）。"""
-        page_num = data.get("pageNum", 1)
-        page_size = data.get("pageSize", 10)
-        rule_type = data.get("ruleType")
-        is_active = data.get("isActive")
-        created_time = data.get("createdTime")
-
-        if is_active is not None:
-            is_active = int(is_active)
-
         rules, total = await service.get_ip_rules(
-            page_num=page_num, page_size=page_size, rule_type=rule_type, is_active=is_active, created_time=created_time
+            page_num=query.pageNum,
+            page_size=query.pageSize,
+            rule_type=query.ruleType,
+            is_active=query.isActive,
+            created_time=query.createdTime,
         )
-        rule_list = []
-        for rule in rules:
-            rule_list.append(
-                {
-                    "id": rule.id,
-                    "ipAddress": rule.ip_address,
-                    "ruleType": rule.rule_type,
-                    "reason": rule.reason or "",
-                    "isActive": rule.is_active,
-                    "creatorId": rule.creator_id,
-                    "modifierId": rule.modifier_id,
-                    "createdTime": rule.created_time.isoformat() if rule.created_time else None,
-                    "updatedTime": rule.updated_time.isoformat() if rule.updated_time else None,
-                    "expiresAt": rule.expires_at.isoformat() if rule.expires_at else None,
-                    "description": rule.description or "",
-                }
-            )
-        return list_response(list_data=rule_list, total=total, page_size=page_size, current_page=page_num)
+        rule_list = [_to_response(rule) for rule in rules]
+        return list_response(
+            list_data=rule_list, total=total, page_size=query.pageSize, current_page=query.pageNum
+        )
 
     @get("/{rule_id}", response_model=ApiResponse[dict])
     async def get_ip_rule(
@@ -65,45 +71,22 @@ class IPRuleRouter(Routable):
     ) -> dict:
         """获取 IP 规则详情。"""
         rule = await service.get_ip_rule(rule_id)
-        return success_response(
-            data={
-                "id": rule.id,
-                "ipAddress": rule.ip_address,
-                "ruleType": rule.rule_type,
-                "reason": rule.reason or "",
-                "isActive": rule.is_active,
-                "creatorId": rule.creator_id,
-                "modifierId": rule.modifier_id,
-                "createdTime": rule.created_time.isoformat() if rule.created_time else None,
-                "updatedTime": rule.updated_time.isoformat() if rule.updated_time else None,
-                "expiresAt": rule.expires_at.isoformat() if rule.expires_at else None,
-                "description": rule.description or "",
-            }
-        )
+        return success_response(data=_to_response(rule))
 
     @post("/create", response_model=ApiResponse[dict])
     async def create_ip_rule(
         self,
-        data: dict = Body(default={}),
+        dto: IPRuleCreateDTO,
         service: IPRuleService = Depends(get_ip_rule_service),
         _: dict = Depends(require_permission("ip-rule:add")),
     ) -> dict:
         """创建 IP 规则。"""
-        from datetime import datetime
-
-        expires_at = None
-        if data.get("expiresAt"):
-            try:
-                expires_at = datetime.fromisoformat(data["expiresAt"])
-            except ValueError:
-                expires_at = None
-
         rule = await service.create_ip_rule(
-            ip_address=data.get("ipAddress", ""),
-            rule_type=data.get("ruleType", "blacklist"),
-            reason=data.get("reason"),
-            is_active=int(data.get("isActive", 1)),
-            expires_at=expires_at,
+            ip_address=dto.ipAddress,
+            rule_type=dto.ruleType,
+            reason=dto.reason,
+            is_active=dto.isActive,
+            expires_at=dto.expiresAt,
         )
         return success_response(data={"id": rule.id, "ipAddress": rule.ip_address}, message="创建成功", code=201)
 
@@ -111,28 +94,19 @@ class IPRuleRouter(Routable):
     async def update_ip_rule(
         self,
         rule_id: str,
-        data: dict = Body(default={}),
+        dto: IPRuleUpdateDTO,
         service: IPRuleService = Depends(get_ip_rule_service),
         _: dict = Depends(require_permission("ip-rule:edit")),
     ) -> dict:
         """更新 IP 规则。"""
-        from datetime import datetime
-
-        expires_at = None
-        if data.get("expiresAt"):
-            try:
-                expires_at = datetime.fromisoformat(data["expiresAt"])
-            except ValueError:
-                expires_at = None
-
         rule = await service.update_ip_rule(
             rule_id=rule_id,
-            ip_address=data.get("ipAddress"),
-            rule_type=data.get("ruleType"),
-            reason=data.get("reason"),
-            is_active=int(data.get("isActive")) if data.get("isActive") is not None else None,
-            expires_at=expires_at,
-            description=data.get("description"),
+            ip_address=dto.ipAddress,
+            rule_type=dto.ruleType,
+            reason=dto.reason,
+            is_active=dto.isActive,
+            expires_at=dto.expiresAt,
+            description=dto.description,
         )
         return success_response(data={"id": rule.id, "ipAddress": rule.ip_address}, message="更新成功")
 
@@ -150,13 +124,12 @@ class IPRuleRouter(Routable):
     @post("/batch-delete", response_model=ApiResponse[dict])
     async def batch_delete_ip_rules(
         self,
-        data: dict = Body(default={}),
+        dto: IPRuleBatchDeleteDTO,
         service: IPRuleService = Depends(get_ip_rule_service),
         _: dict = Depends(require_permission("ip-rule:delete")),
     ) -> dict:
         """批量删除 IP 规则。"""
-        ids = data.get("ids", [])
-        count = await service.delete_ip_rules(ids)
+        count = await service.delete_ip_rules(dto.ids)
         return success_response(data={"deleted": count}, message=f"已删除 {count} 条记录")
 
     @post("/clear", response_model=ApiResponse[dict])
