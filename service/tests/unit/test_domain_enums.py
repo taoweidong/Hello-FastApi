@@ -53,7 +53,7 @@ class TestUserRole:
 
     def test_superuser_value(self):
         """测试 SUPERUSER 枚举值。"""
-        assert UserRole.SUPERUSER == 1
+        assert UserRole.SUPERUSER == 2
 
 
 @pytest.mark.unit

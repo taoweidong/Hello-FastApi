@@ -383,7 +383,7 @@ class TestUserService:
         """测试创建超级用户并自动分配 admin 角色。"""
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(return_value=None)
-        created = UserEntity(id="su-id", username="superadmin", password="hashed", is_superuser=1)
+        created = UserEntity(id="su-id", username="superadmin", password="hashed", is_superuser=UserRole.SUPERUSER)
         mock_user_repo.create = AsyncMock(return_value=created)
         mock_role_repo.get_by_name = AsyncMock(return_value=None)
         mock_role_repo.get_user_roles = AsyncMock(return_value=[])
@@ -402,7 +402,7 @@ class TestUserService:
         from src.domain.entities.role import RoleEntity
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(return_value=None)
-        created = UserEntity(id="su-id", username="superadmin", password="hashed", is_superuser=1)
+        created = UserEntity(id="su-id", username="superadmin", password="hashed", is_superuser=UserRole.SUPERUSER)
         mock_user_repo.create = AsyncMock(return_value=created)
         admin_role = RoleEntity(id="admin-id", name="admin", code="admin")
         mock_role_repo.get_by_name = AsyncMock(return_value=admin_role)

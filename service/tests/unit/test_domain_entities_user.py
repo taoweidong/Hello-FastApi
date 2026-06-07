@@ -6,6 +6,7 @@
 import pytest
 
 from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 
 
 @pytest.mark.unit
@@ -16,7 +17,7 @@ class TestUserEntity:
 
     def test_is_superuser_user_when_superuser(self):
         """测试 is_superuser_user 属性（是超级管理员）。"""
-        user = UserEntity(id="user-1", username="admin", password="hash", is_superuser=1)
+        user = UserEntity(id="user-1", username="admin", password="hash", is_superuser=UserRole.SUPERUSER)
         assert user.is_superuser_user is True
 
     def test_is_superuser_user_when_not_superuser(self):
@@ -164,11 +165,11 @@ class TestUserEntity:
         assert user.nickname == "管理员"
         assert user.is_active == 1
         assert user.is_staff == 1
-        assert user.is_superuser == 1
+        assert user.is_superuser == UserRole.SUPERUSER
 
     def test_create_superuser_entity_with_defaults(self):
         """测试 create_superuser_entity 工厂方法（使用默认值）。"""
         user = UserEntity.create_superuser_entity(username="admin", hashed_password="hash")
         assert user.is_active == 1
         assert user.is_staff == 1
-        assert user.is_superuser == 1
+        assert user.is_superuser == UserRole.SUPERUSER

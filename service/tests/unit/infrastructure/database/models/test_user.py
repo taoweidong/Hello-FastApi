@@ -6,7 +6,7 @@
 import pytest
 from sqlmodel import SQLModel
 
-from src.domain.enums import Gender, UserStatus
+from src.domain.enums import Gender, UserRole, UserStatus
 from src.infrastructure.database.models.user import IntEnumColumn, User
 
 
@@ -83,7 +83,7 @@ class TestUserModel:
             id="user-1",
             username="admin",
             password="hash",
-            is_superuser=1,
+            is_superuser=UserRole.SUPERUSER,
             is_active=1,
             nickname="管理员",
             gender=1,
@@ -94,7 +94,7 @@ class TestUserModel:
         assert isinstance(entity, UserEntity)
         assert entity.id == "user-1"
         assert entity.username == "admin"
-        assert entity.is_superuser == 1
+        assert entity.is_superuser == UserRole.SUPERUSER
         assert entity.nickname == "管理员"
         assert entity.email == "admin@example.com"
 

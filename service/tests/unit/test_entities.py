@@ -13,6 +13,7 @@ from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.system_config import SystemConfigEntity
 from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 
 
 @pytest.mark.unit
@@ -21,7 +22,7 @@ class TestUserEntity:
 
     def test_properties_superuser(self):
         """测试超级用户属性。"""
-        user = UserEntity(id="1", username="admin", password="hash", is_superuser=1)
+        user = UserEntity(id="1", username="admin", password="hash", is_superuser=UserRole.SUPERUSER)
         assert user.is_superuser_user is True
         assert user.is_active_user is True
 
@@ -109,7 +110,7 @@ class TestUserEntity:
     def test_create_superuser_entity(self):
         """测试工厂方法创建超级用户。"""
         user = UserEntity.create_superuser_entity(username="admin", hashed_password="hashed")
-        assert user.is_superuser == 1
+        assert user.is_superuser == UserRole.SUPERUSER
         assert user.is_staff == 1
         assert user.is_active == 1
 

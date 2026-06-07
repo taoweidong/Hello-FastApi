@@ -13,6 +13,7 @@ from src.domain.entities.user import UserEntity
 from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
+from src.domain.enums import UserRole
 
 TEST_SECRET_KEY = "test-secret-key-for-auth-testing"
 TEST_ALGORITHM = "HS256"
@@ -145,7 +146,7 @@ class TestAuthService:
             username="admin",
             password="hashed",
             is_active=1,
-            is_superuser=1,
+            is_superuser=UserRole.SUPERUSER,
         )
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         # get_all 返回 list[RoleEntity]
@@ -268,7 +269,7 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_get_async_routes_superuser(self, auth_service, mock_user_repo, mock_menu_repo, mock_cache_service):
         """测试超级用户获取动态路由。"""
-        user = UserEntity(id="su-1", username="admin", password="hash", is_superuser=1)
+        user = UserEntity(id="su-1", username="admin", password="hash", is_superuser=UserRole.SUPERUSER)
         mock_user_repo.get_by_id = AsyncMock(return_value=user)
         meta = MenuMetaEntity(id="m1", title="首页")
         menus = [
@@ -588,7 +589,7 @@ class TestAuthService:
         mock_cache_service,
     ):
         """测试超级用户登录时菜单从缓存读取。"""
-        user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=1)
+        user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=UserRole.SUPERUSER)
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         mock_role_repo.get_all = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
         cached_menus = [

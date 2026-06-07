@@ -18,7 +18,7 @@ class UserRole(IntEnum):
 
     USER = 0
     STAFF = 1
-    SUPERUSER = 1
+    SUPERUSER = 2
 
 
 class Gender(IntEnum):
