@@ -127,28 +127,7 @@ class MenuRepository(GenericRepository[Menu, MenuEntity], MenuRepositoryInterfac
 
     async def update_meta(self, meta: MenuMetaEntity) -> MenuMetaEntity:
         """更新菜单元数据。"""
-        stmt = (
-            sa_update(MenuMeta)
-            .where(MenuMeta.id == meta.id)
-            .values(
-                title=meta.title,
-                icon=meta.icon,
-                r_svg_name=meta.r_svg_name,
-                is_show_menu=meta.is_show_menu,
-                is_show_parent=meta.is_show_parent,
-                is_keepalive=meta.is_keepalive,
-                frame_url=meta.frame_url,
-                frame_loading=meta.frame_loading,
-                transition_enter=meta.transition_enter,
-                transition_leave=meta.transition_leave,
-                is_hidden_tag=meta.is_hidden_tag,
-                fixed_tag=meta.fixed_tag,
-                dynamic_level=meta.dynamic_level,
-                creator_id=meta.creator_id,
-                modifier_id=meta.modifier_id,
-                description=meta.description,
-            )
-        )
+        stmt = sa_update(MenuMeta).where(MenuMeta.id == meta.id).values(**self._build_update_values(meta))
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return await self.get_meta_by_id(meta.id)  # type: ignore[return-value]

@@ -67,20 +67,7 @@ class SystemConfigRepository(GenericRepository[SystemConfig, SystemConfigEntity]
 
     async def update(self, config: SystemConfigEntity) -> SystemConfigEntity:
         """更新配置。"""
-        stmt = (
-            sa_update(SystemConfig)
-            .where(SystemConfig.id == config.id)
-            .values(
-                value=config.value,
-                is_active=config.is_active,
-                access=config.access,
-                key=config.key,
-                inherit=config.inherit,
-                creator_id=config.creator_id,
-                modifier_id=config.modifier_id,
-                description=config.description,
-            )
-        )
+        stmt = sa_update(SystemConfig).where(SystemConfig.id == config.id).values(**self._build_update_values(config))
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(config.id)

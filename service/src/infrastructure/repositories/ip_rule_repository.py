@@ -92,20 +92,7 @@ class IPRuleRepository(GenericRepository[IPRule, IPRuleEntity], IPRuleRepository
 
     async def update_ip_rule(self, rule: IPRuleEntity) -> IPRuleEntity:
         """更新 IP 规则。"""
-        stmt = (
-            sa_update(IPRule)
-            .where(IPRule.id == rule.id)
-            .values(
-                ip_address=rule.ip_address,
-                rule_type=rule.rule_type,
-                reason=rule.reason,
-                is_active=rule.is_active,
-                creator_id=rule.creator_id,
-                modifier_id=rule.modifier_id,
-                expires_at=rule.expires_at,
-                description=rule.description,
-            )
-        )
+        stmt = sa_update(IPRule).where(IPRule.id == rule.id).values(**self._build_update_values(rule))
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_ip_rule_by_id(rule.id)

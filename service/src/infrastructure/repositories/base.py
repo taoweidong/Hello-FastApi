@@ -8,6 +8,7 @@
 - 复杂业务逻辑在服务层处理（验证、事务、多步骤操作）
 """
 
+from dataclasses import asdict
 from typing import Any, Generic, TypeVar
 
 from sqlalchemy import Column
@@ -113,6 +114,24 @@ class GenericRepository(Generic[ModelT, EntityT]):
         await self.session.flush()
         await self.session.refresh(merged)
         return self._to_domain(merged)
+
+    def _build_update_values(self, entity: EntityT, exclude: tuple[str, ...] = ("id",)) -> dict[str, Any]:
+        """从领域实体构造 UPDATE 语句的 values 字典。
+
+        仅包含模型表中存在的列，自动排除主键（默认 ``id``）及调用方指定的字段。
+        这样新增实体字段时 update 不会被静默丢弃。
+
+        Args:
+            entity: 领域实体（dataclass 实例）
+            exclude: 额外排除的列名
+
+        Returns:
+            ``{列名: 值}`` 字典，可直接传给 ``sa_update(Model).values(**...)``。
+        """
+        entity_dict = asdict(entity) if hasattr(entity, "__dataclass_fields__") else dict(entity.__dict__)
+        column_names = {c.name for c in self._model_class.__table__.columns}
+        excluded = {self._primary_key, *exclude}
+        return {k: v for k, v in entity_dict.items() if k in column_names and k not in excluded}
 
     async def delete(self, item_id: str) -> bool:
         """根据 ID 删除实体。"""
