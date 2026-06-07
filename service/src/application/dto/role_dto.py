@@ -98,3 +98,9 @@ class AssignRoleDTO(BaseModel):
     roleId: str = Field(alias="roleId")
 
     model_config = {"populate_by_name": True}
+
+
+class RoleStatusUpdateDTO(BaseModel):
+    """角色状态更新请求"""
+
+    isActive: int = Field(ge=0, le=1)

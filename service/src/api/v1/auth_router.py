@@ -18,7 +18,15 @@ from src.api.dependencies import (
     get_user_service,
     security_scheme,
 )
-from src.application.dto.auth_dto import LoginDTO, RefreshTokenDTO, RegisterDTO
+from src.application.dto.auth_dto import (
+    LoginDTO,
+    MineUserDTO,
+    RefreshTokenDTO,
+    RegisterDTO,
+    RoleIdRequestDTO,
+    RoleMenuItemDTO,
+    UserIdRequestDTO,
+)
 from src.application.services.auth_service import AuthService
 from src.application.services.menu_service import MenuService
 from src.application.services.role_service import RoleService
@@ -72,16 +80,15 @@ class AuthRouter(Routable):
         user = await user_service.get_user_by_id(current_user.id)
         if user is None:
             raise UnauthorizedError("用户不存在")
-        return success_response(
-            data={
-                "avatar": user.avatar or "",
-                "username": user.username,
-                "nickname": user.nickname or user.username,
-                "email": user.email or "",
-                "phone": user.phone or "",
-                "description": user.description or "",
-            }
+        data = MineUserDTO(
+            avatar=user.avatar or "",
+            username=user.username,
+            nickname=user.nickname or user.username,
+            email=user.email or "",
+            phone=user.phone or "",
+            description=user.description or "",
         )
+        return success_response(data=data.model_dump())
 
     @get("/mine-logs", response_model=PaginatedResponse[dict])
     async def get_mine_logs(self, current_user: UserEntity = Depends(get_current_active_user)) -> dict:
@@ -111,15 +118,12 @@ class AuthRouter(Routable):
     @post("/list-role-ids", response_model=ApiResponse[list[str]])
     async def list_role_ids(
         self,
-        data: dict,
+        dto: UserIdRequestDTO,
         service: AuthService = Depends(get_auth_service),
         current_user: UserEntity = Depends(get_current_active_user),
     ) -> dict:
         """根据用户ID获取对应角色ID列表。"""
-        user_id = data.get("userId")
-        if not user_id:
-            return {"code": 10001, "message": "请求参数缺失或格式不正确", "data": []}
-        role_ids = await service.get_user_role_ids(str(user_id))
+        role_ids = await service.get_user_role_ids(str(dto.userId))
         return success_response(data=role_ids)
 
     @post("/role-menu", response_model=ApiResponse[list[dict]])
@@ -130,29 +134,22 @@ class AuthRouter(Routable):
     ) -> dict:
         """获取角色菜单权限树。"""
         all_menus = await menu_service.get_all_menus_raw()
-        menu_list = []
+        menu_list: list[dict] = []
         for menu in all_menus:
-            menu_dict = {
-                "parentId": int(menu.parent_id)
-                if menu.parent_id and menu.parent_id.isdigit()
-                else (menu.parent_id or 0),
-                "id": int(menu.id) if menu.id.isdigit() else menu.id,
-                "menuType": menu.menu_type,
-                "title": menu.meta.title if menu.meta else (menu.name or ""),
-            }
-            menu_list.append(menu_dict)
+            parent_id = int(menu.parent_id) if menu.parent_id and menu.parent_id.isdigit() else (menu.parent_id or 0)
+            menu_id = int(menu.id) if menu.id.isdigit() else menu.id
+            title = menu.meta.title if menu.meta else (menu.name or "")
+            item = RoleMenuItemDTO(parentId=parent_id, id=menu_id, menuType=menu.menu_type, title=title)
+            menu_list.append(item.model_dump())
         return success_response(data=menu_list)
 
     @post("/role-menu-ids", response_model=ApiResponse[list[str]])
     async def get_role_menu_ids(
         self,
-        data: dict,
+        dto: RoleIdRequestDTO,
         service: AuthService = Depends(get_auth_service),
         current_user: UserEntity = Depends(get_current_active_user),
     ) -> dict:
         """根据角色ID获取菜单ID列表。"""
-        role_id = data.get("id")
-        if not role_id:
-            return success_response(data=[])
-        menu_ids = await service.get_role_menu_ids(str(role_id))
+        menu_ids = await service.get_role_menu_ids(str(dto.id))
         return success_response(data=menu_ids)

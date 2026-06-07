@@ -1,6 +1,8 @@
 """应用层 - 认证领域的数据传输对象。"""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
+
+from src.application.validators import empty_str_to_none, normalize_optional_id
 
 
 class LoginDTO(BaseModel):
@@ -59,3 +61,45 @@ class LoginResponseDTO(BaseModel):
     refreshToken: str
     userInfo: UserInfoDTO | None = None
     roles: list[str] = []
+
+
+class UserIdRequestDTO(BaseModel):
+    """按用户 ID 查询角色列表请求"""
+
+    userId: str | int = Field(min_length=1)
+
+    @field_validator("userId", mode="before")
+    @classmethod
+    def _normalize(cls, v):
+        return normalize_optional_id(empty_str_to_none(v))
+
+
+class RoleIdRequestDTO(BaseModel):
+    """按角色 ID 查询菜单列表请求"""
+
+    id: str | int = Field(min_length=1)
+
+    @field_validator("id", mode="before")
+    @classmethod
+    def _normalize(cls, v):
+        return normalize_optional_id(empty_str_to_none(v))
+
+
+class MineUserDTO(BaseModel):
+    """当前登录用户简要信息响应"""
+
+    avatar: str = ""
+    username: str
+    nickname: str
+    email: str = ""
+    phone: str = ""
+    description: str = ""
+
+
+class RoleMenuItemDTO(BaseModel):
+    """角色菜单权限项响应"""
+
+    parentId: int | str
+    id: int | str
+    menuType: int
+    title: str

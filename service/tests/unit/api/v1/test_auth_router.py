@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 from src.infrastructure.http.exception_handler_registry import register_exception_handlers
 
 
@@ -33,7 +34,7 @@ class TestAuthRouter:
         return UserEntity(
             id="1", username="admin", password="hashed", avatar="av.png",
             nickname="管理员", email="admin@test.com", phone="13800000000",
-            description="管理员账号", is_active=1, is_superuser=1,
+            description="管理员账号", is_active=1, is_superuser=UserRole.SUPERUSER,
         )
 
     @pytest.fixture
@@ -168,10 +169,9 @@ class TestAuthRouter:
         assert resp.status_code == 200
         assert len(resp.json()["data"]) == 1
 
-    def test_list_role_ids_missing_param(self, client):
+    def test_list_role_ids_missing_param_returns_422(self, client):
         resp = client.post("/api/system/list-role-ids", json={}, headers={"Authorization": "Bearer test_token"})
-        assert resp.status_code == 200
-        assert resp.json()["code"] == 10001
+        assert resp.status_code == 422
 
     def test_get_role_menu(self, client):
         resp = client.post("/api/system/role-menu", headers={"Authorization": "Bearer test_token"})
@@ -188,7 +188,6 @@ class TestAuthRouter:
         data = resp.json()["data"]
         assert "1" in data
 
-    def test_get_role_menu_ids_empty_id(self, client):
+    def test_get_role_menu_ids_empty_id_returns_422(self, client):
         resp = client.post("/api/system/role-menu-ids", json={}, headers={"Authorization": "Bearer test_token"})
-        assert resp.status_code == 200
-        assert resp.json()["data"] == []
+        assert resp.status_code == 422
