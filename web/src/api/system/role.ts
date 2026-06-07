@@ -18,7 +18,7 @@ class RoleApi extends BaseApi {
 
   /** 保存角色菜单权限 */
   saveRoleMenu(roleId: string, menuIds: string[]): Promise<Result> {
-    return http.request<Result>("post", `/role/${roleId}/menu`, {
+    return http.request<Result>("post", `/role/${roleId}/menus`, {
       data: { menuIds }
     });
   }

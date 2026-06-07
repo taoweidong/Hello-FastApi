@@ -79,7 +79,7 @@ class TestRoleCrudFlow:
         rid = r.json()["data"]["id"]
 
         r = await flow_client.post(
-            f"/api/system/role/{rid}/menu",
+            f"/api/system/role/{rid}/menus",
             headers=h,
             json={"menuIds": [flow_seed.menu_root_id, flow_seed.menu_perm_id]},
         )

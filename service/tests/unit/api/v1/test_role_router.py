@@ -53,25 +53,10 @@ class TestRoleRouter:
         return svc
 
     @pytest.fixture
-    def mock_role_repo(self):
-        repo = AsyncMock()
-        repo.assign_menus_to_role.return_value = None
-        return repo
-
-    @pytest.fixture
-    def mock_db_session(self):
-        session = AsyncMock()
-        session.commit.return_value = None
-        return session
-
-    @pytest.fixture
-    def client(self, app, mock_user_entity, mock_role_service, mock_role_repo, mock_db_session):
-        from src.api.dependencies import get_current_active_user, get_role_repository, get_role_service
-        from src.infrastructure.database import get_db
+    def client(self, app, mock_user_entity, mock_role_service):
+        from src.api.dependencies import get_current_active_user, get_role_service
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_role_service] = lambda: mock_role_service
-        app.dependency_overrides[get_role_repository] = lambda: mock_role_repo
-        app.dependency_overrides[get_db] = lambda: mock_db_session
         return TestClient(app, raise_server_exceptions=False)
 
     auth = {"Authorization": "Bearer test_token"}
@@ -116,17 +101,15 @@ class TestRoleRouter:
         assert resp.status_code == 200
         assert resp.json()["message"] == "状态更新成功"
 
-    def test_update_role_status_empty(self, client):
+    def test_update_role_status_empty_returns_422(self, client):
         resp = client.put("/api/system/role/r1/status", json={}, headers=self.auth)
-        assert resp.status_code == 200
-        assert resp.json()["message"] == "状态值不能为空"
+        assert resp.status_code == 422
+
+    def test_update_role_status_invalid_value_returns_422(self, client):
+        resp = client.put("/api/system/role/r1/status", json={"isActive": 5}, headers=self.auth)
+        assert resp.status_code == 422
 
     def test_assign_menus(self, client):
         resp = client.post("/api/system/role/r1/menus", json={"menuIds": ["m1", "m2"]}, headers=self.auth)
-        assert resp.status_code == 200
-        assert resp.json()["message"] == "菜单权限分配成功"
-
-    def test_assign_role_menu(self, client):
-        resp = client.post("/api/system/role/r1/menu", json={"menuIds": ["m1"]}, headers=self.auth)
         assert resp.status_code == 200
         assert resp.json()["message"] == "菜单权限分配成功"

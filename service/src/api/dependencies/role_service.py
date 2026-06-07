@@ -1,4 +1,4 @@
-"""角色应用服务和仓储工厂。"""
+"""角色应用服务工厂。"""
 
 from fastapi import Depends
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -15,8 +15,3 @@ async def get_role_service(db: AsyncSession = Depends(get_db)) -> RoleService:
     """
     role_repo = RoleRepository(db)
     return RoleService(role_repo=role_repo)
-
-
-async def get_role_repository(db: AsyncSession = Depends(get_db)) -> RoleRepository:
-    """获取角色仓储实例。"""
-    return RoleRepository(db)

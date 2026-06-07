@@ -159,7 +159,7 @@ class TestRoleMenuRealFlow:
 
         # 分配菜单给角色
         r = await flow_client.post(
-            f"/api/system/role/{rid}/menu",
+            f"/api/system/role/{rid}/menus",
             headers=h,
             json={"menuIds": [flow_seed.menu_root_id, flow_seed.menu_perm_id]},
         )
@@ -188,7 +188,7 @@ class TestRoleMenuRealFlow:
 
         # 分配新建菜单给角色
         r = await flow_client.post(
-            f"/api/system/role/{rid}/menu",
+            f"/api/system/role/{rid}/menus",
             headers=h,
             json={"menuIds": [mid, flow_seed.menu_root_id]},
         )

@@ -20,7 +20,7 @@ from src.api.dependencies.domain_services import get_password_service, get_token
 from src.api.dependencies.ip_rule_service import get_ip_rule_service
 from src.api.dependencies.log_service import get_log_service
 from src.api.dependencies.menu_service import get_menu_repository, get_menu_service
-from src.api.dependencies.role_service import get_role_repository, get_role_service
+from src.api.dependencies.role_service import get_role_service
 from src.api.dependencies.system_config_service import get_system_config_service
 from src.api.dependencies.user_service import get_user_repository, get_user_service
 
@@ -47,7 +47,6 @@ __all__ = [
     "get_user_service",
     # 仓储工厂
     "get_menu_repository",
-    "get_role_repository",
     "get_user_repository",
     # 缓存服务工厂
     "get_cache_service",
