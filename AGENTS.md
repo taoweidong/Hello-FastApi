@@ -1,121 +1,122 @@
 # AGENTS.md
 
 Monorepo: FastAPI backend (`service/`) + Vue3 frontend (`web/`).
+Frontend scaffolded from **vue-pure-admin v7**; backend ports pure-admin-backend from Java to Python.
 
 ## Backend (service/)
 
-**Setup:**
+**Setup** (requires Python >= 3.10, `uv`):
 ```bash
 uv venv --python 3.10
-.venv\Scripts\activate  # Windows
-source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate              # Windows
+source .venv/bin/activate           # Linux/Mac
 uv pip install -e ".[dev]"
 ```
 
-**Commands:**
+**CLI commands** (run from `service/`, all via `python -m scripts.cli <cmd>`):
+| Command | Purpose |
+|---|---|
+| `runserver` | Dev server on port 8000 (host/port from `settings`) |
+| `initall` | One-shot: `initdb` → `seeddata` → `seedrbac` → `createsuperuser` |
+| `initdb` | Runs **Alembic** `upgrade head` (not `create_all`) |
+| `seeddata` | Test data (operation/login logs) |
+| `seedrbac` | Default menus + roles. **Must run after `seeddata`** |
+| `createsuperuser -u <name> -e <email> -p <pwd>` | Superuser with `admin` role |
+| `migrate` | Alias for `alembic upgrade head` |
+| `rollback --steps N` | `alembic downgrade -N` |
+| `stamp <rev>` | `alembic stamp <rev>` (mark version without running SQL) |
+
+Default superuser: `admin` / `admin123` (after `initall`).
+
+**Tests:**
 ```bash
-python -m scripts.cli runserver            # Dev server (port 8000)
-python -m scripts.cli initdb               # Create tables
-python -m scripts.cli seeddata             # Test menu/log seed data
-python -m scripts.cli seedrbac             # Role/permission defaults (AFTER seeddata)
-python -m scripts.cli createsuperuser -u admin -e admin@example.com -p admin123
-python -m scripts.cli initall              # One-click: all above in correct order
-pytest                                     # All tests (~1828)
-pytest tests/unit/                         # Unit tests only
-pytest tests/integration/                  # Integration tests only
-pytest -n auto                             # Parallel with xdist
-pytest --cov=src --cov-report=term-missing  # Coverage
-ruff check src/ --fix && ruff format src/  # Lint + format
-mypy src/                                  # Typecheck
+pytest                                  # ~1828 tests
+pytest tests/unit/                      # unit only
+pytest tests/integration/               # integration only
+pytest -n auto                          # parallel (xdist; safe — each worker gets a temp-file SQLite DB)
+pytest -k <pattern>                     # single test or module
+pytest --cov=src --cov-report=term-missing
+ruff check src/ --fix && ruff format src/   # lint + format (line-length=120)
+mypy src/                               # typecheck
 ```
 
-**Architecture:** DDD 4-layer — `api/` → `application/` → `domain/` → `infrastructure/`.
-- `src/api/v1/` — routers (auth, user, role, menu, dept, dict, log, monitor, system_config, ip_rule)
-- `src/api/dependencies/` — FastAPI `Depends` injection (one file per service)
-- `src/application/services/` — use cases, transaction control
-- `src/domain/entities/`, `src/domain/repositories/` — abstract interfaces
-- `src/infrastructure/repositories/` — SQLModel implementations with `to_domain()`/`from_domain()`
-- `src/infrastructure/cache/` — Redis cache with auto-degradation
-- `src/infrastructure/http/` — middleware (CORS, IP filter, rate limit, request logging)
-- `src/config/settings.py` — multi-env config via `get_settings()` singleton
+**Architecture** — DDD 4-layer under `src/`: `api/` → `application/` → `domain/` → `infrastructure/`.
+- `src/api/v1/` — routers (classy-fastapi): `auth`, `user`, `role`, `menu`, `dept`, `dictionary`, `log`, `monitor`, `system_config`, `ip_rule`. Aggregated in `src/api/v1/__init__.py`.
+- `src/api/dependencies/` — one `Depends` provider per service.
+- `src/application/services/` — use cases (one per domain); transaction control lives here.
+- `src/application/mappers/` — DTO ↔ entity ↔ dict mappers.
+- `src/domain/entities/`, `src/domain/repositories/` (interfaces), `src/domain/services/` (`CachePort`, `IPFilterPort`, `LoggingPort`, `PasswordService`, `TokenService`).
+- `src/infrastructure/repositories/` — SQLModel impls with `to_domain()` / `from_domain()`.
+- `src/infrastructure/cache/` — Redis cache with auto-degradation.
+- `src/infrastructure/http/` — middleware: CORS, IP filter, rate limit (SlowAPI), request logging.
+- `src/infrastructure/database/models/` — SQLModel table definitions imported by Alembic env and by `tests/conftest.py` (`autouse setup_database`).
 
-**API prefix:** `/api/system` (defined in `src/api/constants.py`).
+**API prefix:** `/api/system` (`src/api/constants.py`). Docs at `/docs`, `/redoc`, `/openapi.json`.
 
-**Database:** SQLite for dev (`sql/dev.db`), PostgreSQL for production. Redis for cache+rate-limit.
-Alembic for migrations. Init order matters: `initdb → seeddata → seedrbac → createsuperuser`.
+**Database:** SQLite for dev (`sql/dev.db`) and test (`sql/test.db`); PostgreSQL for production. Redis for cache + rate-limit. Migrations via **Alembic** (`alembic/`, `alembic.ini`) — do not use `create_all` outside tests.
 
-**Testing fixtures** (from `tests/conftest.py`):
-- `client` — `httpx.AsyncClient` wired to test app via `ASGITransport` (in-memory SQLite)
-- `db_session` — test DB session (table create/drop per test via `setup_database` autouse)
-- `auth_headers` — auto-creates superuser + JWT token
-- `test_user_data` — sample user creation dict
-- xdist-compatible: each worker gets an isolated temp-file DB
+**Test fixtures** (`tests/conftest.py`):
+- `client` — `httpx.AsyncClient` over `ASGITransport(test_app)`, `get_db` overridden per-test.
+- `test_app` — built with `empty_lifespan` so the real DB init does not run.
+- `setup_database` (autouse) — `create_all` before each test, `drop_all` after.
+- `db_session` — async session bound to the test engine.
+- `auth_headers` — auto-creates a superuser and yields `{"Authorization": "Bearer <jwt>"}`.
+- `test_user_data` — sample user-create dict.
+- `os.environ.setdefault("APP_ENV", "testing")` runs at import time so `Settings` picks up `.env.testing`.
 
-**Lint (ruff):** `line-length=120`, per-file-ignores: `N803`, `N815` in `api/` and `dto/` (camelCase for JSON fields).
+**Lint (ruff):** `line-length=120`, `select = E,F,W,I,N,UP,B,A,SIM`, `ignore = B008`, `skip-magic-trailing-comma = true`. Per-file ignores: `N803` + `N815` in `src/api/`, `N815` in `src/application/dto/` (frontend uses camelCase JSON, so PEP8 is intentionally violated for DTO field names).
 
-**Known DIP violations (P1):** `IPRuleService`, `MenuService`, `UserService` directly import `infrastructure.cache` concrete classes instead of domain-level `CachePort`.
-
-**Existing UI test** at `service/tests/ui_test.py` — Playwright-based full-stack test (login, page navigation, API endpoints). Requires both servers running. Not in CI.
-
-**API docs:** `/docs` (Swagger), `/redoc` (ReDoc), `/openapi.json`.
+**Smoke test:** `service/tests/ui_test.py` — Playwright full-stack script (login + page nav + API). Requires both servers running; writes screenshots to `tests/screenshots/`. Not in CI.
 
 ## Frontend (web/)
 
-**Constraints:** `pnpm >= 9`. Node.js: `^20.19.0 || >=22.13.0`. Preinstall script blocks npm/yarn.
+**Constraints:** `pnpm >= 9`, Node `^20.19.0 || >=22.13.0`. The `preinstall` script (`only-allow pnpm`) blocks `npm`/`yarn` — do not try to install with them.
 
 **Commands:**
 ```bash
 pnpm install
-pnpm dev                     # Dev server (port 8848)
-pnpm lint                    # ESLint + Prettier + Stylelint
-pnpm typecheck               # vue-tsc
-pnpm build
-pnpm build:staging           # Build with staging mode
-pnpm test:e2e                # Playwright e2e tests (requires servers running)
-pnpm test:e2e:headed         # Playwright e2e in headed mode
+pnpm dev                  # port 8848 (VITE_PORT in .env.development)
+pnpm lint                 # eslint + prettier + stylelint (eslint uses --max-warnings 0)
+pnpm typecheck            # vue-tsc --noEmit --skipLibCheck
+pnpm build                # production
+pnpm build:staging        # staging mode
+pnpm test:e2e             # Playwright (requires backend + frontend running)
+pnpm test:e2e:headed      # headed mode
 ```
 
-**Proxy:** Vite proxies `/api` → `localhost:8000`. Start backend before frontend for full-stack dev.
+**Proxy:** Vite proxies `/api` → `http://localhost:8000` (`vite.config.ts`). Start backend first for full-stack dev.
 
-**Architecture:** Pure Admin (vue-pure-admin) scaffold. Key dirs:
-- `src/api/` — `BaseApi` class provides `list/retrieve/create/partialUpdate/destroy/batchDelete` for all CRUD modules
-- `src/router/` — dynamic routes fetched from backend after login
-- `src/store/` — Pinia stores
-- `src/views/` — page components matching backend routers
-- `e2e/` — Playwright e2e tests (requires both servers running)
-
-**Mock:** Uses `vite-plugin-fake-server` for dev mock data. Real backend calls go to `/api/system/*`.
+**Architecture** — vue-pure-admin v7 conventions:
+- `src/api/system.ts` → `BaseApi` subclass; `BaseApi` (in `src/api/base.ts`) provides `list/retrieve/create/partialUpdate/destroy/batchDelete` for all CRUD modules. Per-module files under `src/api/system/`.
+- `src/router/` — routes are **fetched from backend after login** (dynamic), not statically defined.
+- `src/views/` — pages mirror backend routers 1:1.
+- `e2e/` — Playwright tests; sample at `e2e/login.spec.ts` (uses default `admin` / `admin123`).
+- `mock/` — `vite-plugin-fake-server` for dev mocks. Real backend calls go to `/api/system/*`.
+- Stack: Vue 3.5 + TypeScript 6 + Element Plus + Pinia 3 + Vite 8 (Rolldown/Oxc) + Tailwind 4.
 
 ## Full-stack Dev
 
-1. Start backend: `cd service && python -m scripts.cli runserver`
-2. Start frontend: `cd web && pnpm dev`
-3. Frontend: http://localhost:8848, Backend: http://localhost:8000
-4. API docs: http://localhost:8000/docs
-5. Default login: `admin` / `admin123`
+1. `cd service && python -m scripts.cli runserver`  → http://localhost:8000
+2. `cd web && pnpm dev`  → http://localhost:8848
+3. API docs: http://localhost:8000/docs
+4. Default login: `admin` / `admin123`
 
 ## Verification Flow
 
-**Backend:** `ruff check src/ && ruff format src/ && mypy src/ && pytest`
+**Backend:** `ruff check src/ && ruff format src/ --check && mypy src/ && pytest`
 **Frontend:** `pnpm lint && pnpm typecheck`
-**Full-stack e2e (2 ways):**
+**Full-stack e2e:**
+```bash
+# Terminal 1
+cd service && python -m scripts.cli runserver &
+# Terminal 2
+cd web && pnpm dev &
+# Terminal 3
+cd web && pnpm test:e2e
+```
+Backend smoke: `cd service && python -m tests.ui_test` (also requires both servers).
 
-1. **Frontend Playwright** (recommended for CI):
-   ```bash
-   # Terminal 1: start backend + frontend
-   cd service && python -m scripts.cli runserver &
-   cd web && pnpm dev &
-   # Terminal 2: run e2e tests
-   cd web && pnpm test:e2e
-   ```
-
-2. **Backend Playwright script** (smoke test):
-   ```bash
-   cd service && source .venv_linux/bin/activate && python -m tests.ui_test
-   ```
-   Requires both servers running. Not in CI.
-
-**Frontend lint expects zero warnings** (`--max-warnings 0` in ESLint). Pre-push hooks via husky + lint-staged.
+Pre-push hooks: husky + lint-staged (configured in `web/`). Jenkinsfile in `service/` mirrors the lint/format/typecheck/test pipeline with `--cov-fail-under=95`.
 
 ## Docker
 
@@ -123,20 +124,41 @@ pnpm test:e2e:headed         # Playwright e2e in headed mode
 cd service/docker && docker-compose up -d
 docker-compose exec app python -m scripts.cli initall
 ```
-Standalone FastAPI container + PostgreSQL + Redis.
-
-## OpenCode Integration
-
-- **Project skills** in `.opencode/skills/`: `agent-browser` (browser automation CLI), `code-gen` (MySQL→CRUD codegen), `commit-changelog`, `git-release`
-- **agent-browser CLI** (v0.25.3) globally available for quick browser interactions.
-- **Playwright MCP Server** configured in `~/.config/opencode/opencode.json` (`@playwright/mcp`) — AI can directly control browser via MCP tools.
-- **Playwright (MCP) skill** available for browser automation tasks.
-- **Frontend e2e**: `@playwright/test` (v1.60) in `web/` with `playwright.config.ts` and sample `e2e/login.spec.ts`.
+Standalone FastAPI + PostgreSQL 15 + Redis 7. Uses `APP_ENV=production` and a `/health` endpoint for healthchecks.
 
 ## Settings & Env
 
-- Environment auto-detected via `APP_ENV` env var or `.env` file
-- Config files: `.env.development` (dev), `.env.production` (prod), `.env.testing` (test)
-- Priority: constructor kwargs > `.env.{APP_ENV}` > `.env` > model defaults
-- Settings are singleton via `get_settings()` / `get_cached_settings()` (lru_cache)
-- Testing automatically sets `APP_ENV=testing` in `conftest.py` via `os.environ.setdefault`
+- Active env: `APP_ENV` env var or `.env` file. Files: `.env.development`, `.env.production`, `.env.testing`.
+- Resolution order: constructor kwargs > `.env.{APP_ENV}` > `.env` > model defaults.
+- Settings are singleton via `get_settings()` / `get_cached_settings()` (`lru_cache`). Access the singleton as `from src.config.settings import settings`.
+- Profile defaults (`settings.py`): `production` → `DEBUG=False`, `LOG_LEVEL=WARNING`; `testing` → `DEBUG=True`, `LOG_LEVEL=DEBUG`, `DATABASE_URL=sqlite+aiosqlite:///./sql/test.db`.
+
+## CodeGraph Integration
+
+**CodeGraph** is configured as the primary code search tool. When searching for symbols, functions, callers, callees, or impact analysis, **always prefer CodeGraph MCP tools** over built-in grep/glob:
+
+| Tool | Use case |
+|---|---|
+| `codegraph_search` | Find symbols by name/signature/docstring (FTS5 full-text search) |
+| `codegraph_node` | Look up a symbol by ID or exact name |
+| `codegraph_callers` | Find all functions/methods that call a specific symbol |
+| `codegraph_callees` | Find all functions/methods that a specific symbol calls |
+| `codegraph_impact` | Transitive impact radius (callers + references) |
+| `codegraph_context` | Composed context for a symbol or topic |
+| `codegraph_files` | List indexed files under a path |
+
+**Workflow:**
+1. For code search → use `codegraph_search` first
+2. For understanding call chains → use `codegraph_callers` / `codegraph_callees`
+3. For impact analysis before refactoring → use `codegraph_impact`
+4. Fall back to `grep`/`glob` only when CodeGraph tools don't cover the need
+
+Index is at `.codegraph/codegraph.db`. Refresh with `codegraph sync` after large changes.
+
+## OpenCode Integration
+
+- **Project skills** in `.opencode/skills/`: `agent-browser`, `code-gen` (MySQL → DDD 4-layer + Vue3 CRUD codegen), `commit-changelog`, `git-release`.
+- **agent-browser** — Rust-based headless browser CLI; available globally and as a project skill.
+- **Playwright MCP** server (`@playwright/mcp`) configured in `~/.config/opencode/opencode.json` — use the MCP browser tools for in-session automation.
+- **CodeGraph MCP** server configured in `opencode.json` — provides semantic code search, call graph, and impact analysis tools.
+- **Frontend e2e** uses `@playwright/test` (see `web/playwright.config.ts`).
