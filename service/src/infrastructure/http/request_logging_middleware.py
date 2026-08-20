@@ -12,6 +12,7 @@ from fastapi import Request, Response
 from jose import JWTError, jwt
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from src.application.utils.user_agent import extract_user_agent_info
 from src.config.settings import settings
 from src.infrastructure.logging.logger import log_request, logger
 
@@ -30,42 +31,6 @@ _SKIP_LOG_PATH_PREFIXES = frozenset(
         "/api/system/role-menu-ids",  # 高频权限查询
     }
 )
-
-
-def _extract_user_agent_info(user_agent: str) -> tuple[str, str]:
-    """从 User-Agent 字符串中粗略提取浏览器和操作系统信息。
-
-    Returns:
-        (browser, system) 元组
-    """
-    browser = "unknown"
-    system = "unknown"
-
-    if not user_agent:
-        return browser, system
-
-    ua_lower = user_agent.lower()
-    if "windows" in ua_lower:
-        system = "Windows"
-    elif "mac os" in ua_lower:
-        system = "Mac OS"
-    elif "linux" in ua_lower:
-        system = "Linux"
-    elif "android" in ua_lower:
-        system = "Android"
-    elif "iphone" in ua_lower or "ipad" in ua_lower:
-        system = "iOS"
-
-    if "edg/" in ua_lower:
-        browser = "Edge"
-    elif "chrome/" in ua_lower:
-        browser = "Chrome"
-    elif "firefox/" in ua_lower:
-        browser = "Firefox"
-    elif "safari/" in ua_lower and "chrome/" not in ua_lower:
-        browser = "Safari"
-
-    return browser, system
 
 
 def _try_decode_user_id(authorization: str | None) -> str | None:
@@ -152,7 +117,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         import asyncio
 
         user_agent = request.headers.get("user-agent", "")
-        browser, system = _extract_user_agent_info(user_agent)
+        browser, system = extract_user_agent_info(user_agent)
         creator_id = _try_decode_user_id(request.headers.get("authorization"))
 
         # 捕获写入日志所需的所有数据（不再依赖 request/response 对象）

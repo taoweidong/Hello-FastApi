@@ -43,6 +43,74 @@ class CachePort(ABC):
         """
         ...
 
+    @abstractmethod
+    async def blacklist_token_hash(self, token_hash: str, expires_at: datetime) -> bool:
+        """将 Token 哈希加入黑名单。
+
+        用于强制下线等场景：直接从会话哈希生成黑名单 Key，
+        无需再次对 Token 取哈希，保证与在线会话的 Key 一致。
+
+        Args:
+            token_hash: Token 的哈希前缀（与在线会话 Key 的后缀一致）
+            expires_at: Token 的过期时间
+
+        Returns:
+            是否成功加入黑名单
+        """
+        ...
+
+    # ---- 在线用户会话 ----
+
+    @abstractmethod
+    async def set_online_user(self, session_key: str, info: dict[str, Any], expires_at: datetime) -> bool:
+        """登记在线用户会话。
+
+        登录成功后调用，将会话信息写入缓存，TTL 与访问令牌生命周期一致。
+
+        Args:
+            session_key: 会话 Key（访问令牌哈希前缀）
+            info: 会话信息字典（userId/username/ip/system/browser/loginTime/expiresAt 等）
+            expires_at: 会话过期时间
+
+        Returns:
+            是否成功写入缓存
+        """
+        ...
+
+    @abstractmethod
+    async def get_online_user(self, session_key: str) -> dict[str, Any] | None:
+        """获取在线用户会话。
+
+        Args:
+            session_key: 会话 Key（访问令牌哈希前缀）
+
+        Returns:
+            会话信息字典（命中时），None 表示未命中或存储不可用
+        """
+        ...
+
+    @abstractmethod
+    async def get_online_users(self) -> list[dict[str, Any]]:
+        """获取全部在线用户会话。
+
+        Returns:
+            会话信息字典列表（每项含 id=session_key 供强制下线使用）；
+            存储不可用时返回空列表（降级处理）
+        """
+        ...
+
+    @abstractmethod
+    async def delete_online_user(self, session_key: str) -> bool:
+        """删除在线用户会话（强制下线）。
+
+        Args:
+            session_key: 会话 Key（访问令牌哈希前缀）
+
+        Returns:
+            是否成功删除
+        """
+        ...
+
     # ---- 用户权限缓存 ----
 
     @abstractmethod

@@ -7,6 +7,8 @@ interface FormItemProps {
   code: string;
   /** 是否启用 */
   isActive: number;
+  /** 数据权限范围：1全部/2自定义/3本部门/4本部门及以下/5仅本人 */
+  dataScope: number;
   /** 描述 */
   description: string;
 }

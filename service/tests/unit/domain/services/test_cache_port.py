@@ -56,6 +56,21 @@ class ConcreteCachePort(CachePort):
     async def invalidate_dict(self, dict_name: str) -> bool:
         return True
 
+    async def blacklist_token_hash(self, token_hash: str, expires_at: datetime) -> bool:
+        return True
+
+    async def set_online_user(self, session_key: str, info: dict[str, Any], expires_at: datetime) -> bool:
+        return True
+
+    async def get_online_user(self, session_key: str) -> dict[str, Any] | None:
+        return None
+
+    async def get_online_users(self) -> list[dict[str, Any]]:
+        return []
+
+    async def delete_online_user(self, session_key: str) -> bool:
+        return True
+
 
 class ConcreteIPFilterPort(IPFilterPort):
     """用于测试的 IPFilterPort 最小化具体实现。"""

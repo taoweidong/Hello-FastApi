@@ -30,11 +30,15 @@ class LogRepository(LogRepositoryInterface):
         status: int | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
+        username: str | None = None,
     ) -> tuple[list[LoginLogEntity], int]:
         """获取登录日志列表（支持筛选和分页）。"""
         stmt = select(LoginLog).order_by(LoginLog.created_time.desc())
         count_stmt = select(sa_func.count()).select_from(LoginLog)
 
+        if username:
+            stmt = stmt.where(LoginLog.username == username)
+            count_stmt = count_stmt.where(LoginLog.username == username)
         if status is not None:
             stmt = stmt.where(LoginLog.status == status)
             count_stmt = count_stmt.where(LoginLog.status == status)

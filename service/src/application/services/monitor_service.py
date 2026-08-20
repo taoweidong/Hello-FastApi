@@ -7,7 +7,7 @@
 import os
 import platform
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import psutil
 from loguru import logger
@@ -18,10 +18,13 @@ from src.application.dto.monitor_dto import (
     CpuInfoDTO,
     DiskInfoDTO,
     MemoryInfoDTO,
+    OnlineLogsQueryDTO,
     ProcessInfoDTO,
     ServerInfoDTO,
     SystemInfoDTO,
 )
+from src.config.settings import settings
+from src.domain.services.cache_port import CachePort
 
 _GB = 1024**3
 
@@ -50,6 +53,65 @@ def _format_duration(seconds: float) -> str:
 
 class MonitorService:
     """系统监控服务：无状态采集器，不依赖数据库。"""
+
+    def __init__(self, cache_service: CachePort | None = None) -> None:
+        """初始化监控服务。
+
+        Args:
+            cache_service: 缓存服务端口（用于在线用户会话查询与强制下线），可为 None 触发降级
+        """
+        self.cache_service = cache_service
+
+    async def get_online_logs(self, query: OnlineLogsQueryDTO) -> tuple[list[dict], int]:
+        """获取在线用户会话列表（支持用户名过滤与分页）。
+
+        Args:
+            query: 查询参数（username/page_num/page_size）
+
+        Returns:
+            (当前页会话列表, 总条数)；缓存未注入或不可用时降级返回空列表
+        """
+        if self.cache_service is None:
+            return [], 0
+        sessions = await self.cache_service.get_online_users()
+        if query.username:
+            keyword = query.username.strip().lower()
+            sessions = [item for item in sessions if keyword in str(item.get("username") or "").lower()]
+        # 按登录时间倒序排列
+        sessions.sort(key=lambda item: str(item.get("loginTime") or ""), reverse=True)
+        total = len(sessions)
+        start = (query.page_num - 1) * query.page_size
+        page_items = sessions[start : start + query.page_size]
+        return page_items, total
+
+    async def force_offline(self, session_key: str) -> bool:
+        """强制下线指定在线会话。
+
+        删除 Redis 在线会话，并将该会话 Token 哈希加入黑名单，
+        使其下一次调用被认证中间件拦截。会话不存在时同样返回成功（幂等）。
+
+        Args:
+            session_key: 在线会话 Key（访问令牌哈希前缀）
+
+        Returns:
+            是否执行成功；缓存未注入时返回 False
+        """
+        if self.cache_service is None:
+            return False
+        # 先读取会话的过期时间（用作黑名单 TTL），再删除会话
+        session = await self.cache_service.get_online_user(session_key)
+        await self.cache_service.delete_online_user(session_key)
+        expires_at: datetime | None = None
+        if session and session.get("expiresAt"):
+            try:
+                expires_at = datetime.fromisoformat(str(session["expiresAt"]))
+            except (TypeError, ValueError):
+                expires_at = None
+        if expires_at is None:
+            # 会话信息缺失或已过期：兜底使用默认黑名单保留时长
+            expires_at = datetime.now(timezone.utc) + timedelta(seconds=settings.CACHE_TOKEN_BLACKLIST_TTL)
+        await self.cache_service.blacklist_token_hash(session_key, expires_at)
+        return True
 
     async def get_server_info(self) -> ServerInfoDTO:
         """采集服务器资源信息（CPU/内存/磁盘/系统/进程）。"""

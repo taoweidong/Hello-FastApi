@@ -51,6 +51,7 @@ class TestRoleRouter:
         svc.update_role.return_value = _mock_update
         svc.delete_role.return_value = None
         svc.assign_menus.return_value = None
+        svc.change_data_scope.return_value = None
         return svc
 
     @pytest.fixture
@@ -115,3 +116,14 @@ class TestRoleRouter:
         resp = client.post("/api/system/role/r1/menus", json={"menuIds": ["m1", "m2"]}, headers=self.auth)
         assert resp.status_code == 200
         assert resp.json()["message"] == "菜单权限分配成功"
+
+    def test_change_data_scope(self, client):
+        resp = client.post(
+            "/api/system/role/r1/data-scope", json={"dataScope": 2, "deptIds": ["d1", "d2"]}, headers=self.auth
+        )
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "数据权限修改成功"
+
+    def test_change_data_scope_invalid_scope_returns_422(self, client):
+        resp = client.post("/api/system/role/r1/data-scope", json={"dataScope": 9}, headers=self.auth)
+        assert resp.status_code == 422

@@ -27,7 +27,7 @@ from src.application.dto.auth_dto import (
     RoleMenuItemDTO,
     UserIdRequestDTO,
 )
-from src.application.services.auth_service import AuthService
+from src.application.services.auth_service import AuthService, LoginRequestInfo
 from src.application.services.menu_service import MenuService
 from src.application.services.role_service import RoleService
 from src.application.services.user_service import UserService
@@ -42,7 +42,10 @@ class AuthRouter(Routable):
     @post("/login", response_model=ApiResponse[dict])
     async def login(self, request: Request, dto: LoginDTO, service: AuthService = Depends(get_auth_service)) -> dict:
         """用户登录接口。"""
-        result = await service.login(dto)
+        request_info = LoginRequestInfo(
+            client_ip=request.client.host if request.client else None, user_agent=request.headers.get("user-agent")
+        )
+        result = await service.login(dto, request_info)
         return success_response(data=result, message="登录成功")
 
     @post("/register", response_model=ApiResponse[dict])
@@ -92,9 +95,26 @@ class AuthRouter(Routable):
         return success_response(data=data.model_dump())
 
     @get("/mine-logs", response_model=PaginatedResponse[dict])
-    async def get_mine_logs(self, current_user: UserEntity = Depends(get_current_active_user)) -> dict:
-        """获取当前用户的安全日志（stub 数据）。"""
-        return list_response(list_data=[], total=0)
+    async def get_mine_logs(
+        self,
+        current_user: UserEntity = Depends(get_current_active_user),
+        service: AuthService = Depends(get_auth_service),
+    ) -> dict:
+        """获取当前用户的安全日志（登录/认证记录，含成功与失败）。"""
+        logs, total = await service.get_mine_logs(username=current_user.username)
+        log_list = [
+            {
+                "id": log.id,
+                "username": log.username or "",
+                "ip": log.ipaddress or "",
+                "browser": log.browser or "",
+                "system": log.system or "",
+                "loginTime": log.created_time.isoformat() if log.created_time else None,
+                "status": log.status,
+            }
+            for log in logs
+        ]
+        return list_response(list_data=log_list, total=total, page_size=10, current_page=1)
 
     @get("/get-async-routes", response_model=ApiResponse[list[dict]])
     async def get_async_routes(

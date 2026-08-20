@@ -6,7 +6,17 @@ import { transformI18n } from "@/plugins/i18n";
 import { useCrudTable, useSwitchStatus, useDialogForm } from "@/composables";
 import { getKeyList } from "@pureadmin/utils";
 import { roleApi } from "@/api/system/role";
-import { type Ref, reactive, ref, onMounted, watch } from "vue";
+import { deptApi } from "@/api/system/dept";
+import { type Ref, reactive, ref, onMounted, watch, nextTick } from "vue";
+
+/** 数据权限范围枚举（与后端 DataScope 一致）：1全部/2自定义/3本部门/4本部门及以下/5仅本人 */
+const DataScope = {
+  ALL: 1,
+  CUSTOM: 2,
+  DEPT: 3,
+  DEPT_AND_CHILD: 4,
+  SELF: 5
+} as const;
 
 export function useRole(treeRef: Ref) {
   const form = reactive({
@@ -60,6 +70,7 @@ export function useRole(treeRef: Ref) {
       { key: "name", defaultValue: "" },
       { key: "code", defaultValue: "" },
       { key: "isActive", defaultValue: 1 },
+      { key: "dataScope", defaultValue: DataScope.ALL },
       { key: "description", defaultValue: "", nullable: true }
     ],
     width: "40%",
@@ -106,7 +117,7 @@ export function useRole(treeRef: Ref) {
     {
       label: "操作",
       fixed: "right",
-      width: 210,
+      width: 280,
       slot: "operation"
     }
   ];
@@ -154,6 +165,102 @@ export function useRole(treeRef: Ref) {
     treeRef.value!.filter(query);
   };
 
+  /** 数据权限-抽屉显隐 */
+  const dataScopeVisible = ref(false);
+  /** 数据权限-当前角色行 */
+  const dataScopeRow = ref<any>({});
+  /** 数据权限-表单 */
+  const dataScopeForm = reactive<{ dataScope: number; deptIds: string[] }>({
+    dataScope: DataScope.ALL,
+    deptIds: []
+  });
+  /** 数据权限-部门树引用 */
+  const deptTreeRef = ref();
+  /** 数据权限-部门树数据 */
+  const deptTreeData = ref([]);
+  /** 数据权限-单选范围选项 */
+  const dataScopeOptions = [
+    { value: DataScope.ALL, label: "全部数据权限" },
+    { value: DataScope.CUSTOM, label: "自定义数据权限" },
+    { value: DataScope.DEPT, label: "本部门数据权限" },
+    { value: DataScope.DEPT_AND_CHILD, label: "本部门及以下数据权限" },
+    { value: DataScope.SELF, label: "仅本人数据权限" }
+  ];
+  /** 数据权限-部门树配置（部门树字段为 id/parentId/name/children） */
+  const deptTreeProps = {
+    value: "id",
+    label: "name",
+    children: "children"
+  };
+
+  /** 数据权限-打开抽屉并回填 */
+  async function handleDataScope(row?: any) {
+    dataScopeRow.value = row ?? {};
+    dataScopeVisible.value = true;
+    dataScopeForm.dataScope = DataScope.ALL;
+    dataScopeForm.deptIds = [];
+
+    // 部门树首次加载后缓存复用
+    if (deptTreeData.value.length === 0) {
+      const { code, data } = await deptApi.tree();
+      if (code === 0) deptTreeData.value = data;
+    }
+
+    // 列表接口不返回 deptIds，需调用详情接口回填
+    const { id } = dataScopeRow.value;
+    const detailRes = await roleApi.retrieve(id);
+    if (detailRes.code === 0 && detailRes.data) {
+      dataScopeForm.dataScope = detailRes.data.dataScope ?? DataScope.ALL;
+      dataScopeForm.deptIds = detailRes.data.deptIds ?? [];
+    }
+    await nextTick();
+    if (dataScopeForm.dataScope === DataScope.CUSTOM) {
+      deptTreeRef.value?.setCheckedKeys(dataScopeForm.deptIds);
+    }
+  }
+
+  /** 数据权限-保存 */
+  async function handleDataScopeSave() {
+    const { id, name } = dataScopeRow.value;
+    const deptIds =
+      dataScopeForm.dataScope === DataScope.CUSTOM
+        ? deptTreeRef.value.getCheckedKeys()
+        : [];
+
+    try {
+      const { code } = await roleApi.changeDataScope(
+        id,
+        dataScopeForm.dataScope,
+        deptIds
+      );
+      if (code === 0) {
+        message(`角色 ${name} 的数据权限修改成功`, { type: "success" });
+        dataScopeVisible.value = false;
+        onSearch();
+      }
+    } catch {
+      message("保存数据权限失败", { type: "error" });
+    }
+  }
+
+  /** 数据权限-关闭时重置 */
+  function handleDataScopeClose() {
+    dataScopeVisible.value = false;
+    dataScopeForm.dataScope = DataScope.ALL;
+    dataScopeForm.deptIds = [];
+    deptTreeRef.value?.setCheckedKeys([]);
+  }
+
+  // 非自定义范围时清空部门勾选
+  watch(
+    () => dataScopeForm.dataScope,
+    val => {
+      if (val !== DataScope.CUSTOM) {
+        deptTreeRef.value?.setCheckedKeys([]);
+      }
+    }
+  );
+
   const filterMethod = (query: string, node) => {
     return transformI18n(node.title)!.includes(query);
   };
@@ -194,12 +301,23 @@ export function useRole(treeRef: Ref) {
     isExpandAll,
     isSelectAll,
     treeSearchValue,
+    DataScope,
+    dataScopeOptions,
+    dataScopeVisible,
+    dataScopeRow,
+    dataScopeForm,
+    deptTreeData,
+    deptTreeProps,
+    deptTreeRef,
     onSearch,
     resetForm,
     openDialog,
     handleMenu,
     handleSave,
     handleDelete,
+    handleDataScope,
+    handleDataScopeSave,
+    handleDataScopeClose,
     filterMethod,
     transformI18n,
     onQueryChanged,

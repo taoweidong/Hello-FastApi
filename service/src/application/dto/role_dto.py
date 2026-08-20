@@ -107,6 +107,13 @@ class AssignRoleDTO(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class ChangeDataScopeDTO(BaseModel):
+    """修改角色数据权限请求"""
+
+    dataScope: int = Field(ge=1, le=5, description="数据权限范围：1全部/2自定义/3本部门/4本部门及以下/5仅本人")
+    deptIds: list[str] = Field(default=[], description="自定义数据权限的部门ID列表（dataScope=2 时生效）")
+
+
 class RoleStatusUpdateDTO(BaseModel):
     """角色状态更新请求"""
 

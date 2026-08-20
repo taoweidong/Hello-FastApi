@@ -12,6 +12,7 @@ from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import get_role_service, require_permission
 from src.application.dto.role_dto import (
     AssignMenusDTO,
+    ChangeDataScopeDTO,
     RoleCreateDTO,
     RoleListQueryDTO,
     RoleStatusUpdateDTO,
@@ -103,3 +104,15 @@ class RoleRouter(Routable):
         """为角色分配菜单权限接口。"""
         await service.assign_menus(role_id, dto.menuIds)
         return success_response(message="菜单权限分配成功")
+
+    @post("/{role_id}/data-scope", response_model=ApiResponse[None])
+    async def change_data_scope(
+        self,
+        role_id: str,
+        dto: ChangeDataScopeDTO,
+        service: RoleService = Depends(get_role_service),
+        _: dict = Depends(require_permission("role:manage")),
+    ) -> dict:
+        """修改角色数据权限范围接口。"""
+        await service.change_data_scope(role_id, dto)
+        return success_response(message="数据权限修改成功")

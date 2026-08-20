@@ -31,11 +31,7 @@ class TestUserProfileService:
 
     @pytest.fixture
     def service(self, mock_user_repo, mock_role_repo):
-        return UserService(
-            repo=mock_user_repo,
-            password_service=AsyncMock(),
-            role_repo=mock_role_repo,
-        )
+        return UserService(repo=mock_user_repo, password_service=AsyncMock(), role_repo=mock_role_repo)
 
     async def test_update_own_profile_applies_profile_fields(self, service, mock_user_repo, mock_role_repo):
         """更新个人资料时应用档案字段并返回响应。"""

@@ -30,8 +30,9 @@ class LogRepositoryInterface(ABC):
         status: int | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
+        username: str | None = None,
     ) -> tuple[list[LoginLogEntity], int]:
-        """获取登录日志列表。"""
+        """获取登录日志列表（可按用户名精确过滤，供个人安全日志按登录名查询）。"""
         ...
 
     @abstractmethod

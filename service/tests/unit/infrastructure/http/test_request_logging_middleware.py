@@ -4,82 +4,79 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.infrastructure.http.request_logging_middleware import (
-    RequestLoggingMiddleware,
-    _extract_user_agent_info,
-    _try_decode_user_id,
-)
+from src.application.utils.user_agent import extract_user_agent_info
+from src.infrastructure.http.request_logging_middleware import RequestLoggingMiddleware, _try_decode_user_id
 
 
 @pytest.mark.unit
 class TestExtractUserAgentInfo:
-    """_extract_user_agent_info 工具函数测试。"""
+    """extract_user_agent_info 工具函数测试。"""
 
     def test_empty_user_agent(self):
         """测试空 user-agent。"""
-        browser, system = _extract_user_agent_info("")
+        browser, system = extract_user_agent_info("")
         assert browser == "unknown"
         assert system == "unknown"
 
     def test_none_user_agent(self):
         """测试 None user-agent。"""
-        browser, system = _extract_user_agent_info(None)  # type: ignore[arg-type]
+        browser, system = extract_user_agent_info(None)  # type: ignore[arg-type]
         assert browser == "unknown"
         assert system == "unknown"
 
     def test_windows_chrome(self):
         """测试 Windows Chrome。"""
         ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "Chrome"
         assert system == "Windows"
 
     def test_mac_firefox(self):
         """测试 Mac Firefox。"""
         ua = "Mozilla/5.0 (Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "Firefox"
         assert system == "Mac OS"
 
     def test_linux_edge(self):
         """测试 Linux Edge（包含 android 但 linux 优先匹配）。"""
         ua = "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Edg/120.0"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "Edge"
         assert system == "Linux"
 
     def test_ios_safari(self):
         """测试 iOS Safari。"""
         ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0) AppleWebKit/605.1.15 Safari/604.1"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "Safari"
         assert system == "iOS"
 
     def test_chrome_in_safari_string(self):
         """测试字符串中包含 Chrome 时优先识别为 Chrome。"""
         ua = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/120 Safari/537.36"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "Chrome"
         assert system == "Windows"
 
     def test_android_unknown_browser(self):
         """测试 Android 未知浏览器。"""
         ua = "Mozilla/5.0 (Android 13; Mobile) AppleWebKit/537.36"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "unknown"
         assert system == "Android"
 
     def test_unknown_os_unknown_browser(self):
         """测试完全未知的 User-Agent。"""
         ua = "SomeRandom/1.0"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "unknown"
         assert system == "unknown"
 
     def test_safari_without_chrome(self):
         """测试纯 Safari（不含 Chrome 字样）。"""
         ua = "Mozilla/5.0 (iPad; CPU OS 17_0) AppleWebKit/605.1.15 Safari/604.1"
-        browser, system = _extract_user_agent_info(ua)
+        browser, system = extract_user_agent_info(ua)
         assert browser == "Safari"
         assert system == "iOS"
 

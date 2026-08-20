@@ -1,11 +1,13 @@
 """认证路由模块单元测试。"""
 
+from datetime import datetime
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.domain.entities.log import LoginLogEntity
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.user import UserEntity
@@ -63,6 +65,7 @@ class TestAuthRouter:
         ]
         svc.get_user_role_ids.return_value = ["r1"]
         svc.get_role_menu_ids.return_value = ["1", "2"]
+        svc.get_mine_logs.return_value = ([], 0)
         return svc
 
     @pytest.fixture
@@ -165,10 +168,34 @@ class TestAuthRouter:
         resp = client.get("/api/system/mine", headers={"Authorization": "Bearer test_token"})
         assert resp.status_code == 401
 
-    def test_get_mine_logs(self, client):
+    def test_get_mine_logs(self, client, mock_auth_service):
+        mock_auth_service.get_mine_logs.return_value = (
+            [
+                LoginLogEntity(
+                    id="log-1",
+                    status=1,
+                    username="admin",
+                    ipaddress="127.0.0.1",
+                    browser="Chrome",
+                    system="Windows",
+                    created_time=datetime(2026, 8, 23, 10, 0, 0),
+                )
+            ],
+            1,
+        )
         resp = client.get("/api/system/mine-logs", headers={"Authorization": "Bearer test_token"})
         assert resp.status_code == 200
-        assert resp.json()["data"]["list"] == []
+        data = resp.json()["data"]
+        assert len(data["list"]) == 1
+        item = data["list"][0]
+        assert item["id"] == "log-1"
+        assert item["username"] == "admin"
+        assert item["ip"] == "127.0.0.1"
+        assert item["browser"] == "Chrome"
+        assert item["system"] == "Windows"
+        assert item["status"] == 1
+        assert item["loginTime"] is not None
+        mock_auth_service.get_mine_logs.assert_awaited_once_with(username="admin")
 
     def test_get_async_routes(self, client):
         resp = client.get("/api/system/get-async-routes", headers={"Authorization": "Bearer test_token"})

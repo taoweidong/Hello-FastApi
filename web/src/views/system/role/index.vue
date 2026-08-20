@@ -10,8 +10,8 @@ import {
   useResizeObserver
 } from "@pureadmin/utils";
 
-// import Database from "~icons/ri/database-2-line";
 // import More from "~icons/ep/more-filled";
+import Database from "~icons/ri/database-2-line";
 import Delete from "~icons/ep/delete";
 import EditPen from "~icons/ep/edit-pen";
 import Refresh from "~icons/ep/refresh";
@@ -59,6 +59,14 @@ const {
   isExpandAll,
   isSelectAll,
   treeSearchValue,
+  DataScope,
+  dataScopeOptions,
+  dataScopeVisible,
+  dataScopeRow,
+  dataScopeForm,
+  deptTreeData,
+  deptTreeProps,
+  deptTreeRef,
   // buttonClass,
   onSearch,
   resetForm,
@@ -66,10 +74,12 @@ const {
   handleMenu,
   handleSave,
   handleDelete,
+  handleDataScope,
+  handleDataScopeSave,
+  handleDataScopeClose,
   filterMethod,
   transformI18n,
   onQueryChanged,
-  // handleDatabase,
   handleSizeChange,
   handleCurrentChange
 } = useRole(treeRef);
@@ -218,43 +228,17 @@ onMounted(() => {
               >
                 权限
               </el-button>
-              <!-- <el-dropdown>
               <el-button
-                class="ml-3 mt-[2px]"
+                v-auth="'role:manage'"
+                class="reset-margin"
                 link
                 type="primary"
                 :size="size"
-                :icon="useRenderIcon(More)"
-              />
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item>
-                    <el-button
-                      :class="buttonClass"
-                      link
-                      type="primary"
-                      :size="size"
-                      :icon="useRenderIcon(Menu)"
-                      @click="handleMenu"
-                    >
-                      菜单权限
-                    </el-button>
-                  </el-dropdown-item>
-                  <el-dropdown-item>
-                    <el-button
-                      :class="buttonClass"
-                      link
-                      type="primary"
-                      :size="size"
-                      :icon="useRenderIcon(Database)"
-                      @click="handleDatabase"
-                    >
-                      数据权限
-                    </el-button>
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown> -->
+                :icon="useRenderIcon(Database)"
+                @click="handleDataScope(row)"
+              >
+                数据权限
+              </el-button>
             </template>
           </pure-table>
         </template>
@@ -322,6 +306,51 @@ onMounted(() => {
           </template>
         </el-tree-v2>
       </div>
+
+      <el-dialog
+        v-model="dataScopeVisible"
+        title="数据权限"
+        width="560px"
+        destroy-on-close
+        :closeOnClickModal="false"
+        @closed="handleDataScopeClose"
+      >
+        <el-form label-width="82px" @submit.prevent>
+          <el-form-item label="数据范围">
+            <el-radio-group v-model="dataScopeForm.dataScope">
+              <el-radio
+                v-for="opt in dataScopeOptions"
+                :key="opt.value"
+                :value="opt.value"
+              >
+                {{ opt.label }}
+              </el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item
+            v-if="dataScopeForm.dataScope === DataScope.CUSTOM"
+            label="部门选择"
+          >
+            <el-tree
+              ref="deptTreeRef"
+              class="w-full max-h-60! overflow-auto border border-gray-200 rounded"
+              :data="deptTreeData"
+              :props="deptTreeProps"
+              node-key="id"
+              show-checkbox
+              default-expand-all
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <div class="dialog-footer">
+            <el-button bg text @click="handleDataScopeClose">取消</el-button>
+            <el-button bg text type="primary" @click="handleDataScopeSave">
+              确定
+            </el-button>
+          </div>
+        </template>
+      </el-dialog>
     </div>
   </div>
 </template>

@@ -10,6 +10,11 @@ class DeptApi extends BaseApi {
   list<T = any>(params?: object): Promise<Result<T>> {
     return http.request<Result<T>>("post", this.prefix, { data: params });
   }
+
+  /** 获取部门树结构（全量，数据权限配置用） */
+  tree<T = any>(): Promise<Result<T>> {
+    return http.request<Result<T>>("get", `${this.prefix}/tree`);
+  }
 }
 
 export const deptApi = new DeptApi();

@@ -19,6 +19,7 @@ class CacheService(CachePort):
 
     # Key 前缀
     _BLACKLIST_PREFIX = "token:blacklist:"
+    _ONLINE_USER_PREFIX = "online:user:"
     _PERMS_PREFIX = "user:perms:"
     _USER_INFO_PREFIX = "user:info:"
     _DICT_PREFIX = "dict:"
@@ -46,19 +47,7 @@ class CacheService(CachePort):
         Returns:
             是否成功加入黑名单
         """
-        if self._redis is None:
-            return True
-        key = self._blacklist_key(token)
-        ttl = self._remaining_seconds(expires_at)
-        if ttl <= 0:
-            # Token 已过期，无需加入黑名单
-            return True
-        try:
-            await self._redis.set(key, "1", ex=ttl)
-            return True
-        except Exception:
-            logger.warning("Redis 写入 Token 黑名单失败", exc_info=True)
-            return False
+        return await self.blacklist_token_hash(self._token_hash(token), expires_at)
 
     async def is_token_blacklisted(self, token: str) -> bool:
         """检查 Token 是否在黑名单中。
@@ -77,6 +66,122 @@ class CacheService(CachePort):
             return result is not None
         except Exception:
             logger.warning("Redis 查询 Token 黑名单失败，降级放行", exc_info=True)
+            return False
+
+    async def blacklist_token_hash(self, token_hash: str, expires_at: datetime) -> bool:
+        """将 Token 哈希加入黑名单。
+
+        供强制下线使用：直接以会话哈希作为 Key 后缀写入黑名单，
+        与在线会话 Key 保持一致，无需再次对 Token 取哈希。
+
+        Args:
+            token_hash: Token 的哈希前缀
+            expires_at: Token 的过期时间
+
+        Returns:
+            是否成功加入黑名单
+        """
+        if self._redis is None:
+            return True
+        key = f"{self._BLACKLIST_PREFIX}{token_hash}"
+        ttl = self._remaining_seconds(expires_at)
+        if ttl <= 0:
+            # Token 已过期，无需加入黑名单
+            return True
+        try:
+            await self._redis.set(key, "1", ex=ttl)
+            return True
+        except Exception:
+            logger.warning("Redis 写入 Token 哈希黑名单失败", exc_info=True)
+            return False
+
+    # ---- 在线用户会话 ----
+
+    async def set_online_user(self, session_key: str, info: dict, expires_at: datetime) -> bool:
+        """登记在线用户会话。
+
+        Args:
+            session_key: 会话 Key（访问令牌哈希前缀）
+            info: 会话信息字典
+            expires_at: 会话过期时间（TTL 与访问令牌生命周期一致）
+
+        Returns:
+            是否成功写入缓存
+        """
+        if self._redis is None:
+            return True
+        key = f"{self._ONLINE_USER_PREFIX}{session_key}"
+        ttl = self._remaining_seconds(expires_at)
+        if ttl <= 0:
+            return True
+        try:
+            await self._redis.set(key, json.dumps(info, ensure_ascii=False), ex=ttl)
+            return True
+        except Exception:
+            logger.warning("Redis 登记在线用户会话失败", exc_info=True)
+            return False
+
+    async def get_online_user(self, session_key: str) -> dict | None:
+        """获取在线用户会话。
+
+        Args:
+            session_key: 会话 Key（访问令牌哈希前缀）
+
+        Returns:
+            会话信息字典（命中时），None 表示未命中或 Redis 不可用
+        """
+        if self._redis is None:
+            return None
+        key = f"{self._ONLINE_USER_PREFIX}{session_key}"
+        try:
+            data = await self._redis.get(key)
+            if data is None:
+                return None
+            return json.loads(data)
+        except Exception:
+            logger.warning("Redis 读取在线用户会话失败", exc_info=True)
+            return None
+
+    async def get_online_users(self) -> list[dict]:
+        """获取全部在线用户会话。
+
+        Returns:
+            会话信息字典列表（每项含 id=session_key 供强制下线使用）；
+            Redis 不可用时返回空列表（降级处理）
+        """
+        if self._redis is None:
+            return []
+        try:
+            sessions: list[dict] = []
+            prefix = self._ONLINE_USER_PREFIX
+            async for key in self._redis.scan_iter(match=f"{prefix}*", count=100):
+                data = await self._redis.get(key)
+                if data is None:
+                    continue
+                item = json.loads(data)
+                item["id"] = key[len(prefix) :]
+                sessions.append(item)
+            return sessions
+        except Exception:
+            logger.warning("Redis 遍历在线用户会话失败，降级返回空列表", exc_info=True)
+            return []
+
+    async def delete_online_user(self, session_key: str) -> bool:
+        """删除在线用户会话（强制下线）。
+
+        Args:
+            session_key: 会话 Key（访问令牌哈希前缀）
+
+        Returns:
+            是否成功删除
+        """
+        if self._redis is None:
+            return True
+        try:
+            await self._redis.delete(f"{self._ONLINE_USER_PREFIX}{session_key}")
+            return True
+        except Exception:
+            logger.warning("Redis 删除在线用户会话失败", exc_info=True)
             return False
 
     # ---- 用户权限缓存 ----
@@ -385,10 +490,14 @@ class CacheService(CachePort):
 
         使用 token 的哈希前缀作为标识，避免存储完整 Token。
         """
+        return f"{self._BLACKLIST_PREFIX}{self._token_hash(token)}"
+
+    @staticmethod
+    def _token_hash(token: str) -> str:
+        """计算 Token 的 SHA-256 哈希前缀（前 32 位）。"""
         import hashlib
 
-        token_hash = hashlib.sha256(token.encode()).hexdigest()[:32]
-        return f"{self._BLACKLIST_PREFIX}{token_hash}"
+        return hashlib.sha256(token.encode()).hexdigest()[:32]
 
     @staticmethod
     def _remaining_seconds(expires_at: datetime) -> int:

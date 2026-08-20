@@ -11,11 +11,19 @@ class OnlineLogsQueryDTO(BaseModel):
     """在线用户列表查询请求"""
 
     username: str | None = None
+    page_num: int = Field(default=1, ge=1, description="页码")
+    page_size: int = Field(default=10, ge=1, le=100, description="每页条数")
 
     @field_validator("username", mode="before")
     @classmethod
     def _empty_to_none(cls, v):
         return empty_str_to_none(v)
+
+
+class ForceOfflineDTO(BaseModel):
+    """强制下线请求"""
+
+    id: str = Field(description="在线会话 Key（访问令牌哈希前缀）")
 
 
 class CpuInfoDTO(BaseModel):

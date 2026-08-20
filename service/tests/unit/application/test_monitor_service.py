@@ -6,9 +6,11 @@
 - get_cache_info 降级（None 客户端/连接异常）与 Redis info 解析（命中率/命令统计 Top10）
 """
 
+from datetime import datetime, timezone
+
 import pytest
 
-from src.application.dto.monitor_dto import CacheInfoDTO, ServerInfoDTO
+from src.application.dto.monitor_dto import CacheInfoDTO, OnlineLogsQueryDTO, ServerInfoDTO
 from src.application.services.monitor_service import MonitorService, _format_duration, _format_gb
 
 
@@ -131,3 +133,125 @@ class TestGetCacheInfo:
         assert len(result.commandStats) == 10
         assert result.commandStats[0].name == "cmd15"
         assert result.commandStats[0].calls == 15
+
+
+class _FakeCache:
+    """缓存服务替身：预置在线会话列表并记录删除/拉黑调用。"""
+
+    def __init__(self, sessions: list[dict] | None = None):
+        self._sessions = list(sessions or [])
+        self.deleted: list[str] = []
+        self.blacklisted: list[str] = []
+        self.blacklist_ttl: int = 0
+
+    async def get_online_users(self) -> list[dict]:
+        return [dict(item) for item in self._sessions]
+
+    async def get_online_user(self, session_key: str) -> dict | None:
+        for item in self._sessions:
+            if item.get("id") == session_key:
+                return dict(item)
+        return None
+
+    async def delete_online_user(self, session_key: str) -> bool:
+        self.deleted.append(session_key)
+        return True
+
+    async def blacklist_token_hash(self, token_hash: str, expires_at: datetime) -> bool:
+        self.blacklisted.append(token_hash)
+        now = datetime.now(timezone.utc)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        self.blacklist_ttl = max(int((expires_at - now).total_seconds()), 0)
+        return True
+
+
+def _make_session(
+    session_id: str, username: str, login_time: str, expires_at: str = "2099-01-01T00:00:00+00:00"
+) -> dict:
+    """构造一条在线会话记录（含 id=session_key）。"""
+    return {
+        "id": session_id,
+        "userId": f"u-{session_id}",
+        "username": username,
+        "ip": "127.0.0.1",
+        "system": "Windows",
+        "browser": "Chrome",
+        "loginTime": login_time,
+        "expiresAt": expires_at,
+    }
+
+
+@pytest.mark.unit
+class TestGetOnlineLogs:
+    """在线用户会话查询测试（get_online_logs）。"""
+
+    async def test_without_cache_service_returns_empty(self):
+        """未注入缓存服务时降级返回空列表与 0 总数。"""
+        query = OnlineLogsQueryDTO()
+        result = await MonitorService().get_online_logs(query)
+        assert result == ([], 0)
+
+    async def test_filter_sort_and_paginate(self):
+        """支持用户名过滤、loginTime 倒序与分页。"""
+        cache = _FakeCache(
+            sessions=[
+                _make_session("h1", "admin", "2026-03-29T10:00:00"),
+                _make_session("h2", "common", "2026-03-29T11:00:00"),
+                _make_session("h3", "Admin", "2026-03-29T09:00:00"),
+            ]
+        )
+        service = MonitorService(cache_service=cache)
+
+        # 无过滤：按登录时间倒序
+        items, total = await service.get_online_logs(OnlineLogsQueryDTO(page_size=2))
+        assert total == 3
+        assert [item["id"] for item in items] == ["h2", "h1"]
+
+        # 用户名过滤（忽略大小写）、分页取第二页
+        items, total = await service.get_online_logs(OnlineLogsQueryDTO(username="admin", page_num=1, page_size=10))
+        assert total == 2
+        assert sorted(item["username"] for item in items) == ["Admin", "admin"]
+
+
+@pytest.mark.unit
+class TestForceOffline:
+    """强制下线测试（force_offline）。"""
+
+    async def test_without_cache_service_returns_false(self):
+        """未注入缓存服务时返回 False（调用方应提示失败）。"""
+        assert await MonitorService().force_offline("h1") is False
+
+    async def test_force_offline_deletes_session_and_blacklists_token(self):
+        """强退删除会话并将会话哈希加入黑名单，TTL 取会话过期时间。"""
+        cache = _FakeCache(sessions=[_make_session("h1", "admin", "2026-03-29T10:00:00", "2099-01-01T00:00:00+00:00")])
+        service = MonitorService(cache_service=cache)
+
+        result = await service.force_offline("h1")
+        assert result is True
+        assert cache.deleted == ["h1"]
+        assert cache.blacklisted == ["h1"]
+        assert cache.blacklist_ttl > 0
+
+    async def test_force_offline_missing_session_is_idempotent(self):
+        """会话不存在时同样删除并拉黑（幂等，不抛异常）。"""
+        cache = _FakeCache(sessions=[])
+        service = MonitorService(cache_service=cache)
+
+        result = await service.force_offline("unknown-hash")
+        assert result is True
+        assert cache.deleted == ["unknown-hash"]
+        assert cache.blacklisted == ["unknown-hash"]
+        # 无会话过期时间：兜底使用默认黑名单保留时长
+        assert cache.blacklist_ttl == 86400
+
+    async def test_force_offline_invalid_expires_at_uses_fallback(self):
+        """会话过期时间无法解析时兜底使用默认黑名单保留时长。"""
+        cache = _FakeCache(
+            sessions=[{"id": "h1", "username": "admin", "loginTime": "2026-03-29T10:00:00", "expiresAt": "bad-value"}]
+        )
+        service = MonitorService(cache_service=cache)
+
+        result = await service.force_offline("h1")
+        assert result is True
+        assert cache.blacklist_ttl == 86400

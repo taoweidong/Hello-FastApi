@@ -33,11 +33,6 @@ export function useOnline() {
       minWidth: 140
     },
     {
-      label: "登录地点",
-      prop: "address",
-      minWidth: 140
-    },
-    {
       label: "操作系统",
       prop: "system",
       minWidth: 100
@@ -69,10 +64,6 @@ export function useOnline() {
   function handleCurrentChange(val: number) {
     pagination.currentPage = val;
     onSearch();
-  }
-
-  function handleSelectionChange(val) {
-    console.log("handleSelectionChange", val);
   }
 
   function handleOffline(row) {
@@ -119,7 +110,6 @@ export function useOnline() {
     resetForm,
     handleOffline,
     handleSizeChange,
-    handleCurrentChange,
-    handleSelectionChange
+    handleCurrentChange
   };
 }

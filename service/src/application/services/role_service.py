@@ -1,6 +1,12 @@
 """应用层 - 角色服务。"""
 
-from src.application.dto.role_dto import RoleCreateDTO, RoleListQueryDTO, RoleResponseDTO, RoleUpdateDTO
+from src.application.dto.role_dto import (
+    ChangeDataScopeDTO,
+    RoleCreateDTO,
+    RoleListQueryDTO,
+    RoleResponseDTO,
+    RoleUpdateDTO,
+)
 from src.domain.entities.role import RoleEntity
 from src.domain.enums import DataScope
 from src.domain.error_messages import ErrorMessages as EM
@@ -107,6 +113,20 @@ class RoleService:
             raise NotFoundError(EM.role_not_found_by_id(role_id))
 
         await self.role_repo.assign_menus_to_role(role_id, menu_ids)
+        return True
+
+    async def change_data_scope(self, role_id: str, dto: ChangeDataScopeDTO) -> bool:
+        """修改角色数据权限范围，自定义范围时重建关联部门。"""
+        role = await self.role_repo.get_by_id(role_id)
+        if role is None:
+            raise NotFoundError(EM.role_not_found_by_id(role_id))
+
+        role.update_info(data_scope=dto.dataScope)
+        await self.role_repo.update(role)
+
+        # 仅自定义数据权限时关联部门，其余范围清空历史关联
+        dept_ids = dto.deptIds if dto.dataScope == DataScope.CUSTOM else []
+        await self.role_repo.assign_depts_to_role(role_id, dept_ids)
         return True
 
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:

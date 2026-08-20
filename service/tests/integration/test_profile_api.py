@@ -56,9 +56,7 @@ class TestProfileApi:
         super_h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/user/avatar",
-            headers=super_h,
-            files={"file": ("avatar.png", _FAKE_PNG, "image/png")},
+            "/api/system/user/avatar", headers=super_h, files={"file": ("avatar.png", _FAKE_PNG, "image/png")}
         )
         assert r.status_code == 200, r.text
         avatar_url = r.json()["data"]["avatar"]
@@ -79,9 +77,7 @@ class TestProfileApi:
         super_h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/user/avatar",
-            headers=super_h,
-            files={"file": ("evil.txt", b"not-an-image", "text/plain")},
+            "/api/system/user/avatar", headers=super_h, files={"file": ("evil.txt", b"not-an-image", "text/plain")}
         )
         assert r.status_code == 422
 
@@ -89,7 +85,5 @@ class TestProfileApi:
         """未登录访问返回 401。"""
         r = await flow_client.put("/api/system/user/profile", json={"nickname": "x"})
         assert r.status_code == 401
-        r = await flow_client.post(
-            "/api/system/user/avatar", files={"file": ("avatar.png", _FAKE_PNG, "image/png")}
-        )
+        r = await flow_client.post("/api/system/user/avatar", files={"file": ("avatar.png", _FAKE_PNG, "image/png")})
         assert r.status_code == 401

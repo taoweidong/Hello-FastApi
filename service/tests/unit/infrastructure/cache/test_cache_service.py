@@ -796,3 +796,182 @@ class TestIPRulesCacheEdgeCases:
         blacklist, whitelist = await svc.get_ip_rules()
         assert blacklist == {"192.168.1.1"}
         assert whitelist == set()
+
+
+def _async_iter(items):
+    """构造异步迭代器（模拟 redis scan_iter 的 async generator）。"""
+
+    async def gen():
+        for item in items:
+            yield item
+
+    return gen()
+
+
+@pytest.mark.unit
+class TestOnlineUsers:
+    """在线用户会话操作测试。"""
+
+    _expires = datetime.now(timezone.utc) + timedelta(hours=1)
+
+    # ── set_online_user ──
+
+    @pytest.mark.asyncio
+    async def test_set_online_user_success(self):
+        """成功登记在线用户会话，Key 使用 online:user: 前缀。"""
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+        info = {"userId": "u1", "username": "admin", "system": "Windows", "browser": "Chrome"}
+
+        result = await svc.set_online_user("abc123", info, self._expires)
+        assert result is True
+        key, value = mock_redis.set.await_args.args[0], mock_redis.set.await_args.args[1]
+        assert key == f"{CacheService._ONLINE_USER_PREFIX}abc123"
+        assert json.loads(value) == info
+        assert mock_redis.set.await_args.kwargs["ex"] > 0
+
+    @pytest.mark.asyncio
+    async def test_set_online_user_no_redis(self):
+        """Redis 不可用时登记会话（降级放行）。"""
+        svc = CacheService()
+        result = await svc.set_online_user("abc123", {"username": "admin"}, self._expires)
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_set_online_user_redis_error(self):
+        """Redis 写入异常时返回 False（不抛异常）。"""
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock(side_effect=Exception("连接失败"))
+        svc = CacheService(redis_client=mock_redis)
+
+        result = await svc.set_online_user("abc123", {"username": "admin"}, self._expires)
+        assert result is False
+
+    # ── get_online_user ──
+
+    @pytest.mark.asyncio
+    async def test_get_online_user_hit(self):
+        """命中时返回会话信息字典。"""
+        mock_redis = MagicMock()
+        info = {"userId": "u1", "username": "admin"}
+        mock_redis.get = AsyncMock(return_value=json.dumps(info))
+        svc = CacheService(redis_client=mock_redis)
+
+        result = await svc.get_online_user("abc123")
+        assert result == info
+        mock_redis.get.assert_called_once_with(f"{CacheService._ONLINE_USER_PREFIX}abc123")
+
+    @pytest.mark.asyncio
+    async def test_get_online_user_miss(self):
+        """未命中时返回 None。"""
+        mock_redis = MagicMock()
+        mock_redis.get = AsyncMock(return_value=None)
+        svc = CacheService(redis_client=mock_redis)
+
+        assert await svc.get_online_user("abc123") is None
+
+    @pytest.mark.asyncio
+    async def test_get_online_user_no_redis(self):
+        """Redis 不可用时返回 None（降级）。"""
+        assert await CacheService().get_online_user("abc123") is None
+
+    # ── get_online_users ──
+
+    @pytest.mark.asyncio
+    async def test_get_online_users_returns_sessions_with_id(self):
+        """遍历 Redis 前缀返回会话列表，并追加 id=session_key。"""
+        mock_redis = MagicMock()
+        info = {"username": "admin", "system": "Windows"}
+        mock_redis.scan_iter = lambda match, count: _async_iter(
+            [f"{CacheService._ONLINE_USER_PREFIX}hash1", f"{CacheService._ONLINE_USER_PREFIX}hash2"]
+        )
+        mock_redis.get = AsyncMock(side_effect=[json.dumps(info), None])
+        svc = CacheService(redis_client=mock_redis)
+
+        result = await svc.get_online_users()
+        assert len(result) == 1
+        assert result[0]["id"] == "hash1"
+        assert result[0]["username"] == "admin"
+
+    @pytest.mark.asyncio
+    async def test_get_online_users_no_redis(self):
+        """Redis 不可用时返回空列表（降级）。"""
+        assert await CacheService().get_online_users() == []
+
+    @pytest.mark.asyncio
+    async def test_get_online_users_redis_error(self):
+        """遍历异常时降级返回空列表。"""
+        mock_redis = MagicMock()
+
+        def boom(match, count):
+            raise Exception("连接失败")
+
+        mock_redis.scan_iter = boom
+        svc = CacheService(redis_client=mock_redis)
+
+        assert await svc.get_online_users() == []
+
+    # ── delete_online_user ──
+
+    @pytest.mark.asyncio
+    async def test_delete_online_user_success(self):
+        """强制下线删除会话，Key 使用 online:user: 前缀。"""
+        mock_redis = MagicMock()
+        mock_redis.delete = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+
+        result = await svc.delete_online_user("abc123")
+        assert result is True
+        mock_redis.delete.assert_called_once_with(f"{CacheService._ONLINE_USER_PREFIX}abc123")
+
+    @pytest.mark.asyncio
+    async def test_delete_online_user_no_redis(self):
+        """Redis 不可用时删除会话（降级放行）。"""
+        assert await CacheService().delete_online_user("abc123") is True
+
+    # ── blacklist_token_hash ──
+
+    @pytest.mark.asyncio
+    async def test_blacklist_token_hash_uses_hash_as_key_suffix(self):
+        """黑名单 Key 直接拼接哈希后缀，不得二次哈希（与在线会话 Key 一致）。"""
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+
+        result = await svc.blacklist_token_hash("ABC123", self._expires)
+        assert result is True
+        key = mock_redis.set.await_args.args[0]
+        assert key == f"{CacheService._BLACKLIST_PREFIX}ABC123"
+
+    @pytest.mark.asyncio
+    async def test_blacklist_token_hash_matches_add_token_to_blacklist(self):
+        """add_token_to_blacklist 与 blacklist_token_hash 生成相同 Key。"""
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+        token = "some-jwt-token"
+
+        await svc.add_token_to_blacklist(token, self._expires)
+        key_from_add = mock_redis.set.await_args.args[0]
+
+        await svc.blacklist_token_hash(svc._token_hash(token), self._expires)
+        key_from_hash = mock_redis.set.await_args.args[0]
+        assert key_from_add == key_from_hash
+
+    @pytest.mark.asyncio
+    async def test_blacklist_token_hash_no_redis(self):
+        """Redis 不可用时加入黑名单（降级放行）。"""
+        assert await CacheService().blacklist_token_hash("ABC123", self._expires) is True
+
+    @pytest.mark.asyncio
+    async def test_blacklist_token_hash_expired(self):
+        """过期 Token 无需写入黑名单。"""
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+        expired = datetime.now(timezone.utc) - timedelta(minutes=1)
+
+        result = await svc.blacklist_token_hash("ABC123", expired)
+        assert result is True
+        mock_redis.set.assert_not_called()

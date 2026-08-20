@@ -1,9 +1,12 @@
 """监控应用服务工厂。"""
 
 import redis.asyncio as redis_async
+from fastapi import Depends
 from loguru import logger
 
+from src.api.dependencies.cache_service import get_cache_service
 from src.application.services.monitor_service import MonitorService
+from src.domain.services.cache_port import CachePort
 from src.infrastructure.cache.redis_manager import get_redis
 
 
@@ -16,6 +19,6 @@ async def get_redis_or_none() -> redis_async.Redis | None:
         return None
 
 
-def get_monitor_service() -> MonitorService:
-    """获取监控服务实例（无状态，无需数据库会话）。"""
-    return MonitorService()
+async def get_monitor_service(cache_service: CachePort = Depends(get_cache_service)) -> MonitorService:
+    """获取监控服务实例（注入缓存服务，用于在线用户会话查询与强制下线）。"""
+    return MonitorService(cache_service=cache_service)

@@ -79,6 +79,7 @@ Hello-FastApi/
 
 | 时间 | 修改人 | 主要修改内容 |
 |------|--------|-------------|
+| 2026-08-21 | Taowd | 全栈差异补齐：登录流程写入登录日志（sys_userloginlog）；在线会话 Redis 登记/查询/强退（`online:user:*`，TTL 与 access token 一致，Redis 不可用时降级）；monitor_router 以真实实现替换 stub；个人安全日志 mine-logs 真实化（按当前用户查询）；角色数据权限配置（1-全部/2-自定义/3-本部门/4-本部门及以下/5-仅本人，`POST /role/{id}/data-scope` 保存 dataScope + 重建 role_dept_link，前端角色表单单选组 + 数据权限抽屉含部门树勾选）。2143 tests passing，ruff/mypy/vue-tsc/eslint 全绿 |
 | 2026-06-07 | Taowd | 后端架构质量优化（Wave 3）：修复 UserRole 枚举冲突 (SUPERUSER 1→2)；删除 RoleRouter.assign_role_menu 层违规；删除未使用的 transaction.py / UnifiedResponse / PageResponse；提取 _build_update_values 通用助手；将 11 个 router 端点的 data:dict 改为强类型 Pydantic DTO（认证/IP/部门/字典/日志/监控/角色），入参校验提前到 422 响应；前端 /role/{id}/menu 端点 URL 同步为 /menus |
 | 2026-05-22 | Taowd | 后端架构改进（Wave 1-2 完成）：修复 CachePort DIP 违规；统一 Alembic-only 建表；UserModel IntEnumColumn 类型安全；API 层服务化；Settings 单例化；get_current_active_user 返回 UserEntity；补齐高频字段索引；MenuService 构造函数注入优化。1828 tests passing，覆盖率 93.48% |
 | 2026-05-05 20:52 | Taowd | 统一换行符为 LF；开发环境数据库切换为 SQLite；修复字典仓库查询方法；修复 Alembic 测试编码和空输出问题；修复前端操作日志缩进 |
