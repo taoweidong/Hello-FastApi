@@ -63,6 +63,24 @@ class DepartmentRepository(GenericRepository[Department, DepartmentEntity], Depa
             items = result.all()
         return [self._to_domain(m) for m in items]
 
+    async def get_child_dept_ids(self, dept_id: str) -> list[str]:
+        """获取指定部门的所有下级部门ID（不含自身，递归全部子孙）。"""
+        all_depts = await self.get_all()
+        # 构建父ID -> 子部门ID列表的映射
+        children_map: dict[str | None, list[str]] = {}
+        for dept in all_depts:
+            children_map.setdefault(dept.parent_id, []).append(dept.id)
+
+        # BFS 逐层展开所有子孙部门
+        child_ids: list[str] = []
+        queue = [dept_id]
+        while queue:
+            current = queue.pop(0)
+            for child in children_map.get(current, []):
+                child_ids.append(child)
+                queue.append(child)
+        return child_ids
+
     # ========== 覆盖基类方法（类型化参数）==========
 
     async def count(self, name: str | None = None, is_active: int | None = None) -> int:

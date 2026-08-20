@@ -1,4 +1,4 @@
-﻿"""用户领域实体的单元测试。
+"""用户领域实体的单元测试。
 
 测试 UserEntity 的所有状态查询属性、状态变更方法和工厂方法。
 """
@@ -152,11 +152,7 @@ class TestUserEntity:
     def test_create_superuser_entity(self):
         """测试 create_superuser_entity 工厂方法。"""
         user = UserEntity.create_superuser_entity(
-            username="admin",
-            hashed_password="hashed",
-            email="admin@example.com",
-            nickname="管理员",
-            mode_type=0,
+            username="admin", hashed_password="hashed", email="admin@example.com", nickname="管理员", mode_type=0
         )
         assert user.id is not None
         assert user.username == "admin"

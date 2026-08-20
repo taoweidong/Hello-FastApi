@@ -3,6 +3,7 @@
 import re
 from typing import TypeVar
 
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ValidationError
 
 T = TypeVar("T")
@@ -11,20 +12,20 @@ T = TypeVar("T")
 def validate_username(username: str) -> str:
     """验证用户名：3-50个字符，字母数字和下划线。"""
     if not re.match(r"^[a-zA-Z0-9_]{3,50}$", username):
-        raise ValidationError("用户名必须为 3-50 个字符，只允许字母数字和下划线")
+        raise ValidationError(EM.USERNAME_FORMAT_INVALID)
     return username
 
 
 def validate_password_strength(password: str) -> str:
     """验证密码强度。"""
     if len(password) < 8:
-        raise ValidationError("密码长度必须至少 8 个字符")
+        raise ValidationError(EM.PASSWORD_TOO_SHORT)
     if not re.search(r"[A-Z]", password):
-        raise ValidationError("密码必须包含至少一个大写字母")
+        raise ValidationError(EM.PASSWORD_REQUIRES_UPPERCASE)
     if not re.search(r"[a-z]", password):
-        raise ValidationError("密码必须包含至少一个小写字母")
+        raise ValidationError(EM.PASSWORD_REQUIRES_LOWERCASE)
     if not re.search(r"\d", password):
-        raise ValidationError("密码必须包含至少一个数字")
+        raise ValidationError(EM.PASSWORD_REQUIRES_DIGIT)
     return password
 
 

@@ -20,6 +20,7 @@ class TestSystemConfigRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.system_config_router import SystemConfigRouter
+
         _app.include_router(SystemConfigRouter().router, prefix="/api/system/config")
         return _app
 
@@ -38,8 +39,7 @@ class TestSystemConfigRouter:
             {"id": "c1", "key": "site_name", "value": '"Hello-FastApi"', "isActive": 1, "access": 0},
             {"id": "c2", "key": "site_desc", "value": '"A FastAPI project"', "isActive": 1, "access": 0},
         ]
-        svc.get_configs.return_value = (
-            [type("Config", (), {"model_dump": lambda self, c=c: c})() for c in configs], 2)
+        svc.get_configs.return_value = ([type("Config", (), {"model_dump": lambda self, c=c: c})() for c in configs], 2)
         _mock_create = MagicMock()
         _mock_create.model_dump.return_value = {"id": "c3", "key": "new_key", "value": '"new_val"'}
         _mock_get = MagicMock()
@@ -55,6 +55,7 @@ class TestSystemConfigRouter:
     @pytest.fixture
     def client(self, app, mock_user_entity, mock_config_service):
         from src.api.dependencies import get_current_active_user, get_system_config_service
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_system_config_service] = lambda: mock_config_service
         return TestClient(app, raise_server_exceptions=False)
@@ -70,9 +71,9 @@ class TestSystemConfigRouter:
         assert len(data["data"]["list"]) == 2
 
     def test_create_config_success(self, client):
-        resp = client.post("/api/system/config/create", json={
-            "key": "new_key", "value": '"new_val"', "isActive": 1,
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/config/create", json={"key": "new_key", "value": '"new_val"', "isActive": 1}, headers=self.auth
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 201
         assert resp.json()["message"] == "创建成功"

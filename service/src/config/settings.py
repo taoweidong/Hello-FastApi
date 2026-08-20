@@ -37,6 +37,14 @@ LOGS_DIR.mkdir(exist_ok=True)
 DOCS_DIR = BASE_DIR / "docs"
 DOCS_DIR.mkdir(exist_ok=True)
 
+# 上传目录（头像等静态资源，通过 /media 挂载对外提供）
+UPLOAD_DIR = BASE_DIR / "uploads"
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+# 头像存储子目录
+AVATAR_DIR = UPLOAD_DIR / "avatars"
+AVATAR_DIR.mkdir(exist_ok=True)
+
 
 class Settings(BaseSettings):
     """应用配置类，从环境变量和 .env 文件加载配置。"""
@@ -92,6 +100,7 @@ class Settings(BaseSettings):
     CACHE_USER_INFO_TTL: int = Field(default=300, ge=1)  # 5 分钟
     CACHE_MENU_ALL_TTL: int = Field(default=600, ge=1)  # 10 分钟
     CACHE_TOKEN_BLACKLIST_TTL: int = Field(default=86400, ge=1)  # 24 小时
+    CACHE_DICT_TTL: int = Field(default=3600, ge=1)  # 1 小时（字典数据缓存）
 
     @field_validator("LOG_LEVEL")
     @classmethod

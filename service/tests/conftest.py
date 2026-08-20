@@ -14,9 +14,25 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+# ── 测试环境禁用 Redis 真实连接 ─────────────────────────────────── #
+# 无 Redis 服务时每次连接尝试会超时数秒，严重拖慢集成测试。
+# 将 get_redis 替换为直接抛异常的替身，触发各调用点的降级逻辑（CacheService(None)），
+# 行为与 Redis 不可用时完全一致，但无需等待超时。
+import src.api.dependencies.cache_service as _cache_dep_module  # noqa: E402
+import src.api.dependencies.monitor_service as _monitor_dep_module  # noqa: E402
+import src.infrastructure.http.ip_filter_cache as _ip_filter_cache_module  # noqa: E402
 from src.infrastructure.database import get_db
 from src.infrastructure.lifecycle import empty_lifespan
 from src.main import create_app
+
+
+async def _redis_disabled():
+    raise RuntimeError("测试环境已禁用 Redis")
+
+
+_cache_dep_module.get_redis = _redis_disabled
+_ip_filter_cache_module.get_redis = _redis_disabled
+_monitor_dep_module.get_redis = _redis_disabled
 
 # ── 为每个 xdist worker 创建独立数据库 ────────────────────────────── #
 # xdist 每个 worker 是独立进程，无法共享 :memory: SQLite。
@@ -46,9 +62,7 @@ def _get_db_url_from_config(config) -> str:
 def pytest_configure(config):
     global test_engine
     url = _get_db_url_from_config(config)
-    test_engine = create_async_engine(
-        url, echo=False, connect_args={"check_same_thread": False}
-    )
+    test_engine = create_async_engine(url, echo=False, connect_args={"check_same_thread": False})
 
 
 @pytest.hookimpl(trylast=True)

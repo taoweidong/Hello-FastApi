@@ -84,6 +84,7 @@ function onFullscreen() {
     >
       <template #buttons>
         <el-button
+          v-auth="'dept:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
@@ -113,6 +114,7 @@ function onFullscreen() {
         >
           <template #operation="{ row }">
             <el-button
+              v-auth="'dept:edit'"
               class="reset-margin"
               link
               type="primary"
@@ -123,6 +125,7 @@ function onFullscreen() {
               修改
             </el-button>
             <el-button
+              v-auth="'dept:add'"
               class="reset-margin"
               link
               type="primary"
@@ -138,6 +141,7 @@ function onFullscreen() {
             >
               <template #reference>
                 <el-button
+                  v-auth="'dept:delete'"
                   class="reset-margin"
                   link
                   type="primary"

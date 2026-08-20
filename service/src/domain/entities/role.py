@@ -20,6 +20,7 @@ class RoleEntity:
         name: 角色名称
         code: 角色编码（唯一）
         is_active: 是否启用
+        data_scope: 数据权限范围（1全部/2自定义/3本部门/4本部门及以下/5仅本人）
         creator_id: 创建人ID
         modifier_id: 修改人ID
         created_time: 创建时间
@@ -31,6 +32,7 @@ class RoleEntity:
     name: str
     code: str
     is_active: int = 1
+    data_scope: int = 1
     creator_id: str | None = None
     modifier_id: str | None = None
     created_time: datetime | None = None
@@ -61,6 +63,7 @@ class RoleEntity:
         code: str | None = None,
         description: str | None = None,
         is_active: int | None = None,
+        data_scope: int | None = None,
     ) -> None:
         """有条件地更新角色信息。"""
         if name is not None:
@@ -71,10 +74,14 @@ class RoleEntity:
             self.description = description
         if is_active is not None:
             self.is_active = is_active
+        if data_scope is not None:
+            self.data_scope = data_scope
 
     # ---- 工厂方法 ----
 
     @classmethod
-    def create_new(cls, name: str, code: str, description: str | None = None) -> RoleEntity:
+    def create_new(cls, name: str, code: str, description: str | None = None, data_scope: int = 1) -> RoleEntity:
         """创建新角色实体的工厂方法。"""
-        return cls(id=uuid.uuid4().hex, name=name, code=code, description=description, is_active=1)
+        return cls(
+            id=uuid.uuid4().hex, name=name, code=code, description=description, is_active=1, data_scope=data_scope
+        )

@@ -14,12 +14,21 @@ from src.infrastructure.http.exception_handler_registry import register_exceptio
 
 def _make_log_entity(log_id: str, **kw):
     defaults = {
-        "id": log_id, "status": 1, "ipaddress": "127.0.0.1",
-        "browser": "Chrome", "system": "Windows", "agent": "",
-        "login_type": 0, "creator_id": "1",
+        "id": log_id,
+        "status": 1,
+        "ipaddress": "127.0.0.1",
+        "browser": "Chrome",
+        "system": "Windows",
+        "agent": "",
+        "login_type": 0,
+        "creator_id": "1",
         "created_time": datetime(2026, 1, 1),
-        "module": "auth", "path": "/login", "body": "{}",
-        "method": "POST", "response_code": 200, "response_result": "ok",
+        "module": "auth",
+        "path": "/login",
+        "body": "{}",
+        "method": "POST",
+        "response_code": 200,
+        "response_result": "ok",
         "status_code": 200,
     }
     defaults.update(kw)
@@ -35,6 +44,7 @@ class TestLogRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.log_router import LogRouter
+
         _app.include_router(LogRouter().router, prefix="/api/system")
         return _app
 
@@ -66,6 +76,7 @@ class TestLogRouter:
     @pytest.fixture
     def client(self, app, mock_user_entity, mock_log_service):
         from src.api.dependencies import get_current_active_user, get_log_service
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_log_service] = lambda: mock_log_service
         return TestClient(app, raise_server_exceptions=False)

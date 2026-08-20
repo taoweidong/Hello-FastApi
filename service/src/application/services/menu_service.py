@@ -7,6 +7,7 @@ from src.application.dto.menu_dto import MenuCreateDTO, MenuMetaDTO, MenuRespons
 from src.application.utils.menu_mapper import menu_dict_to_entity, menu_entity_to_dict
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.services.cache_port import CachePort
@@ -67,7 +68,7 @@ class MenuService:
         if parent_id:
             parent = await self.menu_repo.get_by_id(parent_id)
             if not parent:
-                raise NotFoundError("父菜单不存在")
+                raise NotFoundError(EM.PARENT_MENU_NOT_FOUND)
 
         # 创建MenuMeta
         meta_entity = MenuMetaEntity.create_new(
@@ -105,7 +106,7 @@ class MenuService:
         # 重新获取以加载meta关系
         loaded = await self.menu_repo.get_by_id(created_menu.id)
         if loaded is None:
-            raise NotFoundError("菜单创建后无法加载")
+            raise NotFoundError(EM.MENU_LOAD_FAILED)
         await self._invalidate_menu_cache()
         return self._to_response_dto(loaded)
 
@@ -113,17 +114,17 @@ class MenuService:
         """更新菜单（同时更新MenuMeta）。"""
         menu = await self.menu_repo.get_by_id(menu_id)
         if not menu:
-            raise NotFoundError("菜单不存在")
+            raise NotFoundError(EM.MENU_NOT_FOUND)
 
         # 检查循环引用
         if dto.parentId is not None:
             pid = dto.parentId
             if pid == menu_id:
-                raise ConflictError("不能将菜单设置为自己的子菜单")
+                raise ConflictError(EM.MENU_CIRCULAR_REFERENCE)
             if pid:
                 parent = await self.menu_repo.get_by_id(pid)
                 if not parent:
-                    raise NotFoundError("父菜单不存在")
+                    raise NotFoundError(EM.PARENT_MENU_NOT_FOUND)
                 menu.parent_id = pid
             else:
                 menu.parent_id = None
@@ -170,7 +171,7 @@ class MenuService:
         # 重新获取
         updated = await self.menu_repo.get_by_id(menu_id)
         if updated is None:
-            raise NotFoundError("菜单不存在")
+            raise NotFoundError(EM.MENU_NOT_FOUND)
         await self._invalidate_menu_cache()
         return self._to_response_dto(updated)
 
@@ -178,12 +179,12 @@ class MenuService:
         """删除菜单（同时删除关联的MenuMeta）。"""
         menu = await self.menu_repo.get_by_id(menu_id)
         if not menu:
-            raise NotFoundError("菜单不存在")
+            raise NotFoundError(EM.MENU_NOT_FOUND)
 
         # 检查子菜单
         children = await self.menu_repo.get_by_parent_id(menu_id)
         if children:
-            raise ConflictError("该菜单下有子菜单，请先删除子菜单")
+            raise ConflictError(EM.MENU_HAS_CHILDREN)
 
         # 删除关联的meta
         meta_id = menu.meta_id

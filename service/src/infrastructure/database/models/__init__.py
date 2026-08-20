@@ -9,11 +9,15 @@ from src.infrastructure.database.models.ip_rule import IPRule
 from src.infrastructure.database.models.login_log import LoginLog
 from src.infrastructure.database.models.menu import Menu
 from src.infrastructure.database.models.menu_meta import MenuMeta
+from src.infrastructure.database.models.notice import Notice
+from src.infrastructure.database.models.post import Post
 from src.infrastructure.database.models.role import Role
+from src.infrastructure.database.models.role_dept_link import RoleDeptLink
 from src.infrastructure.database.models.role_menu_link import RoleMenuLink
 from src.infrastructure.database.models.system_config import SystemConfig
 from src.infrastructure.database.models.system_log import SystemLog
 from src.infrastructure.database.models.user import User
+from src.infrastructure.database.models.user_post_link import UserPostLink
 from src.infrastructure.database.models.user_role import UserRole
 
 __all__ = [
@@ -23,10 +27,14 @@ __all__ = [
     "LoginLog",
     "Menu",
     "MenuMeta",
+    "Notice",
+    "Post",
     "Role",
+    "RoleDeptLink",
     "RoleMenuLink",
     "SystemConfig",
     "SystemLog",
     "User",
+    "UserPostLink",
     "UserRole",
 ]

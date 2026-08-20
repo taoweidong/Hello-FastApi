@@ -25,9 +25,7 @@ def _create_token_service() -> TokenService:
 
 def _create_user_service(session: AsyncSession) -> UserService:
     return UserService(
-        repo=UserRepository(session),
-        password_service=PasswordService(),
-        role_repo=RoleRepository(session),
+        repo=UserRepository(session), password_service=PasswordService(), role_repo=RoleRepository(session)
     )
 
 
@@ -36,17 +34,11 @@ async def _superuser_bearer(session: AsyncSession, username: str) -> str:
     service = _create_user_service(session)
     user = await service.create_superuser(
         UserCreateDTO(
-            username=username,
-            email=f"{username}@example.com",
-            password="TestPass123",
-            nickname=username,
-            isActive=True,
+            username=username, email=f"{username}@example.com", password="TestPass123", nickname=username, isActive=True
         )
     )
     await session.commit()
-    token = _create_token_service().create_access_token(
-        {"sub": user.id, "username": user.username}
-    )
+    token = _create_token_service().create_access_token({"sub": user.id, "username": user.username})
     return f"Bearer {token}"
 
 
@@ -105,12 +97,7 @@ class TestAuthEndpoints:
     async def test_register_success(self, client: AsyncClient):
         response = await client.post(
             "/api/system/register",
-            json={
-                "username": "newuser",
-                "password": "TestPass123",
-                "nickname": "新用户",
-                "email": "new@example.com",
-            },
+            json={"username": "newuser", "password": "TestPass123", "nickname": "新用户", "email": "new@example.com"},
         )
         assert response.status_code == 200
         result = response.json()
@@ -122,12 +109,7 @@ class TestAuthEndpoints:
     async def test_logout(self, client: AsyncClient, db_session: AsyncSession):
         service = _create_user_service(db_session)
         user = await service.create_user(
-            UserCreateDTO(
-                username="logoutuser",
-                email="logout@example.com",
-                password="TestPass123",
-                isActive=True,
-            )
+            UserCreateDTO(username="logoutuser", email="logout@example.com", password="TestPass123", isActive=True)
         )
         await db_session.commit()
 
@@ -141,18 +123,12 @@ class TestAuthEndpoints:
     async def test_refresh_token(self, client: AsyncClient, db_session: AsyncSession):
         service = _create_user_service(db_session)
         await service.create_user(
-            UserCreateDTO(
-                username="refreshuser",
-                email="refresh@example.com",
-                password="TestPass123",
-                isActive=True,
-            )
+            UserCreateDTO(username="refreshuser", email="refresh@example.com", password="TestPass123", isActive=True)
         )
         await db_session.commit()
 
         login_response = await client.post(
-            "/api/system/login",
-            json={"username": "refreshuser", "password": "TestPass123"},
+            "/api/system/login", json={"username": "refreshuser", "password": "TestPass123"}
         )
         login_data = login_response.json()["data"]
         refresh_token = login_data["refreshToken"]
@@ -210,9 +186,7 @@ class TestUserManagementEndpoints:
         await db_session.commit()
 
         response = await client.post(
-            "/api/system/user",
-            headers={"Authorization": auth},
-            json={"pageNum": 1, "pageSize": 10},
+            "/api/system/user", headers={"Authorization": auth}, json={"pageNum": 1, "pageSize": 10}
         )
         assert response.status_code == 200
         result = response.json()
@@ -316,9 +290,7 @@ class TestUserManagementEndpoints:
         )
         await db_session.commit()
 
-        token = _create_token_service().create_access_token(
-            {"sub": user.id, "username": user.username}
-        )
+        token = _create_token_service().create_access_token({"sub": user.id, "username": user.username})
 
         response = await client.post(
             "/api/system/user/change-password",
@@ -343,9 +315,7 @@ class TestUserManagementEndpoints:
         await db_session.commit()
 
         response = await client.put(
-            f"/api/system/user/{user.id}/status",
-            headers={"Authorization": auth},
-            json={"isActive": False},
+            f"/api/system/user/{user.id}/status", headers={"Authorization": auth}, json={"isActive": False}
         )
         assert response.status_code == 200
         assert response.json()["code"] == 0

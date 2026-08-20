@@ -1,11 +1,11 @@
-﻿"""领域枚举的单元测试。
+"""领域枚举的单元测试。
 
 测试 src.domain.enums 中的所有枚举类型。
 """
 
 import pytest
 
-from src.domain.enums import Gender, LoginStatus, MenuType, PermissionMode, UserStatus, UserRole
+from src.domain.enums import Gender, LoginStatus, MenuType, PermissionMode, UserRole, UserStatus
 
 
 @pytest.mark.unit
@@ -22,11 +22,11 @@ class TestUserStatus:
 
     def test_to_int_inactive(self):
         """测试 to_int 方法（INACTIVE）。"""
-        assert UserStatus.INACTIVE == int(0)
+        assert UserStatus.INACTIVE == 0
 
     def test_to_int_active(self):
         """测试 to_int 方法（ACTIVE）。"""
-        assert UserStatus.ACTIVE == int(1)
+        assert UserStatus.ACTIVE == 1
 
     def test_from_int_inactive(self):
         """测试 from_int 方法（0 -> INACTIVE）。"""

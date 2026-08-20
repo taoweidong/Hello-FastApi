@@ -86,6 +86,7 @@ const {
             >
               <template #reference>
                 <el-button
+                  v-auth="'monitor:manage'"
                   class="reset-margin"
                   link
                   type="primary"

@@ -22,6 +22,8 @@ import {
   getSystemLogsDetail
 } from "./system/log";
 import { systemConfigApi } from "./system/system_config";
+import { noticeApi } from "./system/notice";
+import { postApi } from "./system/post";
 
 // =============================================================================
 // 类型导出（向后兼容）
@@ -217,3 +219,60 @@ export const updateConfig = (id: string, data?: object) =>
 
 /** 删除系统配置 */
 export const deleteConfig = (id: string) => systemConfigApi.destroy(id);
+
+// =============================================================================
+// 通知公告管理 — 委托给 NoticeApi
+// =============================================================================
+
+/** 获取通知公告列表 */
+export const getNoticeList = (data?: object) => noticeApi.list(data);
+
+/** 创建通知公告 */
+export const createNotice = (data?: object) => noticeApi.create(data);
+
+/** 获取通知公告详情 */
+export const getNotice = (id: string) => noticeApi.retrieve(id);
+
+/** 更新通知公告 */
+export const updateNotice = (id: string, data?: object) =>
+  noticeApi.partialUpdate(id, data);
+
+/** 删除通知公告 */
+export const deleteNotice = (id: string) => noticeApi.destroy(id);
+
+/** 批量删除通知公告 */
+export const batchDeleteNotice = (data?: object) =>
+  noticeApi.batchDelete(data?.["ids"] ?? []);
+
+/** 获取最新启用公告（顶栏铃铛） */
+export const getLatestNotices = () => noticeApi.latest();
+
+// =============================================================================
+// 岗位管理 — 委托给 PostApi
+// =============================================================================
+
+/** 获取岗位列表 */
+export const getPostList = (data?: object) => postApi.list(data);
+
+/** 创建岗位 */
+export const createPost = (data?: object) => postApi.create(data);
+
+/** 获取岗位详情 */
+export const getPost = (id: string) => postApi.retrieve(id);
+
+/** 更新岗位 */
+export const updatePost = (id: string, data?: object) =>
+  postApi.partialUpdate(id, data);
+
+/** 删除岗位 */
+export const deletePost = (id: string) => postApi.destroy(id);
+
+/** 批量删除岗位 */
+export const batchDeletePost = (data?: object) =>
+  postApi.batchDelete(data?.["ids"] ?? []);
+
+/** 获取启用岗位下拉选项（用户表单岗位多选） */
+export const getPostOptions = () => postApi.options();
+
+/** 获取用户已分配的岗位 ID 列表 */
+export const getUserPostIds = (userId: string) => postApi.userPosts(userId);

@@ -31,13 +31,7 @@ class TestDictionaryCreateDTO:
     def test_valid_input_all_fields(self):
         """测试所有字段。"""
         dto = DictionaryCreateDTO(
-            name="gender",
-            label="性别",
-            value="1",
-            parentId="123",
-            sort=1,
-            isActive=0,
-            description="性别字典",
+            name="gender", label="性别", value="1", parentId="123", sort=1, isActive=0, description="性别字典"
         )
         assert dto.label == "性别"
         assert dto.value == "1"

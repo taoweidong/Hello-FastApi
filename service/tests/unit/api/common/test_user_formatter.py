@@ -11,11 +11,7 @@ class TestFormatUserListRow:
 
     def test_basic_formatting(self):
         """测试基本格式化应添加 dept 和空字符串占位。"""
-        user = {
-            "id": 1,
-            "username": "admin",
-            "dept_id": 10,
-        }
+        user = {"id": 1, "username": "admin", "dept_id": 10}
         result = format_user_list_row(user)
         assert result["id"] == 1
         assert result["username"] == "admin"

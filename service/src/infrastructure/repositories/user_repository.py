@@ -8,6 +8,9 @@
 
 from typing import Any
 
+from sqlalchemy import false as sa_false
+from sqlalchemy import func as sa_func
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.user import UserEntity
@@ -53,10 +56,22 @@ class UserRepository(GenericRepository[User, UserEntity], UserRepositoryInterfac
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> list[UserEntity]:
-        """获取用户列表（支持筛选和分页）。"""
+        """获取用户列表（支持筛选、分页及数据权限范围过滤）。"""
         filters = self._build_user_filters(username, phone, email, is_active, dept_id)
-        return await super().get_all(page_num, page_size, **filters)
+        stmt = select(User)
+        stmt = self._apply_filters(stmt, filters)
+        stmt = self._apply_scope_filters(stmt, scope_dept_ids, scope_user_id)
+        offset = (page_num - 1) * page_size
+        stmt = stmt.offset(offset).limit(page_size)
+        result = await self.session.exec(stmt)
+        try:
+            items = result.scalars().all()
+        except AttributeError:
+            items = result.all()
+        return [self._to_domain(m) for m in items]
 
     async def count(
         self,
@@ -65,10 +80,16 @@ class UserRepository(GenericRepository[User, UserEntity], UserRepositoryInterfac
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> int:
-        """获取用户总数（支持筛选）。"""
+        """获取用户总数（支持筛选与数据权限范围过滤）。"""
         filters = self._build_user_filters(username, phone, email, is_active, dept_id)
-        return await super().count(**filters)
+        stmt = select(sa_func.count()).select_from(User)
+        stmt = self._apply_filters(stmt, filters)
+        stmt = self._apply_scope_filters(stmt, scope_dept_ids, scope_user_id)
+        result = await self.session.exec(stmt)
+        return result.one()
 
     # ========== 批量操作 ==========
 
@@ -94,3 +115,20 @@ class UserRepository(GenericRepository[User, UserEntity], UserRepositoryInterfac
         if dept_id is not None:
             filters["dept_id"] = dept_id
         return filters
+
+    def _apply_scope_filters(self, stmt: Any, scope_dept_ids: list[str] | None, scope_user_id: str | None) -> Any:
+        """应用数据权限范围过滤条件。
+
+        Args:
+            stmt: 查询语句
+            scope_dept_ids: 可见部门ID列表（None 表示不限；空列表表示无可见数据）
+            scope_user_id: 仅本人可见时限定当前用户ID（优先级高于部门范围）
+        """
+        if scope_user_id is not None:
+            return stmt.where(User.id == scope_user_id)
+        if scope_dept_ids is not None:
+            if not scope_dept_ids:
+                # 空部门范围：强制无结果
+                return stmt.where(sa_false())
+            return stmt.where(User.dept_id.in_(scope_dept_ids))
+        return stmt

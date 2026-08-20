@@ -100,9 +100,7 @@ class TestRoleCrudFlow:
         rid = r.json()["data"]["id"]
 
         r = await flow_client.post(
-            f"/api/system/role/{rid}/menus",
-            headers=h,
-            json={"menuIds": [flow_seed.menu_root_id]},
+            f"/api/system/role/{rid}/menus", headers=h, json={"menuIds": [flow_seed.menu_root_id]}
         )
         assert r.status_code == 200
 

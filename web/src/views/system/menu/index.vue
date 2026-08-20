@@ -127,6 +127,7 @@ function onFullscreen() {
         >
           <template #buttons>
             <el-button
+              v-auth="'menu:add'"
               type="primary"
               :icon="useRenderIcon(AddFill)"
               @click="handleAddChild()"
@@ -155,6 +156,7 @@ function onFullscreen() {
             >
               <template #operation="{ row }">
                 <el-button
+                  v-auth="'menu:edit'"
                   class="reset-margin"
                   link
                   type="primary"
@@ -165,6 +167,7 @@ function onFullscreen() {
                   修改
                 </el-button>
                 <el-button
+                  v-auth="'menu:add'"
                   class="reset-margin"
                   link
                   type="primary"
@@ -180,6 +183,7 @@ function onFullscreen() {
                 >
                   <template #reference>
                     <el-button
+                      v-auth="'menu:delete'"
                       class="reset-margin"
                       link
                       type="primary"

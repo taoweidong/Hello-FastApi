@@ -1,4 +1,4 @@
-﻿"""令牌服务的单元测试。
+"""令牌服务的单元测试。
 
 测试 TokenService 的访问令牌和刷新令牌创建、验证和解码功能。
 """
@@ -22,10 +22,7 @@ class TestTokenService:
     def token_service(self):
         """创建令牌服务实例。"""
         return TokenService(
-            secret_key=TEST_SECRET_KEY,
-            algorithm=TEST_ALGORITHM,
-            access_expire_minutes=30,
-            refresh_expire_days=7,
+            secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=30, refresh_expire_days=7
         )
 
     # ---- 创建访问令牌测试 ----
@@ -130,10 +127,7 @@ class TestTokenService:
         token = token_service.create_access_token({"sub": "user-1"})
         # 使用不同密钥的服务解码
         other_service = TokenService(
-            secret_key="wrong-secret",
-            algorithm=TEST_ALGORITHM,
-            access_expire_minutes=30,
-            refresh_expire_days=7,
+            secret_key="wrong-secret", algorithm=TEST_ALGORITHM, access_expire_minutes=30, refresh_expire_days=7
         )
         payload = other_service.decode_token(token)
         assert payload is None

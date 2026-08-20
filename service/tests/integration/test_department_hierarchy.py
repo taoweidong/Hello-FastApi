@@ -36,6 +36,7 @@ class TestDepartmentHierarchy:
         )
         assert r.status_code == 200
         child_id = r.json()["data"]["id"]
+        assert child_id
 
         r = await flow_client.get("/api/system/dept/tree", headers=h)
         assert r.status_code == 200

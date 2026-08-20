@@ -72,6 +72,18 @@ class ConcreteRoleRepository(RoleRepositoryInterface):
     async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
         return {}
 
+    async def get_user_data_scope(self, user_id: str) -> int:
+        return 1
+
+    async def get_role_dept_ids(self, role_id: str) -> list[str]:
+        return []
+
+    async def get_user_custom_dept_ids(self, user_id: str) -> list[str]:
+        return []
+
+    async def assign_depts_to_role(self, role_id: str, dept_ids: list[str]) -> bool:
+        return True
+
 
 @pytest.mark.unit
 class TestRoleRepositoryInterface:
@@ -265,3 +277,39 @@ class TestRoleRepositoryInterface:
         repo = ConcreteRoleRepository()
         result = await repo.get_roles_menu_ids_batch(["role-1", "role-2"])
         assert isinstance(result, dict)
+
+    # ---- get_user_data_scope ----
+
+    @pytest.mark.asyncio
+    async def test_get_user_data_scope_returns_int(self):
+        """测试 get_user_data_scope 返回整数。"""
+        repo = ConcreteRoleRepository()
+        result = await repo.get_user_data_scope("user-1")
+        assert isinstance(result, int)
+
+    # ---- get_role_dept_ids ----
+
+    @pytest.mark.asyncio
+    async def test_get_role_dept_ids_returns_list(self):
+        """测试 get_role_dept_ids 返回部门ID列表。"""
+        repo = ConcreteRoleRepository()
+        result = await repo.get_role_dept_ids("role-1")
+        assert isinstance(result, list)
+
+    # ---- get_user_custom_dept_ids ----
+
+    @pytest.mark.asyncio
+    async def test_get_user_custom_dept_ids_returns_list(self):
+        """测试 get_user_custom_dept_ids 返回部门ID列表。"""
+        repo = ConcreteRoleRepository()
+        result = await repo.get_user_custom_dept_ids("user-1")
+        assert isinstance(result, list)
+
+    # ---- assign_depts_to_role ----
+
+    @pytest.mark.asyncio
+    async def test_assign_depts_to_role_returns_bool(self):
+        """测试 assign_depts_to_role 返回布尔值。"""
+        repo = ConcreteRoleRepository()
+        result = await repo.assign_depts_to_role("role-1", ["dept-1"])
+        assert isinstance(result, bool)

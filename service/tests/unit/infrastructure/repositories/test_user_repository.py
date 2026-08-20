@@ -230,8 +230,6 @@ class TestUserRepository:
         mock_result.one.return_value = 3
         mock_session.exec = AsyncMock(return_value=mock_result)
 
-        result = await repo.count(
-            username="admin", phone="138", email="admin@test.com", is_active=1, dept_id="dept-1"
-        )
+        result = await repo.count(username="admin", phone="138", email="admin@test.com", is_active=1, dept_id="dept-1")
 
         assert result == 3

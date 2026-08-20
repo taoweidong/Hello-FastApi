@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.domain.enums import UserRole as UserRoleEnum
 from src.domain.services.password_service import PasswordService
 from src.infrastructure.database.models import (
     Department,
@@ -83,7 +84,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
         password=pwd(out.super_password),
         nickname="流程超级管理员",
         is_active=True,
-        is_superuser=True,
+        is_superuser=UserRoleEnum.SUPERUSER,
     )
     user_op = User(
         username=out.operator_username,
@@ -91,7 +92,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
         password=pwd(out.operator_password),
         nickname="流程受限用户",
         is_active=True,
-        is_superuser=False,
+        is_superuser=UserRoleEnum.USER,
     )
     session.add(user_super)
     session.add(user_op)
@@ -118,7 +119,11 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     session.add(perm_meta)
     await session.flush()
 
-    menu_perm = Menu(name="user:view", menu_type=2, method="GET",         path="/api/system/user",
+    menu_perm = Menu(
+        name="user:view",
+        menu_type=2,
+        method="GET",
+        path="/api/system/user",
         is_active=True,
         parent_id=menu.id,
         meta_id=perm_meta.id,

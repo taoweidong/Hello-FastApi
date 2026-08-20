@@ -56,9 +56,7 @@ class TestBatchOperations:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/login-logs/batch-delete",
-            headers=h,
-            json={"ids": [flow_seed.login_log_id]},
+            "/api/system/login-logs/batch-delete", headers=h, json={"ids": [flow_seed.login_log_id]}
         )
         assert r.status_code == 200
 
@@ -66,9 +64,7 @@ class TestBatchOperations:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/operation-logs/batch-delete",
-            headers=h,
-            json={"ids": [flow_seed.system_log_id]},
+            "/api/system/operation-logs/batch-delete", headers=h, json={"ids": [flow_seed.system_log_id]}
         )
         assert r.status_code == 200
 
@@ -82,8 +78,6 @@ class TestBatchOperations:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/user/batch-delete",
-            headers=h,
-            json={"ids": ["nonexistent-id-1", "nonexistent-id-2"]},
+            "/api/system/user/batch-delete", headers=h, json={"ids": ["nonexistent-id-1", "nonexistent-id-2"]}
         )
         assert r.status_code == 200

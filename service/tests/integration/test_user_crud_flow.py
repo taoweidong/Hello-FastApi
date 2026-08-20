@@ -53,9 +53,7 @@ class TestUserCrudFlow:
         uid = r.json()["data"]["id"]
 
         r = await flow_client.put(
-            f"/api/system/user/{uid}",
-            headers=h,
-            json={"nickname": "新名", "description": "备注信息"},
+            f"/api/system/user/{uid}", headers=h, json={"nickname": "新名", "description": "备注信息"}
         )
         assert r.status_code == 200
         assert r.json()["data"]["nickname"] == "新名"
@@ -66,12 +64,7 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={
-                "username": "flow_delete_u",
-                "password": "FlowDel123!",
-                "email": "del@flow.test",
-                "isActive": True,
-            },
+            json={"username": "flow_delete_u", "password": "FlowDel123!", "email": "del@flow.test", "isActive": True},
         )
         uid = r.json()["data"]["id"]
 
@@ -88,12 +81,7 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={
-                "username": "flow_pwd_user",
-                "password": "OldPwd123!",
-                "email": "pwd@flow.test",
-                "isActive": True,
-            },
+            json={"username": "flow_pwd_user", "password": "OldPwd123!", "email": "pwd@flow.test", "isActive": True},
         )
         assert r.status_code == 201
 
@@ -126,7 +114,9 @@ class TestUserCrudFlow:
         r = await flow_client.put(f"/api/system/user/{uid}/status", headers=h, json={"isActive": False})
         assert r.status_code == 200
 
-        r = await flow_client.post("/api/system/login", json={"username": "flow_status_u", "password": "FlowStatus123!"})
+        r = await flow_client.post(
+            "/api/system/login", json={"username": "flow_status_u", "password": "FlowStatus123!"}
+        )
         assert r.status_code == 401
 
     async def test_reset_password(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
@@ -135,19 +125,12 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={
-                "username": "flow_reset_u",
-                "password": "Original123!",
-                "email": "reset@flow.test",
-                "isActive": True,
-            },
+            json={"username": "flow_reset_u", "password": "Original123!", "email": "reset@flow.test", "isActive": True},
         )
         uid = r.json()["data"]["id"]
 
         r = await flow_client.put(
-            f"/api/system/user/{uid}/reset-password",
-            headers=h,
-            json={"newPassword": "ResetNew123!"},
+            f"/api/system/user/{uid}/reset-password", headers=h, json={"newPassword": "ResetNew123!"}
         )
         assert r.status_code == 200
 

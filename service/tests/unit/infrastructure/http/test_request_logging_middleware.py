@@ -364,10 +364,6 @@ class TestWriteSystemLogAsync:
 
         with patch("asyncio.create_task") as mock_task:
             middleware._write_system_log_async(
-                request=request,
-                response=response,
-                client_ip="127.0.0.1",
-                body='{"name": "test"}',
-                duration_ms=50.0,
+                request=request, response=response, client_ip="127.0.0.1", body='{"name": "test"}', duration_ms=50.0
             )
         mock_task.assert_called_once()

@@ -19,6 +19,7 @@ class TestGetCacheService:
 
         service = await get_cache_service()
         from src.infrastructure.cache.cache_service import CacheService
+
         assert isinstance(service, CacheService)
         assert service._redis == mock_redis
 
@@ -31,5 +32,6 @@ class TestGetCacheService:
 
         service = await get_cache_service()
         from src.infrastructure.cache.cache_service import CacheService
+
         assert isinstance(service, CacheService)
         assert service._redis is None

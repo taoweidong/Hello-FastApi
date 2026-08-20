@@ -3,7 +3,6 @@
 测试 DepartmentRepositoryInterface 抽象基类的方法签名和返回类型。
 """
 
-
 import pytest
 
 from src.domain.entities.department import DepartmentEntity
@@ -29,6 +28,9 @@ class ConcreteDepartmentRepository(DepartmentRepositoryInterface):
         return None
 
     async def get_by_parent_id(self, parent_id: str | None) -> list[DepartmentEntity]:
+        return []
+
+    async def get_child_dept_ids(self, dept_id: str) -> list[str]:
         return []
 
     async def create(self, department: DepartmentEntity) -> DepartmentEntity:

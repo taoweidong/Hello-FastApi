@@ -4,6 +4,7 @@
 """
 
 from datetime import datetime
+from typing import Any
 
 import pytest
 
@@ -44,6 +45,15 @@ class ConcreteCachePort(CachePort):
         return True
 
     async def invalidate_all_menus(self) -> bool:
+        return True
+
+    async def get_dict_items(self, dict_name: str) -> list[dict[str, Any]] | None:
+        return None
+
+    async def set_dict_items(self, dict_name: str, items: list[dict[str, Any]]) -> bool:
+        return True
+
+    async def invalidate_dict(self, dict_name: str) -> bool:
         return True
 
 

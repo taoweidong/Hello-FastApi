@@ -9,6 +9,7 @@ import userAvatar from "@/assets/user.jpg";
 import { usePublicHooks, formatHigherDeptOptions } from "../../hooks";
 import { GenderChoices } from "../../constants";
 import { addDialog } from "@/components/ReDialog";
+import { useDict, dictLabel } from "@/composables/useDict";
 import type { PaginationProps } from "@pureadmin/table";
 import ReCropperPreview from "@/components/ReCropperPreview";
 import type { FormItemProps, RoleFormItemProps } from "../utils/types";
@@ -20,6 +21,7 @@ import {
 } from "@pureadmin/utils";
 import { userApi } from "@/api/system/user";
 import { deptApi } from "@/api/system/dept";
+import { postApi, type PostOption } from "@/api/system/post";
 import {
   ElForm,
   ElInput,
@@ -54,6 +56,8 @@ export function useUser(tableRef: Ref) {
   const { switchStyle } = usePublicHooks();
   const higherDeptOptions = ref();
   const selectedNum = ref(0);
+  /** 性别字典（后端字典取数，未命中时回退本地 GenderChoices） */
+  const dicts = useDict("sys_user_sex");
   const pagination = reactive<PaginationProps>({
     total: 0,
     pageSize: 10,
@@ -101,14 +105,19 @@ export function useUser(tableRef: Ref) {
       prop: "gender",
       minWidth: 90,
       cellRenderer: ({ row, props }) => {
-        const choice = GenderChoices.find(c => c.value === row.gender);
+        const options = dicts["sys_user_sex"].length
+          ? dicts["sys_user_sex"]
+          : GenderChoices.map(c => ({
+              label: c.label,
+              value: String(c.value)
+            }));
         return (
           <el-tag
             size={props.size}
             type={row.gender === 1 ? "danger" : null}
             effect="plain"
           >
-            {choice?.label ?? "未知"}
+            {dictLabel(options, row.gender, "未知")}
           </el-tag>
         );
       }
@@ -198,6 +207,8 @@ export function useUser(tableRef: Ref) {
   ];
   const curScore = ref();
   const roleOptions = ref([]);
+  /** 启用岗位下拉选项（用户表单岗位多选） */
+  const postOptions = ref<PostOption[]>([]);
 
   function onChange({ row, index }) {
     ElMessageBox.confirm(
@@ -340,7 +351,13 @@ export function useUser(tableRef: Ref) {
     onSearch();
   };
 
-  function openDialog(title = "新增", row?: FormItemProps) {
+  async function openDialog(title = "新增", row?: FormItemProps) {
+    // 编辑时回填用户已分配的岗位
+    let postIds: string[] = [];
+    if (row?.id) {
+      postIds =
+        (await postApi.userPosts(String(row.id)).catch(() => null))?.data ?? [];
+    }
     addDialog({
       title: `${title}用户`,
       props: {
@@ -355,6 +372,8 @@ export function useUser(tableRef: Ref) {
           email: row?.email ?? "",
           gender: row?.gender ?? "",
           isActive: row?.isActive ?? 1,
+          postOptions: postOptions.value ?? [],
+          postIds,
           description: row?.description ?? ""
         }
       },
@@ -380,6 +399,7 @@ export function useUser(tableRef: Ref) {
                 gender: curData.gender || null,
                 isActive: curData.isActive,
                 deptId: curData.parentId || null,
+                postIds: curData.postIds ?? [],
                 description: curData.description || null
               };
 
@@ -570,6 +590,8 @@ export function useUser(tableRef: Ref) {
     }
 
     roleOptions.value = (await userApi.getAllRoleList()).data ?? [];
+
+    postOptions.value = (await postApi.options().catch(() => null))?.data ?? [];
   });
 
   return {

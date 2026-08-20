@@ -124,12 +124,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_update_is_active_success(self, user_service, mock_user_repo):
         """测试更新用户活跃状态成功。"""
-        test_user = UserEntity(
-            id="test-id",
-            username="testuser",
-            password="hashed",
-            is_active=1,
-        )
+        test_user = UserEntity(id="test-id", username="testuser", password="hashed", is_active=1)
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
         mock_user_repo.update = AsyncMock(return_value=test_user)
 
@@ -367,12 +362,7 @@ class TestUserService:
         """测试创建超级用户时邮箱重复。"""
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(
-            return_value=UserEntity(
-                id="ex-id",
-                username="other",
-                password="hash",
-                email="dup@test.com",
-            )
+            return_value=UserEntity(id="ex-id", username="other", password="hash", email="dup@test.com")
         )
         dto = UserCreateDTO(username="newadmin", password="Admin123456", email="dup@test.com", isActive=True)
         with patch.object(user_service, "repo", mock_user_repo), pytest.raises(ConflictError):
@@ -400,6 +390,7 @@ class TestUserService:
     async def test_create_superuser_with_admin_role(self, user_service, mock_user_repo, mock_role_repo):
         """测试创建超级用户并存在 admin 角色时分配。"""
         from src.domain.entities.role import RoleEntity
+
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(return_value=None)
         created = UserEntity(id="su-id", username="superadmin", password="hashed", is_superuser=UserRole.SUPERUSER)
@@ -423,12 +414,7 @@ class TestUserService:
         """测试创建用户时邮箱重复。"""
         mock_user_repo.get_by_username = AsyncMock(return_value=None)
         mock_user_repo.get_by_email = AsyncMock(
-            return_value=UserEntity(
-                id="ex-id",
-                username="existing",
-                password="hash",
-                email="dup@test.com",
-            )
+            return_value=UserEntity(id="ex-id", username="existing", password="hash", email="dup@test.com")
         )
 
         dto = UserCreateDTO(username="newuser", password="Pass123456", email="dup@test.com", isActive=True)
@@ -486,6 +472,7 @@ class TestUserService:
     def test_to_response_with_roles_static(self, user_service):
         """测试 _to_response_with_roles 静态方法。"""
         from src.domain.entities.role import RoleEntity
+
         user = UserEntity(id="u1", username="testuser", password="hash", nickname="测试")
         roles = [RoleEntity(id="r1", name="管理员", code="admin"), RoleEntity(id="r2", name="用户", code="user")]
         result = user_service._to_response_with_roles(user, roles)
@@ -595,9 +582,7 @@ class TestUserServiceGetUserInfoWithCache:
         return AsyncMock()
 
     @pytest.fixture
-    def user_service_cached(
-        self, mock_user_repo, mock_password_service, mock_role_repo, mock_cache
-    ):
+    def user_service_cached(self, mock_user_repo, mock_password_service, mock_role_repo, mock_cache):
         return UserService(
             repo=mock_user_repo,
             password_service=mock_password_service,
@@ -608,10 +593,7 @@ class TestUserServiceGetUserInfoWithCache:
     @pytest.fixture
     def user_service_no_cache(self, mock_user_repo, mock_password_service, mock_role_repo):
         return UserService(
-            repo=mock_user_repo,
-            password_service=mock_password_service,
-            role_repo=mock_role_repo,
-            cache_service=None,
+            repo=mock_user_repo, password_service=mock_password_service, role_repo=mock_role_repo, cache_service=None
         )
 
     @pytest.mark.asyncio
@@ -645,9 +627,11 @@ class TestUserServiceGetUserInfoWithCache:
         }
         mock_cache.get_user_info = AsyncMock(return_value=cached_info)
 
-        with patch.object(user_service_cached, "cache_service", mock_cache):
-            with pytest.raises(UnauthorizedError) as exc_info:
-                await user_service_cached.get_user_info_with_cache("u1")
+        with (
+            patch.object(user_service_cached, "cache_service", mock_cache),
+            pytest.raises(UnauthorizedError) as exc_info,
+        ):
+            await user_service_cached.get_user_info_with_cache("u1")
         assert "禁用" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -682,36 +666,32 @@ class TestUserServiceGetUserInfoWithCache:
         with (
             patch.object(user_service_cached, "cache_service", mock_cache),
             patch.object(user_service_cached, "repo", mock_user_repo),
+            pytest.raises(UnauthorizedError) as exc_info,
         ):
-            with pytest.raises(UnauthorizedError) as exc_info:
-                await user_service_cached.get_user_info_with_cache("u1")
+            await user_service_cached.get_user_info_with_cache("u1")
         assert "不存在" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_cache_miss_db_hit_inactive(self, user_service_cached, mock_cache, mock_user_repo):
         """L260-261：缓存未命中 + DB命中 + 不活跃 → 抛 UnauthorizedError。"""
         mock_cache.get_user_info = AsyncMock(return_value=None)
-        test_user = UserEntity.create_new(
-            username="disabled_user", hashed_password="hashed", is_active=0
-        )
+        test_user = UserEntity.create_new(username="disabled_user", hashed_password="hashed", is_active=0)
         test_user.id = "u1"
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
 
         with (
             patch.object(user_service_cached, "cache_service", mock_cache),
             patch.object(user_service_cached, "repo", mock_user_repo),
+            pytest.raises(UnauthorizedError) as exc_info,
         ):
-            with pytest.raises(UnauthorizedError) as exc_info:
-                await user_service_cached.get_user_info_with_cache("u1")
+            await user_service_cached.get_user_info_with_cache("u1")
         assert "禁用" in str(exc_info.value)
         mock_cache.set_user_info.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_no_cache_skip_cache_db_hit(self, user_service_no_cache, mock_user_repo):
         """L243/L270：无 cache_service → 跳过缓存，直接查 DB。"""
-        test_user = UserEntity.create_new(
-            username="nocache_user", hashed_password="hashed", is_active=1
-        )
+        test_user = UserEntity.create_new(username="nocache_user", hashed_password="hashed", is_active=1)
         test_user.id = "u1"
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
 
@@ -745,9 +725,7 @@ class TestUserServiceCheckPermissionCachedOrDb:
         return AsyncMock()
 
     @pytest.fixture
-    def user_service_cached(
-        self, mock_user_repo, mock_password_service, mock_role_repo, mock_cache
-    ):
+    def user_service_cached(self, mock_user_repo, mock_password_service, mock_role_repo, mock_cache):
         return UserService(
             repo=mock_user_repo,
             password_service=mock_password_service,
@@ -758,18 +736,13 @@ class TestUserServiceCheckPermissionCachedOrDb:
     @pytest.fixture
     def user_service_no_cache(self, mock_user_repo, mock_password_service, mock_role_repo):
         return UserService(
-            repo=mock_user_repo,
-            password_service=mock_password_service,
-            role_repo=mock_role_repo,
-            cache_service=None,
+            repo=mock_user_repo, password_service=mock_password_service, role_repo=mock_role_repo, cache_service=None
         )
 
     @pytest.mark.asyncio
     async def test_superuser_fastpath(self, user_service_cached, mock_cache):
         """L281-284：超级用户快捷路径 → 返回 SUPERUSER 实体。"""
-        result = await user_service_cached.check_permission_cached_or_db(
-            "u1", UserRole.SUPERUSER, "some:permission"
-        )
+        result = await user_service_cached.check_permission_cached_or_db("u1", UserRole.SUPERUSER, "some:permission")
         assert result.is_superuser == UserRole.SUPERUSER
         assert result.id == "u1"
 
@@ -777,43 +750,32 @@ class TestUserServiceCheckPermissionCachedOrDb:
     async def test_cache_hit_permission_found(self, user_service_cached, mock_cache):
         """L286-293：缓存命中 + 权限存在 → 返回 USER 实体。"""
         mock_cache.get_user_permissions = AsyncMock(
-            return_value=[
-                {"type": "permission", "name": "user:add"},
-                {"type": "permission", "name": "user:delete"},
-            ]
+            return_value=[{"type": "permission", "name": "user:add"}, {"type": "permission", "name": "user:delete"}]
         )
 
         with patch.object(user_service_cached, "cache_service", mock_cache):
-            result = await user_service_cached.check_permission_cached_or_db(
-                "u1", UserRole.USER, "user:add"
-            )
+            result = await user_service_cached.check_permission_cached_or_db("u1", UserRole.USER, "user:add")
 
         assert result.is_superuser == UserRole.USER
 
     @pytest.mark.asyncio
     async def test_cache_hit_permission_not_found(self, user_service_cached, mock_cache):
         """L294：缓存命中 + 权限不存在 → 抛 ForbiddenError。"""
-        mock_cache.get_user_permissions = AsyncMock(
-            return_value=[
-                {"type": "permission", "name": "user:view"},
-            ]
-        )
+        mock_cache.get_user_permissions = AsyncMock(return_value=[{"type": "permission", "name": "user:view"}])
 
-        with patch.object(user_service_cached, "cache_service", mock_cache):
-            with pytest.raises(ForbiddenError) as exc_info:
-                await user_service_cached.check_permission_cached_or_db(
-                    "u1", UserRole.USER, "user:delete"
-                )
+        with patch.object(user_service_cached, "cache_service", mock_cache), pytest.raises(ForbiddenError) as exc_info:
+            await user_service_cached.check_permission_cached_or_db("u1", UserRole.USER, "user:delete")
         assert "必需" in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_cache_miss_db_permission_found(self, user_service_cached, mock_user_repo, mock_role_repo, mock_cache):
+    async def test_cache_miss_db_permission_found(
+        self, user_service_cached, mock_user_repo, mock_role_repo, mock_cache
+    ):
         """L296-312：缓存未命中 + DB 查菜单 + 权限存在 → 写缓存 + 返回 USER。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
 
         perm_menu = MenuEntity(
-            id="m1", menu_type=MenuEntity.PERMISSION, name="user:add",
-            rank=1, path=None, method=None
+            id="m1", menu_type=MenuEntity.PERMISSION, name="user:add", rank=1, path=None, method=None
         )
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=[perm_menu])
 
@@ -821,9 +783,7 @@ class TestUserServiceCheckPermissionCachedOrDb:
             patch.object(user_service_cached, "cache_service", mock_cache),
             patch.object(user_service_cached, "role_repo", mock_role_repo),
         ):
-            result = await user_service_cached.check_permission_cached_or_db(
-                "u1", UserRole.USER, "user:add"
-            )
+            result = await user_service_cached.check_permission_cached_or_db("u1", UserRole.USER, "user:add")
 
         assert result.is_superuser == UserRole.USER
         mock_cache.set_user_permissions.assert_called_once()
@@ -833,34 +793,28 @@ class TestUserServiceCheckPermissionCachedOrDb:
         """L314：缓存未命中 + DB 查菜单 + 无权限 → 抛 ForbiddenError。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
         view_menu = MenuEntity(
-            id="m1", menu_type=MenuEntity.PERMISSION, name="user:view",
-            rank=1, path=None, method=None
+            id="m1", menu_type=MenuEntity.PERMISSION, name="user:view", rank=1, path=None, method=None
         )
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=[view_menu])
 
         with (
             patch.object(user_service_cached, "cache_service", mock_cache),
             patch.object(user_service_cached, "role_repo", mock_role_repo),
+            pytest.raises(ForbiddenError) as exc_info,
         ):
-            with pytest.raises(ForbiddenError) as exc_info:
-                await user_service_cached.check_permission_cached_or_db(
-                    "u1", UserRole.USER, "user:delete"
-                )
+            await user_service_cached.check_permission_cached_or_db("u1", UserRole.USER, "user:delete")
         assert "必需" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_no_cache_skip_and_db_hit(self, user_service_no_cache, mock_role_repo):
         """L296 + L306：无 cache_service → 查 DB 权限并成功返回。"""
         perm_menu = MenuEntity(
-            id="m1", menu_type=MenuEntity.PERMISSION, name="system:config",
-            rank=1, path=None, method=None
+            id="m1", menu_type=MenuEntity.PERMISSION, name="system:config", rank=1, path=None, method=None
         )
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=[perm_menu])
 
         with patch.object(user_service_no_cache, "role_repo", mock_role_repo):
-            result = await user_service_no_cache.check_permission_cached_or_db(
-                "u1", UserRole.USER, "system:config"
-            )
+            result = await user_service_no_cache.check_permission_cached_or_db("u1", UserRole.USER, "system:config")
 
         assert result.is_superuser == UserRole.USER
 
@@ -889,9 +843,7 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
         return AsyncMock()
 
     @pytest.fixture
-    def user_service_cached(
-        self, mock_user_repo, mock_password_service, mock_role_repo, mock_cache
-    ):
+    def user_service_cached(self, mock_user_repo, mock_password_service, mock_role_repo, mock_cache):
         return UserService(
             repo=mock_user_repo,
             password_service=mock_password_service,
@@ -902,10 +854,7 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
     @pytest.fixture
     def user_service_no_cache(self, mock_user_repo, mock_password_service, mock_role_repo):
         return UserService(
-            repo=mock_user_repo,
-            password_service=mock_password_service,
-            role_repo=mock_role_repo,
-            cache_service=None,
+            repo=mock_user_repo, password_service=mock_password_service, role_repo=mock_role_repo, cache_service=None
         )
 
     @pytest.mark.asyncio
@@ -938,16 +887,11 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
     async def test_cache_hit_api_perm_not_found(self, user_service_cached, mock_cache):
         """L336：缓存命中 + 无匹配 API 权限 → 抛 ForbiddenError。"""
         mock_cache.get_user_permissions = AsyncMock(
-            return_value=[
-                {"type": "api", "path": "/api/users", "method": "GET", "name": "user:list"},
-            ]
+            return_value=[{"type": "api", "path": "/api/users", "method": "GET", "name": "user:list"}]
         )
 
-        with patch.object(user_service_cached, "cache_service", mock_cache):
-            with pytest.raises(ForbiddenError) as exc_info:
-                await user_service_cached.check_api_permission_cached_or_db(
-                    "u1", UserRole.USER, "/api/users", "DELETE"
-                )
+        with patch.object(user_service_cached, "cache_service", mock_cache), pytest.raises(ForbiddenError) as exc_info:
+            await user_service_cached.check_api_permission_cached_or_db("u1", UserRole.USER, "/api/users", "DELETE")
         assert "必需" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -956,8 +900,7 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
 
         api_menu = MenuEntity(
-            id="m1", menu_type=MenuEntity.PERMISSION, name="user:list",
-            rank=1, path="/api/users", method="GET"
+            id="m1", menu_type=MenuEntity.PERMISSION, name="user:list", rank=1, path="/api/users", method="GET"
         )
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=[api_menu])
 
@@ -980,27 +923,23 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
         """L359：缓存未命中 + DB 查菜单 + 不匹配 → 抛 ForbiddenError。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
         api_menu = MenuEntity(
-            id="m1", menu_type=MenuEntity.PERMISSION, name="user:list",
-            rank=1, path="/api/users", method="GET"
+            id="m1", menu_type=MenuEntity.PERMISSION, name="user:list", rank=1, path="/api/users", method="GET"
         )
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=[api_menu])
 
         with (
             patch.object(user_service_cached, "cache_service", mock_cache),
             patch.object(user_service_cached, "role_repo", mock_role_repo),
+            pytest.raises(ForbiddenError) as exc_info,
         ):
-            with pytest.raises(ForbiddenError) as exc_info:
-                await user_service_cached.check_api_permission_cached_or_db(
-                    "u1", UserRole.USER, "/api/users", "DELETE"
-                )
+            await user_service_cached.check_api_permission_cached_or_db("u1", UserRole.USER, "/api/users", "DELETE")
         assert "必需" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_no_cache_skip_and_db_hit(self, user_service_no_cache, mock_role_repo):
         """L338 + L351：无 cache_service → 查 DB 权限并成功返回。"""
         api_menu = MenuEntity(
-            id="m1", menu_type=MenuEntity.PERMISSION, name="system:list",
-            rank=1, path="/api/system", method="GET"
+            id="m1", menu_type=MenuEntity.PERMISSION, name="system:list", rank=1, path="/api/system", method="GET"
         )
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=[api_menu])
 
@@ -1016,19 +955,16 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
         """L343-349：缓存未命中 + DB 菜单无 path/method → fallback permission entry。"""
         mock_cache.get_user_permissions = AsyncMock(return_value=None)
         perm_menu = MenuEntity(
-            id="m1", menu_type=MenuEntity.PERMISSION, name="user:view",
-            rank=1, path=None, method=None
+            id="m1", menu_type=MenuEntity.PERMISSION, name="user:view", rank=1, path=None, method=None
         )
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=[perm_menu])
 
         with (
             patch.object(user_service_cached, "cache_service", mock_cache),
             patch.object(user_service_cached, "role_repo", mock_role_repo),
+            pytest.raises(ForbiddenError),
         ):
-            with pytest.raises(ForbiddenError):
-                await user_service_cached.check_api_permission_cached_or_db(
-                    "u1", UserRole.USER, "/api/users", "GET"
-                )
+            await user_service_cached.check_api_permission_cached_or_db("u1", UserRole.USER, "/api/users", "GET")
 
 
 @pytest.mark.unit

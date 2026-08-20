@@ -45,8 +45,15 @@ class UserRepositoryInterface(ABC):
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> list[UserEntity]:
-        """获取用户列表（分页与筛选）。"""
+        """获取用户列表（分页与筛选）。
+
+        Args:
+            scope_dept_ids: 数据权限部门范围（None 表示不限；空列表表示无可见数据）
+            scope_user_id: 仅本人数据权限时限定当前用户ID
+        """
         ...
 
     @abstractmethod
@@ -72,8 +79,10 @@ class UserRepositoryInterface(ABC):
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> int:
-        """统计用户数（支持筛选）。"""
+        """统计用户数（支持筛选与数据权限范围）。"""
         ...
 
     @abstractmethod

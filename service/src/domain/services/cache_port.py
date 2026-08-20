@@ -120,6 +120,38 @@ class CachePort(ABC):
         """使菜单全量缓存失效。"""
         ...
 
+    # ---- 字典数据缓存 ----
+
+    @abstractmethod
+    async def get_dict_items(self, dict_name: str) -> list[dict[str, Any]] | None:
+        """从缓存获取字典项列表。
+
+        Args:
+            dict_name: 字典类型名称
+
+        Returns:
+            字典项列表（缓存命中时），None 表示缓存未命中或存储不可用
+        """
+        ...
+
+    @abstractmethod
+    async def set_dict_items(self, dict_name: str, items: list[dict[str, Any]]) -> bool:
+        """将字典项列表写入缓存。
+
+        Args:
+            dict_name: 字典类型名称
+            items: 字典项列表
+
+        Returns:
+            是否成功写入缓存
+        """
+        ...
+
+    @abstractmethod
+    async def invalidate_dict(self, dict_name: str) -> bool:
+        """使指定字典类型的数据缓存失效。"""
+        ...
+
 
 class IPFilterPort(ABC):
     """IP 过滤缓存服务的抽象端口。

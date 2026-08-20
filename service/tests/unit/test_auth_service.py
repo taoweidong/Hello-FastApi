@@ -10,10 +10,10 @@ from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
-from src.domain.enums import UserRole
 
 TEST_SECRET_KEY = "test-secret-key-for-auth-testing"
 TEST_ALGORITHM = "HS256"
@@ -38,10 +38,7 @@ class TestAuthService:
     @pytest.fixture
     def token_service(self):
         return TokenService(
-            secret_key=TEST_SECRET_KEY,
-            algorithm=TEST_ALGORITHM,
-            access_expire_minutes=30,
-            refresh_expire_days=7,
+            secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=30, refresh_expire_days=7
         )
 
     @pytest.fixture
@@ -57,13 +54,7 @@ class TestAuthService:
 
     @pytest.fixture
     def auth_service(
-        self,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        token_service,
-        mock_password_service,
-        mock_cache_service,
+        self, mock_user_repo, mock_role_repo, mock_menu_repo, token_service, mock_password_service, mock_cache_service
     ):
         return AuthService(
             user_repo=mock_user_repo,
@@ -78,12 +69,7 @@ class TestAuthService:
     async def test_login_success(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo):
         """测试登录成功。"""
         user = UserEntity(
-            id="user-1",
-            username="testuser",
-            password="hashed",
-            is_active=1,
-            nickname="测试",
-            avatar="a.png",
+            id="user-1", username="testuser", password="hashed", is_active=1, nickname="测试", avatar="a.png"
         )
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         mock_role_repo.get_user_roles = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
@@ -133,21 +119,10 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_login_superuser(
-        self,
-        auth_service,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        mock_cache_service,
+        self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service
     ):
         """测试超级用户登录。"""
-        user = UserEntity(
-            id="su-1",
-            username="admin",
-            password="hashed",
-            is_active=1,
-            is_superuser=UserRole.SUPERUSER,
-        )
+        user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=UserRole.SUPERUSER)
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         # get_all 返回 list[RoleEntity]
         mock_role_repo.get_all = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
@@ -176,11 +151,7 @@ class TestAuthService:
         mock_user_repo.create = AsyncMock(return_value=created)
 
         dto = RegisterDTO(
-            username="newuser",
-            password="TestPass123",
-            nickname="新用户",
-            email="new@test.com",
-            phone="123456",
+            username="newuser", password="TestPass123", nickname="新用户", email="new@test.com", phone="123456"
         )
         result = await auth_service.register(dto)
 
@@ -246,12 +217,7 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_logout_without_cache(
-        self,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        token_service,
-        mock_password_service,
+        self, mock_user_repo, mock_role_repo, mock_menu_repo, token_service, mock_password_service
     ):
         """测试登出（无缓存服务）。"""
         service = AuthService(
@@ -295,23 +261,8 @@ class TestAuthService:
         meta1 = MenuMetaEntity(id="m1", title="根菜单", icon="home")
         meta2 = MenuMetaEntity(id="m2", title="子菜单", icon="user")
         menus = [
-            MenuEntity(
-                id="1",
-                name="root",
-                menu_type=0,
-                path="/root",
-                rank=1,
-                meta=meta1,
-            ),
-            MenuEntity(
-                id="2",
-                name="child",
-                menu_type=1,
-                path="/child",
-                rank=2,
-                parent_id="1",
-                meta=meta2,
-            ),
+            MenuEntity(id="1", name="root", menu_type=0, path="/root", rank=1, meta=meta1),
+            MenuEntity(id="2", name="child", menu_type=1, path="/child", rank=2, parent_id="1", meta=meta2),
         ]
         tree = auth_service._build_route_tree(menus)
         assert len(tree) == 1
@@ -379,10 +330,7 @@ class TestAuthService:
 
         # Create a token with zero expiry to avoid 'exp' claim
         minimal_service = TokenService(
-            secret_key=TEST_SECRET_KEY,
-            algorithm=TEST_ALGORITHM,
-            access_expire_minutes=0,
-            refresh_expire_days=0,
+            secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=0, refresh_expire_days=0
         )
         token = minimal_service.create_access_token({"sub": "user-1"})
         # token has no 'exp' -> should return True without calling cache
@@ -392,27 +340,13 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_get_async_routes_user(
-        self,
-        auth_service,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        mock_cache_service,
+        self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service
     ):
         """测试普通用户获取动态路由。"""
         user = UserEntity(id="u1", username="testuser", password="hash", is_active=1)
         mock_user_repo.get_by_id = AsyncMock(return_value=user)
         meta = MenuMetaEntity(id="m1", title="首页", is_show_menu=1, is_keepalive=1)
-        menus = [
-            MenuEntity(
-                id="1",
-                name="home",
-                menu_type=0,
-                path="/home",
-                rank=0,
-                meta=meta,
-            )
-        ]
+        menus = [MenuEntity(id="1", name="home", menu_type=0, path="/home", rank=0, meta=meta)]
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=menus)
 
         routes = await auth_service.get_async_routes("u1")
@@ -557,6 +491,7 @@ class TestAuthService:
     async def test_refresh_token_no_sub_claim(self, auth_service, mock_user_repo, token_service):
         """测试刷新令牌时 payload 缺少 sub。"""
         from jose import jwt as pyjwt
+
         # Forge a refresh token with no "sub" claim but valid structure
         forged = pyjwt.encode({"type": "refresh", "exp": 9999999999}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
         with pytest.raises(UnauthorizedError):
@@ -566,6 +501,7 @@ class TestAuthService:
     async def test_logout_token_no_exp_claim(self, auth_service, mock_cache_service, token_service):
         """测试登出时 token 无 exp 声明。"""
         from jose import jwt as pyjwt
+
         forged = pyjwt.encode({"sub": "user-1", "type": "access"}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
         result = await auth_service.logout(forged)
         assert result is True
@@ -581,12 +517,7 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_login_superuser_cached_menus(
-        self,
-        auth_service,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        mock_cache_service,
+        self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service
     ):
         """测试超级用户登录时菜单从缓存读取。"""
         user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=UserRole.SUPERUSER)

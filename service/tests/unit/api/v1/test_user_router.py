@@ -20,6 +20,7 @@ class TestUserRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.user_router import UserRouter
+
         _app.include_router(UserRouter().router, prefix="/api/system/user")
         return _app
 
@@ -69,6 +70,7 @@ class TestUserRouter:
     @pytest.fixture
     def client(self, app, mock_user_entity, mock_user_service):
         from src.api.dependencies import get_current_active_user, get_current_user_id, get_user_service
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_current_user_id] = lambda: "1"
         app.dependency_overrides[get_user_service] = lambda: mock_user_service
@@ -84,9 +86,11 @@ class TestUserRouter:
         assert len(data["data"]["list"]) == 1
 
     def test_create_user_success(self, client):
-        resp = client.post("/api/system/user/create", json={
-            "username": "newuser", "password": "Pass1234", "isActive": 1,
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/user/create",
+            json={"username": "newuser", "password": "Pass1234", "isActive": 1},
+            headers=self.auth,
+        )
         assert resp.status_code == 201
         assert resp.json()["message"] == "创建成功"
 
@@ -130,15 +134,17 @@ class TestUserRouter:
         assert resp.json()["message"] == "状态更新成功"
 
     def test_change_password(self, client):
-        resp = client.post("/api/system/user/change-password", json={
-            "oldPassword": "old123", "newPassword": "NewPass123",
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/user/change-password",
+            json={"oldPassword": "old123", "newPassword": "NewPass123"},
+            headers=self.auth,
+        )
         assert resp.status_code == 200
         assert resp.json()["message"] == "密码修改成功"
 
     def test_assign_role(self, client):
-        resp = client.post("/api/system/user/assign-role", json={
-            "userId": "1", "roleIds": ["r1", "r2"],
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/user/assign-role", json={"userId": "1", "roleIds": ["r1", "r2"]}, headers=self.auth
+        )
         assert resp.status_code == 200
         assert resp.json()["message"] == "角色分配成功"

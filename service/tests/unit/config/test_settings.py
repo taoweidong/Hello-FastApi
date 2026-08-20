@@ -25,14 +25,9 @@ class TestSettings:
     def test_cors_origins_list_property(self):
         """测试 cors_origins_list 属性。"""
         settings = Settings(
-            _env_file=None,
-            CORS_ORIGINS="http://localhost:3000,http://localhost:8080",
-            APP_ENV="development",
+            _env_file=None, CORS_ORIGINS="http://localhost:3000,http://localhost:8080", APP_ENV="development"
         )
-        assert settings.cors_origins_list == [
-            "http://localhost:3000",
-            "http://localhost:8080",
-        ]
+        assert settings.cors_origins_list == ["http://localhost:3000", "http://localhost:8080"]
 
     def test_cors_origins_list_empty(self):
         """测试空的 CORS 源列表。"""
@@ -134,12 +129,7 @@ def test_development_overrides():
 
 def test_production_overrides():
     """验证生产环境覆盖逻辑。"""
-    settings = Settings(
-        _env_file=None,
-        APP_ENV="production",
-        DEBUG=False,
-        LOG_LEVEL="WARNING",
-    )
+    settings = Settings(_env_file=None, APP_ENV="production", DEBUG=False, LOG_LEVEL="WARNING")
     assert settings.DEBUG is False
     assert settings.LOG_LEVEL == "WARNING"
 
@@ -181,7 +171,7 @@ class TestGetSettings:
         assert settings.DEBUG is False
         assert settings.LOG_LEVEL == "WARNING"
 
-    def test_all_envs_return_Settings(self):
+    def test_all_envs_return_settings(self):
         """验证所有环境调用都返回 Settings 实例。"""
         for env in ("development", "production", "testing"):
             result = get_settings(env=env)

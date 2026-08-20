@@ -27,13 +27,7 @@ def screenshot(page: Page, name: str):
 
 def record_issue(page: Page, category: str, page_name: str, description: str, severity: str = "functional"):
     """记录问题。"""
-    issue = {
-        "category": category,
-        "page": page_name,
-        "description": description,
-        "severity": severity,
-        "url": page.url,
-    }
+    issue = {"category": category, "page": page_name, "description": description, "severity": severity, "url": page.url}
     issues.append(issue)
     print(f"  !! 问题 [{severity}] {category}: {description}")
 
@@ -147,9 +141,7 @@ def test_user_management(page: Page):
 
     # 测试搜索
     search_input = page.locator(
-        '.el-table__header-wrapper input, '
-        'input[placeholder*="搜索"], '
-        'input[placeholder*="用户名"]'
+        '.el-table__header-wrapper input, input[placeholder*="搜索"], input[placeholder*="用户名"]'
     ).first
     if search_input.count() > 0:
         search_input.fill("admin")
@@ -376,10 +368,11 @@ def test_api_endpoints(page: Page):
     print("\n=== 测试后端API端点 ===")
 
     # 登录获取token
-    login_resp = page.request.post(f"{API_URL}/api/system/login", data=json.dumps({
-        "username": "admin",
-        "password": "admin123"
-    }), headers={"Content-Type": "application/json"})
+    login_resp = page.request.post(
+        f"{API_URL}/api/system/login",
+        data=json.dumps({"username": "admin", "password": "admin123"}),
+        headers={"Content-Type": "application/json"},
+    )
 
     if login_resp.ok:
         login_data = login_resp.json()

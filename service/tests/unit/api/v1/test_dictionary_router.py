@@ -20,6 +20,7 @@ class TestDictionaryRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.dictionary_router import DictionaryRouter
+
         _app.include_router(DictionaryRouter().router, prefix="/api/system")
         return _app
 
@@ -50,6 +51,7 @@ class TestDictionaryRouter:
     @pytest.fixture
     def client(self, app, mock_user_entity, mock_dict_service):
         from src.api.dependencies import get_current_active_user, get_dictionary_service
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_dictionary_service] = lambda: mock_dict_service
         return TestClient(app, raise_server_exceptions=False)
@@ -69,9 +71,11 @@ class TestDictionaryRouter:
         assert len(resp.json()["data"]) == 2
 
     def test_create_dictionary_success(self, client):
-        resp = client.post("/api/system/dictionary/create", json={
-            "name": "状态", "label": "启用", "value": "1", "isActive": 1,
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/dictionary/create",
+            json={"name": "状态", "label": "启用", "value": "1", "isActive": 1},
+            headers=self.auth,
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 201
         assert resp.json()["message"] == "创建成功"

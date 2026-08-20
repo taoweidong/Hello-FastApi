@@ -206,25 +206,11 @@ class TestDepartmentService:
         mock_dept_repo.get_by_name = AsyncMock(return_value=None)
         mock_dept_repo.get_by_code = AsyncMock(return_value=None)
         created = DepartmentEntity(
-            id="1",
-            name="技术部",
-            code="tech",
-            mode_type=1,
-            rank=10,
-            auto_bind=1,
-            is_active=1,
-            parent_id=None,
+            id="1", name="技术部", code="tech", mode_type=1, rank=10, auto_bind=1, is_active=1, parent_id=None
         )
         mock_dept_repo.create = AsyncMock(return_value=created)
 
-        dto = DepartmentCreateDTO(
-            name="技术部",
-            code="tech",
-            modeType=1,
-            rank=10,
-            autoBind=1,
-            isActive=1,
-        )
+        dto = DepartmentCreateDTO(name="技术部", code="tech", modeType=1, rank=10, autoBind=1, isActive=1)
         result = await dept_service.create_department(dto)
         assert result.name == "技术部"
         assert result.code == "tech"
@@ -258,6 +244,7 @@ class TestDepartmentService:
     def test_to_response(self, dept_service):
         """测试 _to_response 静态方法。"""
         from datetime import datetime
+
         now = datetime.now()
         dept = DepartmentEntity(
             id="1",

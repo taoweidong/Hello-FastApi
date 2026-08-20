@@ -21,12 +21,9 @@ class TestGetIpRuleService:
         from src.api.dependencies.ip_rule_service import get_ip_rule_service
 
         mock_db = MagicMock()
-        service = await get_ip_rule_service(
-            db=mock_db,
-            ip_filter_port=mock_filter_instance,
-            logging_port=MagicMock(),
-        )
+        service = await get_ip_rule_service(db=mock_db, ip_filter_port=mock_filter_instance, logging_port=MagicMock())
         from src.application.services.ip_rule_service import IPRuleService
+
         assert isinstance(service, IPRuleService)
         assert service.ip_rule_repo == mock_repo_instance
         mock_ip_repo.assert_called_once_with(mock_db)
@@ -41,9 +38,7 @@ class TestGetIpRuleService:
         from src.api.dependencies.ip_rule_service import get_ip_rule_service
 
         service = await get_ip_rule_service(
-            db=MagicMock(),
-            ip_filter_port=mock_filter_port,
-            logging_port=mock_logging_port,
+            db=MagicMock(), ip_filter_port=mock_filter_port, logging_port=mock_logging_port
         )
         assert service.ip_filter_port == mock_filter_port
         assert service.logging_port == mock_logging_port

@@ -21,6 +21,7 @@ class CacheService(CachePort):
     _BLACKLIST_PREFIX = "token:blacklist:"
     _PERMS_PREFIX = "user:perms:"
     _USER_INFO_PREFIX = "user:info:"
+    _DICT_PREFIX = "dict:"
     _MENU_ALL_KEY = "menu:all"
 
     # 缓存 TTL（秒）- 从配置读取
@@ -28,6 +29,7 @@ class CacheService(CachePort):
     USER_INFO_CACHE_TTL = settings.CACHE_USER_INFO_TTL
     MENU_ALL_CACHE_TTL = settings.CACHE_MENU_ALL_TTL
     TOKEN_BLACKLIST_TTL = settings.CACHE_TOKEN_BLACKLIST_TTL
+    DICT_CACHE_TTL = settings.CACHE_DICT_TTL
 
     def __init__(self, redis_client: redis.Redis | None = None) -> None:
         self._redis = redis_client
@@ -251,6 +253,68 @@ class CacheService(CachePort):
             return True
         except Exception:
             logger.warning("Redis 删除菜单缓存失败", exc_info=True)
+            return False
+
+    # ---- 字典数据缓存 ----
+
+    async def get_dict_items(self, dict_name: str) -> list[dict] | None:
+        """从缓存获取字典项列表。
+
+        Args:
+            dict_name: 字典类型名称
+
+        Returns:
+            字典项列表（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        if self._redis is None:
+            return None
+        key = f"{self._DICT_PREFIX}{dict_name}"
+        try:
+            data = await self._redis.get(key)
+            if data is None:
+                return None
+            return json.loads(data)
+        except Exception:
+            logger.warning("Redis 读取字典缓存失败", exc_info=True)
+            return None
+
+    async def set_dict_items(self, dict_name: str, items: list[dict]) -> bool:
+        """将字典项列表写入缓存。
+
+        Args:
+            dict_name: 字典类型名称
+            items: 字典项列表
+
+        Returns:
+            是否成功写入缓存
+        """
+        if self._redis is None:
+            return False
+        key = f"{self._DICT_PREFIX}{dict_name}"
+        try:
+            await self._redis.set(key, json.dumps(items, ensure_ascii=False), ex=self.DICT_CACHE_TTL)
+            return True
+        except Exception:
+            logger.warning("Redis 写入字典缓存失败", exc_info=True)
+            return False
+
+    async def invalidate_dict(self, dict_name: str) -> bool:
+        """使指定字典类型的数据缓存失效。
+
+        Args:
+            dict_name: 字典类型名称
+
+        Returns:
+            是否成功失效
+        """
+        if self._redis is None:
+            return False
+        key = f"{self._DICT_PREFIX}{dict_name}"
+        try:
+            await self._redis.delete(key)
+            return True
+        except Exception:
+            logger.warning("Redis 删除字典缓存失败", exc_info=True)
             return False
 
     # ---- IP 规则缓存 ----

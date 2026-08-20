@@ -86,9 +86,7 @@ class TestMenuTreeFlow:
         mid = r.json()["data"]["id"]
 
         r = await flow_client.put(
-            f"/api/system/menu/{mid}",
-            headers=h,
-            json={"rank": 99, "meta": {"title": "已更新菜单"}},
+            f"/api/system/menu/{mid}", headers=h, json={"rank": 99, "meta": {"title": "已更新菜单"}}
         )
         assert r.status_code == 200
         assert r.json()["code"] == 0

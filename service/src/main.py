@@ -6,12 +6,13 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from src.api.constants import API_SYSTEM_PREFIX
 from src.api.v1 import system_router
-from src.config.settings import settings
+from src.config.settings import UPLOAD_DIR, settings
 from src.infrastructure.http import (
     IPFilterMiddleware,
     RequestLoggingMiddleware,
@@ -65,6 +66,9 @@ def create_app(*, lifespan_override: LifespanFactory | None = None) -> FastAPI:
         return {"status": "healthy", "version": settings.API_VERSION}
 
     app.include_router(system_router, prefix=API_SYSTEM_PREFIX)
+
+    # 挂载上传静态资源（头像等，目录在配置加载时已创建）
+    app.mount("/media", StaticFiles(directory=str(UPLOAD_DIR)), name="media")
 
     return app
 

@@ -69,9 +69,7 @@ class TestListResponse:
 
     def test_custom_page_params(self):
         """测试自定义分页参数应生效。"""
-        result = list_response(
-            list_data=["a", "b", "c"], total=30, page_size=5, current_page=3
-        )
+        result = list_response(list_data=["a", "b", "c"], total=30, page_size=5, current_page=3)
         assert result["data"]["list"] == ["a", "b", "c"]
         assert result["data"]["total"] == 30
         assert result["data"]["pageSize"] == 5

@@ -193,6 +193,7 @@ class TestSystemConfigService:
     def test_to_response(self, config_service):
         """测试 _to_response 静态方法。"""
         from datetime import datetime
+
         now = datetime.now()
         config = SystemConfigEntity(
             id="cfg-1",

@@ -12,6 +12,34 @@ from src.infrastructure.lifecycle import empty_lifespan
 from src.main import create_app
 
 
+def _collect_route_paths(routes) -> list[str]:
+    """递归收集所有路由路径。
+
+    新版 FastAPI 的 app.routes 可能包含延迟展开的 _IncludedRouter（无 path 属性），
+    递归展开其子路由以兼容新旧版本。
+    """
+    paths: list[str] = []
+    for route in routes:
+        path = getattr(route, "path", None)
+        if path is not None:
+            paths.append(path)
+        sub_routes = getattr(route, "routes", None)
+        if sub_routes:
+            paths.extend(_collect_route_paths(sub_routes))
+    return paths
+
+
+def _collect_app_paths(app) -> list[str]:
+    """收集应用全部路由路径（含懒加载 include 的路由）。
+
+    新版 FastAPI 的 include_router 延迟展开，app.routes 中看不到完整路径；
+    OpenAPI schema 会强制展开全部路由，合并两个来源保证新旧版本均可断言。
+    """
+    paths = set(_collect_route_paths(app.routes))
+    paths.update(app.openapi()["paths"].keys())
+    return sorted(paths)
+
+
 @pytest.mark.unit
 class TestCreateApp:
     """create_app 应用程序工厂测试类。"""
@@ -65,12 +93,12 @@ class TestCreateApp:
 
     def test_health_check_route_exists(self, app):
         """测试 /health 路由已注册。"""
-        routes = [r.path for r in app.routes]
+        routes = _collect_route_paths(app.routes)
         assert "/health" in routes
 
     def test_system_router_included(self, app):
         """测试 system_router 已包含。"""
-        route_paths = [r.path for r in app.routes]
+        route_paths = _collect_app_paths(app)
         system_paths = [p for p in route_paths if p.startswith(API_SYSTEM_PREFIX)]
         assert len(system_paths) > 0
 
@@ -101,16 +129,11 @@ class TestCreateApp:
 
     def test_health_check_returns_correct_response(self, app):
         """测试 /health 端点返回正确内容。"""
-        for route in app.routes:
-            if route.path == "/health":
-                assert hasattr(route, "endpoint")
-                break
-        else:
-            pytest.fail("未找到 /health 路由")
+        assert "/health" in _collect_route_paths(app.routes), "未找到 /health 路由"
 
     def test_openapi_routes_exist(self, app):
         """测试 OpenAPI 相关路由存在。"""
-        route_paths = [r.path for r in app.routes]
+        route_paths = _collect_app_paths(app)
         assert "/openapi.json" in route_paths
 
     def test_all_middleware_registered(self, app):

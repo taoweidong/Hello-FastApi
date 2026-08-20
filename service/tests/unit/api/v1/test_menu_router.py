@@ -20,6 +20,7 @@ class TestMenuRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.menu_router import MenuRouter
+
         _app.include_router(MenuRouter().router, prefix="/api/system/menu")
         return _app
 
@@ -35,18 +36,12 @@ class TestMenuRouter:
     def mock_menu_service(self):
         svc = AsyncMock()
         svc.get_menu_list.return_value = [
-            {"id": "1", "name": "系统管理", "menuType": 0, "children": [
-                {"id": "2", "name": "用户管理", "menuType": 1},
-            ]},
+            {"id": "1", "name": "系统管理", "menuType": 0, "children": [{"id": "2", "name": "用户管理", "menuType": 1}]}
         ]
         svc.get_menu_tree.return_value = [
-            {"id": "1", "name": "系统管理", "children": [
-                {"id": "2", "name": "用户管理"},
-            ]},
+            {"id": "1", "name": "系统管理", "children": [{"id": "2", "name": "用户管理"}]}
         ]
-        svc.get_user_menus.return_value = [
-            {"id": "1", "name": "系统管理", "menuType": 0},
-        ]
+        svc.get_user_menus.return_value = [{"id": "1", "name": "系统管理", "menuType": 0}]
         _mock_create = MagicMock()
         _mock_create.model_dump.return_value = {"id": "3", "name": "新菜单", "menuType": 1}
         _mock_update = MagicMock()
@@ -59,6 +54,7 @@ class TestMenuRouter:
     @pytest.fixture
     def client(self, app, mock_user_entity, mock_menu_service):
         from src.api.dependencies import get_current_active_user, get_menu_service
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_menu_service] = lambda: mock_menu_service
         return TestClient(app, raise_server_exceptions=False)
@@ -84,9 +80,11 @@ class TestMenuRouter:
         assert len(resp.json()["data"]) == 1
 
     def test_create_menu(self, client):
-        resp = client.post("/api/system/menu/create", json={
-            "name": "新菜单", "menuType": 1, "path": "/new", "component": "new/index.vue",
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/menu/create",
+            json={"name": "新菜单", "menuType": 1, "path": "/new", "component": "new/index.vue"},
+            headers=self.auth,
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 201
         assert resp.json()["message"] == "创建成功"

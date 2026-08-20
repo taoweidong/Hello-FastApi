@@ -20,6 +20,7 @@ class TestDeptRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.dept_router import DeptRouter
+
         _app.include_router(DeptRouter().router, prefix="/api/system")
         return _app
 
@@ -42,14 +43,13 @@ class TestDeptRouter:
         svc.create_department.return_value = type("Dept", (), {"id": "d3", "name": "测试部"})()
         svc.update_department.return_value = type("Dept", (), {"id": "d1", "name": "更新部"})()
         svc.delete_department.return_value = None
-        svc.get_dept_tree.return_value = [
-            {"id": "d1", "name": "技术部", "children": [{"id": "d2", "name": "开发组"}]},
-        ]
+        svc.get_dept_tree.return_value = [{"id": "d1", "name": "技术部", "children": [{"id": "d2", "name": "开发组"}]}]
         return svc
 
     @pytest.fixture
     def client(self, app, mock_user_entity, mock_dept_service):
         from src.api.dependencies import get_current_active_user, get_department_service
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_department_service] = lambda: mock_dept_service
         return TestClient(app, raise_server_exceptions=False)
@@ -64,9 +64,9 @@ class TestDeptRouter:
         assert len(data["data"]) == 2
 
     def test_create_dept_success(self, client):
-        resp = client.post("/api/system/dept/create", json={
-            "name": "测试部", "code": "test", "isActive": 1,
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/dept/create", json={"name": "测试部", "code": "test", "isActive": 1}, headers=self.auth
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 201
         assert resp.json()["message"] == "创建成功"

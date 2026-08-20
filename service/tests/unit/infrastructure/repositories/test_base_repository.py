@@ -15,7 +15,7 @@ class TestModel(SQLModel, table=True):
 
 
 class TestEntity:
-    def __init__(self, id: str, name: str) -> None:
+    def __init__(self, id: str, name: str) -> None:  # noqa: A002 测试桩与领域实体字段保持一致
         self.id = id
         self.name = name
 

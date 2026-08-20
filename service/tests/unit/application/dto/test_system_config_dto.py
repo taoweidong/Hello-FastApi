@@ -30,12 +30,7 @@ class TestSystemConfigCreateDTO:
     def test_valid_input_all_fields(self):
         """测试所有字段。"""
         dto = SystemConfigCreateDTO(
-            key="site_name",
-            value='"Hello-FastApi"',
-            isActive=0,
-            access=1,
-            inherit=1,
-            description="网站名称",
+            key="site_name", value='"Hello-FastApi"', isActive=0, access=1, inherit=1, description="网站名称"
         )
         assert dto.isActive == 0
         assert dto.access == 1

@@ -17,6 +17,11 @@ class DictionaryApi extends BaseApi {
       data: { name }
     });
   }
+
+  /** 根据字典类型名称获取启用状态的字典项（公开取数接口，带后端缓存） */
+  getByType<T = any>(name: string): Promise<Result<T>> {
+    return http.request<Result<T>>("get", `${this.prefix}/type/${name}`);
+  }
 }
 
 export const dictionaryApi = new DictionaryApi();

@@ -13,8 +13,11 @@ class RoleCreateDTO(BaseModel):
     name: str = Field(min_length=2, max_length=64)
     code: str = Field(min_length=2, max_length=64)
     isActive: int = Field(default=1, description="是否启用")
+    # 数据权限范围：1全部/2自定义/3本部门/4本部门及以下/5仅本人
+    dataScope: int = Field(default=1, ge=1, le=5, description="数据权限范围")
     description: str | None = Field(default=None, max_length=500)
     menuIds: list[str] = []
+    deptIds: list[str] = Field(default=[], description="自定义数据权限的部门ID列表（dataScope=2 时生效）")
 
     @field_validator("description", mode="before")
     @classmethod
@@ -29,8 +32,10 @@ class RoleUpdateDTO(BaseModel):
     name: str | None = Field(default=None, min_length=2, max_length=64)
     code: str | None = Field(default=None, min_length=2, max_length=64)
     isActive: int | None = Field(default=None, description="是否启用")
+    dataScope: int | None = Field(default=None, ge=1, le=5, description="数据权限范围")
     description: str | None = Field(default=None, max_length=500)
     menuIds: list[str] | None = None
+    deptIds: list[str] | None = Field(default=None, description="自定义数据权限的部门ID列表")
 
     @field_validator("name", "code", "description", mode="before")
     @classmethod
@@ -59,7 +64,9 @@ class RoleResponseDTO(BaseModel):
     name: str
     code: str
     isActive: int = 1
+    dataScope: int = 1
     menus: list[dict] = []
+    deptIds: list[str] = []
     creatorId: str | None = None
     modifierId: str | None = None
     createdTime: datetime | None = None

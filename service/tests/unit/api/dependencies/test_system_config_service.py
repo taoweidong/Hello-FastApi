@@ -20,6 +20,7 @@ class TestGetSystemConfigService:
         mock_db = MagicMock()
         service = await get_system_config_service(db=mock_db)
         from src.application.services.system_config_service import SystemConfigService
+
         assert isinstance(service, SystemConfigService)
         assert service.config_repo == mock_repo_instance
         mock_config_repo.assert_called_once_with(mock_db)

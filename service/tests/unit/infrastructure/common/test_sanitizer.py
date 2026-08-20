@@ -1,14 +1,6 @@
 """数据脱敏工具测试。"""
 
-from unittest.mock import MagicMock, patch
-
-import pytest
-
-from src.infrastructure.common.sanitizer import (
-    DataSanitizer,
-    SENSITIVE_PATTERNS,
-    safe_log_data,
-)
+from src.infrastructure.common.sanitizer import DataSanitizer, safe_log_data
 
 
 class TestSanitizeDict:
@@ -29,10 +21,8 @@ class TestSanitizeDict:
         assert result["config"]["db_password"] == "********"
 
     def test_sanitize_dict_with_nested_dict_and_sensitive_value_being_dict(self):
-        """测试字典的 value 是一个包含敏感键的 dict → hits _is_sensitive_key + _mask_value via nested sanitize_dict (L42 in nested call)."""
-        data = {
-            "wrapper_key": {"inner_password": "abc123abc123", "normal": "ok"},
-        }
+        """测试字典 value 为含敏感键的 dict，嵌套 sanitize_dict 命中敏感键检测与掩码。"""
+        data = {"wrapper_key": {"inner_password": "abc123abc123", "normal": "ok"}}
         result = DataSanitizer.sanitize_dict(data)
         # The inner dict gets sanitized via sanitize_dict -> _is_sensitive_key on "inner_password" -> _mask_value
         assert result["wrapper_key"]["normal"] == "ok"
@@ -40,13 +30,7 @@ class TestSanitizeDict:
 
     def test_sanitize_dict_with_list_value(self):
         """测试字典的 value 是 list → hits L46 (sanitize_list called from sanitize_dict)."""
-        data = {
-            "users": [
-                {"name": "alice", "token": "secret_token"},
-                {"name": "bob", "role": "user"},
-            ],
-            "count": 2,
-        }
+        data = {"users": [{"name": "alice", "token": "secret_token"}, {"name": "bob", "role": "user"}], "count": 2}
         result = DataSanitizer.sanitize_dict(data)
         assert result["count"] == 2
         assert result["users"][0]["name"] == "alice"
@@ -84,13 +68,7 @@ class TestSanitizeList:
 
     def test_sanitize_list_nested(self):
         """测试嵌套列表 (list of lists) → hits L66-69。"""
-        data = [
-            [
-                {"name": "item1", "secret": "hiddenvalue12"},
-                "plain_string",
-            ],
-            [1, 2, 3],
-        ]
+        data = [[{"name": "item1", "secret": "hiddenvalue12"}, "plain_string"], [1, 2, 3]]
         result = DataSanitizer.sanitize_list(data)
         # Nested list element with dict
         assert result[0][0]["name"] == "item1"

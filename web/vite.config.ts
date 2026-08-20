@@ -29,6 +29,11 @@ export default async ({ mode }: ConfigEnv): Promise<UserConfigExport> => {
           // 代理到后端 FastAPI 服务
           target: "http://localhost:8000",
           changeOrigin: true
+        },
+        "/media": {
+          // 上传静态资源（头像等）代理到后端
+          target: "http://localhost:8000",
+          changeOrigin: true
         }
       },
       // 预热文件以提前转换和缓存结果，降低启动期间的初始页面加载时长并防止转换瀑布

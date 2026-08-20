@@ -17,6 +17,8 @@ const props = withDefaults(defineProps<FormProps>(), {
     email: "",
     gender: "",
     isActive: 1,
+    postOptions: [],
+    postIds: [],
     description: ""
   })
 });
@@ -141,6 +143,25 @@ defineExpose({ getRef });
               <span v-if="!node.isLeaf"> ({{ data.children.length }}) </span>
             </template>
           </el-cascader>
+        </el-form-item>
+      </re-col>
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-form-item label="归属岗位">
+          <el-select
+            v-model="newFormInline.postIds"
+            multiple
+            clearable
+            filterable
+            class="w-full"
+            placeholder="请选择归属岗位"
+          >
+            <el-option
+              v-for="item in newFormInline.postOptions"
+              :key="item.id"
+              :label="item.postName"
+              :value="item.id"
+            />
+          </el-select>
         </el-form-item>
       </re-col>
       <re-col

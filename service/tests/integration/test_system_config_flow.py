@@ -21,12 +21,7 @@ class TestSystemConfigFlow:
         r = await flow_client.post(
             "/api/system/config/create",
             headers=h,
-            json={
-                "key": "site_name",
-                "value": "Hello-FastApi",
-                "isActive": 1,
-                "description": "站点名称",
-            },
+            json={"key": "site_name", "value": "Hello-FastApi", "isActive": 1, "description": "站点名称"},
         )
         assert r.status_code == 200
         assert r.json()["code"] == 201
@@ -35,9 +30,7 @@ class TestSystemConfigFlow:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/config/create",
-            headers=h,
-            json={"key": "max_login_attempts", "value": "5", "isActive": 1},
+            "/api/system/config/create", headers=h, json={"key": "max_login_attempts", "value": "5", "isActive": 1}
         )
         cid = r.json()["data"]["id"]
 
@@ -49,9 +42,7 @@ class TestSystemConfigFlow:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/config/create",
-            headers=h,
-            json={"key": "theme", "value": "light", "isActive": 1},
+            "/api/system/config/create", headers=h, json={"key": "theme", "value": "light", "isActive": 1}
         )
         cid = r.json()["data"]["id"]
 
@@ -63,9 +54,7 @@ class TestSystemConfigFlow:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/config/create",
-            headers=h,
-            json={"key": "del_config", "value": "to_delete", "isActive": 1},
+            "/api/system/config/create", headers=h, json={"key": "del_config", "value": "to_delete", "isActive": 1}
         )
         cid = r.json()["data"]["id"]
 
@@ -91,14 +80,10 @@ class TestSystemConfigFlow:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         await flow_client.post(
-            "/api/system/config/create",
-            headers=h,
-            json={"key": "dup_key", "value": "v1", "isActive": 1},
+            "/api/system/config/create", headers=h, json={"key": "dup_key", "value": "v1", "isActive": 1}
         )
 
         r = await flow_client.post(
-            "/api/system/config/create",
-            headers=h,
-            json={"key": "dup_key", "value": "v2", "isActive": 1},
+            "/api/system/config/create", headers=h, json={"key": "dup_key", "value": "v2", "isActive": 1}
         )
         assert r.status_code in (400, 409, 500)

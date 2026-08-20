@@ -9,6 +9,8 @@ from src.application.services.user_service import UserService
 from src.domain.services.cache_port import CachePort
 from src.domain.services.password_service import PasswordService
 from src.infrastructure.database import get_db
+from src.infrastructure.repositories.department_repository import DepartmentRepository
+from src.infrastructure.repositories.post_repository import PostRepository
 from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
 
@@ -20,12 +22,19 @@ async def get_user_service(
 ) -> UserService:
     """获取用户服务实例。
 
-    注入用户仓储、角色仓储、密码服务和缓存服务依赖。
+    注入用户仓储、角色仓储、部门仓储、岗位仓储、密码服务和缓存服务依赖。
     """
     user_repo = UserRepository(db)
     role_repo = RoleRepository(db)
+    dept_repo = DepartmentRepository(db)
+    post_repo = PostRepository(db)
     return UserService(
-        repo=user_repo, password_service=password_service, role_repo=role_repo, cache_service=cache_service
+        repo=user_repo,
+        password_service=password_service,
+        role_repo=role_repo,
+        cache_service=cache_service,
+        dept_repo=dept_repo,
+        post_repo=post_repo,
     )
 
 

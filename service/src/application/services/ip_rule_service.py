@@ -6,6 +6,7 @@
 from datetime import datetime
 
 from src.domain.entities.ip_rule import IPRuleEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import NotFoundError
 from src.domain.repositories.ip_rule_repository import IPRuleRepositoryInterface
 from src.domain.services.cache_port import IPFilterPort
@@ -72,7 +73,7 @@ class IPRuleService:
         """获取单个 IP 规则。"""
         rule = await self.ip_rule_repo.get_ip_rule_by_id(rule_id=rule_id)
         if rule is None:
-            raise NotFoundError("IP规则不存在")
+            raise NotFoundError(EM.IP_RULE_NOT_FOUND)
         return rule
 
     async def create_ip_rule(
@@ -104,7 +105,7 @@ class IPRuleService:
         """更新 IP 规则。"""
         rule = await self.ip_rule_repo.get_ip_rule_by_id(rule_id=rule_id)
         if rule is None:
-            raise NotFoundError("IP规则不存在")
+            raise NotFoundError(EM.IP_RULE_NOT_FOUND)
 
         rule.update_info(
             ip_address=ip_address,

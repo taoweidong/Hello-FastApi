@@ -4,8 +4,10 @@
 路由前缀: /api/system/user
 """
 
+import uuid
+
 from classy_fastapi import Routable, delete, get, post, put
-from fastapi import Depends
+from fastapi import Depends, File, UploadFile
 
 from src.api.common import format_user_list_row, list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
@@ -21,6 +23,12 @@ from src.application.dto.user_dto import (
     UserUpdateDTO,
 )
 from src.application.services.user_service import UserService
+from src.config.settings import AVATAR_DIR
+from src.domain.exceptions import ValidationError
+
+# 头像上传限制：允许的扩展名与最大字节数（2MB）
+ALLOWED_AVATAR_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+MAX_AVATAR_SIZE = 2 * 1024 * 1024
 
 
 class UserRouter(Routable):
@@ -32,9 +40,10 @@ class UserRouter(Routable):
         query: UserListQueryDTO,
         service: UserService = Depends(get_user_service),
         _: dict = Depends(require_permission("user:view")),
+        operator_id: str = Depends(get_current_user_id),
     ) -> dict:
-        """获取用户列表接口（支持筛选和分页）。"""
-        users, total = await service.get_users(query)
+        """获取用户列表接口（支持筛选、分页及数据权限过滤）。"""
+        users, total = await service.get_users(query, operator_id=operator_id)
         user_list = [format_user_list_row(user.model_dump()) for user in users]
         return list_response(list_data=user_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
@@ -136,6 +145,41 @@ class UserRouter(Routable):
         """修改当前用户密码接口。"""
         await service.change_password(user_id, dto)
         return success_response(message="密码修改成功")
+
+    @put("/profile", response_model=ApiResponse[dict])
+    async def update_profile(
+        self,
+        dto: UserUpdateDTO,
+        user_id: str = Depends(get_current_user_id),
+        service: UserService = Depends(get_user_service),
+    ) -> dict:
+        """更新当前用户个人资料接口（仅需登录，不含管理字段）。"""
+        user = await service.update_own_profile(user_id, dto)
+        return success_response(data=user.model_dump(), message="更新成功")
+
+    @post("/avatar", response_model=ApiResponse[dict])
+    async def upload_avatar(
+        self,
+        file: UploadFile = File(...),
+        user_id: str = Depends(get_current_user_id),
+        service: UserService = Depends(get_user_service),
+    ) -> dict:
+        """上传当前用户头像（本地存储，仅支持图片格式，限 2MB）。"""
+        ext = (file.filename or "").rpartition(".")[2].lower()
+        ext = f".{ext}" if ext else ""
+        if ext not in ALLOWED_AVATAR_EXTENSIONS:
+            raise ValidationError("仅支持 jpg/jpeg/png/gif/webp 格式的图片")
+        content = await file.read()
+        if len(content) > MAX_AVATAR_SIZE:
+            raise ValidationError("头像文件大小不能超过 2MB")
+
+        filename = f"{uuid.uuid4().hex}{ext}"
+        AVATAR_DIR.mkdir(parents=True, exist_ok=True)
+        (AVATAR_DIR / filename).write_bytes(content)
+        avatar_url = f"/media/avatars/{filename}"
+
+        await service.update_avatar(user_id, avatar_url)
+        return success_response(data={"avatar": avatar_url}, message="头像更新成功")
 
     @post("/assign-role", response_model=ApiResponse[None])
     async def assign_role(

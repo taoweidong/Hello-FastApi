@@ -58,9 +58,7 @@ class TestRedisManagerGetClient:
             client = await mgr.get_client()
 
         assert client is mgr._client
-        mock_from_url.assert_called_once_with(
-            "redis://localhost:6379/0", encoding="utf-8", decode_responses=True
-        )
+        mock_from_url.assert_called_once_with("redis://localhost:6379/0", encoding="utf-8", decode_responses=True)
 
     @pytest.mark.asyncio
     async def test_get_client_returns_existing(self):
@@ -84,9 +82,7 @@ class TestRedisManagerGetClient:
             mock_from_url.return_value = MagicMock()
             await mgr.get_client()
 
-        mock_from_url.assert_called_once_with(
-            "redis://localhost:6379/0", encoding="gbk", decode_responses=False
-        )
+        mock_from_url.assert_called_once_with("redis://localhost:6379/0", encoding="gbk", decode_responses=False)
 
 
 @pytest.mark.unit
@@ -134,9 +130,7 @@ class TestRedisManagerModuleFunctions:
     """模块级单例与兼容函数测试。"""
 
     def setup_method(self):
-        self.global_patch = patch(
-            "src.infrastructure.cache.redis_manager._redis_manager", None
-        )
+        self.global_patch = patch("src.infrastructure.cache.redis_manager._redis_manager", None)
         self.global_patch.start()
 
     def teardown_method(self):

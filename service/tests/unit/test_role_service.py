@@ -189,6 +189,7 @@ class TestRoleService:
     async def test_get_roles_empty(self, role_service, mock_role_repo):
         """测试获取空角色列表。"""
         from src.application.dto.role_dto import RoleListQueryDTO
+
         mock_role_repo.count = AsyncMock(return_value=0)
         mock_role_repo.get_all = AsyncMock(return_value=[])
         mock_role_repo.get_roles_menu_ids_batch = AsyncMock(return_value={})
@@ -202,6 +203,7 @@ class TestRoleService:
     async def test_get_roles_with_filters(self, role_service, mock_role_repo):
         """测试按名称/状态筛选角色列表。"""
         from src.application.dto.role_dto import RoleListQueryDTO
+
         role = RoleEntity(id="r1", name="管理员", code="admin", is_active=1)
         mock_role_repo.count = AsyncMock(return_value=1)
         mock_role_repo.get_all = AsyncMock(return_value=[role])
@@ -277,10 +279,7 @@ class TestRoleService:
     @pytest.mark.asyncio
     async def test_get_user_roles_success(self, role_service, mock_role_repo):
         """测试获取用户的所有角色。"""
-        roles = [
-            RoleEntity(id="r1", name="管理员", code="admin"),
-            RoleEntity(id="r2", name="用户", code="user"),
-        ]
+        roles = [RoleEntity(id="r1", name="管理员", code="admin"), RoleEntity(id="r2", name="用户", code="user")]
         mock_role_repo.get_user_roles = AsyncMock(return_value=roles)
         mock_role_repo.get_role_menu_ids = AsyncMock(return_value=[])
 
@@ -298,6 +297,7 @@ class TestRoleService:
     def test_role_to_response_with_menus(self, role_service):
         """测试 _role_to_response_with_menus 静态方法。"""
         from datetime import datetime
+
         role = RoleEntity(
             id="r1",
             name="管理员",

@@ -506,10 +506,9 @@ class TestIPRulesCache:
     async def test_get_ip_rules_hit(self):
         """测试缓存命中时返回 IP 规则。"""
         mock_redis = MagicMock()
-        mock_redis.hgetall = AsyncMock(return_value={
-            "blacklist": json.dumps(["192.168.1.1"]),
-            "whitelist": json.dumps(["10.0.0.1"]),
-        })
+        mock_redis.hgetall = AsyncMock(
+            return_value={"blacklist": json.dumps(["192.168.1.1"]), "whitelist": json.dumps(["10.0.0.1"])}
+        )
         svc = CacheService(redis_client=mock_redis)
 
         result = await svc.get_ip_rules()
@@ -574,10 +573,12 @@ class TestIPRulesCache:
     async def test_get_ip_rules_preserves_python_types(self):
         """测试返回的 IP 规则为 Python set 类型。"""
         mock_redis = MagicMock()
-        mock_redis.hgetall = AsyncMock(return_value={
-            "blacklist": json.dumps(["192.168.1.1", "192.168.1.2"]),
-            "whitelist": json.dumps(["10.0.0.1"]),
-        })
+        mock_redis.hgetall = AsyncMock(
+            return_value={
+                "blacklist": json.dumps(["192.168.1.1", "192.168.1.2"]),
+                "whitelist": json.dumps(["10.0.0.1"]),
+            }
+        )
         svc = CacheService(redis_client=mock_redis)
 
         blacklist, whitelist = await svc.get_ip_rules()
@@ -778,9 +779,7 @@ class TestIPRulesCacheEdgeCases:
     async def test_get_ip_rules_missing_blacklist(self):
         """测试 hgetall 缺少 blacklist 字段时返回空集合。"""
         mock_redis = MagicMock()
-        mock_redis.hgetall = AsyncMock(return_value={
-            "whitelist": json.dumps(["10.0.0.1"]),
-        })
+        mock_redis.hgetall = AsyncMock(return_value={"whitelist": json.dumps(["10.0.0.1"])})
         svc = CacheService(redis_client=mock_redis)
 
         blacklist, whitelist = await svc.get_ip_rules()
@@ -791,9 +790,7 @@ class TestIPRulesCacheEdgeCases:
     async def test_get_ip_rules_missing_whitelist(self):
         """测试 hgetall 缺少 whitelist 字段时返回空集合。"""
         mock_redis = MagicMock()
-        mock_redis.hgetall = AsyncMock(return_value={
-            "blacklist": json.dumps(["192.168.1.1"]),
-        })
+        mock_redis.hgetall = AsyncMock(return_value={"blacklist": json.dumps(["192.168.1.1"])})
         svc = CacheService(redis_client=mock_redis)
 
         blacklist, whitelist = await svc.get_ip_rules()

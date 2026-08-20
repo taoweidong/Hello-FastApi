@@ -21,6 +21,7 @@ class TestGetMenuService:
         mock_cache = MagicMock()
         service = await get_menu_service(db=mock_db, cache_service=mock_cache)
         from src.application.services.menu_service import MenuService
+
         assert isinstance(service, MenuService)
         assert service.menu_repo == mock_repo_instance
         assert service.cache_service == mock_cache

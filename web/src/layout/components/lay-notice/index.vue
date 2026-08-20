@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import dayjs from "dayjs";
 import { useI18n } from "vue-i18n";
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { noticesData } from "./data";
+import type { ListItem } from "./data";
 import NoticeList from "./components/NoticeList.vue";
+import { getLatestNotices } from "@/api/system";
 
 import BellIcon from "~icons/ri/notification-3-line";
 import ArrowRightIcon from "~icons/ri/arrow-right-s-line";
@@ -11,6 +14,38 @@ const { t } = useI18n();
 const dropdownRef = ref();
 const notices = ref(noticesData);
 const activeKey = ref(noticesData[0]?.key);
+
+/** 从后端拉取最新启用公告填充铃铛下拉（公告→tab1，通知→tab2） */
+async function fetchNotices() {
+  try {
+    const { code, data } = await getLatestNotices();
+    if (code !== 0 || !Array.isArray(data)) return;
+    const toItem = (n: any): ListItem => ({
+      id: n.id,
+      avatar: "",
+      title: n.title,
+      description: n.content || "",
+      datetime: n.createdTime
+        ? dayjs(n.createdTime).format("YYYY-MM-DD HH:mm")
+        : "",
+      type: String(n.noticeType)
+    });
+    const announceTab = notices.value.find(item => item.key === "1");
+    const noticeTab = notices.value.find(item => item.key === "2");
+    if (announceTab) {
+      announceTab.list = data.filter(n => n.noticeType === 2).map(toItem);
+    }
+    if (noticeTab) {
+      noticeTab.list = data.filter(n => n.noticeType === 1).map(toItem);
+    }
+  } catch {
+    // 铃铛取数失败静默降级，不影响布局
+  }
+}
+
+onMounted(() => {
+  fetchNotices();
+});
 
 const getLabel = computed(
   () => item =>

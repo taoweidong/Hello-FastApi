@@ -1,29 +1,52 @@
 """系统监控路由模块。
 
-提供在线用户、地图数据、卡片列表等 stub 接口。
+提供在线用户、地图数据、卡片列表等 stub 接口，
+以及服务器监控（CPU/内存/磁盘）与缓存监控（Redis info）接口。
 路由直接挂在 /api/system 路径下（无额外前缀）。
 """
 
 import random
 from typing import Any
 
+import redis.asyncio as redis_async
 from classy_fastapi import Routable, get, post
 from fastapi import Depends
 
 from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission
-from src.application.dto.monitor_dto import OnlineLogsQueryDTO
+from src.api.dependencies.monitor_service import get_monitor_service, get_redis_or_none
+from src.application.dto.monitor_dto import CacheInfoDTO, OnlineLogsQueryDTO, ServerInfoDTO
+from src.application.services.monitor_service import MonitorService
 
 
 class MonitorRouter(Routable):
-    """系统监控路由类，提供在线用户、地图数据、卡片列表等 stub 接口。"""
+    """系统监控路由类，提供在线用户、服务器监控、缓存监控等接口。"""
+
+    @get("/server-info", response_model=ApiResponse[ServerInfoDTO])
+    async def get_server_info(
+        self,
+        _: dict = Depends(require_permission("monitor:view")),
+        service: MonitorService = Depends(get_monitor_service),
+    ) -> dict:
+        """获取服务器资源监控数据（CPU/内存/磁盘/系统/进程）。"""
+        data = await service.get_server_info()
+        return success_response(data=data.model_dump())
+
+    @get("/cache-info", response_model=ApiResponse[CacheInfoDTO])
+    async def get_cache_info(
+        self,
+        _: dict = Depends(require_permission("monitor:view")),
+        service: MonitorService = Depends(get_monitor_service),
+        redis_client: redis_async.Redis | None = Depends(get_redis_or_none),
+    ) -> dict:
+        """获取缓存监控数据（Redis info + 键统计），Redis 不可用时降级返回。"""
+        data = await service.get_cache_info(redis_client)
+        return success_response(data=data.model_dump())
 
     @post("/online-logs", response_model=PaginatedResponse[dict])
     async def get_online_logs(
-        self,
-        query: OnlineLogsQueryDTO,
-        _: dict = Depends(require_permission("monitor:view")),
+        self, query: OnlineLogsQueryDTO, _: dict = Depends(require_permission("monitor:view"))
     ) -> dict:
         """获取在线用户列表（stub 数据）。"""
         list_data: list[dict[str, Any]] = [
@@ -51,9 +74,7 @@ class MonitorRouter(Routable):
         return list_response(list_data=list_data, total=len(list_data))
 
     @post("/online-logs/force-offline", response_model=ApiResponse[None])
-    async def force_offline(
-        self, _: dict = Depends(require_permission("monitor:manage"))
-    ) -> dict:
+    async def force_offline(self, _: dict = Depends(require_permission("monitor:manage"))) -> dict:
         """强制下线用户（stub 实现，仅返回成功响应）。"""
         return success_response(message="强制下线成功")
 

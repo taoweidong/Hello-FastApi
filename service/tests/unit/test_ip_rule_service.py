@@ -83,9 +83,7 @@ class TestIPRuleService:
         mock_ip_rule_repo.get_ip_rules = AsyncMock(return_value=([], 0))
 
         await ip_rule_service.get_ip_rules(
-            page_num=1,
-            page_size=10,
-            created_time=["2024-01-01T00:00:00", "2024-12-31T23:59:59"],
+            page_num=1, page_size=10, created_time=["2024-01-01T00:00:00", "2024-12-31T23:59:59"]
         )
         call_kwargs = mock_ip_rule_repo.get_ip_rules.call_args[1]
         assert call_kwargs["start_time"] is not None
@@ -173,24 +171,16 @@ class TestIPRuleService:
     async def test_create_ip_rule_full_params(self, ip_rule_service, mock_ip_rule_repo):
         """测试创建IP规则所有参数。"""
         from datetime import datetime
+
         expires = datetime.now() + timedelta(days=7)
         created = IPRuleEntity(
-            id="1",
-            ip_address="10.0.0.1",
-            rule_type="whitelist",
-            reason="测试",
-            is_active=1,
-            expires_at=expires,
+            id="1", ip_address="10.0.0.1", rule_type="whitelist", reason="测试", is_active=1, expires_at=expires
         )
         mock_ip_rule_repo.create_ip_rule = AsyncMock(return_value=created)
 
         with patch.object(IPRuleService, "_refresh_ip_filter_cache", new_callable=AsyncMock):
             result = await ip_rule_service.create_ip_rule(
-                ip_address="10.0.0.1",
-                rule_type="whitelist",
-                reason="测试",
-                is_active=1,
-                expires_at=expires,
+                ip_address="10.0.0.1", rule_type="whitelist", reason="测试", is_active=1, expires_at=expires
             )
         assert result.ip_address == "10.0.0.1"
         assert result.rule_type == "whitelist"

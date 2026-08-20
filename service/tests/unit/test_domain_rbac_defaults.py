@@ -1,4 +1,4 @@
-﻿"""RBAC 默认数据的单元测试。
+"""RBAC 默认数据的单元测试。
 
 测试 src.domain.rbac_defaults 中的默认角色和菜单数据。
 """

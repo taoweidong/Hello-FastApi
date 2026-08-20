@@ -32,6 +32,7 @@ from src.application.services.menu_service import MenuService
 from src.application.services.role_service import RoleService
 from src.application.services.user_service import UserService
 from src.domain.entities.user import UserEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import UnauthorizedError
 
 
@@ -79,7 +80,7 @@ class AuthRouter(Routable):
         """获取当前登录用户的个人信息。"""
         user = await user_service.get_user_by_id(current_user.id)
         if user is None:
-            raise UnauthorizedError("用户不存在")
+            raise UnauthorizedError(EM.USER_NOT_FOUND)
         data = MineUserDTO(
             avatar=user.avatar or "",
             username=user.username,

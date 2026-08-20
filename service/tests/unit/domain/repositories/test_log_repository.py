@@ -104,11 +104,7 @@ class TestLogRepositoryInterface:
         """测试 get_login_logs 接受所有可选参数。"""
         repo = ConcreteLogRepository()
         result = await repo.get_login_logs(
-            page_num=1,
-            page_size=20,
-            status=1,
-            start_time=datetime(2024, 1, 1),
-            end_time=datetime(2024, 12, 31),
+            page_num=1, page_size=20, status=1, start_time=datetime(2024, 1, 1), end_time=datetime(2024, 12, 31)
         )
         assert isinstance(result, tuple)
 

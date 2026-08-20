@@ -18,6 +18,7 @@ class TestMonitorRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.monitor_router import MonitorRouter
+
         _app.include_router(MonitorRouter().router, prefix="/api/system")
         return _app
 
@@ -32,7 +33,11 @@ class TestMonitorRouter:
     @pytest.fixture
     def client(self, app, mock_user_entity):
         from src.api.dependencies import get_current_active_user
+        from src.api.dependencies.monitor_service import get_redis_or_none
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
+        # 禁用 Redis 依赖，缓存监控走降级分支，避免单测依赖真实 Redis
+        app.dependency_overrides[get_redis_or_none] = lambda: None
         return TestClient(app, raise_server_exceptions=False)
 
     auth = {"Authorization": "Bearer test_token"}
@@ -70,3 +75,22 @@ class TestMonitorRouter:
         data = resp.json()
         assert data["code"] == 0
         assert len(data["data"]["list"]) == 48
+
+    def test_get_server_info(self, client):
+        resp = client.get("/api/system/server-info", headers=self.auth)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["code"] == 0
+        payload = data["data"]
+        for key in ("cpu", "memory", "disk", "system", "process"):
+            assert key in payload
+        assert payload["cpu"]["coreCount"] >= 1
+
+    def test_get_cache_info_degraded(self, client):
+        """Redis 依赖被覆写为 None 时返回降级结构。"""
+        resp = client.get("/api/system/cache-info", headers=self.auth)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["code"] == 0
+        assert data["data"]["connected"] is False
+        assert data["data"]["message"]

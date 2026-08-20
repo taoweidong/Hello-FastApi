@@ -33,6 +33,8 @@ class ConcreteUserRepository(UserRepositoryInterface):
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> list[UserEntity]:
         return []
 
@@ -52,6 +54,8 @@ class ConcreteUserRepository(UserRepositoryInterface):
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> int:
         return 0
 
@@ -115,8 +119,13 @@ class TestUserRepositoryInterface:
         """测试 get_all 接受所有可选参数。"""
         repo = ConcreteUserRepository()
         result = await repo.get_all(
-            page_num=1, page_size=20, username="admin", phone="138", email="test@test.com",
-            is_active=1, dept_id="dept-1",
+            page_num=1,
+            page_size=20,
+            username="admin",
+            phone="138",
+            email="test@test.com",
+            is_active=1,
+            dept_id="dept-1",
         )
         assert isinstance(result, list)
 

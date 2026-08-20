@@ -7,7 +7,8 @@ from src.application.utils.menu_mapper import menu_dict_to_entity, menu_entity_t
 from src.config.settings import settings
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.user import UserEntity
-from src.domain.enums import MenuType
+from src.domain.enums import MenuType, SystemRole
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
@@ -57,13 +58,13 @@ class AuthService:
         """
         user = await self.user_repo.get_by_username(dto.username)
         if user is None:
-            raise UnauthorizedError("用户名或密码错误")
+            raise UnauthorizedError(EM.INVALID_USERNAME_OR_PASSWORD)
 
         if not self.password_service.verify_password(dto.password, user.password):
-            raise UnauthorizedError("用户名或密码错误")
+            raise UnauthorizedError(EM.INVALID_USERNAME_OR_PASSWORD)
 
         if not user.is_active_user:
-            raise UnauthorizedError("用户账号已被禁用")
+            raise UnauthorizedError(EM.USER_ACCOUNT_DISABLED)
 
         return user
 
@@ -135,7 +136,7 @@ class AuthService:
         """用户注册。"""
         existing_user = await self.user_repo.get_by_username(dto.username)
         if existing_user is not None:
-            raise BusinessError("用户名已存在")
+            raise BusinessError(EM.USERNAME_EXISTS)
 
         hashed_password = self.password_service.hash_password(dto.password)
 
@@ -148,7 +149,7 @@ class AuthService:
         )
         created_user = await self.user_repo.create(user_entity)
         if created_user is None:
-            raise NotFoundError("注册成功但无法加载用户")
+            raise NotFoundError(EM.REGISTER_LOAD_FAILED)
 
         return {
             "id": created_user.id,
@@ -163,18 +164,18 @@ class AuthService:
         """使用刷新令牌刷新访问令牌。"""
         payload = self.token_service.decode_token(refresh_token)
         if payload is None:
-            raise UnauthorizedError("无效的刷新令牌")
+            raise UnauthorizedError(EM.INVALID_REFRESH_TOKEN)
 
         if not self.token_service.verify_token_type(payload, "refresh"):
-            raise UnauthorizedError("无效的令牌类型")
+            raise UnauthorizedError(EM.INVALID_TOKEN_TYPE)
 
         user_id = payload.get("sub")
         if user_id is None:
-            raise UnauthorizedError("无效的刷新令牌")
+            raise UnauthorizedError(EM.INVALID_REFRESH_TOKEN)
 
         user = await self.user_repo.get_by_id(user_id)
         if user is None or not user.is_active_user:
-            raise UnauthorizedError("用户不存在或已被禁用")
+            raise UnauthorizedError(EM.USER_NOT_FOUND_OR_DISABLED)
 
         token_data = {"sub": user.id, "username": user.username}
         new_access_token = self.token_service.create_access_token(token_data)
@@ -214,8 +215,14 @@ class AuthService:
         # 只保留DIRECTORY和MENU类型
         route_menus = [m for m in all_menus if m.menu_type in (MenuType.DIRECTORY, MenuType.MENU)]
 
+        # 汇总各菜单下的按钮权限码（PERMISSION类型子节点），供前端 hasAuth 判断
+        auths_map: dict[str, list[str]] = {}
+        for menu in all_menus:
+            if menu.menu_type == MenuType.PERMISSION and menu.parent_id:
+                auths_map.setdefault(menu.parent_id, []).append(menu.name)
+
         # 构建树形路由
-        return self._build_route_tree(route_menus)
+        return self._build_route_tree(route_menus, auths_map=auths_map)
 
     async def _get_all_menus_cached(self) -> list[MenuEntity]:
         """获取所有菜单（带缓存），用于超级用户场景。"""
@@ -241,19 +248,26 @@ class AuthService:
         """将序列化的字典转回菜单实体。"""
         return menu_dict_to_entity(data)
 
-    def _build_route_tree(self, menus: list, parent_id: str | None = None) -> list[dict]:
+    def _build_route_tree(
+        self, menus: list, parent_id: str | None = None, auths_map: dict[str, list[str]] | None = None
+    ) -> list[dict]:
         """将扁平菜单列表构建为嵌套路由树。"""
         routes = []
         for menu in menus:
             if menu.parent_id == parent_id:
+                meta = self._build_meta(menu)
+                # 挂载当前菜单的按钮权限码列表，前端通过 meta.auths 做按钮级控制
+                menu_auths = (auths_map or {}).get(menu.id, [])
+                if menu_auths:
+                    meta["auths"] = menu_auths
                 route = {
                     "path": menu.path,
                     "name": menu.name,
                     "rank": menu.rank,
                     "component": menu.component,
-                    "meta": self._build_meta(menu),
+                    "meta": meta,
                 }
-                children = self._build_route_tree(menus, menu.id)
+                children = self._build_route_tree(menus, menu.id, auths_map)
                 if children:
                     route["children"] = children
                 routes.append(route)
@@ -291,7 +305,7 @@ class AuthService:
     async def get_role_menu_ids(self, role_id: str) -> list[str]:
         """根据角色ID获取菜单ID列表（admin角色返回全部）。"""
         role = await self.role_repo.get_by_id(role_id)
-        if role and role.code == "admin":
+        if role and role.code == SystemRole.ADMIN:
             all_menus = await self.menu_repo.get_all()
             return [m.id for m in all_menus]
         return await self.role_repo.get_role_menu_ids(role_id)

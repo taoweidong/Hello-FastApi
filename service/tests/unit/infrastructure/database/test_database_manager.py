@@ -30,10 +30,7 @@ class TestDatabaseManagerInit:
 
     def test_init_with_postgresql_url_has_pool(self):
         """使用 PostgreSQL URL 时应配置连接池参数。"""
-        mgr = DatabaseManager(
-            database_url="postgresql+asyncpg://user:pass@localhost/db",
-            echo=False,
-        )
+        mgr = DatabaseManager(database_url="postgresql+asyncpg://user:pass@localhost/db", echo=False)
         assert isinstance(mgr.engine, AsyncEngine)
 
     def test_init_with_default_url_uses_settings(self):
@@ -99,9 +96,7 @@ class TestDatabaseManagerInitTables:
         mgr = DatabaseManager(database_url="sqlite+aiosqlite:///:memory:")
         await mgr.init_tables()
         async with mgr.engine.begin() as conn:
-            tables = await conn.run_sync(
-                lambda sync_conn: sync_conn.dialect.get_table_names(sync_conn)
-            )
+            tables = await conn.run_sync(lambda sync_conn: sync_conn.dialect.get_table_names(sync_conn))
         assert len(tables) > 0
 
     @pytest.mark.asyncio
