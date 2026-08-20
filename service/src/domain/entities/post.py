@@ -65,18 +65,6 @@ class PostEntity:
     # ---- 工厂方法 ----
 
     @classmethod
-    def create_new(
-        cls,
-        post_code: str,
-        post_name: str,
-        post_sort: int = 0,
-        remark: str = "",
-    ) -> PostEntity:
+    def create_new(cls, post_code: str, post_name: str, post_sort: int = 0, remark: str = "") -> PostEntity:
         """创建新岗位实体的工厂方法。"""
-        return cls(
-            id=str(uuid.uuid4()),
-            post_code=post_code,
-            post_name=post_name,
-            post_sort=post_sort,
-            remark=remark,
-        )
+        return cls(id=str(uuid.uuid4()), post_code=post_code, post_name=post_name, post_sort=post_sort, remark=remark)

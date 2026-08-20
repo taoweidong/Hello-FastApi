@@ -36,9 +36,7 @@ class TestPostApi:
         super_h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/post/create",
-            headers=super_h,
-            json={"postCode": "ceo", "postName": "董事长", "postSort": 1},
+            "/api/system/post/create", headers=super_h, json={"postCode": "ceo", "postName": "董事长", "postSort": 1}
         )
         assert r.status_code == 200, r.text
         data = r.json()["data"]
@@ -144,11 +142,7 @@ class TestPostApi:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=super_h,
-            json={
-                "username": "post_user",
-                "password": "PostUser@123",
-                "postIds": [post_a, post_b],
-            },
+            json={"username": "post_user", "password": "PostUser@123", "postIds": [post_a, post_b]},
         )
         assert r.status_code == 201, r.text
         user_id = r.json()["data"]["id"]
@@ -158,9 +152,7 @@ class TestPostApi:
         assert sorted(r.json()["data"]) == sorted([post_a, post_b])
 
         # 更新用户岗位（清空场景：传空列表）
-        r = await flow_client.put(
-            f"/api/system/user/{user_id}", headers=super_h, json={"postIds": [post_a]}
-        )
+        r = await flow_client.put(f"/api/system/user/{user_id}", headers=super_h, json={"postIds": [post_a]})
         assert r.status_code == 200, r.text
         r = await flow_client.get(f"/api/system/post/user/{user_id}", headers=super_h)
         assert r.json()["data"] == [post_a]

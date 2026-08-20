@@ -29,17 +29,12 @@ class PostRouter(Routable):
         """获取岗位列表（分页）。"""
         posts, total = await service.get_posts(query)
         return list_response(
-            list_data=[p.model_dump() for p in posts],
-            total=total,
-            page_size=query.pageSize,
-            current_page=query.pageNum,
+            list_data=[p.model_dump() for p in posts], total=total, page_size=query.pageSize, current_page=query.pageNum
         )
 
     @get("/options", response_model=ApiResponse[list[dict]])
     async def get_options(
-        self,
-        _: UserEntity = Depends(get_current_active_user),
-        service: PostService = Depends(get_post_service),
+        self, _: UserEntity = Depends(get_current_active_user), service: PostService = Depends(get_post_service)
     ) -> dict:
         """获取启用岗位下拉选项（仅需登录，供用户表单选择）。"""
         options = await service.get_active_post_options()

@@ -19,9 +19,7 @@ class Post(SQLModel, table=True):
 
     __tablename__ = "sys_post"
 
-    id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36
-    )  # 36 位 UUID 主键
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)  # 36 位 UUID 主键
     post_code: str = Field(max_length=64, index=True)  # 岗位编码（唯一）
     post_name: str = Field(max_length=64)  # 岗位名称
     post_sort: int = Field(default=0)  # 显示排序

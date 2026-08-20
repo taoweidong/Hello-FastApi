@@ -32,11 +32,7 @@ class PostRepository(GenericRepository[Post, PostEntity], PostRepositoryInterfac
         return Post.from_domain(entity)
 
     def _apply_post_filters(
-        self,
-        stmt: Any,
-        post_code: str | None = None,
-        post_name: str | None = None,
-        is_active: int | None = None,
+        self, stmt: Any, post_code: str | None = None, post_name: str | None = None, is_active: int | None = None
     ) -> Any:
         """组装岗位筛选条件（编码/名称模糊匹配，状态等值匹配）。"""
         if post_code:

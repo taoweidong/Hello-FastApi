@@ -20,10 +20,7 @@ class PostService:
             raise ConflictError(f"岗位编码 '{dto.postCode}' 已存在")
 
         post_entity = PostEntity.create_new(
-            post_code=dto.postCode,
-            post_name=dto.postName,
-            post_sort=dto.postSort,
-            remark=dto.remark or "",
+            post_code=dto.postCode, post_name=dto.postName, post_sort=dto.postSort, remark=dto.remark or ""
         )
         post_entity.is_active = dto.isActive
         post_entity.creator_id = current_user.id
@@ -39,9 +36,7 @@ class PostService:
 
     async def get_posts(self, query: PostListQueryDTO) -> tuple[list[PostResponseDTO], int]:
         """获取岗位列表。"""
-        total = await self.post_repo.count(
-            post_code=query.postCode, post_name=query.postName, is_active=query.isActive
-        )
+        total = await self.post_repo.count(post_code=query.postCode, post_name=query.postName, is_active=query.isActive)
         posts = await self.post_repo.get_all(
             page_num=query.pageNum,
             page_size=query.pageSize,
@@ -54,9 +49,7 @@ class PostService:
     async def get_active_post_options(self) -> list[dict]:
         """获取启用岗位下拉选项（供用户表单选择）。"""
         posts = await self.post_repo.get_all_active()
-        return [
-            {"id": p.id, "postCode": p.post_code, "postName": p.post_name, "postSort": p.post_sort} for p in posts
-        ]
+        return [{"id": p.id, "postCode": p.post_code, "postName": p.post_name, "postSort": p.post_sort} for p in posts]
 
     async def get_user_post_ids(self, user_id: str) -> list[str]:
         """获取用户已分配的岗位 ID 列表。"""
