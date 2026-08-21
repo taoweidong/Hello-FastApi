@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.config.settings import settings
 from src.infrastructure.cache.redis_manager import RedisManager, _get_redis_manager, close_redis, get_redis
 
 
@@ -58,7 +59,13 @@ class TestRedisManagerGetClient:
             client = await mgr.get_client()
 
         assert client is mgr._client
-        mock_from_url.assert_called_once_with("redis://localhost:6379/0", encoding="utf-8", decode_responses=True)
+        mock_from_url.assert_called_once_with(
+            "redis://localhost:6379/0",
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+            socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+        )
 
     @pytest.mark.asyncio
     async def test_get_client_returns_existing(self):
@@ -82,7 +89,13 @@ class TestRedisManagerGetClient:
             mock_from_url.return_value = MagicMock()
             await mgr.get_client()
 
-        mock_from_url.assert_called_once_with("redis://localhost:6379/0", encoding="gbk", decode_responses=False)
+        mock_from_url.assert_called_once_with(
+            "redis://localhost:6379/0",
+            encoding="gbk",
+            decode_responses=False,
+            socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+            socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+        )
 
 
 @pytest.mark.unit

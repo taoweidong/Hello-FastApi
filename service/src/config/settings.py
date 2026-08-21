@@ -71,6 +71,8 @@ class Settings(BaseSettings):
 
     # ============ Redis 配置 ============
     REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_CONNECT_TIMEOUT: float = Field(default=1.0, gt=0)  # 连接超时秒数，Redis 不可用时避免长时间阻塞
+    REDIS_SOCKET_TIMEOUT: float = Field(default=1.0, gt=0)  # 读写超时秒数
 
     # ============ JWT 配置 ============
     JWT_SECRET_KEY: str = Field(default="your-jwt-secret-key-change-in-production", min_length=32)

@@ -17,7 +17,13 @@ class RedisManager:
     async def get_client(self) -> redis.Redis:
         """获取或创建 Redis 客户端实例。"""
         if self._client is None:
-            self._client = redis.from_url(self._url, encoding=self._encoding, decode_responses=self._decode_responses)
+            self._client = redis.from_url(
+                self._url,
+                encoding=self._encoding,
+                decode_responses=self._decode_responses,
+                socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+                socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+            )
         return self._client
 
     async def close(self) -> None:
