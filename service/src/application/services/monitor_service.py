@@ -181,9 +181,13 @@ class MonitorService:
         misses = int(info.get("keyspace_misses") or 0)
         hit_rate = round(hits / (hits + misses) * 100, 2) if (hits + misses) > 0 else None
 
-        # 命令统计：解析 info 中的 cmdstat_* 段，按调用次数取 Top10
+        # 命令统计：Redis 5.0 默认 INFO 输出不含 cmdstat_* 段，需显式查询 commandstats
+        try:
+            cmd_info: dict = await redis_client.info("commandstats")  # type: ignore[attr-defined]
+        except Exception:  # noqa: BLE001 —— 老版本客户端或无该段时退化为默认 INFO
+            cmd_info = info
         command_stats: list[CacheCommandStatDTO] = []
-        for key, value in info.items():
+        for key, value in cmd_info.items():
             if not isinstance(key, str) or not key.startswith("cmdstat_"):
                 continue
             stat = value if isinstance(value, dict) else {}

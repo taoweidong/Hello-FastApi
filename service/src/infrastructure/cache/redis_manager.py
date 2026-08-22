@@ -23,6 +23,9 @@ class RedisManager:
                 decode_responses=self._decode_responses,
                 socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
                 socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+                # 显式使用 RESP2 协议：Redis 6.0 以下版本不支持 HELLO 命令，
+                # redis-py 8.x 默认 RESP3 握手会报 unknown command 'HELLO'。
+                protocol=2,
             )
         return self._client
 

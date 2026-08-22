@@ -5,6 +5,16 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def reset_cache_service_singleton():
+    """每个用例前重置模块级单例，避免测试间相互污染。"""
+    from src.api.dependencies import cache_service
+
+    cache_service._cache_service = None
+    yield
+    cache_service._cache_service = None
+
+
 @pytest.mark.unit
 class TestGetCacheService:
     """get_cache_service 函数测试。"""

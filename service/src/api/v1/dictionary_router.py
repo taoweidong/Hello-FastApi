@@ -5,7 +5,7 @@
 """
 
 from classy_fastapi import Routable, delete, get, post, put
-from fastapi import Depends
+from fastapi import Body, Depends
 
 from src.api.common import success_response
 from src.api.common.response_schemas import ApiResponse
@@ -26,7 +26,7 @@ class DictionaryRouter(Routable):
     @post("/dictionary", response_model=ApiResponse[list[dict]])
     async def get_dictionary_list(
         self,
-        query: DictionaryListQueryDTO,
+        query: DictionaryListQueryDTO = Body(default=DictionaryListQueryDTO()),
         service: DictionaryService = Depends(get_dictionary_service),
         _: dict = Depends(require_permission("dictionary:view")),
     ) -> dict:
@@ -38,7 +38,7 @@ class DictionaryRouter(Routable):
     @post("/dictionary/getByName", response_model=ApiResponse[list[dict]])
     async def get_dictionary_by_name(
         self,
-        query: DictionaryNameQueryDTO,
+        query: DictionaryNameQueryDTO = Body(default=DictionaryNameQueryDTO()),
         service: DictionaryService = Depends(get_dictionary_service),
         _: dict = Depends(require_permission("dictionary:view")),
     ) -> dict:

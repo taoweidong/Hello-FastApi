@@ -65,6 +65,7 @@ class TestRedisManagerGetClient:
             decode_responses=True,
             socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
             socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+            protocol=2,  # 显式 RESP2，兼容 Redis 6.0 以下版本
         )
 
     @pytest.mark.asyncio
@@ -95,6 +96,7 @@ class TestRedisManagerGetClient:
             decode_responses=False,
             socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
             socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+            protocol=2,  # 显式 RESP2，兼容 Redis 6.0 以下版本
         )
 
 

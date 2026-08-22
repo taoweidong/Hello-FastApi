@@ -840,13 +840,16 @@ class TestOnlineUsers:
 
     @pytest.mark.asyncio
     async def test_set_online_user_redis_error(self):
-        """Redis 写入异常时返回 False（不抛异常）。"""
+        """Redis 写入异常时降级为内存存储（返回 True 且会话可读）。"""
         mock_redis = MagicMock()
         mock_redis.set = AsyncMock(side_effect=Exception("连接失败"))
         svc = CacheService(redis_client=mock_redis)
+        info = {"username": "admin"}
 
-        result = await svc.set_online_user("abc123", {"username": "admin"}, self._expires)
-        assert result is False
+        result = await svc.set_online_user("abc123", info, self._expires)
+        assert result is True
+        # 降级后内存镜像仍可读取该会话
+        assert svc._online_memory["abc123"]["info"] == info
 
     # ── get_online_user ──
 

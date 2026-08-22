@@ -126,7 +126,11 @@ def _get_storage_uri() -> str:
 _default_limit = f"{settings.RATE_LIMIT_TIMES} per {settings.RATE_LIMIT_SECONDS} seconds"
 
 limiter = Limiter(
-    key_func=get_real_ip, default_limits=[_default_limit], storage_uri=_get_storage_uri(), strategy="fixed-window"
+    key_func=get_real_ip,
+    default_limits=[_default_limit],
+    storage_uri=_get_storage_uri(),
+    storage_options={"protocol": 2},  # Redis 6.0 以下版本不支持 RESP3 握手，需显式降级为 RESP2
+    strategy="fixed-window",
 )
 
 
