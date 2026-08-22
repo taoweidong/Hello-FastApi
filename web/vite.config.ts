@@ -26,13 +26,13 @@ export default async ({ mode }: ConfigEnv): Promise<UserConfigExport> => {
       // 本地跨域代理 https://cn.vitejs.dev/config/server-options.html#server-proxy
       proxy: {
         "/api": {
-          // 代理到后端 FastAPI 服务
-          target: "http://localhost:8000",
+          // 代理到后端 FastAPI 服务（显式 127.0.0.1，避免 localhost 解析到 ::1 命中其他 8000 绑定）
+          target: "http://127.0.0.1:8000",
           changeOrigin: true
         },
         "/media": {
           // 上传静态资源（头像等）代理到后端
-          target: "http://localhost:8000",
+          target: "http://127.0.0.1:8000",
           changeOrigin: true
         }
       },

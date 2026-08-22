@@ -37,8 +37,8 @@ export function useLoginLog(tableRef: Ref) {
     },
     {
       label: "序号",
-      prop: "id",
-      minWidth: 90
+      type: "index",
+      minWidth: 70
     },
     {
       label: "登录状态",

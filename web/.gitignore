@@ -13,6 +13,10 @@ npm-debug.log*
 .pnpm-debug.log
 tests/**/coverage/
 
+# Playwright 测试产物
+test-results/
+playwright-report/
+
 # Editor directories and files
 .idea
 *.suo

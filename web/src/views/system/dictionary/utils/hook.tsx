@@ -111,7 +111,7 @@ export function useDictionary() {
   async function onSearch() {
     loading.value = true;
     treeLoading.value = true;
-    const { code, data } = await dictionaryApi.list();
+    const { code, data } = await dictionaryApi.list({});
     if (code === 0) {
       allDataList.value = data;
       // 默认选中第一个根节点

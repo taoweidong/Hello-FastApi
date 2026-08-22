@@ -77,7 +77,11 @@ export function useOnline() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await getOnlineLogsList(toRaw(form));
+    const { code, data } = await getOnlineLogsList({
+      ...toRaw(form),
+      pageNum: pagination.currentPage,
+      pageSize: pagination.pageSize
+    });
     if (code === 0) {
       dataList.value = data.list;
       pagination.total = data.total;

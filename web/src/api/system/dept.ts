@@ -8,7 +8,10 @@ class DeptApi extends BaseApi {
 
   /** 获取部门列表（树结构，不分页） */
   list<T = any>(params?: object): Promise<Result<T>> {
-    return http.request<Result<T>>("post", this.prefix, { data: params });
+    // params 缺省时补空对象：FastAPI body 参数必填，无 body 会 422
+    return http.request<Result<T>>("post", this.prefix, {
+      data: params ?? {}
+    });
   }
 
   /** 获取部门树结构（全量，数据权限配置用） */
