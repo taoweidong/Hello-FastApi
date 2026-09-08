@@ -1,5 +1,12 @@
 import { defineConfig } from "@playwright/test";
-import { STORAGE_STATE } from "./e2e/global-setup";
+
+/**
+ * 登录态落盘路径。
+ *
+ * 与 e2e/global-setup.ts 保持一致；此处不直接 import 是为了避免配置文件
+ * 加载时执行 global-setup 的模块顶层代码（ESM 环境下 __dirname 不可用）。
+ */
+const STORAGE_STATE = "e2e/.auth/admin.json";
 
 export default defineConfig({
   testDir: "./e2e",
