@@ -29,9 +29,7 @@ class TestGetCurrentUserId:
 
         with patch("fastapi.security.HTTPBearer.__call__", return_value=MagicMock(credentials="token")):
             result = await get_current_user_id(
-                credentials=MagicMock(credentials="valid_token"),
-                token_service=mock_token_svc,
-                cache_service=mock_cache,
+                credentials=MagicMock(credentials="valid_token"), token_service=mock_token_svc, cache_service=mock_cache
             )
             assert result == "user123"
 
@@ -126,15 +124,12 @@ class TestGetCurrentActiveUser:
         """缓存中存在活跃用户应直接返回。"""
         mock_user_service = AsyncMock()
         mock_user_service.get_user_info_with_cache.return_value = UserEntity(
-            id="1", username="test", password="", is_active=1,
-            email="test@example.com", is_superuser=UserRole.USER,
+            id="1", username="test", password="", is_active=1, email="test@example.com", is_superuser=UserRole.USER
         )
 
         from src.api.dependencies.auth import get_current_active_user
 
-        result = await get_current_active_user(
-            user_id="1", user_service=mock_user_service
-        )
+        result = await get_current_active_user(user_id="1", user_service=mock_user_service)
         assert result.id == "1"
         mock_user_service.get_user_info_with_cache.assert_called_once_with("1")
 
@@ -146,23 +141,18 @@ class TestGetCurrentActiveUser:
         from src.api.dependencies.auth import get_current_active_user
 
         with pytest.raises(UnauthorizedError, match="用户账号已被禁用"):
-            await get_current_active_user(
-                user_id="1", user_service=mock_user_service
-            )
+            await get_current_active_user(user_id="1", user_service=mock_user_service)
 
     async def test_cache_miss_user_found_returns_info(self):
         """缓存未命中且数据库中存在用户应返回用户信息。"""
         mock_user_service = AsyncMock()
         mock_user_service.get_user_info_with_cache.return_value = UserEntity(
-            id="1", username="test", password="", is_active=1,
-            email="test@example.com", is_superuser=UserRole.USER,
+            id="1", username="test", password="", is_active=1, email="test@example.com", is_superuser=UserRole.USER
         )
 
         from src.api.dependencies.auth import get_current_active_user
 
-        result = await get_current_active_user(
-            user_id="1", user_service=mock_user_service
-        )
+        result = await get_current_active_user(user_id="1", user_service=mock_user_service)
         assert result.id == "1"
         assert result.username == "test"
 
@@ -174,9 +164,7 @@ class TestGetCurrentActiveUser:
         from src.api.dependencies.auth import get_current_active_user
 
         with pytest.raises(UnauthorizedError, match="用户不存在"):
-            await get_current_active_user(
-                user_id="nonexistent", user_service=mock_user_service
-            )
+            await get_current_active_user(user_id="nonexistent", user_service=mock_user_service)
 
 
 @pytest.mark.unit
@@ -187,7 +175,7 @@ class TestRequirePermission:
         """超级用户应绕过权限检查。"""
         mock_user_service = AsyncMock()
         mock_user_service.check_permission_cached_or_db.return_value = UserEntity(
-            id="1", username="", password="", is_superuser=UserRole.SUPERUSER,
+            id="1", username="", password="", is_superuser=UserRole.SUPERUSER
         )
 
         from src.api.dependencies.auth import require_permission
@@ -203,7 +191,7 @@ class TestRequirePermission:
         """缓存命中且拥有权限应返回用户。"""
         mock_user_service = AsyncMock()
         mock_user_service.check_permission_cached_or_db.return_value = UserEntity(
-            id="1", username="", password="", is_superuser=UserRole.USER,
+            id="1", username="", password="", is_superuser=UserRole.USER
         )
 
         from src.api.dependencies.auth import require_permission
@@ -218,9 +206,7 @@ class TestRequirePermission:
     async def test_cache_hit_no_permission_raises(self):
         """缓存命中但无权限应抛出 ForbiddenError。"""
         mock_user_service = AsyncMock()
-        mock_user_service.check_permission_cached_or_db.side_effect = ForbiddenError(
-            "权限 'system:read' 是必需的"
-        )
+        mock_user_service.check_permission_cached_or_db.side_effect = ForbiddenError("权限 'system:read' 是必需的")
 
         from src.api.dependencies.auth import require_permission
 
@@ -240,7 +226,7 @@ class TestRequireMenuPermission:
         """超级用户应绕过API权限检查。"""
         mock_user_service = AsyncMock()
         mock_user_service.check_api_permission_cached_or_db.return_value = UserEntity(
-            id="1", username="", password="", is_superuser=UserRole.SUPERUSER,
+            id="1", username="", password="", is_superuser=UserRole.SUPERUSER
         )
 
         from src.api.dependencies.auth import require_menu_permission
@@ -256,7 +242,7 @@ class TestRequireMenuPermission:
         """缓存命中且拥有API权限应返回用户。"""
         mock_user_service = AsyncMock()
         mock_user_service.check_api_permission_cached_or_db.return_value = UserEntity(
-            id="1", username="", password="", is_superuser=UserRole.USER,
+            id="1", username="", password="", is_superuser=UserRole.USER
         )
 
         from src.api.dependencies.auth import require_menu_permission
@@ -295,9 +281,7 @@ class TestRequireSuperuser:
 
         checker = require_superuser()
         result = await checker(
-            current_user=UserEntity(
-                id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER
-            )
+            current_user=UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
         )
         assert result.is_superuser == UserRole.SUPERUSER
 
@@ -307,8 +291,4 @@ class TestRequireSuperuser:
 
         checker = require_superuser()
         with pytest.raises(ForbiddenError, match="需要超级用户权限"):
-            await checker(
-                current_user=UserEntity(
-                    id="1", username="user", password="", is_superuser=UserRole.USER
-                )
-            )
+            await checker(current_user=UserEntity(id="1", username="user", password="", is_superuser=UserRole.USER))

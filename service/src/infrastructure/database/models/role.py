@@ -23,6 +23,7 @@ class Role(SQLModel, table=True):
     name: str = Field(max_length=128, unique=True, index=True)
     code: str = Field(max_length=128, sa_column_kwargs={"unique": True})  # 角色编码，唯一
     is_active: int = Field(default=1)  # 是否启用
+    data_scope: int = Field(default=1)  # 数据权限范围（1全部/2自定义/3本部门/4本部门及以下/5仅本人）
     creator_id: str | None = Field(default=None, max_length=150)  # 创建人ID
     modifier_id: str | None = Field(default=None, max_length=150)  # 修改人ID
     created_time: datetime | None = Field(default=None, sa_column=Column(DateTime(6), server_default=func.now()))
@@ -43,6 +44,7 @@ class Role(SQLModel, table=True):
             name=self.name,
             code=self.code,
             is_active=self.is_active,
+            data_scope=self.data_scope,
             creator_id=self.creator_id,
             modifier_id=self.modifier_id,
             created_time=self.created_time,
@@ -58,6 +60,7 @@ class Role(SQLModel, table=True):
             name=entity.name,
             code=entity.code,
             is_active=entity.is_active,
+            data_scope=entity.data_scope,
             creator_id=entity.creator_id,
             modifier_id=entity.modifier_id,
             created_time=entity.created_time,

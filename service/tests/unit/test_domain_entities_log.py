@@ -1,4 +1,4 @@
-﻿"""日志领域实体的单元测试。
+"""日志领域实体的单元测试。
 
 测试 LoginLogEntity 和 OperationLogEntity 的状态查询属性和工厂方法。
 """

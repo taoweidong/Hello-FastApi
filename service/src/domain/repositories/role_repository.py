@@ -129,3 +129,23 @@ class RoleRepositoryInterface(ABC):
             字典: role_id -> list[menu_id]
         """
         ...
+
+    @abstractmethod
+    async def get_user_data_scope(self, user_id: str) -> int:
+        """获取用户的数据权限范围（取所有角色中范围最大的值，即数值最小者）。"""
+        ...
+
+    @abstractmethod
+    async def get_role_dept_ids(self, role_id: str) -> list[str]:
+        """获取角色自定义数据权限关联的部门ID列表。"""
+        ...
+
+    @abstractmethod
+    async def get_user_custom_dept_ids(self, user_id: str) -> list[str]:
+        """获取用户所有自定义数据权限角色关联的部门ID并集。"""
+        ...
+
+    @abstractmethod
+    async def assign_depts_to_role(self, role_id: str, dept_ids: list[str]) -> bool:
+        """为角色分配自定义数据权限部门（先清除旧部门再分配新的）。"""
+        ...

@@ -10,6 +10,7 @@ from src.domain.services.cache_port import CachePort
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
 from src.infrastructure.database import get_db
+from src.infrastructure.repositories.log_repository import LogRepository
 from src.infrastructure.repositories.menu_repository import MenuRepository
 from src.infrastructure.repositories.role_repository import RoleRepository
 from src.infrastructure.repositories.user_repository import UserRepository
@@ -28,6 +29,7 @@ async def get_auth_service(
     user_repo = UserRepository(db)
     role_repo = RoleRepository(db)
     menu_repo = MenuRepository(db)
+    log_repo = LogRepository(db)
     return AuthService(
         user_repo=user_repo,
         role_repo=role_repo,
@@ -35,4 +37,5 @@ async def get_auth_service(
         token_service=token_service,
         password_service=password_service,
         cache_service=cache_service,
+        log_repo=log_repo,
     )

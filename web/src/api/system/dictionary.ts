@@ -11,8 +11,9 @@ class DictionaryApi extends BaseApi<SystemDictionary, SystemDictionary> {
   listTree(
     params?: Record<string, unknown>
   ): Promise<Result<SystemDictionary[]>> {
+    // params 缺省时补空对象：FastAPI body 参数必填，无 body 会 422
     return http.request<Result<SystemDictionary[]>>("post", this.prefix, {
-      data: params
+      data: params ?? {}
     });
   }
 
@@ -25,6 +26,11 @@ class DictionaryApi extends BaseApi<SystemDictionary, SystemDictionary> {
         data: { name }
       }
     );
+  }
+
+  /** 根据字典类型名称获取启用状态的字典项（公开取数接口，带后端缓存） */
+  getByType<T = any>(name: string): Promise<Result<T>> {
+    return http.request<Result<T>>("get", `${this.prefix}/type/${name}`);
   }
 }
 

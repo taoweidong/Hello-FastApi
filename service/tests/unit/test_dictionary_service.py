@@ -235,6 +235,7 @@ class TestDictionaryService:
     def test_to_response(self, dict_service):
         """测试 _to_response 静态方法。"""
         from datetime import datetime
+
         now = datetime.now()
         d = DictionaryEntity(
             id="1",

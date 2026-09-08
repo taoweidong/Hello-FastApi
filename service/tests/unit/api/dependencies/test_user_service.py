@@ -23,12 +23,9 @@ class TestGetUserService:
         mock_db = MagicMock()
         mock_pwd = MagicMock()
         mock_cache = MagicMock()
-        service = await get_user_service(
-            db=mock_db,
-            password_service=mock_pwd,
-            cache_service=mock_cache,
-        )
+        service = await get_user_service(db=mock_db, password_service=mock_pwd, cache_service=mock_cache)
         from src.application.services.user_service import UserService
+
         assert isinstance(service, UserService)
         assert service.repo == mock_user_instance
         assert service.role_repo == mock_role_instance

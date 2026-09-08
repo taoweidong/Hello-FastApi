@@ -176,22 +176,8 @@ class TestMenuService:
         meta1 = MenuMetaEntity(id="m1", title="根菜单")
         meta2 = MenuMetaEntity(id="m2", title="子菜单")
         menus = [
-            MenuEntity(
-                id="1",
-                name="root",
-                menu_type=0,
-                parent_id=None,
-                rank=0,
-                meta=meta1,
-            ),
-            MenuEntity(
-                id="2",
-                name="child",
-                menu_type=1,
-                parent_id="1",
-                rank=0,
-                meta=meta2,
-            ),
+            MenuEntity(id="1", name="root", menu_type=0, parent_id=None, rank=0, meta=meta1),
+            MenuEntity(id="2", name="child", menu_type=1, parent_id="1", rank=0, meta=meta2),
         ]
         mock_menu_repo.get_all = AsyncMock(return_value=menus)
 

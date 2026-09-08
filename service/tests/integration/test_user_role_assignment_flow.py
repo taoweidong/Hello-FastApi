@@ -31,9 +31,7 @@ class TestUserRoleAssignmentFlow:
         uid = r.json()["data"]["id"]
 
         r = await flow_client.post(
-            "/api/system/user/assign-role",
-            headers=h,
-            json={"userId": uid, "roleIds": [flow_seed.role_admin_id]},
+            "/api/system/user/assign-role", headers=h, json={"userId": uid, "roleIds": [flow_seed.role_admin_id]}
         )
         assert r.status_code == 200
         assert r.json()["code"] == 0
@@ -54,9 +52,7 @@ class TestUserRoleAssignmentFlow:
         uid = r.json()["data"]["id"]
 
         await flow_client.post(
-            "/api/system/user/assign-role",
-            headers=h,
-            json={"userId": uid, "roleIds": [flow_seed.role_ops_id]},
+            "/api/system/user/assign-role", headers=h, json={"userId": uid, "roleIds": [flow_seed.role_ops_id]}
         )
 
         r = await flow_client.post("/api/system/list-role-ids", headers=h, json={"userId": uid})
@@ -66,11 +62,7 @@ class TestUserRoleAssignmentFlow:
     async def test_operator_initial_role(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
-        r = await flow_client.post(
-            "/api/system/list-role-ids",
-            headers=h,
-            json={"userId": flow_seed.operator_user_id},
-        )
+        r = await flow_client.post("/api/system/list-role-ids", headers=h, json={"userId": flow_seed.operator_user_id})
         assert r.status_code == 200
         assert flow_seed.role_ops_id in r.json()["data"]
 
@@ -84,11 +76,7 @@ class TestUserRoleAssignmentFlow:
     async def test_role_menu_ids_lookup(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
-        r = await flow_client.post(
-            "/api/system/role-menu-ids",
-            headers=h,
-            json={"id": flow_seed.role_admin_id},
-        )
+        r = await flow_client.post("/api/system/role-menu-ids", headers=h, json={"id": flow_seed.role_admin_id})
         assert r.status_code == 200
         assert flow_seed.menu_root_id in r.json()["data"]
 

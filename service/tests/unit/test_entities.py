@@ -216,13 +216,7 @@ class TestMenuEntity:
 
     def test_create_new(self):
         """测试工厂方法创建菜单。"""
-        menu = MenuEntity.create_new(
-            name="test_menu",
-            menu_type=1,
-            path="/test",
-            component="TestComp",
-            rank=3,
-        )
+        menu = MenuEntity.create_new(name="test_menu", menu_type=1, path="/test", component="TestComp", rank=3)
         assert len(menu.id) == 32
         assert menu.name == "test_menu"
         assert menu.menu_type == 1
@@ -432,14 +426,7 @@ class TestSystemConfigEntity:
     def test_update_info(self):
         """测试更新系统配置信息。"""
         config = SystemConfigEntity(id="1", key="old_key", value="old_val")
-        config.update_info(
-            value="new_val",
-            is_active=0,
-            access=1,
-            key="new_key",
-            inherit=1,
-            description="desc",
-        )
+        config.update_info(value="new_val", is_active=0, access=1, key="new_key", inherit=1, description="desc")
         assert config.value == "new_val"
         assert config.is_active == 0
         assert config.access == 1

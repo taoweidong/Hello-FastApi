@@ -103,10 +103,7 @@ class TestModelsToList:
 
     def test_multiple_models_returns_list_of_dicts(self):
         """测试多个模型应返回多个字典。"""
-        models = [
-            SamplePydanticModel(name="a", age=1),
-            SamplePydanticModel(name="b", age=2),
-        ]
+        models = [SamplePydanticModel(name="a", age=1), SamplePydanticModel(name="b", age=2)]
         result = models_to_list(models)
         assert len(result) == 2
         assert result[0]["name"] == "a"

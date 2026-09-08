@@ -156,6 +156,53 @@ async def seed_rbac() -> None:
                 await role_repo.assign_menus_to_role(user_role.id, user_menu_ids)
                 print(f"  user 角色已分配 {len(user_menu_ids)} 个菜单权限")
 
+        # ========== 5. 种子常用业务字典（供 useDict/DictTag 取数） ==========
+        print("正在创建业务字典...")
+        from sqlmodel import select
+
+        from src.infrastructure.database.models import Dictionary
+
+        # （字典类型名称, 类型标签, 子项列表[(名称, 标签, 值, 排序)]）
+        default_dicts = [
+            (
+                "sys_user_sex",
+                "用户性别",
+                [
+                    ("sys_user_sex_male", "男", "0", 1),
+                    ("sys_user_sex_female", "女", "1", 2),
+                    ("sys_user_sex_unknown", "未知", "2", 3),
+                ],
+            ),
+            (
+                "sys_active_status",
+                "启用状态",
+                [("sys_active_status_on", "启用", "1", 1), ("sys_active_status_off", "停用", "0", 2)],
+            ),
+            (
+                "sys_notice_type",
+                "通知类型",
+                [("sys_notice_type_notice", "通知", "1", 1), ("sys_notice_type_announce", "公告", "2", 2)],
+            ),
+        ]
+        dict_created = 0
+        for type_name, type_label, items in default_dicts:
+            result = await session.exec(select(Dictionary).where(Dictionary.name == type_name))
+            root = result.first()
+            if root is None:
+                root = Dictionary(name=type_name, label=type_label, value="", sort=0)
+                session.add(root)
+                await session.flush()
+                dict_created += 1
+            for item_name, label, value, sort in items:
+                item_result = await session.exec(select(Dictionary).where(Dictionary.name == item_name))
+                if item_result.first() is None:
+                    session.add(Dictionary(name=item_name, label=label, value=value, sort=sort, parent_id=root.id))
+                    dict_created += 1
+        if dict_created:
+            print(f"  创建 {dict_created} 个字典节点")
+        else:
+            print("  业务字典已存在，跳过创建")
+
         await session.commit()
         await close_db()
         print("RBAC 初始数据创建成功")

@@ -20,6 +20,7 @@ class TestGetDepartmentService:
         mock_db = MagicMock()
         service = await get_department_service(db=mock_db)
         from src.application.services.department_service import DepartmentService
+
         assert isinstance(service, DepartmentService)
         assert service.dept_repo == mock_repo_instance
         mock_dept_repo.assert_called_once_with(mock_db)

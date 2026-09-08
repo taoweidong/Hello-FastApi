@@ -89,7 +89,11 @@ const {
       <template #buttons>
         <el-popconfirm title="确定要删除所有日志数据吗？" @confirm="clearAll">
           <template #reference>
-            <el-button type="danger" :icon="useRenderIcon(Delete)">
+            <el-button
+              v-auth="'log:delete'"
+              type="danger"
+              :icon="useRenderIcon(Delete)"
+            >
               清空日志
             </el-button>
           </template>
@@ -114,7 +118,9 @@ const {
           </div>
           <el-popconfirm title="是否确认删除?" @confirm="onbatchDel">
             <template #reference>
-              <el-button type="danger" text class="mr-1!"> 批量删除 </el-button>
+              <el-button v-auth="'log:delete'" type="danger" text class="mr-1!">
+                批量删除
+              </el-button>
             </template>
           </el-popconfirm>
         </div>

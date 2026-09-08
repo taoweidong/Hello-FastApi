@@ -10,6 +10,7 @@ from src.application.dto.department_dto import (
     DepartmentUpdateDTO,
 )
 from src.domain.entities.department import DepartmentEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import BusinessError, ConflictError, NotFoundError
 from src.domain.repositories.department_repository import DepartmentRepositoryInterface
 
@@ -54,20 +55,20 @@ class DepartmentService:
         # 检查名称唯一性
         existing = await self.dept_repo.get_by_name(dto.name)
         if existing:
-            raise ConflictError("部门名称已存在")
+            raise ConflictError(EM.DEPARTMENT_NAME_EXISTS)
 
         # 检查编码唯一性
         if dto.code:
             existing_code = await self.dept_repo.get_by_code(dto.code)
             if existing_code:
-                raise ConflictError("部门编码已存在")
+                raise ConflictError(EM.DEPARTMENT_CODE_EXISTS)
 
         # 处理 parentId
         parent_id = dto.parentId
         if parent_id:
             parent = await self.dept_repo.get_by_id(parent_id)
             if not parent:
-                raise BusinessError("父部门不存在")
+                raise BusinessError(EM.PARENT_DEPARTMENT_NOT_FOUND)
 
         # 创建部门
         department = DepartmentEntity.create_new(
@@ -88,16 +89,16 @@ class DepartmentService:
         """更新部门。"""
         department = await self.dept_repo.get_by_id(dept_id)
         if not department:
-            raise NotFoundError("部门不存在")
+            raise NotFoundError(EM.DEPARTMENT_NOT_FOUND)
 
         # 处理 parentId
         if dto.parentId is not None:
             if department.is_circular_reference(dto.parentId):
-                raise BusinessError("不能将部门设为自己的子部门")
+                raise BusinessError(EM.DEPARTMENT_CIRCULAR_REFERENCE)
             if dto.parentId:
                 parent = await self.dept_repo.get_by_id(dto.parentId)
                 if not parent:
-                    raise BusinessError("父部门不存在")
+                    raise BusinessError(EM.PARENT_DEPARTMENT_NOT_FOUND)
             department.parent_id = dto.parentId or None
 
         department.update_info(
@@ -118,12 +119,12 @@ class DepartmentService:
         """删除部门。"""
         department = await self.dept_repo.get_by_id(dept_id)
         if not department:
-            raise NotFoundError("部门不存在")
+            raise NotFoundError(EM.DEPARTMENT_NOT_FOUND)
 
         # 检查是否有子部门
         children = await self.dept_repo.get_by_parent_id(dept_id)
         if children:
-            raise BusinessError("部门下存在子部门，不能删除")
+            raise BusinessError(EM.DEPARTMENT_HAS_CHILDREN)
 
         return await self.dept_repo.delete(dept_id)
 

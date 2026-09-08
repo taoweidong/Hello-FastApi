@@ -30,7 +30,11 @@ def remove_session_param(file_path: str):
 
 
 if __name__ == "__main__":
-    files = ["src/application/services/menu_service.py", "src/application/services/log_service.py", "src/api/v1/auth_routes.py"]
+    files = [
+        "src/application/services/menu_service.py",
+        "src/application/services/log_service.py",
+        "src/api/v1/auth_routes.py",
+    ]
 
     for f in files:
         try:

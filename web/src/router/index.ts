@@ -169,6 +169,10 @@ router.beforeEach((to: ToRouteType, _from) => {
       }
     } else {
       // 刷新
+      if (to.path === "/login") {
+        // 刷新登录页时直接放行，避免被 toCorrectRoute() 重定向到首页
+        return true;
+      }
       if (
         usePermissionStoreHook().wholeMenus.length === 0 &&
         to.path !== "/login"

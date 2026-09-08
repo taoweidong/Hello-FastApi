@@ -1,4 +1,4 @@
-﻿"""IP规则领域实体的单元测试。
+"""IP规则领域实体的单元测试。
 
 测试 IPRuleEntity 的所有状态查询属性、业务规则方法和工厂方法。
 """
@@ -67,11 +67,7 @@ class TestIPRuleEntity:
         """测试 is_effective 属性（启用且未过期）。"""
         future = datetime.now(timezone.utc) + timedelta(days=1)
         rule = IPRuleEntity(
-            id="rule-1",
-            ip_address="192.168.1.1",
-            rule_type="blacklist",
-            is_active=1,
-            expires_at=future,
+            id="rule-1", ip_address="192.168.1.1", rule_type="blacklist", is_active=1, expires_at=future
         )
         assert rule.is_effective is True
 

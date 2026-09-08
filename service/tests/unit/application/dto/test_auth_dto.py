@@ -45,11 +45,7 @@ class TestRegisterDTO:
     def test_valid_input_all_fields(self):
         """测试所有字段。"""
         dto = RegisterDTO(
-            username="newuser",
-            password="TestPass123",
-            nickname="昵称",
-            email="user@example.com",
-            phone="13800138000",
+            username="newuser", password="TestPass123", nickname="昵称", email="user@example.com", phone="13800138000"
         )
         assert dto.nickname == "昵称"
         assert dto.email == "user@example.com"

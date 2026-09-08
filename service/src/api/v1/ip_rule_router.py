@@ -58,9 +58,7 @@ class IPRuleRouter(Routable):
             created_time=query.createdTime,
         )
         rule_list = [_to_response(rule) for rule in rules]
-        return list_response(
-            list_data=rule_list, total=total, page_size=query.pageSize, current_page=query.pageNum
-        )
+        return list_response(list_data=rule_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @get("/{rule_id}", response_model=ApiResponse[dict])
     async def get_ip_rule(

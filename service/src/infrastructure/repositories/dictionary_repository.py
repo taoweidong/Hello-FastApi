@@ -64,8 +64,8 @@ class DictionaryRepository(GenericRepository[Dictionary, DictionaryEntity], Dict
 
     async def update(self, dictionary: DictionaryEntity) -> DictionaryEntity:
         """更新现有字典。"""
-        update_values = self._build_update_values(dictionary)
-        stmt = sa_update(Dictionary).where(Dictionary.id == dictionary.id).values(**update_values)
+        values = self._build_update_values(dictionary)
+        stmt = sa_update(Dictionary).where(Dictionary.id == dictionary.id).values(**values)
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         updated = await self.get_by_id(dictionary.id)

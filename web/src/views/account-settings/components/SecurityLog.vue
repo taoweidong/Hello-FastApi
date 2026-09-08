@@ -20,18 +20,14 @@ const pagination = reactive<PaginationProps>({
 });
 const columns: TableColumnList = [
   {
-    label: "详情",
-    prop: "summary",
-    minWidth: 140
+    label: "登录状态",
+    prop: "status",
+    minWidth: 100,
+    formatter: ({ status }) => (status === 1 ? "登录成功" : "登录失败")
   },
   {
     label: "IP 地址",
     prop: "ip",
-    minWidth: 100
-  },
-  {
-    label: "地点",
-    prop: "address",
     minWidth: 140
   },
   {
@@ -46,10 +42,10 @@ const columns: TableColumnList = [
   },
   {
     label: "时间",
-    prop: "operatingTime",
+    prop: "loginTime",
     minWidth: 180,
-    formatter: ({ operatingTime }) =>
-      dayjs(operatingTime).format("YYYY-MM-DD HH:mm:ss")
+    formatter: ({ loginTime }) =>
+      loginTime ? dayjs(loginTime).format("YYYY-MM-DD HH:mm:ss") : "-"
   }
 ];
 

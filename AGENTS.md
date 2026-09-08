@@ -5,6 +5,8 @@ Frontend scaffolded from **vue-pure-admin v7**; backend ports pure-admin-backend
 
 ## Backend (service/)
 
+**Coding rules:** All logging must use the `loguru` library. `print()` is strictly prohibited in any source file under `src/`, `scripts/`, or `tests/`. Use `from loguru import logger` and call `logger.info()`, `logger.debug()`, `logger.warning()`, `logger.error()`, etc.
+
 **Setup** (requires Python >= 3.10, `uv`):
 ```bash
 uv venv --python 3.10

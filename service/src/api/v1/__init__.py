@@ -12,6 +12,8 @@ from src.api.v1.ip_rule_router import IPRuleRouter
 from src.api.v1.log_router import LogRouter
 from src.api.v1.menu_router import MenuRouter
 from src.api.v1.monitor_router import MonitorRouter
+from src.api.v1.notice_router import NoticeRouter
+from src.api.v1.post_router import PostRouter
 from src.api.v1.role_router import RoleRouter
 from src.api.v1.system_config_router import SystemConfigRouter
 from src.api.v1.user_router import UserRouter
@@ -42,6 +44,12 @@ system_router.include_router(LogRouter().router, tags=["日志管理"])
 
 # 系统配置路由
 system_router.include_router(SystemConfigRouter().router, prefix="/config", tags=["系统配置"])
+
+# 通知公告路由
+system_router.include_router(NoticeRouter().router, prefix="/notice", tags=["通知公告"])
+
+# 岗位管理路由
+system_router.include_router(PostRouter().router, prefix="/post", tags=["岗位管理"])
 
 # 系统监控路由（stub 接口）
 system_router.include_router(MonitorRouter().router, tags=["系统监控"])

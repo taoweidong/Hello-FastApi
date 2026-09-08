@@ -124,7 +124,7 @@ function onFullscreen() {
                   </el-icon>
                   <template #dropdown>
                     <el-dropdown-menu>
-                      <el-dropdown-item>
+                      <el-dropdown-item v-auth="'dictionary:edit'">
                         <el-button
                           class="reset-margin"
                           link
@@ -135,7 +135,7 @@ function onFullscreen() {
                           修改
                         </el-button>
                       </el-dropdown-item>
-                      <el-dropdown-item>
+                      <el-dropdown-item v-auth="'dictionary:add'">
                         <el-button
                           class="reset-margin"
                           link
@@ -146,7 +146,7 @@ function onFullscreen() {
                           新增子项
                         </el-button>
                       </el-dropdown-item>
-                      <el-dropdown-item>
+                      <el-dropdown-item v-auth="'dictionary:delete'">
                         <el-button
                           class="reset-margin"
                           link
@@ -167,6 +167,7 @@ function onFullscreen() {
         <el-divider style="margin: 0" />
         <div class="p-2">
           <el-button
+            v-auth="'dictionary:add'"
             type="primary"
             class="w-full"
             :icon="useRenderIcon(AddFill)"
@@ -188,6 +189,7 @@ function onFullscreen() {
         >
           <template #buttons>
             <el-button
+              v-auth="'dictionary:add'"
               type="primary"
               plain
               :icon="useRenderIcon(AddFill)"
@@ -216,6 +218,7 @@ function onFullscreen() {
             >
               <template #operation="{ row }">
                 <el-button
+                  v-auth="'dictionary:edit'"
                   class="reset-margin"
                   link
                   type="primary"
@@ -231,6 +234,7 @@ function onFullscreen() {
                 >
                   <template #reference>
                     <el-button
+                      v-auth="'dictionary:delete'"
                       class="reset-margin"
                       link
                       type="primary"

@@ -1,4 +1,4 @@
-﻿"""菜单领域实体的单元测试。
+"""菜单领域实体的单元测试。
 
 测试 MenuEntity 的所有状态查询属性、业务规则方法和工厂方法。
 """
@@ -140,23 +140,14 @@ class TestMenuEntity:
     def test_create_new_menu_page(self):
         """测试 create_new 工厂方法（菜单页面类型）。"""
         menu = MenuEntity.create_new(
-            name="User",
-            menu_type=1,
-            path="/system/user",
-            component="system/user/index",
-            rank=1,
+            name="User", menu_type=1, path="/system/user", component="system/user/index", rank=1
         )
         assert menu.menu_type == 1
         assert menu.component == "system/user/index"
 
     def test_create_new_permission(self):
         """测试 create_new 工厂方法（权限类型）。"""
-        menu = MenuEntity.create_new(
-            name="user:view",
-            menu_type=2,
-            path="/system/user",
-            method="GET",
-        )
+        menu = MenuEntity.create_new(name="user:view", menu_type=2, path="/system/user", method="GET")
         assert menu.menu_type == 2
         assert menu.method == "GET"
 

@@ -16,8 +16,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.role import RoleEntity
+from src.domain.enums import DataScope
 from src.domain.repositories.role_repository import RoleRepositoryInterface
-from src.infrastructure.database.models import Menu, Role, RoleMenuLink, UserRole
+from src.infrastructure.database.models import Menu, Role, RoleDeptLink, RoleMenuLink, UserRole
 from src.infrastructure.repositories.base import GenericRepository
 
 
@@ -178,3 +179,43 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
         for link in links:
             menu_ids_map[str(link.userrole_id)].append(str(link.menu_id))
         return dict(menu_ids_map)
+
+    # ========== 数据权限（data_scope）相关操作 ==========
+
+    async def get_user_data_scope(self, user_id: str) -> int:
+        """获取用户的数据权限范围（取所有启用角色中范围最大的值，即数值最小者）。"""
+        stmt = (
+            select(Role.data_scope)
+            .join(UserRole, UserRole.userrole_id == Role.id)
+            .where(UserRole.userinfo_id == user_id, Role.is_active == 1)
+        )
+        result = await self.session.exec(stmt)
+        scopes = [s for s in result.all() if s is not None]
+        if not scopes:
+            # 无角色时默认仅本人可见，避免数据泄露
+            return int(DataScope.SELF)
+        return int(min(scopes))
+
+    async def get_role_dept_ids(self, role_id: str) -> list[str]:
+        """获取角色自定义数据权限关联的部门ID列表。"""
+        stmt = select(RoleDeptLink.dept_id).where(RoleDeptLink.role_id == role_id)
+        result = await self.session.exec(stmt)
+        return [str(dept_id) for dept_id in result.all()]
+
+    async def get_user_custom_dept_ids(self, user_id: str) -> list[str]:
+        """获取用户所有自定义数据权限角色关联的部门ID并集。"""
+        stmt = (
+            select(RoleDeptLink.dept_id)
+            .join(UserRole, UserRole.userrole_id == RoleDeptLink.role_id)
+            .where(UserRole.userinfo_id == user_id)
+        )
+        result = await self.session.exec(stmt)
+        return sorted({str(dept_id) for dept_id in result.all()})
+
+    async def assign_depts_to_role(self, role_id: str, dept_ids: list[str]) -> bool:
+        """为角色分配自定义数据权限部门（先清除旧部门再分配新的）。"""
+        stmt = sa_delete(RoleDeptLink).where(RoleDeptLink.role_id == role_id)
+        await self.session.exec(stmt)  # type: ignore[arg-type]
+        self.session.add_all([RoleDeptLink(role_id=role_id, dept_id=did) for did in dept_ids])
+        await self.session.flush()
+        return True

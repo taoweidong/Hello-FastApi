@@ -1,11 +1,13 @@
 """认证路由模块单元测试。"""
 
+from datetime import datetime
 from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from src.domain.entities.log import LoginLogEntity
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.user import UserEntity
@@ -22,6 +24,7 @@ class TestAuthRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.auth_router import AuthRouter
+
         _app.include_router(AuthRouter().router, prefix="/api/system")
         return _app
 
@@ -32,29 +35,37 @@ class TestAuthRouter:
     @pytest.fixture
     def mock_user_entity(self):
         return UserEntity(
-            id="1", username="admin", password="hashed", avatar="av.png",
-            nickname="管理员", email="admin@test.com", phone="13800000000",
-            description="管理员账号", is_active=1, is_superuser=UserRole.SUPERUSER,
+            id="1",
+            username="admin",
+            password="hashed",
+            avatar="av.png",
+            nickname="管理员",
+            email="admin@test.com",
+            phone="13800000000",
+            description="管理员账号",
+            is_active=1,
+            is_superuser=UserRole.SUPERUSER,
         )
 
     @pytest.fixture
     def mock_auth_service(self):
         svc = AsyncMock()
         svc.login.return_value = {
-            "accessToken": "access_token", "expires": 1800,
+            "accessToken": "access_token",
+            "expires": 1800,
             "refreshToken": "refresh_token",
-            "userInfo": {"id": "1", "username": "admin"}, "roles": ["admin"],
+            "userInfo": {"id": "1", "username": "admin"},
+            "roles": ["admin"],
         }
         svc.register.return_value = {"id": "2", "username": "newuser"}
         svc.logout.return_value = None
-        svc.refresh_token.return_value = {
-            "accessToken": "new_access", "expires": 1800, "refreshToken": "new_refresh",
-        }
+        svc.refresh_token.return_value = {"accessToken": "new_access", "expires": 1800, "refreshToken": "new_refresh"}
         svc.get_async_routes.return_value = [
-            {"name": "sys", "path": "/sys", "component": None, "meta": {"title": "系统管理", "icon": "setting"}},
+            {"name": "sys", "path": "/sys", "component": None, "meta": {"title": "系统管理", "icon": "setting"}}
         ]
         svc.get_user_role_ids.return_value = ["r1"]
         svc.get_role_menu_ids.return_value = ["1", "2"]
+        svc.get_mine_logs.return_value = ([], 0)
         return svc
 
     @pytest.fixture
@@ -62,19 +73,23 @@ class TestAuthRouter:
         svc = AsyncMock()
         meta1 = MenuMetaEntity(id="m1", title="系统管理", icon="setting")
         menu1 = MenuEntity(id="1", name="sys", menu_type=0, path="/sys", rank=1, meta=meta1)
-        menu2 = MenuEntity(id="2", name="users", menu_type=1, path="/sys/users",
-                           component="sys/users.vue", parent_id="1", rank=2,
-                           meta=MenuMetaEntity(id="m2", title="用户管理"))
+        menu2 = MenuEntity(
+            id="2",
+            name="users",
+            menu_type=1,
+            path="/sys/users",
+            component="sys/users.vue",
+            parent_id="1",
+            rank=2,
+            meta=MenuMetaEntity(id="m2", title="用户管理"),
+        )
         svc.get_all_menus_raw.return_value = [menu1, menu2]
         return svc
 
     @pytest.fixture
     def mock_role_service(self):
         svc = AsyncMock()
-        svc.get_all_simple_roles.return_value = [
-            {"id": "r1", "name": "管理员"},
-            {"id": "r2", "name": "普通用户"},
-        ]
+        svc.get_all_simple_roles.return_value = [{"id": "r1", "name": "管理员"}, {"id": "r2", "name": "普通用户"}]
         return svc
 
     @pytest.fixture
@@ -84,7 +99,16 @@ class TestAuthRouter:
         return svc
 
     @pytest.fixture
-    def client(self, app, mock_user, mock_user_entity, mock_auth_service, mock_menu_service, mock_role_service, mock_user_service):
+    def client(
+        self,
+        app,
+        mock_user,
+        mock_user_entity,
+        mock_auth_service,
+        mock_menu_service,
+        mock_role_service,
+        mock_user_service,
+    ):
         from src.api.dependencies import (
             get_auth_service,
             get_current_active_user,
@@ -92,6 +116,7 @@ class TestAuthRouter:
             get_role_service,
             get_user_service,
         )
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_auth_service] = lambda: mock_auth_service
         app.dependency_overrides[get_menu_service] = lambda: mock_menu_service
@@ -143,10 +168,34 @@ class TestAuthRouter:
         resp = client.get("/api/system/mine", headers={"Authorization": "Bearer test_token"})
         assert resp.status_code == 401
 
-    def test_get_mine_logs(self, client):
+    def test_get_mine_logs(self, client, mock_auth_service):
+        mock_auth_service.get_mine_logs.return_value = (
+            [
+                LoginLogEntity(
+                    id="log-1",
+                    status=1,
+                    username="admin",
+                    ipaddress="127.0.0.1",
+                    browser="Chrome",
+                    system="Windows",
+                    created_time=datetime(2026, 8, 23, 10, 0, 0),
+                )
+            ],
+            1,
+        )
         resp = client.get("/api/system/mine-logs", headers={"Authorization": "Bearer test_token"})
         assert resp.status_code == 200
-        assert resp.json()["data"]["list"] == []
+        data = resp.json()["data"]
+        assert len(data["list"]) == 1
+        item = data["list"][0]
+        assert item["id"] == "log-1"
+        assert item["username"] == "admin"
+        assert item["ip"] == "127.0.0.1"
+        assert item["browser"] == "Chrome"
+        assert item["system"] == "Windows"
+        assert item["status"] == 1
+        assert item["loginTime"] is not None
+        mock_auth_service.get_mine_logs.assert_awaited_once_with(username="admin")
 
     def test_get_async_routes(self, client):
         resp = client.get("/api/system/get-async-routes", headers={"Authorization": "Bearer test_token"})
@@ -162,9 +211,7 @@ class TestAuthRouter:
 
     def test_list_role_ids_success(self, client):
         resp = client.post(
-            "/api/system/list-role-ids",
-            json={"userId": "1"},
-            headers={"Authorization": "Bearer test_token"},
+            "/api/system/list-role-ids", json={"userId": "1"}, headers={"Authorization": "Bearer test_token"}
         )
         assert resp.status_code == 200
         assert len(resp.json()["data"]) == 1
@@ -180,9 +227,7 @@ class TestAuthRouter:
 
     def test_get_role_menu_ids_success(self, client):
         resp = client.post(
-            "/api/system/role-menu-ids",
-            json={"id": "r1"},
-            headers={"Authorization": "Bearer test_token"},
+            "/api/system/role-menu-ids", json={"id": "r1"}, headers={"Authorization": "Bearer test_token"}
         )
         assert resp.status_code == 200
         data = resp.json()["data"]

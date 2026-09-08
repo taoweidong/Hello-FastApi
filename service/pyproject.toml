@@ -23,6 +23,7 @@ dependencies = [
     "slowapi>=0.1.9",
     "limits>=3.10.0",
     "alembic>=1.13.0",
+    "psutil>=7.2.2",
 ]
 
 [project.optional-dependencies]
@@ -62,7 +63,8 @@ skip-magic-trailing-comma = true
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
-ignore = ["B008"]
+# B008: FastAPI 依赖注入惯用法；N817: 项目约定 ErrorMessages as EM 缩写
+ignore = ["B008", "N817"]
 
 # 前端约定驼峰 JSON / Query 参数，与 PEP8 命名 intentionally 不一致
 [tool.ruff.lint.per-file-ignores]
@@ -77,6 +79,8 @@ split-on-trailing-comma = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# ui_test.py 为 Playwright 全栈冒烟脚本（需浏览器环境），不参与常规单元/集成测试
+addopts = "--ignore=tests/ui_test.py"
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",

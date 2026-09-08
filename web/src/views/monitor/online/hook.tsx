@@ -33,11 +33,6 @@ export function useOnline() {
       minWidth: 140
     },
     {
-      label: "登录地点",
-      prop: "address",
-      minWidth: 140
-    },
-    {
       label: "操作系统",
       prop: "system",
       minWidth: 100
@@ -71,10 +66,6 @@ export function useOnline() {
     onSearch();
   }
 
-  function handleSelectionChange(val) {
-    console.log("handleSelectionChange", val);
-  }
-
   function handleOffline(row) {
     forceOffline({ id: row.id }).then(res => {
       if (res.code === 0) {
@@ -86,7 +77,11 @@ export function useOnline() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await getOnlineLogsList(toRaw(form));
+    const { code, data } = await getOnlineLogsList({
+      ...toRaw(form),
+      pageNum: pagination.currentPage,
+      pageSize: pagination.pageSize
+    });
     if (code === 0) {
       dataList.value = data.list;
       pagination.total = data.total;
@@ -117,7 +112,6 @@ export function useOnline() {
     resetForm,
     handleOffline,
     handleSizeChange,
-    handleCurrentChange,
-    handleSelectionChange
+    handleCurrentChange
   };
 }

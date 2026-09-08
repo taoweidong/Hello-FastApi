@@ -21,6 +21,7 @@ class LoginLog(SQLModel, table=True):
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
     status: int = Field(default=1)  # 登录状态(0-失败, 1-成功)
+    username: str | None = Field(default=None, max_length=64)  # 登录用户名
     ipaddress: str | None = Field(default=None, max_length=39)  # IP地址
     browser: str | None = Field(default=None, max_length=64)  # 浏览器
     system: str | None = Field(default=None, max_length=64)  # 操作系统
@@ -41,6 +42,7 @@ class LoginLog(SQLModel, table=True):
         return LoginLogEntity(
             id=self.id,
             status=self.status,
+            username=self.username,
             ipaddress=self.ipaddress,
             browser=self.browser,
             system=self.system,
@@ -59,6 +61,7 @@ class LoginLog(SQLModel, table=True):
         return cls(
             id=entity.id,
             status=entity.status,
+            username=entity.username,
             ipaddress=entity.ipaddress,
             browser=entity.browser,
             system=entity.system,

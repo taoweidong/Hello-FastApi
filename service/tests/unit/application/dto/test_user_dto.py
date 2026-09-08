@@ -284,13 +284,7 @@ class TestUserListQueryDTO:
     def test_custom_values(self):
         """测试自定义值。"""
         dto = UserListQueryDTO(
-            pageNum=2,
-            pageSize=20,
-            username="test",
-            phone="138",
-            email="test@",
-            isActive=1,
-            deptId="dept-001",
+            pageNum=2, pageSize=20, username="test", phone="138", email="test@", isActive=1, deptId="dept-001"
         )
         assert dto.pageNum == 2
         assert dto.username == "test"

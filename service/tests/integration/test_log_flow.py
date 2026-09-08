@@ -26,9 +26,7 @@ class TestLogFlow:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/login-logs/batch-delete",
-            headers=h,
-            json={"ids": [flow_seed.login_log_id]},
+            "/api/system/login-logs/batch-delete", headers=h, json={"ids": [flow_seed.login_log_id]}
         )
         assert r.status_code == 200
         assert r.json()["data"]["deleted"] == 1
@@ -51,9 +49,7 @@ class TestLogFlow:
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
         r = await flow_client.post(
-            "/api/system/operation-logs/batch-delete",
-            headers=h,
-            json={"ids": [flow_seed.system_log_id]},
+            "/api/system/operation-logs/batch-delete", headers=h, json={"ids": [flow_seed.system_log_id]}
         )
         assert r.status_code == 200
         assert r.json()["data"]["deleted"] >= 0
@@ -75,10 +71,6 @@ class TestLogFlow:
     async def test_system_log_detail(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
 
-        r = await flow_client.post(
-            "/api/system/system-logs-detail",
-            headers=h,
-            json={"id": flow_seed.system_log_id},
-        )
+        r = await flow_client.post("/api/system/system-logs-detail", headers=h, json={"id": flow_seed.system_log_id})
         assert r.status_code == 200
         assert r.json()["code"] == 0

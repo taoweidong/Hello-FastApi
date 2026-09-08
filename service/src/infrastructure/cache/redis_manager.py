@@ -17,7 +17,16 @@ class RedisManager:
     async def get_client(self) -> redis.Redis:
         """获取或创建 Redis 客户端实例。"""
         if self._client is None:
-            self._client = redis.from_url(self._url, encoding=self._encoding, decode_responses=self._decode_responses)
+            self._client = redis.from_url(
+                self._url,
+                encoding=self._encoding,
+                decode_responses=self._decode_responses,
+                socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+                socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+                # 显式使用 RESP2 协议：Redis 6.0 以下版本不支持 HELLO 命令，
+                # redis-py 8.x 默认 RESP3 握手会报 unknown command 'HELLO'。
+                protocol=2,
+            )
         return self._client
 
     async def close(self) -> None:

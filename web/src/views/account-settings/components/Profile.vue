@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { formUpload } from "@/api/mock";
 import { message } from "@/utils/message";
 import { onMounted, reactive, ref } from "vue";
-import { type UserInfo, getMine } from "@/api/user";
+import { useUserStoreHook } from "@/store/modules/user";
+import {
+  type UserInfo,
+  getMine,
+  updateProfile,
+  uploadAvatar
+} from "@/api/user";
 import type { FormInstance, FormRules } from "element-plus";
 import ReCropperPreview from "@/components/ReCropperPreview";
 import { createFormData, deviceDetection } from "@pureadmin/utils";
@@ -70,11 +75,13 @@ const onCropper = ({ blob }) => (cropperBlob.value = blob);
 
 const handleSubmitImage = () => {
   const formData = createFormData({
-    files: new File([cropperBlob.value], "avatar")
+    file: new File([cropperBlob.value], "avatar.png", { type: "image/png" })
   });
-  formUpload(formData)
-    .then(({ code }) => {
-      if (code === 0) {
+  uploadAvatar(formData as FormData)
+    .then(({ code, data }) => {
+      if (code === 0 && data?.avatar) {
+        userInfos.avatar = data.avatar;
+        useUserStoreHook().SET_AVATAR(data.avatar);
         message("更新头像成功", { type: "success" });
         handleClose();
       } else {
@@ -82,16 +89,28 @@ const handleSubmitImage = () => {
       }
     })
     .catch(error => {
-      message(`提交异常 ${error}`, { type: "error" });
+      message(`提交异常 ${error?.message ?? error}`, { type: "error" });
     });
 };
 
 // 更新信息
 const onSubmit = async (formEl: FormInstance) => {
-  await formEl.validate((valid, fields) => {
+  await formEl.validate(async (valid, fields) => {
     if (valid) {
-      console.log(userInfos);
-      message("更新信息成功", { type: "success" });
+      try {
+        const { code } = await updateProfile({
+          nickname: userInfos.nickname,
+          email: userInfos.email || null,
+          phone: userInfos.phone || null,
+          description: userInfos.description || null
+        });
+        if (code === 0) {
+          useUserStoreHook().SET_NICKNAME(userInfos.nickname);
+          message("更新信息成功", { type: "success" });
+        }
+      } catch {
+        message("更新信息失败", { type: "error" });
+      }
     } else {
       console.log("error submit!", fields);
     }

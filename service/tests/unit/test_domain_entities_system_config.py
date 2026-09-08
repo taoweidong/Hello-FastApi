@@ -1,4 +1,4 @@
-﻿"""系统配置领域实体的单元测试。
+"""系统配置领域实体的单元测试。
 
 测试 SystemConfigEntity 的状态变更方法和工厂方法。
 """
@@ -17,14 +17,7 @@ class TestSystemConfigEntity:
     def test_update_info_with_all_fields(self):
         """测试 update_info 方法（更新所有字段）。"""
         config = SystemConfigEntity(id="config-1", key="site_title", value="标题")
-        config.update_info(
-            value="新标题",
-            is_active=1,
-            access=1,
-            key="new_key",
-            inherit=1,
-            description="描述",
-        )
+        config.update_info(value="新标题", is_active=1, access=1, key="new_key", inherit=1, description="描述")
         assert config.value == "新标题"
         assert config.is_active == 1
         assert config.access == 1
@@ -51,11 +44,7 @@ class TestSystemConfigEntity:
 
     def test_create_new(self):
         """测试 create_new 工厂方法。"""
-        config = SystemConfigEntity.create_new(
-            key="site_title",
-            value="我的网站",
-            description="网站标题",
-        )
+        config = SystemConfigEntity.create_new(key="site_title", value="我的网站", description="网站标题")
         assert config.id is not None
         assert len(config.id) == 32
         assert config.key == "site_title"

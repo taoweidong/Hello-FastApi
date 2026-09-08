@@ -66,7 +66,7 @@ class LogRouter(Routable):
     @post("/login-logs", response_model=PaginatedResponse[dict])
     async def get_login_logs(
         self,
-        query: LoginLogListQueryDTO = Body(default={}),
+        query: LoginLogListQueryDTO = Body(default=LoginLogListQueryDTO()),
         service: LogService = Depends(get_log_service),
         _: dict = Depends(require_permission("log:view")),
     ) -> dict:
@@ -99,7 +99,7 @@ class LogRouter(Routable):
     @post("/operation-logs", response_model=PaginatedResponse[dict])
     async def get_operation_logs(
         self,
-        query: OperationLogListQueryDTO = Body(default={}),
+        query: OperationLogListQueryDTO = Body(default=OperationLogListQueryDTO()),
         service: LogService = Depends(get_log_service),
         _: dict = Depends(require_permission("log:view")),
     ) -> dict:
@@ -132,7 +132,7 @@ class LogRouter(Routable):
     @post("/system-logs", response_model=PaginatedResponse[dict])
     async def get_system_logs(
         self,
-        query: SystemLogListQueryDTO = Body(default={}),
+        query: SystemLogListQueryDTO = Body(default=SystemLogListQueryDTO()),
         service: LogService = Depends(get_log_service),
         _: dict = Depends(require_permission("log:view")),
     ) -> dict:

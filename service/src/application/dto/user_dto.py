@@ -50,6 +50,7 @@ class UserCreateDTO(BaseModel, UserProfileValidator):
     modeType: int = Field(default=0, description="权限模式(0-OR, 1-AND)")
     dept_id: str | None = Field(default=None, alias="deptId")
     description: str | None = None
+    postIds: list[str] | None = Field(default=None, description="岗位ID列表（传入则同步分配岗位）")
 
     model_config = {"populate_by_name": True}
 
@@ -74,6 +75,7 @@ class UserUpdateDTO(BaseModel, UserProfileValidator):
     modeType: int | None = Field(default=None, description="权限模式(0-OR, 1-AND)")
     dept_id: str | None = Field(default=None, alias="deptId")
     description: str | None = None
+    postIds: list[str] | None = Field(default=None, description="岗位ID列表（传入则同步分配岗位）")
 
     model_config = {"populate_by_name": True}
 

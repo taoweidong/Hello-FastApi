@@ -1,4 +1,4 @@
-﻿"""部门领域实体的单元测试。
+"""部门领域实体的单元测试。
 
 测试 DepartmentEntity 的状态查询属性、业务规则方法和工厂方法。
 """
@@ -47,13 +47,7 @@ class TestDepartmentEntity:
         """测试 update_info 方法（更新所有字段）。"""
         dept = DepartmentEntity(id="dept-1", name="技术部", code="tech", mode_type=0, rank=1)
         dept.update_info(
-            name="研发部",
-            code="rd",
-            mode_type=1,
-            rank=2,
-            auto_bind=1,
-            parent_id="parent-1",
-            description="描述",
+            name="研发部", code="rd", mode_type=1, rank=2, auto_bind=1, parent_id="parent-1", description="描述"
         )
         assert dept.name == "研发部"
         assert dept.code == "rd"
@@ -83,13 +77,7 @@ class TestDepartmentEntity:
     def test_create_new(self):
         """测试 create_new 工厂方法。"""
         dept = DepartmentEntity.create_new(
-            name="技术部",
-            code="tech",
-            parent_id="parent-1",
-            mode_type=1,
-            rank=2,
-            auto_bind=1,
-            description="技术部门",
+            name="技术部", code="tech", parent_id="parent-1", mode_type=1, rank=2, auto_bind=1, description="技术部门"
         )
         assert dept.id is not None
         assert len(dept.id) == 32

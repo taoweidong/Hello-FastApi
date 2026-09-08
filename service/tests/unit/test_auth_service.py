@@ -1,19 +1,21 @@
 """认证服务的单元测试。"""
 
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
-from src.application.services.auth_service import AuthService
+from src.application.services.auth_service import AuthService, LoginRequestInfo
+from src.domain.entities.log import LoginLogEntity
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
+from src.domain.enums import UserRole
 from src.domain.exceptions import BusinessError, NotFoundError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
-from src.domain.enums import UserRole
 
 TEST_SECRET_KEY = "test-secret-key-for-auth-testing"
 TEST_ALGORITHM = "HS256"
@@ -38,10 +40,7 @@ class TestAuthService:
     @pytest.fixture
     def token_service(self):
         return TokenService(
-            secret_key=TEST_SECRET_KEY,
-            algorithm=TEST_ALGORITHM,
-            access_expire_minutes=30,
-            refresh_expire_days=7,
+            secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=30, refresh_expire_days=7
         )
 
     @pytest.fixture
@@ -56,14 +55,12 @@ class TestAuthService:
         return AsyncMock()
 
     @pytest.fixture
+    def mock_log_repo(self):
+        return AsyncMock()
+
+    @pytest.fixture
     def auth_service(
-        self,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        token_service,
-        mock_password_service,
-        mock_cache_service,
+        self, mock_user_repo, mock_role_repo, mock_menu_repo, token_service, mock_password_service, mock_cache_service
     ):
         return AuthService(
             user_repo=mock_user_repo,
@@ -78,12 +75,7 @@ class TestAuthService:
     async def test_login_success(self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo):
         """测试登录成功。"""
         user = UserEntity(
-            id="user-1",
-            username="testuser",
-            password="hashed",
-            is_active=1,
-            nickname="测试",
-            avatar="a.png",
+            id="user-1", username="testuser", password="hashed", is_active=1, nickname="测试", avatar="a.png"
         )
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         mock_role_repo.get_user_roles = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
@@ -133,21 +125,10 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_login_superuser(
-        self,
-        auth_service,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        mock_cache_service,
+        self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service
     ):
         """测试超级用户登录。"""
-        user = UserEntity(
-            id="su-1",
-            username="admin",
-            password="hashed",
-            is_active=1,
-            is_superuser=UserRole.SUPERUSER,
-        )
+        user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=UserRole.SUPERUSER)
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
         # get_all 返回 list[RoleEntity]
         mock_role_repo.get_all = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
@@ -176,11 +157,7 @@ class TestAuthService:
         mock_user_repo.create = AsyncMock(return_value=created)
 
         dto = RegisterDTO(
-            username="newuser",
-            password="TestPass123",
-            nickname="新用户",
-            email="new@test.com",
-            phone="123456",
+            username="newuser", password="TestPass123", nickname="新用户", email="new@test.com", phone="123456"
         )
         result = await auth_service.register(dto)
 
@@ -246,12 +223,7 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_logout_without_cache(
-        self,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        token_service,
-        mock_password_service,
+        self, mock_user_repo, mock_role_repo, mock_menu_repo, token_service, mock_password_service
     ):
         """测试登出（无缓存服务）。"""
         service = AuthService(
@@ -295,23 +267,8 @@ class TestAuthService:
         meta1 = MenuMetaEntity(id="m1", title="根菜单", icon="home")
         meta2 = MenuMetaEntity(id="m2", title="子菜单", icon="user")
         menus = [
-            MenuEntity(
-                id="1",
-                name="root",
-                menu_type=0,
-                path="/root",
-                rank=1,
-                meta=meta1,
-            ),
-            MenuEntity(
-                id="2",
-                name="child",
-                menu_type=1,
-                path="/child",
-                rank=2,
-                parent_id="1",
-                meta=meta2,
-            ),
+            MenuEntity(id="1", name="root", menu_type=0, path="/root", rank=1, meta=meta1),
+            MenuEntity(id="2", name="child", menu_type=1, path="/child", rank=2, parent_id="1", meta=meta2),
         ]
         tree = auth_service._build_route_tree(menus)
         assert len(tree) == 1
@@ -379,10 +336,7 @@ class TestAuthService:
 
         # Create a token with zero expiry to avoid 'exp' claim
         minimal_service = TokenService(
-            secret_key=TEST_SECRET_KEY,
-            algorithm=TEST_ALGORITHM,
-            access_expire_minutes=0,
-            refresh_expire_days=0,
+            secret_key=TEST_SECRET_KEY, algorithm=TEST_ALGORITHM, access_expire_minutes=0, refresh_expire_days=0
         )
         token = minimal_service.create_access_token({"sub": "user-1"})
         # token has no 'exp' -> should return True without calling cache
@@ -392,27 +346,13 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_get_async_routes_user(
-        self,
-        auth_service,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        mock_cache_service,
+        self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service
     ):
         """测试普通用户获取动态路由。"""
         user = UserEntity(id="u1", username="testuser", password="hash", is_active=1)
         mock_user_repo.get_by_id = AsyncMock(return_value=user)
         meta = MenuMetaEntity(id="m1", title="首页", is_show_menu=1, is_keepalive=1)
-        menus = [
-            MenuEntity(
-                id="1",
-                name="home",
-                menu_type=0,
-                path="/home",
-                rank=0,
-                meta=meta,
-            )
-        ]
+        menus = [MenuEntity(id="1", name="home", menu_type=0, path="/home", rank=0, meta=meta)]
         mock_role_repo.get_user_all_menus = AsyncMock(return_value=menus)
 
         routes = await auth_service.get_async_routes("u1")
@@ -557,6 +497,7 @@ class TestAuthService:
     async def test_refresh_token_no_sub_claim(self, auth_service, mock_user_repo, token_service):
         """测试刷新令牌时 payload 缺少 sub。"""
         from jose import jwt as pyjwt
+
         # Forge a refresh token with no "sub" claim but valid structure
         forged = pyjwt.encode({"type": "refresh", "exp": 9999999999}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
         with pytest.raises(UnauthorizedError):
@@ -566,6 +507,7 @@ class TestAuthService:
     async def test_logout_token_no_exp_claim(self, auth_service, mock_cache_service, token_service):
         """测试登出时 token 无 exp 声明。"""
         from jose import jwt as pyjwt
+
         forged = pyjwt.encode({"sub": "user-1", "type": "access"}, TEST_SECRET_KEY, algorithm=TEST_ALGORITHM)
         result = await auth_service.logout(forged)
         assert result is True
@@ -581,12 +523,7 @@ class TestAuthService:
 
     @pytest.mark.asyncio
     async def test_login_superuser_cached_menus(
-        self,
-        auth_service,
-        mock_user_repo,
-        mock_role_repo,
-        mock_menu_repo,
-        mock_cache_service,
+        self, auth_service, mock_user_repo, mock_role_repo, mock_menu_repo, mock_cache_service
     ):
         """测试超级用户登录时菜单从缓存读取。"""
         user = UserEntity(id="su-1", username="admin", password="hashed", is_active=1, is_superuser=UserRole.SUPERUSER)
@@ -617,3 +554,311 @@ class TestAuthService:
         result = await auth_service.login(dto)
         assert "accessToken" in result
         assert "btn:add" in result["permissions"]
+
+    # ── 登录日志与在线会话登记 ──
+
+    def _service_with_log_repo(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """构造注入日志仓储的服务实例。"""
+        return AuthService(
+            user_repo=mock_user_repo,
+            role_repo=mock_role_repo,
+            menu_repo=mock_menu_repo,
+            token_service=token_service,
+            password_service=mock_password_service,
+            cache_service=mock_cache_service,
+            log_repo=mock_log_repo,
+        )
+
+    @pytest.mark.asyncio
+    async def test_login_writes_log_and_registers_session(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """登录成功时写入登录日志并登记在线会话。"""
+        user = UserEntity(
+            id="user-1", username="testuser", password="hashed", is_active=1, nickname="测试", avatar="a.png"
+        )
+        mock_user_repo.get_by_username = AsyncMock(return_value=user)
+        mock_role_repo.get_user_roles = AsyncMock(return_value=[RoleEntity(id="r1", name="admin", code="admin")])
+        mock_menu_repo.get_all = AsyncMock(return_value=[])
+        service = self._service_with_log_repo(
+            mock_user_repo,
+            mock_role_repo,
+            mock_menu_repo,
+            token_service,
+            mock_password_service,
+            mock_cache_service,
+            mock_log_repo,
+        )
+
+        dto = LoginDTO(username="testuser", password="TestPass123")
+        request_info = LoginRequestInfo(
+            client_ip="127.0.0.1",
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
+        )
+        result = await service.login(dto, request_info)
+
+        # 登录日志：状态/账号/IP/浏览器/系统/创建人/登录类型
+        mock_log_repo.create_login_log.assert_awaited_once()
+        entity = mock_log_repo.create_login_log.await_args.args[0]
+        assert isinstance(entity, LoginLogEntity)
+        assert entity.status == 1
+        assert entity.username == "testuser"
+        assert entity.ipaddress == "127.0.0.1"
+        assert entity.browser == "Chrome"
+        assert entity.system == "Windows"
+        assert entity.login_type == 0
+        assert entity.creator_id == "user-1"
+        assert entity.description == "登录成功"
+
+        # 在线会话：session_key 与 Token 哈希一致，信息字段完整
+        mock_cache_service.set_online_user.assert_awaited_once()
+        session_key, info, expires_at = mock_cache_service.set_online_user.await_args.args
+        assert session_key == token_service.hash_token(result["accessToken"])
+        assert info["userId"] == "user-1"
+        assert info["username"] == "testuser"
+        assert info["ip"] == "127.0.0.1"
+        assert info["browser"] == "Chrome"
+        assert info["system"] == "Windows"
+        assert info["loginTime"]
+        assert info["expiresAt"]
+
+    @pytest.mark.asyncio
+    async def test_login_without_request_info_unknown_fields(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """未提供请求信息时日志与会话使用 unknown/None 兜底。"""
+        user = UserEntity(id="user-1", username="testuser", password="hashed", is_active=1)
+        mock_user_repo.get_by_username = AsyncMock(return_value=user)
+        mock_role_repo.get_user_roles = AsyncMock(return_value=[])
+        mock_menu_repo.get_all = AsyncMock(return_value=[])
+        service = self._service_with_log_repo(
+            mock_user_repo,
+            mock_role_repo,
+            mock_menu_repo,
+            token_service,
+            mock_password_service,
+            mock_cache_service,
+            mock_log_repo,
+        )
+
+        dto = LoginDTO(username="testuser", password="TestPass123")
+        await service.login(dto)
+
+        entity = mock_log_repo.create_login_log.await_args.args[0]
+        assert entity.status == 1
+        assert entity.ipaddress is None
+        assert entity.browser == "unknown"
+        assert entity.system == "unknown"
+        _, info, _ = mock_cache_service.set_online_user.await_args.args
+        assert info["ip"] is None
+        assert info["browser"] == "unknown"
+        assert info["system"] == "unknown"
+
+    @pytest.mark.asyncio
+    async def test_login_failure_writes_failed_log(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """认证失败时写入 status=0 日志且不登记在线会话。"""
+        user = UserEntity(id="user-1", username="testuser", password="hashed", is_active=1)
+        mock_user_repo.get_by_username = AsyncMock(return_value=user)
+        mock_password_service.verify_password = MagicMock(return_value=False)
+        service = self._service_with_log_repo(
+            mock_user_repo,
+            mock_role_repo,
+            mock_menu_repo,
+            token_service,
+            mock_password_service,
+            mock_cache_service,
+            mock_log_repo,
+        )
+
+        dto = LoginDTO(username="testuser", password="WrongPass123")
+        with pytest.raises(UnauthorizedError):
+            await service.login(dto)
+
+        mock_log_repo.create_login_log.assert_awaited_once()
+        entity = mock_log_repo.create_login_log.await_args.args[0]
+        assert entity.status == 0
+        assert entity.username == "testuser"
+        assert entity.creator_id is None
+        mock_cache_service.set_online_user.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_login_log_repo_error_degraded(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """日志仓储异常时登录流程降级不阻断。"""
+        user = UserEntity(id="user-1", username="testuser", password="hashed", is_active=1)
+        mock_user_repo.get_by_username = AsyncMock(return_value=user)
+        mock_role_repo.get_user_roles = AsyncMock(return_value=[])
+        mock_menu_repo.get_all = AsyncMock(return_value=[])
+        mock_log_repo.create_login_log = AsyncMock(side_effect=Exception("数据库连接失败"))
+        service = self._service_with_log_repo(
+            mock_user_repo,
+            mock_role_repo,
+            mock_menu_repo,
+            token_service,
+            mock_password_service,
+            mock_cache_service,
+            mock_log_repo,
+        )
+
+        dto = LoginDTO(username="testuser", password="TestPass123")
+        result = await service.login(dto)
+        assert "accessToken" in result
+
+    @pytest.mark.asyncio
+    async def test_login_session_cache_error_degraded(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """在线会话登记异常时登录流程降级不阻断。"""
+        user = UserEntity(id="user-1", username="testuser", password="hashed", is_active=1)
+        mock_user_repo.get_by_username = AsyncMock(return_value=user)
+        mock_role_repo.get_user_roles = AsyncMock(return_value=[])
+        mock_menu_repo.get_all = AsyncMock(return_value=[])
+        mock_cache_service.set_online_user = AsyncMock(side_effect=Exception("Redis 连接失败"))
+        service = self._service_with_log_repo(
+            mock_user_repo,
+            mock_role_repo,
+            mock_menu_repo,
+            token_service,
+            mock_password_service,
+            mock_cache_service,
+            mock_log_repo,
+        )
+
+        dto = LoginDTO(username="testuser", password="TestPass123")
+        result = await service.login(dto)
+        assert "accessToken" in result
+        mock_log_repo.create_login_log.assert_awaited_once()
+
+    # ── 个人安全日志（mine-logs） ──
+
+    @pytest.mark.asyncio
+    async def test_get_mine_logs_returns_user_records(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """按当前用户名过滤查询最近登录记录并透传分页参数。"""
+        logs = [
+            LoginLogEntity(
+                id="log-1",
+                status=1,
+                username="testuser",
+                ipaddress="127.0.0.1",
+                browser="Chrome",
+                system="Windows",
+                created_time=datetime(2026, 8, 23, 10, 0, 0),
+            ),
+            LoginLogEntity(
+                id="log-2",
+                status=0,
+                username="testuser",
+                ipaddress="10.0.0.1",
+                created_time=datetime(2026, 8, 22, 9, 0, 0),
+            ),
+        ]
+        mock_log_repo.get_login_logs = AsyncMock(return_value=(logs, 2))
+        service = self._service_with_log_repo(
+            mock_user_repo,
+            mock_role_repo,
+            mock_menu_repo,
+            token_service,
+            mock_password_service,
+            mock_cache_service,
+            mock_log_repo,
+        )
+
+        result, total = await service.get_mine_logs(username="testuser", page_num=1, page_size=10)
+
+        assert total == 2
+        assert result == logs
+        mock_log_repo.get_login_logs.assert_awaited_once_with(page_num=1, page_size=10, username="testuser")
+
+    @pytest.mark.asyncio
+    async def test_get_mine_logs_empty_without_log_repo(self, auth_service):
+        """未注入日志仓储时返回空列表，不抛异常。"""
+        result, total = await auth_service.get_mine_logs(username="testuser")
+        assert result == []
+        assert total == 0
+
+    @pytest.mark.asyncio
+    async def test_get_mine_logs_error_degraded(
+        self,
+        mock_user_repo,
+        mock_role_repo,
+        mock_menu_repo,
+        token_service,
+        mock_password_service,
+        mock_cache_service,
+        mock_log_repo,
+    ):
+        """日志查询异常时降级返回空列表，不阻断请求。"""
+        mock_log_repo.get_login_logs = AsyncMock(side_effect=Exception("数据库连接失败"))
+        service = self._service_with_log_repo(
+            mock_user_repo,
+            mock_role_repo,
+            mock_menu_repo,
+            token_service,
+            mock_password_service,
+            mock_cache_service,
+            mock_log_repo,
+        )
+
+        result, total = await service.get_mine_logs(username="testuser")
+
+        assert result == []
+        assert total == 0

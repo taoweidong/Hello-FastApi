@@ -24,12 +24,10 @@ class TestGetAuthService:
         from src.api.dependencies.auth_service import get_auth_service
 
         service = await get_auth_service(
-            db=MagicMock(),
-            token_service=MagicMock(),
-            password_service=MagicMock(),
-            cache_service=MagicMock(),
+            db=MagicMock(), token_service=MagicMock(), password_service=MagicMock(), cache_service=MagicMock()
         )
         from src.application.services.auth_service import AuthService
+
         assert isinstance(service, AuthService)
         assert service.user_repo == mock_user_repo_instance
         assert service.role_repo == mock_role_repo_instance
@@ -48,10 +46,7 @@ class TestGetAuthService:
         from src.api.dependencies.auth_service import get_auth_service
 
         service = await get_auth_service(
-            db=mock_db,
-            token_service=mock_token,
-            password_service=mock_password,
-            cache_service=mock_cache,
+            db=mock_db, token_service=mock_token, password_service=mock_password, cache_service=mock_cache
         )
         assert service.token_service == mock_token
         assert service.password_service == mock_password

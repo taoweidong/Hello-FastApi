@@ -177,15 +177,7 @@ class TestLogService:
         """测试带状态和模块筛选获取操作日志。"""
         mock_log_repo.get_operation_logs = AsyncMock(return_value=([], 0))
         query = type(
-            "Query",
-            (),
-            {
-                "createdTime": None,
-                "status": "200",
-                "module": "用户管理",
-                "pageNum": 1,
-                "pageSize": 10,
-            },
+            "Query", (), {"createdTime": None, "status": "200", "module": "用户管理", "pageNum": 1, "pageSize": 10}
         )()
         await log_service.get_operation_logs(query)
         call_kwargs = mock_log_repo.get_operation_logs.call_args[1]
@@ -217,15 +209,7 @@ class TestLogService:
         """测试带状态和模块筛选获取系统日志。"""
         mock_log_repo.get_system_logs = AsyncMock(return_value=([], 0))
         query = type(
-            "Query",
-            (),
-            {
-                "createdTime": None,
-                "status": "500",
-                "module": "系统",
-                "pageNum": 1,
-                "pageSize": 10,
-            },
+            "Query", (), {"createdTime": None, "status": "500", "module": "系统", "pageNum": 1, "pageSize": 10}
         )()
         await log_service.get_system_logs(query)
         call_kwargs = mock_log_repo.get_system_logs.call_args[1]

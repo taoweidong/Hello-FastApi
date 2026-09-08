@@ -28,11 +28,7 @@ class TestAuthRealFlow:
         assert r.status_code == 200
 
         login = await flow_client.post(
-            "/api/system/login",
-            json={
-                "username": flow_seed.super_username,
-                "password": flow_seed.super_password,
-            },
+            "/api/system/login", json={"username": flow_seed.super_username, "password": flow_seed.super_password}
         )
         refresh = login.json()["data"]["refreshToken"]
         r = await flow_client.post("/api/system/refresh-token", json={"refreshToken": refresh})
@@ -110,9 +106,7 @@ class TestUserManagementRealFlow:
         assert r.json()["data"]["username"] == "crud_user"
 
         r = await flow_client.put(
-            f"/api/system/user/{uid}",
-            headers=h,
-            json={"nickname": "已更新", "description": "备注"},
+            f"/api/system/user/{uid}", headers=h, json={"nickname": "已更新", "description": "备注"}
         )
         assert r.status_code == 200
         assert r.json()["data"]["nickname"] == "已更新"
@@ -121,10 +115,7 @@ class TestUserManagementRealFlow:
         r = await flow_client.post(
             "/api/system/user/change-password",
             headers=h_user,
-            json={
-                "oldPassword": "CrudPass123!",
-                "newPassword": "NewCrudPass123!",
-            },
+            json={"oldPassword": "CrudPass123!", "newPassword": "NewCrudPass123!"},
         )
         assert r.status_code == 200
 
@@ -144,12 +135,7 @@ class TestRoleMenuRealFlow:
         r = await flow_client.post(
             "/api/system/role/create",
             headers=h,
-            json={
-                "name": "流程新角色",
-                "code": "flow_new_role",
-                "isActive": True,
-                "menuIds": [],
-            },
+            json={"name": "流程新角色", "code": "flow_new_role", "isActive": True, "menuIds": []},
         )
         assert r.status_code == 200
         rid = r.json()["data"]["id"]
@@ -176,11 +162,7 @@ class TestRoleMenuRealFlow:
                 "path": "/flow-menu",
                 "component": "flow/index",
                 "isActive": True,
-                "meta": {
-                    "title": "接口建菜单",
-                    "isShowMenu": True,
-                    "isKeepalive": True,
-                },
+                "meta": {"title": "接口建菜单", "isShowMenu": True, "isKeepalive": True},
             },
         )
         assert r.status_code == 200
@@ -188,9 +170,7 @@ class TestRoleMenuRealFlow:
 
         # 分配新建菜单给角色
         r = await flow_client.post(
-            f"/api/system/role/{rid}/menus",
-            headers=h,
-            json={"menuIds": [mid, flow_seed.menu_root_id]},
+            f"/api/system/role/{rid}/menus", headers=h, json={"menuIds": [mid, flow_seed.menu_root_id]}
         )
         assert r.status_code == 200
 
@@ -198,12 +178,7 @@ class TestRoleMenuRealFlow:
         r = await flow_client.post(
             "/api/system/dept/create",
             headers=h,
-            json={
-                "name": "接口部门",
-                "rank": 1,
-                "isActive": True,
-                "code": "API_DEPT",
-            },
+            json={"name": "接口部门", "rank": 1, "isActive": True, "code": "API_DEPT"},
         )
         assert r.status_code == 200
 
@@ -241,9 +216,7 @@ class TestSystemLogsRealFlow:
 
         # 删除登录日志
         r = await flow_client.post(
-            "/api/system/login-logs/batch-delete",
-            headers=h,
-            json={"ids": [flow_seed.login_log_id]},
+            "/api/system/login-logs/batch-delete", headers=h, json={"ids": [flow_seed.login_log_id]}
         )
         assert r.status_code == 200
 

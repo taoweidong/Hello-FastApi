@@ -76,6 +76,7 @@ const {
         >
           <template #buttons>
             <el-button
+              v-auth="'role:manage'"
               type="primary"
               :loading="saveLoading"
               :disabled="!currentRoleId"

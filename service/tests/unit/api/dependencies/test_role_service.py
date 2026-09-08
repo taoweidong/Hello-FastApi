@@ -20,6 +20,7 @@ class TestGetRoleService:
         mock_db = MagicMock()
         service = await get_role_service(db=mock_db)
         from src.application.services.role_service import RoleService
+
         assert isinstance(service, RoleService)
         assert service.role_repo == mock_repo_instance
         mock_role_repo.assert_called_once_with(mock_db)

@@ -20,6 +20,7 @@ class TestRoleRouter:
         _app = FastAPI()
         register_exception_handlers(_app)
         from src.api.v1.role_router import RoleRouter
+
         _app.include_router(RoleRouter().router, prefix="/api/system/role")
         return _app
 
@@ -50,11 +51,13 @@ class TestRoleRouter:
         svc.update_role.return_value = _mock_update
         svc.delete_role.return_value = None
         svc.assign_menus.return_value = None
+        svc.change_data_scope.return_value = None
         return svc
 
     @pytest.fixture
     def client(self, app, mock_user_entity, mock_role_service):
         from src.api.dependencies import get_current_active_user, get_role_service
+
         app.dependency_overrides[get_current_active_user] = lambda: mock_user_entity
         app.dependency_overrides[get_role_service] = lambda: mock_role_service
         return TestClient(app, raise_server_exceptions=False)
@@ -70,9 +73,9 @@ class TestRoleRouter:
         assert len(data["data"]["list"]) == 2
 
     def test_create_role_success(self, client):
-        resp = client.post("/api/system/role/create", json={
-            "name": "新角色", "code": "new_role", "isActive": 1,
-        }, headers=self.auth)
+        resp = client.post(
+            "/api/system/role/create", json={"name": "新角色", "code": "new_role", "isActive": 1}, headers=self.auth
+        )
         assert resp.status_code == 200
         assert resp.json()["code"] == 201
         assert resp.json()["message"] == "角色创建成功"
@@ -113,3 +116,14 @@ class TestRoleRouter:
         resp = client.post("/api/system/role/r1/menus", json={"menuIds": ["m1", "m2"]}, headers=self.auth)
         assert resp.status_code == 200
         assert resp.json()["message"] == "菜单权限分配成功"
+
+    def test_change_data_scope(self, client):
+        resp = client.post(
+            "/api/system/role/r1/data-scope", json={"dataScope": 2, "deptIds": ["d1", "d2"]}, headers=self.auth
+        )
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "数据权限修改成功"
+
+    def test_change_data_scope_invalid_scope_returns_422(self, client):
+        resp = client.post("/api/system/role/r1/data-scope", json={"dataScope": 9}, headers=self.auth)
+        assert resp.status_code == 422

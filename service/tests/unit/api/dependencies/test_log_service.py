@@ -20,6 +20,7 @@ class TestGetLogService:
         mock_db = MagicMock()
         service = await get_log_service(db=mock_db)
         from src.application.services.log_service import LogService
+
         assert isinstance(service, LogService)
         assert service.log_repo == mock_repo_instance
         mock_log_repo.assert_called_once_with(mock_db)

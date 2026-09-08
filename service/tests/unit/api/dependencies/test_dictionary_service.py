@@ -20,6 +20,7 @@ class TestGetDictionaryService:
         mock_db = MagicMock()
         service = await get_dictionary_service(db=mock_db)
         from src.application.services.dictionary_service import DictionaryService
+
         assert isinstance(service, DictionaryService)
         assert service.dict_repo == mock_repo_instance
         mock_dict_repo.assert_called_once_with(mock_db)

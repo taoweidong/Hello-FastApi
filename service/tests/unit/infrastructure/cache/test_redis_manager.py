@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from src.config.settings import settings
 from src.infrastructure.cache.redis_manager import RedisManager, _get_redis_manager, close_redis, get_redis
 
 
@@ -59,7 +60,12 @@ class TestRedisManagerGetClient:
 
         assert client is mgr._client
         mock_from_url.assert_called_once_with(
-            "redis://localhost:6379/0", encoding="utf-8", decode_responses=True
+            "redis://localhost:6379/0",
+            encoding="utf-8",
+            decode_responses=True,
+            socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+            socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+            protocol=2,  # 显式 RESP2，兼容 Redis 6.0 以下版本
         )
 
     @pytest.mark.asyncio
@@ -85,7 +91,12 @@ class TestRedisManagerGetClient:
             await mgr.get_client()
 
         mock_from_url.assert_called_once_with(
-            "redis://localhost:6379/0", encoding="gbk", decode_responses=False
+            "redis://localhost:6379/0",
+            encoding="gbk",
+            decode_responses=False,
+            socket_connect_timeout=settings.REDIS_CONNECT_TIMEOUT,
+            socket_timeout=settings.REDIS_SOCKET_TIMEOUT,
+            protocol=2,  # 显式 RESP2，兼容 Redis 6.0 以下版本
         )
 
 
@@ -134,9 +145,7 @@ class TestRedisManagerModuleFunctions:
     """模块级单例与兼容函数测试。"""
 
     def setup_method(self):
-        self.global_patch = patch(
-            "src.infrastructure.cache.redis_manager._redis_manager", None
-        )
+        self.global_patch = patch("src.infrastructure.cache.redis_manager._redis_manager", None)
         self.global_patch.start()
 
     def teardown_method(self):

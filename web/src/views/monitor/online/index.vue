@@ -22,8 +22,7 @@ const {
   resetForm,
   handleOffline,
   handleSizeChange,
-  handleCurrentChange,
-  handleSelectionChange
+  handleCurrentChange
 } = useOnline();
 </script>
 
@@ -75,7 +74,6 @@ const {
             background: 'var(--el-fill-color-light)',
             color: 'var(--el-text-color-primary)'
           }"
-          @selection-change="handleSelectionChange"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
         >
@@ -86,6 +84,7 @@ const {
             >
               <template #reference>
                 <el-button
+                  v-auth="'monitor:manage'"
                   class="reset-margin"
                   link
                   type="primary"

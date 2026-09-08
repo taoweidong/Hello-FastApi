@@ -1,3 +1,5 @@
+import type { PostOption } from "@/api/system/post";
+
 interface FormItemProps {
   id?: number;
   /** 用于判断是`新增`还是`修改` */
@@ -11,6 +13,10 @@ interface FormItemProps {
   email: string;
   gender: string | number;
   isActive: number;
+  /** 岗位下拉选项（启用岗位） */
+  postOptions: PostOption[];
+  /** 已选岗位 ID 列表 */
+  postIds: string[];
   dept?: {
     id?: number;
     name?: string;

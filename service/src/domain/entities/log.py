@@ -18,6 +18,7 @@ class LoginLogEntity:
     Attributes:
         id: 日志唯一标识（32位UUID字符串）
         status: 登录状态(0-失败, 1-成功)
+        username: 登录用户名
         ipaddress: IP地址
         browser: 浏览器
         system: 操作系统
@@ -32,6 +33,7 @@ class LoginLogEntity:
 
     id: str
     status: int = 1
+    username: str | None = None
     ipaddress: str | None = None
     browser: str | None = None
     system: str | None = None
@@ -56,6 +58,7 @@ class LoginLogEntity:
     def create_new(
         cls,
         status: int = 1,
+        username: str | None = None,
         ipaddress: str | None = None,
         browser: str | None = None,
         system: str | None = None,
@@ -67,6 +70,7 @@ class LoginLogEntity:
         return cls(
             id=uuid.uuid4().hex,
             status=status,
+            username=username,
             ipaddress=ipaddress,
             browser=browser,
             system=system,

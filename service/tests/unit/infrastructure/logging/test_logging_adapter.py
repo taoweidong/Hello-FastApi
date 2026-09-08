@@ -28,13 +28,7 @@ class TestLoguruLoggingAdapterInit:
 
     def test_adapter_implements_all_abstract_methods(self):
         """测试适配器实现了 LoggingPort 的所有抽象方法。"""
-        abstract_methods = {
-            "debug",
-            "info",
-            "warning",
-            "error",
-            "critical",
-        }
+        abstract_methods = {"debug", "info", "warning", "error", "critical"}
         for method in abstract_methods:
             assert hasattr(LoguruLoggingAdapter, method)
 

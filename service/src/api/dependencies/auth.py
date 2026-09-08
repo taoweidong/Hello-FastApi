@@ -10,6 +10,7 @@ from src.api.dependencies.domain_services import get_token_service
 from src.api.dependencies.user_service import get_user_service
 from src.application.services.user_service import UserService
 from src.domain.entities.user import UserEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
 from src.domain.services.token_service import TokenService
 from src.infrastructure.cache.cache_service import CacheService
@@ -26,24 +27,23 @@ async def get_current_user_id(
     token = credentials.credentials
     payload = token_service.decode_token(token)
     if payload is None:
-        raise UnauthorizedError("无效或已过期的令牌")
+        raise UnauthorizedError(EM.INVALID_OR_EXPIRED_TOKEN)
 
     if not TokenService.verify_token_type(payload, "access"):
-        raise UnauthorizedError("无效的令牌类型")
+        raise UnauthorizedError(EM.INVALID_TOKEN_TYPE)
 
     # 检查 Token 黑名单
     if await cache_service.is_token_blacklisted(token):
-        raise UnauthorizedError("令牌已失效")
+        raise UnauthorizedError(EM.TOKEN_REVOKED)
 
     user_id = payload.get("sub")
     if user_id is None:
-        raise UnauthorizedError("无效的令牌负载")
+        raise UnauthorizedError(EM.INVALID_TOKEN_PAYLOAD)
     return str(user_id)
 
 
 async def get_current_active_user(
-    user_id: str = Depends(get_current_user_id),
-    user_service: UserService = Depends(get_user_service),
+    user_id: str = Depends(get_current_user_id), user_service: UserService = Depends(get_user_service)
 ) -> UserEntity:
     """从缓存或数据库获取当前活跃用户实体。"""
     return await user_service.get_user_info_with_cache(user_id)
@@ -61,9 +61,7 @@ def require_permission(code: str) -> Callable[..., Awaitable[UserEntity]]:
         user_service: UserService = Depends(get_user_service),
     ) -> UserEntity:
         return await user_service.check_permission_cached_or_db(
-            user_id=current_user.id,
-            is_superuser=current_user.is_superuser,
-            code=code,
+            user_id=current_user.id, is_superuser=current_user.is_superuser, code=code
         )
 
     return permission_checker
@@ -80,10 +78,7 @@ def require_menu_permission(path: str, method: str) -> Callable[..., Awaitable[U
         user_service: UserService = Depends(get_user_service),
     ) -> UserEntity:
         return await user_service.check_api_permission_cached_or_db(
-            user_id=current_user.id,
-            is_superuser=current_user.is_superuser,
-            path=path,
-            method=method,
+            user_id=current_user.id, is_superuser=current_user.is_superuser, path=path, method=method
         )
 
     return permission_checker
@@ -94,7 +89,7 @@ def require_superuser() -> Callable[..., Awaitable[UserEntity]]:
 
     async def superuser_checker(current_user: UserEntity = Depends(get_current_active_user)) -> UserEntity:
         if not current_user.is_superuser_user:
-            raise ForbiddenError("需要超级用户权限")
+            raise ForbiddenError(EM.SUPERUSER_REQUIRED)
         return current_user
 
     return superuser_checker

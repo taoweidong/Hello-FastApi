@@ -46,6 +46,11 @@ class DepartmentRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def get_child_dept_ids(self, dept_id: str) -> list[str]:
+        """获取指定部门的所有下级部门ID（不含自身，递归全部子孙）。"""
+        ...
+
+    @abstractmethod
     async def create(self, department: DepartmentEntity) -> DepartmentEntity:
         """创建部门。"""
         ...

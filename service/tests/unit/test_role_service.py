@@ -4,9 +4,10 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.application.dto.role_dto import RoleCreateDTO, RoleUpdateDTO
+from src.application.dto.role_dto import ChangeDataScopeDTO, RoleCreateDTO, RoleUpdateDTO
 from src.application.services.role_service import RoleService
 from src.domain.entities.role import RoleEntity
+from src.domain.enums import DataScope
 from src.domain.exceptions import ConflictError, NotFoundError
 
 
@@ -189,6 +190,7 @@ class TestRoleService:
     async def test_get_roles_empty(self, role_service, mock_role_repo):
         """测试获取空角色列表。"""
         from src.application.dto.role_dto import RoleListQueryDTO
+
         mock_role_repo.count = AsyncMock(return_value=0)
         mock_role_repo.get_all = AsyncMock(return_value=[])
         mock_role_repo.get_roles_menu_ids_batch = AsyncMock(return_value={})
@@ -202,6 +204,7 @@ class TestRoleService:
     async def test_get_roles_with_filters(self, role_service, mock_role_repo):
         """测试按名称/状态筛选角色列表。"""
         from src.application.dto.role_dto import RoleListQueryDTO
+
         role = RoleEntity(id="r1", name="管理员", code="admin", is_active=1)
         mock_role_repo.count = AsyncMock(return_value=1)
         mock_role_repo.get_all = AsyncMock(return_value=[role])
@@ -277,10 +280,7 @@ class TestRoleService:
     @pytest.mark.asyncio
     async def test_get_user_roles_success(self, role_service, mock_role_repo):
         """测试获取用户的所有角色。"""
-        roles = [
-            RoleEntity(id="r1", name="管理员", code="admin"),
-            RoleEntity(id="r2", name="用户", code="user"),
-        ]
+        roles = [RoleEntity(id="r1", name="管理员", code="admin"), RoleEntity(id="r2", name="用户", code="user")]
         mock_role_repo.get_user_roles = AsyncMock(return_value=roles)
         mock_role_repo.get_role_menu_ids = AsyncMock(return_value=[])
 
@@ -298,6 +298,7 @@ class TestRoleService:
     def test_role_to_response_with_menus(self, role_service):
         """测试 _role_to_response_with_menus 静态方法。"""
         from datetime import datetime
+
         role = RoleEntity(
             id="r1",
             name="管理员",
@@ -332,3 +333,39 @@ class TestRoleService:
         dto = RoleUpdateDTO(name="新角色")
         with pytest.raises(NotFoundError):
             await role_service.update_role("role-id-1", dto)
+
+    @pytest.mark.asyncio
+    async def test_change_data_scope_custom(self, role_service, mock_role_repo):
+        """测试修改数据权限为自定义并分配部门。"""
+        role = RoleEntity(id="role-id-1", name="测试角色", code="test", data_scope=DataScope.ALL)
+        mock_role_repo.get_by_id = AsyncMock(return_value=role)
+
+        dto = ChangeDataScopeDTO(dataScope=DataScope.CUSTOM, deptIds=["dept-1", "dept-2"])
+        result = await role_service.change_data_scope("role-id-1", dto)
+
+        assert result is True
+        assert role.data_scope == DataScope.CUSTOM
+        mock_role_repo.update.assert_called_once_with(role)
+        mock_role_repo.assign_depts_to_role.assert_called_once_with("role-id-1", ["dept-1", "dept-2"])
+
+    @pytest.mark.asyncio
+    async def test_change_data_scope_not_custom_clears_depts(self, role_service, mock_role_repo):
+        """测试修改为非自定义数据权限时清空部门关联。"""
+        role = RoleEntity(id="role-id-1", name="测试角色", code="test", data_scope=DataScope.CUSTOM)
+        mock_role_repo.get_by_id = AsyncMock(return_value=role)
+
+        dto = ChangeDataScopeDTO(dataScope=DataScope.DEPT_AND_CHILD)
+        result = await role_service.change_data_scope("role-id-1", dto)
+
+        assert result is True
+        assert role.data_scope == DataScope.DEPT_AND_CHILD
+        mock_role_repo.assign_depts_to_role.assert_called_once_with("role-id-1", [])
+
+    @pytest.mark.asyncio
+    async def test_change_data_scope_role_not_found(self, role_service, mock_role_repo):
+        """测试修改不存在角色的数据权限。"""
+        mock_role_repo.get_by_id = AsyncMock(return_value=None)
+
+        dto = ChangeDataScopeDTO(dataScope=DataScope.ALL)
+        with pytest.raises(NotFoundError):
+            await role_service.change_data_scope("non-existent-id", dto)

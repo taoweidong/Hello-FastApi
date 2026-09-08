@@ -87,6 +87,33 @@ export const getMine = (data?: object) => {
   return http.request<UserInfoResult>("get", "/mine", { data });
 };
 
+/** 账户设置-更新个人资料 */
+export const updateProfile = (data?: object) => {
+  return http.request<UserInfoResult>("put", "/user/profile", { data });
+};
+
+/** 账户设置-上传头像（FormData） */
+export const uploadAvatar = (data: FormData) => {
+  return http.request<{
+    code: number;
+    message: string;
+    data?: { avatar: string };
+  }>("post", "/user/avatar", {
+    data,
+    // 必须覆写默认 JSON 头，否则 axios 会将 FormData 序列化为 JSON
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+};
+
+/** 账户设置-修改当前用户密码 */
+export const changeMyPassword = (data?: object) => {
+  return http.request<{ code: number; message: string }>(
+    "post",
+    "/user/change-password",
+    { data }
+  );
+};
+
 /** 账户设置-个人安全日志 */
 export const getMineLogs = (data?: object) => {
   return http.request<ResultTable>("get", "/mine-logs", { data });

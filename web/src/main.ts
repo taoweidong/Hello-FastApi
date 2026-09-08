@@ -48,6 +48,10 @@ import { Perms } from "@/components/RePerms";
 app.component("Auth", Auth);
 app.component("Perms", Perms);
 
+// 全局注册字典标签渲染组件（配合 useDict 使用）
+import { DictTag } from "@/components/ReDictTag";
+app.component("DictTag", DictTag);
+
 // 全局注册vue-tippy
 import "tippy.js/dist/tippy.css";
 import "tippy.js/themes/light.css";

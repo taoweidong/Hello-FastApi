@@ -4,6 +4,7 @@
 此服务通过构造函数注入配置参数，不直接依赖配置模块。
 """
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -90,3 +91,18 @@ class TokenService:
             令牌类型是否匹配
         """
         return payload.get("type") == expected_type
+
+    @staticmethod
+    def hash_token(token: str) -> str:
+        """计算 Token 的哈希前缀（SHA-256 前 32 位）。
+
+        Token 黑名单与在线用户会话均以该哈希作为 Redis Key 后缀，
+        由登录、登出、强制下线等多处共用，保证 Key 一致且不存储完整 Token。
+
+        Args:
+            token: JWT Token 字符串
+
+        Returns:
+            32 位十六进制哈希前缀
+        """
+        return hashlib.sha256(token.encode()).hexdigest()[:32]

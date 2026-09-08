@@ -78,11 +78,7 @@ class TestDictionaryFlow:
             json={"name": "sys_query_type", "label": "查询类型", "value": "fuzzy", "isActive": 1},
         )
 
-        r = await flow_client.post(
-            "/api/system/dictionary/getByName",
-            headers=h,
-            json={"name": "sys_query_type"},
-        )
+        r = await flow_client.post("/api/system/dictionary/getByName", headers=h, json={"name": "sys_query_type"})
         assert r.status_code == 200
         assert len(r.json()["data"]) >= 1
 

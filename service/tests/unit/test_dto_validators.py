@@ -14,11 +14,7 @@ class TestUserCreateDTO:
     def test_valid_user_create(self):
         """测试有效的用户创建数据。"""
         dto = UserCreateDTO(
-            username="testuser",
-            password="TestPass123",
-            nickname="测试用户",
-            email="test@example.com",
-            isActive=True,
+            username="testuser", password="TestPass123", nickname="测试用户", email="test@example.com", isActive=True
         )
         assert dto.username == "testuser"
         assert dto.nickname == "测试用户"
@@ -26,13 +22,7 @@ class TestUserCreateDTO:
     def test_empty_str_converts_to_none(self):
         """测试空字符串转换为 None。"""
         dto = UserCreateDTO(
-            username="testuser",
-            password="TestPass123",
-            nickname="",
-            email="",
-            phone="",
-            description="",
-            isActive=True,
+            username="testuser", password="TestPass123", nickname="", email="", phone="", description="", isActive=True
         )
         assert dto.nickname is None
         assert dto.email is None

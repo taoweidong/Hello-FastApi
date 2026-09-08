@@ -27,6 +27,17 @@ class RoleApi extends BaseApi<SystemRole, SystemRole> {
       data: { menuIds }
     });
   }
+
+  /** 修改角色数据权限范围 */
+  changeDataScope(
+    roleId: string,
+    dataScope: number,
+    deptIds: string[]
+  ): Promise<Result> {
+    return http.request<Result>("post", `/role/${roleId}/data-scope`, {
+      data: { dataScope, deptIds }
+    });
+  }
 }
 
 export const roleApi = new RoleApi();

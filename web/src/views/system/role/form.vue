@@ -9,6 +9,7 @@ const props = withDefaults(defineProps<FormProps>(), {
     name: "",
     code: "",
     isActive: 1,
+    dataScope: 1,
     description: ""
   })
 });
@@ -60,6 +61,18 @@ defineExpose({ getRef });
             active-text="启用"
             inactive-text="停用"
           />
+        </el-form-item>
+      </re-col>
+
+      <re-col>
+        <el-form-item label="数据权限" prop="dataScope">
+          <el-radio-group v-model="newFormInline.dataScope">
+            <el-radio :value="1">全部数据权限</el-radio>
+            <el-radio :value="2">自定义数据权限</el-radio>
+            <el-radio :value="3">本部门数据权限</el-radio>
+            <el-radio :value="4">本部门及以下数据权限</el-radio>
+            <el-radio :value="5">仅本人数据权限</el-radio>
+          </el-radio-group>
         </el-form-item>
       </re-col>
 

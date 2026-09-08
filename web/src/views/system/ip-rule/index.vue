@@ -96,6 +96,7 @@ function onFullscreen() {
     >
       <template #buttons>
         <el-button
+          v-auth="'ip-rule:add'"
           type="primary"
           :icon="useRenderIcon(AddFill)"
           @click="openDialog()"
@@ -103,13 +104,20 @@ function onFullscreen() {
           新增规则
         </el-button>
         <el-button
+          v-auth="'ip-rule:delete'"
           type="danger"
           :icon="useRenderIcon(Delete)"
           @click="handleBatchDelete"
         >
           批量删除
         </el-button>
-        <el-button type="warning" @click="handleClear"> 清空全部 </el-button>
+        <el-button
+          v-auth="'ip-rule:delete'"
+          type="warning"
+          @click="handleClear"
+        >
+          清空全部
+        </el-button>
       </template>
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
@@ -135,6 +143,7 @@ function onFullscreen() {
         >
           <template #operation="{ row }">
             <el-button
+              v-auth="'ip-rule:edit'"
               class="reset-margin"
               link
               type="primary"
@@ -150,6 +159,7 @@ function onFullscreen() {
             >
               <template #reference>
                 <el-button
+                  v-auth="'ip-rule:delete'"
                   class="reset-margin"
                   link
                   type="primary"
