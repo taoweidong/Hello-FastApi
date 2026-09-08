@@ -6,15 +6,15 @@
  */
 import { message } from "@/utils/message";
 import { handleTree } from "@/utils/tree";
-import type { BaseApi, ResultTable } from "@/api/base";
+import type { AnyRow, BaseApi, ResultTable } from "@/api/base";
 import { ElMessageBox } from "element-plus";
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
 
 /** useCrudTable 配置项 */
-export interface UseCrudTableOptions {
+export interface UseCrudTableOptions<TList> {
   /** BaseApi 实例，如 roleApi、userApi */
-  api: BaseApi;
+  api: BaseApi<TList, TList, Record<string, unknown>>;
   /** 搜索表单 reactive 对象 */
   searchForm: Record<string, any>;
   /** 删除确认时显示的字段名，如 "name"、"username" */
@@ -28,11 +28,11 @@ export interface UseCrudTableOptions {
 }
 
 /** useCrudTable 返回值 */
-export interface UseCrudTableReturn {
+export interface UseCrudTableReturn<TList> {
   /** 加载状态 */
   loading: Ref<boolean>;
   /** 数据列表 */
-  dataList: Ref<any[]>;
+  dataList: Ref<TList[]>;
   /** 分页配置 */
   pagination: PaginationProps;
   /** 搜索数据 */
@@ -40,7 +40,7 @@ export interface UseCrudTableReturn {
   /** 重置搜索表单并重新搜索 */
   resetForm: (formEl?: any) => void;
   /** 删除单条数据（含确认弹窗） */
-  handleDelete: (row: any) => Promise<void>;
+  handleDelete: (row: TList) => Promise<void>;
   /** 批量删除（含确认弹窗） */
   handleBatchDelete: (ids: string[]) => Promise<void>;
   /** 每页条数变化 */
@@ -49,7 +49,9 @@ export interface UseCrudTableReturn {
   handleCurrentChange: (val: number) => void;
 }
 
-export function useCrudTable(options: UseCrudTableOptions): UseCrudTableReturn {
+export function useCrudTable<TList extends AnyRow = AnyRow>(
+  options: UseCrudTableOptions<TList>
+): UseCrudTableReturn<TList> {
   const {
     api,
     searchForm,
@@ -60,7 +62,7 @@ export function useCrudTable(options: UseCrudTableOptions): UseCrudTableReturn {
   } = options;
 
   const loading = ref(true);
-  const dataList = ref([]);
+  const dataList = ref<TList[]>([]) as Ref<TList[]>;
   const pagination = reactive<PaginationProps>({
     total: 0,
     pageSize: 10,
@@ -75,7 +77,7 @@ export function useCrudTable(options: UseCrudTableOptions): UseCrudTableReturn {
       const { code, data } = await api.list(toRaw(searchForm));
       if (code === 0 && data) {
         if (listMode === "paginated") {
-          const result = data as NonNullable<ResultTable["data"]>;
+          const result = data as NonNullable<ResultTable<TList>["data"]>;
           dataList.value = result.list || [];
           pagination.total = result.total ?? 0;
           pagination.pageSize = result.pageSize ?? 10;

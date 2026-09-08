@@ -58,7 +58,7 @@ ruff format .         # Format code
 mypy src/             # Type checking
 ```
 
-Ruff config is in `pyproject.toml`. Line length is 320. All code comments are in Chinese.
+Ruff config is in `pyproject.toml`. Line length is 120. All code comments are in Chinese.
 
 ---
 

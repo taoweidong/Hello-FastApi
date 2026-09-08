@@ -141,27 +141,58 @@ class UserService:
     async def batch_delete_users(self, user_ids: list[str]) -> dict:
         """批量删除用户。"""
         deleted_count = await self.repo.batch_delete(user_ids)
-        for uid in user_ids:
-            await self._invalidate_user_cache(uid)
+        await self._invalidate_users_cache(user_ids)
         return {"deleted_count": deleted_count, "total_requested": len(user_ids)}
 
-    async def reset_password(self, user_id: str, new_password: str) -> bool:
-        """管理员重置用户密码。"""
+    @staticmethod
+    def _assert_target_manageable(target_user: UserEntity, operator_is_superuser: bool) -> None:
+        """校验操作者是否有权管理目标用户。
+
+        超级用户账号只能由超级用户本人操作。若不做该校验，任何持有 ``user:edit``
+        权限的普通管理员都可以重置超级管理员密码、禁用超级管理员账号或篡改其角色，
+        构成横向越权与提权风险。
+
+        Args:
+            target_user: 被操作的目标用户实体。
+            operator_is_superuser: 操作者是否为超级用户。
+
+        Raises:
+            ForbiddenError: 目标为超级用户而操作者不是超级用户时抛出。
+        """
+        if target_user.is_superuser_user and not operator_is_superuser:
+            raise ForbiddenError("超级用户账号只能由超级用户操作")
+
+    async def reset_password(self, user_id: str, new_password: str, operator_is_superuser: bool = False) -> bool:
+        """管理员重置用户密码。
+
+        Args:
+            user_id: 目标用户 ID。
+            new_password: 新明文密码。
+            operator_is_superuser: 操作者是否为超级用户（用于越权防护）。
+        """
         user = await self.repo.get_by_id(user_id)
         if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
 
+        self._assert_target_manageable(user, operator_is_superuser)
         user.change_password(self.password_service.hash_password(new_password))
         await self.repo.update(user)
         await self._invalidate_user_cache(user_id)
         return True
 
-    async def update_status(self, user_id: str, is_active: int) -> bool:
-        """更改用户状态（通过领域实体的 activate/deactivate 方法）。"""
+    async def update_status(self, user_id: str, is_active: int, operator_is_superuser: bool = False) -> bool:
+        """更改用户状态（通过领域实体的 activate/deactivate 方法）。
+
+        Args:
+            user_id: 目标用户 ID。
+            is_active: 目标状态，1 启用 / 0 禁用。
+            operator_is_superuser: 操作者是否为超级用户（用于越权防护）。
+        """
         user = await self.repo.get_by_id(user_id)
         if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
 
+        self._assert_target_manageable(user, operator_is_superuser)
         if is_active == 1:
             user.activate()
         else:
@@ -216,11 +247,19 @@ class UserService:
         user_roles = await self.role_repo.get_user_roles(created_user.id)
         return UserMapper.to_response(created_user, user_roles)
 
-    async def assign_roles(self, user_id: str, role_ids: list[str]) -> bool:
-        """为用户分配角色。"""
+    async def assign_roles(self, user_id: str, role_ids: list[str], operator_is_superuser: bool = False) -> bool:
+        """为用户分配角色。
+
+        Args:
+            user_id: 目标用户 ID。
+            role_ids: 需要分配的角色 ID 列表。
+            operator_is_superuser: 操作者是否为超级用户（用于越权防护）。
+        """
         user = await self.repo.get_by_id(user_id)
         if user is None:
             raise NotFoundError(f"用户 ID '{user_id}' 不存在")
+
+        self._assert_target_manageable(user, operator_is_superuser)
         await self.role_repo.assign_roles_to_user(user_id, role_ids)
         await self._invalidate_user_cache(user_id)
         return True
@@ -230,6 +269,11 @@ class UserService:
         if self.cache_service is not None:
             await self.cache_service.invalidate_user_info(user_id)
             await self.cache_service.invalidate_user_permissions(user_id)
+
+    async def _invalidate_users_cache(self, user_ids: list[str]) -> None:
+        """批量使多个用户的信息缓存和权限缓存失效（单次批量调用）。"""
+        if self.cache_service is not None and user_ids:
+            await self.cache_service.invalidate_users_batch(user_ids)
 
     async def get_user_by_id(self, user_id: str) -> UserEntity | None:
         """根据 ID 获取用户实体（不抛异常，返回 None）。"""

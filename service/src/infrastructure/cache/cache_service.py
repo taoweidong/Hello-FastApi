@@ -201,6 +201,33 @@ class CacheService(CachePort):
             logger.warning("Redis 删除用户信息缓存失败", exc_info=True)
             return False
 
+    async def invalidate_users_batch(self, user_ids: list[str]) -> bool:
+        """批量失效多个用户的权限与信息缓存（单次 Redis 往返）。
+
+        使用 pipeline 将全部 key 的删除合并为一次网络往返，避免批量操作时
+        出现 N×2 次 Redis 调用的隐式 N+1 问题。
+
+        Args:
+            user_ids: 需要失效的用户 ID 列表
+
+        Returns:
+            是否成功失效，Redis 不可用或列表为空时返回 False / True
+        """
+        if not user_ids:
+            return True
+        if self._redis is None:
+            return False
+        keys = [self._perms_key(uid) for uid in user_ids] + [f"{self._USER_INFO_PREFIX}{uid}" for uid in user_ids]
+        try:
+            async with self._redis.pipeline(transaction=False) as pipe:
+                for key in keys:
+                    pipe.delete(key)
+                await pipe.execute()
+            return True
+        except Exception:
+            logger.warning("Redis 批量删除用户缓存失败", exc_info=True)
+            return False
+
     # ---- 菜单全表缓存 ----
 
     async def get_all_menus(self) -> list[dict] | None:

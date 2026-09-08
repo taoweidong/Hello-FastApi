@@ -21,13 +21,20 @@ interface FormProps {
   formInline: FormItemProps;
 }
 
+import type { SystemRole } from "@/api/types";
+
 interface RoleFormItemProps {
   username: string;
   nickname: string;
-  /** 角色列表 */
-  roleOptions: any[];
-  /** 选中的角色列表 */
-  ids: Record<number, unknown>[];
+  /** 角色下拉选项列表 */
+  roleOptions: SystemRole[];
+  /**
+   * 选中的角色 ID 列表
+   *
+   * 来源为 `getRoleIds` 返回的 `string[]`，并直接作为 `assignUserRole` 的
+   * `roleIds` 提交给后端（后端 AssignRoleDTO.roleIds 为 list[str]）。
+   */
+  ids: string[];
 }
 interface RoleFormProps {
   formInline: RoleFormItemProps;

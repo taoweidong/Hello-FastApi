@@ -161,9 +161,7 @@ export function useSystemLog(_tableRef: Ref) {
       pagination.currentPage = data.currentPage;
     }
 
-    setTimeout(() => {
-      loading.value = false;
-    }, 300);
+    loading.value = false;
   }
 
   const resetForm = formEl => {

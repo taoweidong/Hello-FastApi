@@ -3,12 +3,7 @@ import editForm from "./form.vue";
 import { message } from "@/utils/message";
 import { usePublicHooks } from "@/views/system/hooks";
 import { addDialog } from "@/components/ReDialog";
-import {
-  getConfigList,
-  createConfig,
-  updateConfig,
-  deleteConfig
-} from "@/api/system";
+import { systemConfigApi } from "@/api/system/system_config";
 import type { FormItemProps } from "./utils/types";
 import { ref, onMounted, reactive, h } from "vue";
 import { deviceDetection } from "@pureadmin/utils";
@@ -102,7 +97,7 @@ export function useConfig() {
   async function onSearch() {
     loading.value = true;
     try {
-      const { data } = await getConfigList({
+      const { data } = await systemConfigApi.list({
         key: form.key || undefined,
         pageNum: pagination.currentPage,
         pageSize: pagination.pageSize
@@ -168,10 +163,10 @@ export function useConfig() {
               };
 
               if (title === "新增") {
-                await createConfig(payload);
+                await systemConfigApi.create(payload);
                 message("新增成功", { type: "success" });
               } else {
-                await updateConfig(row.id, payload);
+                await systemConfigApi.partialUpdate(row.id, payload);
                 message("更新成功", { type: "success" });
               }
               done();
@@ -186,7 +181,7 @@ export function useConfig() {
   }
 
   async function handleDelete(row) {
-    await deleteConfig(row.id);
+    await systemConfigApi.destroy(row.id);
     message("删除成功", { type: "success" });
     onSearch();
   }

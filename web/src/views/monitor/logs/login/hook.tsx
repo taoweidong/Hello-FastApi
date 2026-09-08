@@ -146,9 +146,7 @@ export function useLoginLog(tableRef: Ref) {
       pagination.currentPage = data.currentPage;
     }
 
-    setTimeout(() => {
-      loading.value = false;
-    }, 500);
+    loading.value = false;
   }
 
   const resetForm = formEl => {

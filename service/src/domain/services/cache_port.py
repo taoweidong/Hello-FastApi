@@ -99,6 +99,27 @@ class CachePort(ABC):
         """使用户信息缓存失效。"""
         ...
 
+    async def invalidate_users_batch(self, user_ids: list[str]) -> bool:
+        """批量失效多个用户的权限与信息缓存。
+
+        该方法是**性能优化接口**而非抽象契约：默认实现退化为逐条失效，
+        具体实现（如 Redis）可重写为一次批量删除，避免 N 次网络往返。
+
+        Args:
+            user_ids: 需要失效的用户 ID 列表
+
+        Returns:
+            是否全部成功，空列表视为成功
+        """
+        if not user_ids:
+            return True
+        results = []
+        for uid in user_ids:
+            ok_info = await self.invalidate_user_info(uid)
+            ok_perms = await self.invalidate_user_permissions(uid)
+            results.append(ok_info and ok_perms)
+        return all(results)
+
     # ---- 菜单全表缓存 ----
 
     @abstractmethod

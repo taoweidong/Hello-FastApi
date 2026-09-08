@@ -63,9 +63,7 @@ async function onSearch() {
     pagination.currentPage = data.currentPage;
   }
 
-  setTimeout(() => {
-    loading.value = false;
-  }, 200);
+  loading.value = false;
 }
 
 onMounted(() => {

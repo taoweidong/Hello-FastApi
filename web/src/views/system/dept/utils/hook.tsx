@@ -104,7 +104,7 @@ export function useDept() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await deptApi.list();
+    const { code, data } = await deptApi.listTree();
     if (code === 0) {
       let newData = data;
       if (!isAllEmpty(form.name)) {

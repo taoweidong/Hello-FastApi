@@ -186,7 +186,7 @@ set APP_ENV=production                # Windows
 - 遵循 PEP 8 规范
 - 使用 Ruff 进行代码格式化和检查
 - 所有代码注释使用中文描述
-- 行长度限制：320 字符（`pyproject.toml` 配置）
+- 行长度限制：120 字符（`pyproject.toml` 配置）
 
 ### 仓储开发模式
 

@@ -149,7 +149,7 @@ export function useMenu() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await menuApi.list();
+    const { code, data } = await menuApi.listTree();
     if (code === 0) {
       let newData = data;
       if (!isAllEmpty(form.title)) {

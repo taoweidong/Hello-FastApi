@@ -4,14 +4,7 @@ import { message } from "@/utils/message";
 import { usePublicHooks } from "@/views/system/hooks";
 import { IPRuleTypeChoices } from "@/views/system/constants";
 import { addDialog } from "@/components/ReDialog";
-import {
-  getIpRuleList,
-  createIpRule,
-  updateIpRule,
-  deleteIpRule,
-  batchDeleteIpRule,
-  clearIpRule
-} from "@/api/system";
+import { ipRuleApi } from "@/api/system/ip_rule";
 import type { FormItemProps } from "./utils/types";
 import { ref, onMounted, reactive, h } from "vue";
 import { deviceDetection } from "@pureadmin/utils";
@@ -128,7 +121,7 @@ export function useIpRule() {
         ruleType: form.ruleType || undefined,
         isActive: form.isActive !== "" ? form.isActive : undefined
       };
-      const { code, data } = await getIpRuleList(params);
+      const { code, data } = await ipRuleApi.list(params);
       if (code === 0) {
         dataList.value = data.list || [];
         pagination.total = data.total;
@@ -196,10 +189,10 @@ export function useIpRule() {
               };
 
               if (title === "新增") {
-                await createIpRule(payload);
+                await ipRuleApi.create(payload);
                 message("新增成功", { type: "success" });
               } else {
-                await updateIpRule(row.id, payload);
+                await ipRuleApi.partialUpdate(row.id, payload);
                 message("更新成功", { type: "success" });
               }
               done();
@@ -214,13 +207,13 @@ export function useIpRule() {
   }
 
   async function handleDelete(row) {
-    await deleteIpRule(row.id);
+    await ipRuleApi.destroy(row.id);
     message("删除成功", { type: "success" });
     onSearch();
   }
 
   async function handleUpdateStatus(row) {
-    await updateIpRule(row.id, { isActive: row.isActive });
+    await ipRuleApi.partialUpdate(row.id, { isActive: row.isActive });
     message("状态更新成功", { type: "success" });
   }
 
@@ -234,14 +227,14 @@ export function useIpRule() {
       message("请选择要删除的数据", { type: "warning" });
       return;
     }
-    await batchDeleteIpRule({ ids });
+    await ipRuleApi.batchDelete(ids);
     message("批量删除成功", { type: "success" });
     selectedRows.value = [];
     onSearch();
   }
 
   async function handleClear() {
-    await clearIpRule();
+    await ipRuleApi.clear();
     message("清空成功", { type: "success" });
     onSearch();
   }

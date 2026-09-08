@@ -544,8 +544,8 @@ export function useUser(tableRef: Ref) {
         (async () => {
           try {
             const { code } = await userApi.assignUserRole({
-              user_id: row.id,
-              role_ids: curData.ids
+              userId: row.id,
+              roleIds: curData.ids
             });
             if (code === 0) {
               message(`已成功为用户 ${row.username} 分配角色`, {
@@ -564,7 +564,7 @@ export function useUser(tableRef: Ref) {
   onMounted(async () => {
     onSearch();
 
-    const { code, data } = await deptApi.list();
+    const { code, data } = await deptApi.listTree();
     if (code === 0) {
       higherDeptOptions.value = handleTree(data);
     }

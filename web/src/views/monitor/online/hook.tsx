@@ -94,9 +94,7 @@ export function useOnline() {
       pagination.currentPage = data.currentPage;
     }
 
-    setTimeout(() => {
-      loading.value = false;
-    }, 500);
+    loading.value = false;
   }
 
   const resetForm = formEl => {

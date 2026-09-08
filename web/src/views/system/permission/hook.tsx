@@ -1,11 +1,6 @@
 import { ref, onMounted, reactive, nextTick } from "vue";
 import { message } from "@/utils/message";
-import {
-  getRoleList,
-  getRoleMenu,
-  getRoleMenuIds,
-  saveRoleMenu
-} from "@/api/system";
+import { roleApi } from "@/api/system/role";
 import type { FormInstance } from "element-plus";
 
 export function usePermission() {
@@ -67,7 +62,7 @@ export function usePermission() {
   async function fetchRoleList() {
     loading.value = true;
     try {
-      const { code, data } = await getRoleList({
+      const { code, data } = await roleApi.list({
         pageNum: pagination.currentPage,
         pageSize: pagination.pageSize
       });
@@ -84,7 +79,7 @@ export function usePermission() {
   async function fetchMenuTree() {
     menuLoading.value = true;
     try {
-      const { code, data } = await getRoleMenu();
+      const { code, data } = await roleApi.getRoleMenu();
       if (code === 0) {
         menuTree.value = buildTree(data || []);
       }
@@ -99,7 +94,7 @@ export function usePermission() {
     await fetchMenuTree();
     menuLoading.value = true;
     try {
-      const { code, data } = await getRoleMenuIds({ id: role.id });
+      const { code, data } = await roleApi.getRoleMenuIds({ id: role.id });
       if (code === 0) {
         checkedMenuIds.value = (data || []).map(String);
         await nextTick();
@@ -121,7 +116,7 @@ export function usePermission() {
       const checkedKeys = treeRef.value?.getCheckedKeys() || [];
       const halfCheckedKeys = treeRef.value?.getHalfCheckedKeys() || [];
       const menuIds = [...checkedKeys, ...halfCheckedKeys].map(String);
-      const { code } = await saveRoleMenu(currentRoleId.value, menuIds);
+      const { code } = await roleApi.saveRoleMenu(currentRoleId.value, menuIds);
       if (code === 0) {
         message("权限保存成功", { type: "success" });
       }

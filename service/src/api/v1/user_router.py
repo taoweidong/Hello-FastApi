@@ -21,6 +21,7 @@ from src.application.dto.user_dto import (
     UserUpdateDTO,
 )
 from src.application.services.user_service import UserService
+from src.domain.entities.user import UserEntity
 
 
 class UserRouter(Routable):
@@ -108,10 +109,13 @@ class UserRouter(Routable):
         user_id: str,
         dto: ResetPasswordDTO,
         service: UserService = Depends(get_user_service),
-        _: dict = Depends(require_permission("user:edit")),
+        current_user: UserEntity = Depends(require_permission("user:edit")),
     ) -> dict:
-        """重置用户密码接口（管理员功能）。"""
-        await service.reset_password(user_id, dto.newPassword)
+        """重置用户密码接口（管理员功能）。
+
+        目标用户为超级用户时，操作者必须同为超级用户，防止横向越权。
+        """
+        await service.reset_password(user_id, dto.newPassword, operator_is_superuser=current_user.is_superuser_user)
         return success_response(message="密码重置成功")
 
     @put("/{user_id}/status", response_model=ApiResponse[None])
@@ -120,10 +124,13 @@ class UserRouter(Routable):
         user_id: str,
         dto: UpdateStatusDTO,
         service: UserService = Depends(get_user_service),
-        _: dict = Depends(require_permission("user:edit")),
+        current_user: UserEntity = Depends(require_permission("user:edit")),
     ) -> dict:
-        """更改用户状态接口。"""
-        await service.update_status(user_id, dto.isActive)
+        """更改用户状态接口。
+
+        目标用户为超级用户时，操作者必须同为超级用户，防止横向越权。
+        """
+        await service.update_status(user_id, dto.isActive, operator_is_superuser=current_user.is_superuser_user)
         return success_response(message="状态更新成功")
 
     @post("/change-password", response_model=ApiResponse[None])
@@ -142,8 +149,11 @@ class UserRouter(Routable):
         self,
         dto: AssignRoleDTO,
         service: UserService = Depends(get_user_service),
-        _: dict = Depends(require_permission("user:edit")),
+        current_user: UserEntity = Depends(require_permission("user:edit")),
     ) -> dict:
-        """为用户分配角色接口。"""
-        await service.assign_roles(dto.userId, dto.roleIds)
+        """为用户分配角色接口。
+
+        目标用户为超级用户时，操作者必须同为超级用户，防止提权。
+        """
+        await service.assign_roles(dto.userId, dto.roleIds, operator_is_superuser=current_user.is_superuser_user)
         return success_response(message="角色分配成功")
