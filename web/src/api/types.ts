@@ -76,6 +76,10 @@ export interface SystemRole extends AuditFields {
   menus?: Array<Record<string, unknown>>;
   /** 关联的菜单 ID 列表（提交时使用） */
   menuIds?: string[];
+  /** 数据权限范围：1-全部 2-自定义 3-本部门 4-本部门及以下 5-仅本人 */
+  dataScope?: number;
+  /** 自定义数据权限时绑定的部门 ID 列表 */
+  deptIds?: string[];
 }
 
 // ---------------------------------------------------------------- 菜单
@@ -249,4 +253,21 @@ export interface OnlineUser {
   lastActiveTime?: string | null;
   browser?: string | null;
   system?: string | null;
+}
+
+// ---------------------------------------------------------------- 通知公告
+
+/** 通知公告实体 */
+export interface SystemNotice extends AuditFields {
+  id: string;
+  /** 公告标题 */
+  title: string;
+  /** 公告类型：1-通知 2-公告 */
+  noticeType?: number | null;
+  /** 是否启用：1 启用 / 0 关闭 */
+  isActive?: number | null;
+  /** 发布人名称 */
+  publisherName?: string | null;
+  /** 公告内容 */
+  content?: string | null;
 }

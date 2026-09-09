@@ -146,19 +146,25 @@ export function useDept() {
       contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
       beforeSure: (done, { options }) => {
         const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
+        // 关键：直接读取 editForm 的实时表单数据，避免 options.props.formInline 过期
+        const curData = (formRef.value.getFormData?.() ??
+          options.props.formInline) as FormItemProps;
 
         FormRef.validate(async valid => {
           if (valid) {
             try {
+              // 部门表单无「编码」输入项，后端 sys_departments.code 为 NOT NULL + UNIQUE，
+              // 若传空串会与已存在（含测试残留）的空编码行冲突触发 500；故无编码时生成唯一编码
+              const code =
+                (curData.code && String(curData.code).trim()) ||
+                `DEPT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
               const payload = {
                 name: curData.name,
-                code: curData.code || null,
-                parentId: curData.parentId || 0,
-                rank: curData.rank,
-                principal: curData.principal || null,
-                phone: curData.phone || null,
-                email: curData.email || null,
+                code,
+                parentId: curData.parentId || null,
+                modeType: curData.modeType ?? 0,
+                rank: curData.rank ?? 0,
+                autoBind: curData.autoBind ?? 0,
                 isActive: curData.isActive,
                 description: curData.description || null
               };
@@ -169,17 +175,26 @@ export function useDept() {
                   message(`成功创建部门 ${curData.name}`, { type: "success" });
                   done();
                   onSearch();
+                } else {
+                  message(`创建部门失败：返回码 ${code}`, { type: "error" });
                 }
               } else {
                 const { code } = await deptApi.partialUpdate(row.id, payload);
-                if (code === 0) {
+                if (code === 0 || code === 201) {
                   message(`成功更新部门 ${curData.name}`, { type: "success" });
                   done();
                   onSearch();
+                } else {
+                  message(`更新部门失败：返回码 ${code}`, { type: "error" });
                 }
               }
-            } catch {
-              message(`${title}部门失败`, { type: "error" });
+            } catch (err) {
+              message(
+                `${title}部门失败：${(err as Error)?.message ?? "网络异常"}`,
+                {
+                  type: "error"
+                }
+              );
             }
           }
         });

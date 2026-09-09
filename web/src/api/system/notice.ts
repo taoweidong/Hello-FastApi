@@ -1,7 +1,8 @@
 import { http } from "@/utils/http";
 import { BaseApi, type Result } from "../base";
+import type { SystemNotice } from "../types";
 
-class NoticeApi extends BaseApi {
+class NoticeApi extends BaseApi<SystemNotice, SystemNotice> {
   constructor() {
     super("/notice");
   }

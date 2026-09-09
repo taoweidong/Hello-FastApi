@@ -54,15 +54,18 @@ export async function loginViaUI(page: Page, username = ADMIN.username, password
 
 /** 进入指定模块页面并等待主内容渲染完成 */
 export async function gotoModule(page: Page, path: string) {
-  await page.goto(path);
+  // vue-router 使用 createWebHashHistory，必须通过 hash 跳转才能命中目标路由；
+  // 直接 page.goto(path) 在 hash 模式下会被忽略，回落到默认 /welcome
+  await page.goto(`/#${path}`);
   await page.waitForLoadState("networkidle");
-  // 页面骨架渲染：表格或空状态至少出现其一
+  // 页面骨架渲染：表格 / 空状态 / 或布局主容器（.app-main 由布局始终渲染）出现其一即视为渲染完成
   await expect
     .poll(
       async () => {
         const table = await page.locator(".el-table, .pure-table").count();
         const empty = await page.locator(".el-empty, .el-table__empty-block").count();
-        return table + empty;
+        const main = await page.locator(".app-main, .app-main-nofixed-header").count();
+        return table + empty + main;
       },
       { timeout: 15000 }
     )

@@ -1,44 +1,48 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
-  MODULES,
-  fillDialog,
-  gotoModule,
-  search,
-  submitDialog,
-  uniqueName,
-  waitTableReady
-} from "./helpers";
+  cleanupByApi,
+  fillFormItem,
+  gotoPage,
+  makeUniqueName
+} from "./utils/helpers";
 
 /**
- * 系统配置端到端全流程：列表 → 新增 → 搜索 → 删除
+ * 系统配置 CRUD（新增 → 搜索 → API 兜底清理）
+ * - 使用 utils/helpers 的 robust 模式：getByRole / fillFormItem / cleanupByApi
+ * - 避免旧 helpers 中 `button:has-text("新增")` 的脆弱匹配
  */
-test.describe("系统管理 - 系统配置", () => {
-  const configKey = uniqueName("e2e.config");
+test.describe.serial("系统配置 CRUD", () => {
+  const prefix = makeUniqueName("cfg");
+  const configKey = `${prefix}_key`;
+  const configValue = JSON.stringify({ enabled: true, source: "e2e" });
 
-  test("配置列表页面正常加载", async ({ page }) => {
-    await gotoModule(page, MODULES.config);
-    await expect(page.locator(".el-table").first()).toBeVisible();
+  async function searchKey(page: Page): Promise<void> {
+    await page
+      .locator('.search-form input[placeholder*="请输入配置键"]')
+      .fill(configKey);
+    await page.getByRole("button", { name: "搜索" }).click();
+  }
+
+  test("新增配置", async ({ page }) => {
+    await gotoPage(page, "/system/config");
+    await page.getByRole("button", { name: "新增配置" }).click();
+    const dialog = page.locator(".el-dialog", { hasText: "新增配置" });
+    await expect(dialog).toBeVisible();
+    await fillFormItem(dialog, "配置键", configKey);
+    await fillFormItem(dialog, "配置值", configValue);
+    await fillFormItem(dialog, "描述", "E2E 自动化测试创建");
+    await dialog.getByRole("button", { name: "确定" }).click();
+    await expect(dialog).toBeHidden({ timeout: 10000 });
   });
 
-  test("新增配置后可被搜索到（随后清理）", async ({ page }) => {
-    await gotoModule(page, MODULES.config);
+  test("搜索配置可命中新增行", async ({ page }) => {
+    await gotoPage(page, "/system/config");
+    await searchKey(page);
+    const row = page.locator(".el-table__row", { hasText: configKey });
+    await expect(row.first()).toBeVisible({ timeout: 10000 });
+  });
 
-    await page.locator('button:has-text("新增")').first().click();
-    await fillDialog(page, {
-      请输入配置键: configKey,
-      "请输入配置值(JSON格式)": '{"enabled":true}',
-      请输入描述: "E2E 自动化测试创建"
-    });
-    await submitDialog(page);
-    await waitTableReady(page);
-
-    await search(page, "请输入配置键", configKey);
-    await expect(page.locator(".el-table__body-wrapper").first()).toContainText(configKey);
-
-    // 清理
-    await page.locator(".el-table__body-wrapper .el-table__row").first().hover();
-    await page.locator('.el-table__row:first-child button:has-text("删除")').first().click();
-    await page.locator(".el-message-box").last().locator('button:has-text("确定")').click();
-    await waitTableReady(page);
+  test.afterAll(async () => {
+    await cleanupByApi("/config", prefix);
   });
 });

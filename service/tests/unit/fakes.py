@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
+from src.domain.enums import DataScope
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 
@@ -42,6 +43,8 @@ class InMemoryUserRepository(UserRepositoryInterface):
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> list[UserEntity]:
         result = list(self._users.values())
         if username:
@@ -54,6 +57,11 @@ class InMemoryUserRepository(UserRepositoryInterface):
             result = [u for u in result if u.is_active == is_active]
         if dept_id:
             result = [u for u in result if u.dept_id == dept_id]
+        # 数据权限范围过滤（与真实仓储语义一致）
+        if scope_user_id is not None:
+            result = [u for u in result if u.id == scope_user_id]
+        elif scope_dept_ids is not None:
+            result = [] if not scope_dept_ids else [u for u in result if u.dept_id in scope_dept_ids]
         start = (page_num - 1) * page_size
         return result[start : start + page_size]
 
@@ -75,8 +83,24 @@ class InMemoryUserRepository(UserRepositoryInterface):
         email: str | None = None,
         is_active: int | None = None,
         dept_id: str | None = None,
+        scope_dept_ids: list[str] | None = None,
+        scope_user_id: str | None = None,
     ) -> int:
-        rows = await self.get_all(page_num=1, page_size=10**9, username=username, phone=phone, email=email, is_active=is_active, dept_id=dept_id)
+        rows = [u for u in self._users.values()]
+        if username:
+            rows = [u for u in rows if username in u.username]
+        if phone:
+            rows = [u for u in rows if u.phone == phone]
+        if email:
+            rows = [u for u in rows if email in (u.email or "")]
+        if is_active is not None:
+            rows = [u for u in rows if u.is_active == is_active]
+        if dept_id:
+            rows = [u for u in rows if u.dept_id == dept_id]
+        if scope_user_id is not None:
+            rows = [u for u in rows if u.id == scope_user_id]
+        elif scope_dept_ids is not None:
+            rows = [] if not scope_dept_ids else [u for u in rows if u.dept_id in scope_dept_ids]
         return len(rows)
 
     async def batch_delete(self, user_ids: list[str]) -> int:
@@ -93,6 +117,7 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
     def __init__(self, session=None) -> None:
         self._roles: dict[str, RoleEntity] = {}
         self._user_roles: dict[str, list[str]] = {}
+        self._role_depts: dict[str, list[str]] = {}
 
     async def get_by_id(self, role_id: str) -> RoleEntity | None:
         return self._roles.get(role_id)
@@ -162,6 +187,36 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
 
     async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:  # noqa: D102
         return {rid: [] for rid in role_ids}
+
+    # ========== 数据权限（data_scope）相关操作 ==========
+
+    async def get_user_data_scope(self, user_id: str) -> int:  # noqa: D102
+        """取用户所有启用角色中 data_scope 最小者（数值最小=范围最大）。"""
+        roles = await self.get_user_roles(user_id)
+        active_scopes = [
+            r.data_scope for r in roles if r.is_active == 1 and r.data_scope is not None
+        ]
+        if not active_scopes:
+            # 无角色时默认仅本人可见，避免数据泄露
+            return int(DataScope.SELF)
+        return int(min(active_scopes))
+
+    async def get_role_dept_ids(self, role_id: str) -> list[str]:  # noqa: D102
+        return list(self._role_depts.get(role_id, []))
+
+    async def get_user_custom_dept_ids(self, user_id: str) -> list[str]:  # noqa: D102
+        """用户所有自定义数据权限角色关联的部门 ID 并集。"""
+        roles = await self.get_user_roles(user_id)
+        custom_role_ids = [r.id for r in roles if r.data_scope == int(DataScope.CUSTOM)]
+        dept_ids: set[str] = set()
+        for rid in custom_role_ids:
+            dept_ids.update(self._role_depts.get(rid, []))
+        return sorted(dept_ids)
+
+    async def assign_depts_to_role(self, role_id: str, dept_ids: list[str]) -> bool:  # noqa: D102
+        """先清除旧部门再分配新的。"""
+        self._role_depts[role_id] = list(dept_ids)
+        return True
 
 
 class RecordingCacheService:

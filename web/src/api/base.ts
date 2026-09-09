@@ -8,6 +8,7 @@ import type {
   SystemDictionary,
   SystemLog,
   SystemMenu,
+  SystemNotice,
   SystemRole,
   SystemUser
 } from "./types";
@@ -52,6 +53,7 @@ export type AnyRow =
   | LoginLog
   | OperationLog
   | SystemLog
+  | SystemNotice
   | OnlineUser;
 
 /**

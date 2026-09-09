@@ -27,7 +27,12 @@ function getRef() {
   return ruleFormRef.value;
 }
 
-defineExpose({ getRef });
+/** 暴露当前表单实时数据，供父级 beforeSure 取值，避免 options.props.formInline 过期问题 */
+function getFormData() {
+  return newFormInline.value;
+}
+
+defineExpose({ getRef, getFormData });
 </script>
 
 <template>

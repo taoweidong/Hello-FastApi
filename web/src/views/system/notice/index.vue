@@ -211,13 +211,13 @@ function onFullscreen() {
     gap: 16px;
     align-items: center;
     margin-bottom: 16px;
-    color: var(--el-text-color-secondary);
     font-size: 13px;
+    color: var(--el-text-color-secondary);
   }
 
   &-content {
-    white-space: pre-wrap;
     line-height: 1.8;
+    white-space: pre-wrap;
   }
 }
 </style>
