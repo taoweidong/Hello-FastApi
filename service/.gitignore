@@ -49,3 +49,4 @@ coverage.xml
 # OS
 .DS_Store
 Thumbs.db
+sql/*.bak

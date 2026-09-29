@@ -1,4 +1,6 @@
-/dist/*
-/public/*
-public/*
+dist/
+public/
+node_modules/
+playwright-report/
+test-results/
 src/style/reset.scss
