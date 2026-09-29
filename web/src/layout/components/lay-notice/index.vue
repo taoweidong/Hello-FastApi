@@ -5,7 +5,7 @@ import { ref, computed, onMounted } from "vue";
 import { noticesData } from "./data";
 import type { ListItem } from "./data";
 import NoticeList from "./components/NoticeList.vue";
-import { getLatestNotices } from "@/api/system";
+import { noticeApi } from "@/api/system/notice";
 
 import BellIcon from "~icons/ri/notification-3-line";
 import ArrowRightIcon from "~icons/ri/arrow-right-s-line";
@@ -18,7 +18,7 @@ const activeKey = ref(noticesData[0]?.key);
 /** 从后端拉取最新启用公告填充铃铛下拉（公告→tab1，通知→tab2） */
 async function fetchNotices() {
   try {
-    const { code, data } = await getLatestNotices();
+    const { code, data } = await noticeApi.latest();
     if (code !== 0 || !Array.isArray(data)) return;
     const toItem = (n: any): ListItem => ({
       id: n.id,

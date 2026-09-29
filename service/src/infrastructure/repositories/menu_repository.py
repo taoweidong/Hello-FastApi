@@ -44,10 +44,7 @@ class MenuRepository(GenericRepository[Menu, MenuEntity], MenuRepositoryInterfac
         """获取所有菜单，按排序号排序。"""
         stmt = select(Menu).options(selectinload(Menu.meta)).order_by(Menu.rank)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return sorted([self._to_domain(m) for m in items], key=lambda m: m.rank)
 
     async def get_by_id(self, menu_id: str) -> MenuEntity | None:
@@ -65,10 +62,7 @@ class MenuRepository(GenericRepository[Menu, MenuEntity], MenuRepositoryInterfac
         """根据父菜单 ID 获取子菜单，按排序号排序。"""
         stmt = select(Menu).where(Menu.parent_id == parent_id).order_by(Menu.rank)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return sorted([self._to_domain(m) for m in items], key=lambda m: m.rank)
 
     async def count(self, parent_id: str | None = None, is_active: int | None = None) -> int:

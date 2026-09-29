@@ -2,10 +2,14 @@
 
 封装 Token 黑名单和用户权限缓存的 Redis 操作。
 所有方法对 Redis 操作做 try/except 降级处理，确保 Redis 异常不阻塞正常请求。
+
+通用 JSON 读写的降级语义由 ``_get_json`` / ``_set_json`` / ``_delete_keys``
+统一实现；特殊语义（黑名单降级放行、在线会话内存镜像、pipeline 写入）保留各自实现。
 """
 
 import json
 from datetime import datetime, timezone
+from typing import Any
 
 import redis.asyncio as redis
 
@@ -24,6 +28,7 @@ class CacheService(CachePort):
     _USER_INFO_PREFIX = "user:info:"
     _DICT_PREFIX = "dict:"
     _MENU_ALL_KEY = "menu:all"
+    _IP_RULES_KEY = "ip:rules"
 
     # 缓存 TTL（秒）- 从配置读取
     PERMS_CACHE_TTL = settings.CACHE_PERMISSIONS_TTL
@@ -37,6 +42,47 @@ class CacheService(CachePort):
         # 在线会话内存镜像存储（Redis 未配置/不可用时降级数据源）
         # key: 会话 Key，value: {"info": 会话信息字典, "expires_at": 过期时间 UTC}
         self._online_memory: dict[str, dict] = {}
+
+    # ---- 通用 JSON 读写助手（统一降级语义） ----
+
+    async def _get_json(self, key: str) -> tuple[bool, Any]:
+        """读取 JSON 缓存。
+
+        Returns:
+            (命中, 值)；Redis 未配置、异常或未命中时返回 (False, None)。
+        """
+        if self._redis is None:
+            return False, None
+        try:
+            data = await self._redis.get(key)
+            if data is None:
+                return False, None
+            return True, json.loads(data)
+        except Exception:
+            logger.warning(f"Redis 读取缓存失败: {key}", exc_info=True)
+            return False, None
+
+    async def _set_json(self, key: str, value: Any, ttl: int) -> bool:
+        """写入 JSON 缓存，Redis 未配置或异常时返回 False。"""
+        if self._redis is None:
+            return False
+        try:
+            await self._redis.set(key, json.dumps(value, ensure_ascii=False), ex=ttl)
+            return True
+        except Exception:
+            logger.warning(f"Redis 写入缓存失败: {key}", exc_info=True)
+            return False
+
+    async def _delete_keys(self, *keys: str) -> bool:
+        """删除缓存 Key（单次往返），Redis 未配置或异常时返回 False。"""
+        if self._redis is None or not keys:
+            return False
+        try:
+            await self._redis.delete(*keys)
+            return True
+        except Exception:
+            logger.warning(f"Redis 删除缓存失败: {keys}", exc_info=True)
+            return False
 
     # ---- Token 黑名单 ----
 
@@ -142,14 +188,9 @@ class CacheService(CachePort):
         Returns:
             会话信息字典（命中时），None 表示未命中
         """
-        if self._redis is not None:
-            key = f"{self._ONLINE_USER_PREFIX}{session_key}"
-            try:
-                data = await self._redis.get(key)
-                if data is not None:
-                    return json.loads(data)
-            except Exception:
-                logger.warning("Redis 读取在线用户会话失败，降级读取内存镜像", exc_info=True)
+        hit, value = await self._get_json(f"{self._ONLINE_USER_PREFIX}{session_key}")
+        if hit:
+            return value
         return self._memory_get_online(session_key)
 
     async def get_online_users(self) -> list[dict]:
@@ -223,17 +264,8 @@ class CacheService(CachePort):
         Returns:
             权限列表（缓存命中时），None 表示缓存未命中或 Redis 不可用
         """
-        if self._redis is None:
-            return None
-        key = self._perms_key(user_id)
-        try:
-            data = await self._redis.get(key)
-            if data is None:
-                return None
-            return json.loads(data)
-        except Exception:
-            logger.warning("Redis 读取用户权限缓存失败", exc_info=True)
-            return None
+        _, value = await self._get_json(self._perms_key(user_id))
+        return value
 
     async def set_user_permissions(self, user_id: str, permissions: list[dict]) -> bool:
         """将用户权限列表写入缓存。
@@ -245,15 +277,7 @@ class CacheService(CachePort):
         Returns:
             是否成功写入缓存
         """
-        if self._redis is None:
-            return False
-        key = self._perms_key(user_id)
-        try:
-            await self._redis.set(key, json.dumps(permissions, ensure_ascii=False), ex=self.PERMS_CACHE_TTL)
-            return True
-        except Exception:
-            logger.warning("Redis 写入用户权限缓存失败", exc_info=True)
-            return False
+        return await self._set_json(self._perms_key(user_id), permissions, self.PERMS_CACHE_TTL)
 
     async def invalidate_user_permissions(self, user_id: str) -> bool:
         """使用户权限缓存失效。
@@ -264,15 +288,7 @@ class CacheService(CachePort):
         Returns:
             是否成功失效
         """
-        if self._redis is None:
-            return False
-        key = self._perms_key(user_id)
-        try:
-            await self._redis.delete(key)
-            return True
-        except Exception:
-            logger.warning("Redis 删除用户权限缓存失败", exc_info=True)
-            return False
+        return await self._delete_keys(self._perms_key(user_id))
 
     # ---- 用户信息缓存 ----
 
@@ -285,17 +301,8 @@ class CacheService(CachePort):
         Returns:
             用户信息字典（缓存命中时），None 表示缓存未命中或 Redis 不可用
         """
-        if self._redis is None:
-            return None
-        key = f"{self._USER_INFO_PREFIX}{user_id}"
-        try:
-            data = await self._redis.get(key)
-            if data is None:
-                return None
-            return json.loads(data)
-        except Exception:
-            logger.warning("Redis 读取用户信息缓存失败", exc_info=True)
-            return None
+        _, value = await self._get_json(self._user_info_key(user_id))
+        return value
 
     async def set_user_info(self, user_id: str, info: dict) -> bool:
         """将用户基本信息写入缓存。
@@ -307,15 +314,7 @@ class CacheService(CachePort):
         Returns:
             是否成功写入缓存
         """
-        if self._redis is None:
-            return False
-        key = f"{self._USER_INFO_PREFIX}{user_id}"
-        try:
-            await self._redis.set(key, json.dumps(info, ensure_ascii=False), ex=self.USER_INFO_CACHE_TTL)
-            return True
-        except Exception:
-            logger.warning("Redis 写入用户信息缓存失败", exc_info=True)
-            return False
+        return await self._set_json(self._user_info_key(user_id), info, self.USER_INFO_CACHE_TTL)
 
     async def invalidate_user_info(self, user_id: str) -> bool:
         """使用户信息缓存失效。
@@ -326,20 +325,12 @@ class CacheService(CachePort):
         Returns:
             是否成功失效
         """
-        if self._redis is None:
-            return False
-        key = f"{self._USER_INFO_PREFIX}{user_id}"
-        try:
-            await self._redis.delete(key)
-            return True
-        except Exception:
-            logger.warning("Redis 删除用户信息缓存失败", exc_info=True)
-            return False
+        return await self._delete_keys(self._user_info_key(user_id))
 
     async def invalidate_users_batch(self, user_ids: list[str]) -> bool:
         """批量失效多个用户的权限与信息缓存（单次 Redis 往返）。
 
-        使用 pipeline 将全部 key 的删除合并为一次网络往返，避免批量操作时
+        将全部 key 的删除合并为一次网络往返，避免批量操作时
         出现 N×2 次 Redis 调用的隐式 N+1 问题。
 
         Args:
@@ -350,18 +341,8 @@ class CacheService(CachePort):
         """
         if not user_ids:
             return True
-        if self._redis is None:
-            return False
-        keys = [self._perms_key(uid) for uid in user_ids] + [f"{self._USER_INFO_PREFIX}{uid}" for uid in user_ids]
-        try:
-            async with self._redis.pipeline(transaction=False) as pipe:
-                for key in keys:
-                    pipe.delete(key)
-                await pipe.execute()
-            return True
-        except Exception:
-            logger.warning("Redis 批量删除用户缓存失败", exc_info=True)
-            return False
+        keys = [self._perms_key(uid) for uid in user_ids] + [self._user_info_key(uid) for uid in user_ids]
+        return await self._delete_keys(*keys)
 
     # ---- 菜单全表缓存 ----
 
@@ -371,16 +352,8 @@ class CacheService(CachePort):
         Returns:
             菜单字典列表（缓存命中时），None 表示缓存未命中或 Redis 不可用
         """
-        if self._redis is None:
-            return None
-        try:
-            data = await self._redis.get(self._MENU_ALL_KEY)
-            if data is None:
-                return None
-            return json.loads(data)
-        except Exception:
-            logger.warning("Redis 读取菜单缓存失败", exc_info=True)
-            return None
+        _, value = await self._get_json(self._MENU_ALL_KEY)
+        return value
 
     async def set_all_menus(self, menus: list[dict]) -> bool:
         """将所有菜单列表写入缓存。
@@ -391,14 +364,7 @@ class CacheService(CachePort):
         Returns:
             是否成功写入缓存
         """
-        if self._redis is None:
-            return False
-        try:
-            await self._redis.set(self._MENU_ALL_KEY, json.dumps(menus, ensure_ascii=False), ex=self.MENU_ALL_CACHE_TTL)
-            return True
-        except Exception:
-            logger.warning("Redis 写入菜单缓存失败", exc_info=True)
-            return False
+        return await self._set_json(self._MENU_ALL_KEY, menus, self.MENU_ALL_CACHE_TTL)
 
     async def invalidate_all_menus(self) -> bool:
         """使菜单全量缓存失效。
@@ -406,14 +372,7 @@ class CacheService(CachePort):
         Returns:
             是否成功失效
         """
-        if self._redis is None:
-            return False
-        try:
-            await self._redis.delete(self._MENU_ALL_KEY)
-            return True
-        except Exception:
-            logger.warning("Redis 删除菜单缓存失败", exc_info=True)
-            return False
+        return await self._delete_keys(self._MENU_ALL_KEY)
 
     # ---- 字典数据缓存 ----
 
@@ -426,17 +385,8 @@ class CacheService(CachePort):
         Returns:
             字典项列表（缓存命中时），None 表示缓存未命中或 Redis 不可用
         """
-        if self._redis is None:
-            return None
-        key = f"{self._DICT_PREFIX}{dict_name}"
-        try:
-            data = await self._redis.get(key)
-            if data is None:
-                return None
-            return json.loads(data)
-        except Exception:
-            logger.warning("Redis 读取字典缓存失败", exc_info=True)
-            return None
+        _, value = await self._get_json(f"{self._DICT_PREFIX}{dict_name}")
+        return value
 
     async def set_dict_items(self, dict_name: str, items: list[dict]) -> bool:
         """将字典项列表写入缓存。
@@ -448,15 +398,7 @@ class CacheService(CachePort):
         Returns:
             是否成功写入缓存
         """
-        if self._redis is None:
-            return False
-        key = f"{self._DICT_PREFIX}{dict_name}"
-        try:
-            await self._redis.set(key, json.dumps(items, ensure_ascii=False), ex=self.DICT_CACHE_TTL)
-            return True
-        except Exception:
-            logger.warning("Redis 写入字典缓存失败", exc_info=True)
-            return False
+        return await self._set_json(f"{self._DICT_PREFIX}{dict_name}", items, self.DICT_CACHE_TTL)
 
     async def invalidate_dict(self, dict_name: str) -> bool:
         """使指定字典类型的数据缓存失效。
@@ -467,19 +409,9 @@ class CacheService(CachePort):
         Returns:
             是否成功失效
         """
-        if self._redis is None:
-            return False
-        key = f"{self._DICT_PREFIX}{dict_name}"
-        try:
-            await self._redis.delete(key)
-            return True
-        except Exception:
-            logger.warning("Redis 删除字典缓存失败", exc_info=True)
-            return False
+        return await self._delete_keys(f"{self._DICT_PREFIX}{dict_name}")
 
     # ---- IP 规则缓存 ----
-
-    _IP_RULES_KEY = "ip:rules"
 
     async def set_ip_rules(self, blacklist: set[str], whitelist: set[str]) -> bool:
         """将 IP 黑白名单写入 Redis 缓存。
@@ -529,14 +461,7 @@ class CacheService(CachePort):
         Returns:
             是否成功失效
         """
-        if self._redis is None:
-            return False
-        try:
-            await self._redis.delete(self._IP_RULES_KEY)
-            return True
-        except Exception:
-            logger.warning("Redis 删除 IP 规则缓存失败", exc_info=True)
-            return False
+        return await self._delete_keys(self._IP_RULES_KEY)
 
     # ---- 内部方法 ----
 

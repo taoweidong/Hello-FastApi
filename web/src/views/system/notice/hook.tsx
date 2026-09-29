@@ -3,17 +3,10 @@ import editForm from "./form.vue";
 import { message } from "@/utils/message";
 import { useDict, dictLabel } from "@/composables/useDict";
 import { usePublicHooks } from "@/views/system/hooks";
+import { useCrudTable, useDialogForm } from "@/composables";
 import { addDialog } from "@/components/ReDialog";
-import {
-  getNoticeList,
-  createNotice,
-  updateNotice,
-  deleteNotice,
-  batchDeleteNotice,
-  getNotice
-} from "@/api/system";
-import type { FormItemProps } from "./utils/types";
-import { ref, onMounted, reactive, h } from "vue";
+import { noticeApi } from "@/api/system/notice";
+import { ref, reactive } from "vue";
 import { deviceDetection } from "@pureadmin/utils";
 
 /** 公告类型静态回退选项（字典缺失时兜底） */
@@ -23,15 +16,7 @@ const noticeTypeFallback = [
 ];
 
 export function useNotice() {
-  const loading = ref(true);
-  const dataList = ref([]);
-  const formRef = ref();
-  const totalPage = ref(0);
   const selectedIds = ref<string[]>([]);
-  const pagination = reactive({
-    currentPage: 1,
-    pageSize: 10
-  });
 
   const form = reactive({
     title: "",
@@ -47,6 +32,37 @@ export function useNotice() {
     dicts["sys_notice_type"].length
       ? dicts["sys_notice_type"]
       : noticeTypeFallback;
+
+  const {
+    loading,
+    dataList,
+    pagination,
+    onSearch,
+    resetForm,
+    handleDelete,
+    handleBatchDelete: batchDeleteRows,
+    handleSizeChange,
+    handleCurrentChange
+  } = useCrudTable({
+    api: noticeApi,
+    searchForm: form,
+    displayField: "title",
+    entityName: "公告"
+  });
+
+  const { openDialog } = useDialogForm({
+    formComponent: editForm,
+    entityName: "公告",
+    api: noticeApi,
+    fieldMappings: [
+      { key: "title", defaultValue: "" },
+      { key: "content", defaultValue: "", nullable: true },
+      { key: "noticeType", defaultValue: 1 },
+      { key: "isActive", defaultValue: 1 }
+    ],
+    width: "45%",
+    onSuccess: onSearch
+  });
 
   const columns: TableColumnList = [
     {
@@ -109,50 +125,22 @@ export function useNotice() {
     }
   ];
 
-  async function onSearch() {
-    loading.value = true;
-    try {
-      const { data } = await getNoticeList({
-        title: form.title || undefined,
-        noticeType: form.noticeType ?? undefined,
-        isActive: form.isActive ?? undefined,
-        pageNum: pagination.currentPage,
-        pageSize: pagination.pageSize
-      });
-      dataList.value = data.list || [];
-      totalPage.value = data.total || 0;
-    } catch {
-      dataList.value = [];
-    }
-    loading.value = false;
-  }
-
-  function resetForm(formEl) {
-    form.title = "";
-    form.noticeType = null;
-    form.isActive = null;
-    formEl?.resetFields();
-    onSearch();
-  }
-
-  function handleSizeChange(val: number) {
-    pagination.pageSize = val;
-    onSearch();
-  }
-
-  function handleCurrentChange(val: number) {
-    pagination.currentPage = val;
-    onSearch();
-  }
-
   function handleSelectionChange(selections) {
     selectedIds.value = selections.map(item => item.id);
+  }
+
+  /** 模板 popconfirm 确认后触发，删除当前勾选的公告 */
+  function handleBatchDelete() {
+    if (!selectedIds.value.length) {
+      return;
+    }
+    return batchDeleteRows(selectedIds.value);
   }
 
   /** 查看公告详情（只读弹窗） */
   async function handleView(row) {
     try {
-      const { data } = await getNotice(row.id);
+      const { data } = await noticeApi.retrieve(row.id);
       addDialog({
         title: data.title,
         width: "45%",
@@ -189,83 +177,11 @@ export function useNotice() {
     }
   }
 
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}公告`,
-      props: {
-        formInline: {
-          id: row?.id ?? "",
-          title: row?.title ?? "",
-          content: row?.content ?? "",
-          noticeType: row?.noticeType ?? 1,
-          isActive: row?.isActive ?? 1
-        }
-      },
-      width: "45%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-
-        FormRef.validate(async valid => {
-          if (valid) {
-            try {
-              const payload = {
-                title: curData.title,
-                content: curData.content,
-                noticeType: curData.noticeType,
-                isActive: curData.isActive
-              };
-
-              if (title === "新增") {
-                await createNotice(payload);
-                message("新增成功", { type: "success" });
-              } else {
-                await updateNotice(row.id, payload);
-                message("更新成功", { type: "success" });
-              }
-              done();
-              onSearch();
-            } catch {
-              message(`${title}失败`, { type: "error" });
-            }
-          }
-        });
-      }
-    });
-  }
-
-  async function handleDelete(row) {
-    await deleteNotice(row.id);
-    message("删除成功", { type: "success" });
-    onSearch();
-  }
-
-  async function handleBatchDelete() {
-    if (!selectedIds.value.length) {
-      message("请先勾选要删除的公告", { type: "warning" });
-      return;
-    }
-    await batchDeleteNotice({ ids: selectedIds.value });
-    message("批量删除成功", { type: "success" });
-    selectedIds.value = [];
-    onSearch();
-  }
-
-  onMounted(() => {
-    onSearch();
-  });
-
   return {
     loading,
     form,
     columns,
     dataList,
-    totalPage,
     pagination,
     selectedIds,
     typeOptions,

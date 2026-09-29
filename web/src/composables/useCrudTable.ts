@@ -49,6 +49,16 @@ export interface UseCrudTableReturn<TList> {
   handleCurrentChange: (val: number) => void;
 }
 
+/** 移除空字符串与 undefined 的搜索条件，避免后端把 "" 当作有效过滤值 */
+function pruneEmpty(obj: Record<string, unknown>) {
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === "" || value === undefined) continue;
+    result[key] = value;
+  }
+  return result;
+}
+
 export function useCrudTable<TList extends AnyRow = AnyRow>(
   options: UseCrudTableOptions<TList>
 ): UseCrudTableReturn<TList> {
@@ -74,7 +84,11 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
   async function onSearch() {
     loading.value = true;
     try {
-      const { code, data } = await api.list(toRaw(searchForm));
+      const { code, data } = await api.list({
+        ...pruneEmpty(toRaw(searchForm)),
+        pageNum: pagination.currentPage,
+        pageSize: pagination.pageSize
+      });
       if (code === 0 && data) {
         if (listMode === "paginated") {
           const result = data as NonNullable<ResultTable<TList>["data"]>;

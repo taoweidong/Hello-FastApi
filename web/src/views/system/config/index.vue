@@ -21,7 +21,6 @@ const {
   columns,
   dataList,
   pagination,
-  totalPage,
   onSearch,
   resetForm,
   openDialog,
@@ -97,7 +96,7 @@ function onFullscreen() {
           :data="dataList"
           :columns="dynamicColumns"
           :pagination="{
-            total: totalPage,
+            total: pagination.total,
             pageSize: pagination.pageSize,
             currentPage: pagination.currentPage,
             size,

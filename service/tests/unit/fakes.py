@@ -128,7 +128,9 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
     async def get_by_code(self, code: str) -> RoleEntity | None:
         return next((r for r in self._roles.values() if r.code == code), None)
 
-    async def get_all(self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None) -> list[RoleEntity]:  # noqa: D102
+    async def get_all(
+        self, page_num: int = 1, page_size: int = 10, role_name: str | None = None, is_active: int | None = None
+    ) -> list[RoleEntity]:  # noqa: D102
         result = list(self._roles.values())
         if role_name:
             result = [r for r in result if role_name in r.name]
@@ -193,9 +195,7 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
     async def get_user_data_scope(self, user_id: str) -> int:  # noqa: D102
         """取用户所有启用角色中 data_scope 最小者（数值最小=范围最大）。"""
         roles = await self.get_user_roles(user_id)
-        active_scopes = [
-            r.data_scope for r in roles if r.is_active == 1 and r.data_scope is not None
-        ]
+        active_scopes = [r.data_scope for r in roles if r.is_active == 1 and r.data_scope is not None]
         if not active_scopes:
             # 无角色时默认仅本人可见，避免数据泄露
             return int(DataScope.SELF)

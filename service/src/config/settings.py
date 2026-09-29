@@ -130,6 +130,27 @@ class Settings(BaseSettings):
         return self.APP_ENV == "testing"
 
 
+# 已知的不安全密钥特征：占位符/示例值的前缀。生产环境命中任一特征即拒绝启动。
+_INSECURE_SECRET_MARKERS: tuple[str, ...] = ("your-", "change-this-", "dev-secret", "test-secret")
+
+
+def _ensure_production_secrets(s: Settings) -> None:
+    """生产环境下校验密钥未使用占位默认值，命中则 fail-fast 拒绝启动。
+
+    防止使用仓库内的示例密钥（模型默认值、.env.production 占位符、
+    docker-compose 默认值）部署生产，导致 JWT 可被任意伪造。
+    """
+    if not s.is_production:
+        return
+    for field_name in ("SECRET_KEY", "JWT_SECRET_KEY"):
+        value = getattr(s, field_name).lower()
+        if any(marker in value for marker in _INSECURE_SECRET_MARKERS):
+            raise ValueError(
+                f"生产环境检测到不安全的 {field_name} 占位值，"
+                f"请通过环境变量或 .env.production 设置强随机密钥（如 openssl rand -hex 32）"
+            )
+
+
 # 各环境的覆盖配置
 _ENV_OVERRIDES: dict[str, dict[str, Any]] = {
     "development": {},
@@ -195,7 +216,10 @@ def get_settings(env: str | None = None) -> Settings:
     if env not in valid_envs:
         env = "development"
 
-    return Settings(env_file=_ENV_FILES[env], **_ENV_OVERRIDES[env])  # type: ignore[call-arg]
+    # 显式指定 env 时以参数为准（进程环境变量中的 APP_ENV 可能指向其他环境）
+    s = Settings(env_file=_ENV_FILES[env], APP_ENV=env, **_ENV_OVERRIDES[env])  # type: ignore[call-arg, arg-type]
+    _ensure_production_secrets(s)
+    return s
 
 
 @lru_cache

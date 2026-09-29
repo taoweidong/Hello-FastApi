@@ -17,17 +17,12 @@ from __future__ import annotations
 
 import pytest
 
-from src.application.dto.user_dto import (
-    ChangePasswordDTO,
-    UserCreateDTO,
-    UserListQueryDTO,
-    UserUpdateDTO,
-)
+from src.application.dto.user_dto import ChangePasswordDTO, UserCreateDTO, UserListQueryDTO, UserUpdateDTO
+from src.application.services.user_service import UserService
 from src.domain.entities.user import UserEntity
 from src.domain.enums import UserRole, UserStatus
 from src.domain.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
 from src.domain.services.password_service import PasswordService
-from src.application.services.user_service import UserService
 from tests.unit.fakes import InMemoryRoleRepository, InMemoryUserRepository, RecordingCacheService
 
 
@@ -57,11 +52,7 @@ def user_service(user_repo, role_repo, password_service, cache) -> UserService:
 
 
 def make_user(
-    username: str = "alice",
-    email: str = "alice@example.com",
-    *,
-    is_superuser: bool = False,
-    is_active: bool = True,
+    username: str = "alice", email: str = "alice@example.com", *, is_superuser: bool = False, is_active: bool = True
 ) -> UserEntity:
     """构造一个测试用户实体。"""
     return UserEntity.create_new(
@@ -99,7 +90,9 @@ class TestCreateUser:
         await user_repo.create(make_user(username="alice", email="dup@example.com"))
 
         with pytest.raises(ConflictError, match="dup@example.com"):
-            await user_service.create_user(UserCreateDTO(username="other", password="Passw0rd!", email="dup@example.com"))
+            await user_service.create_user(
+                UserCreateDTO(username="other", password="Passw0rd!", email="dup@example.com")
+            )
 
     @pytest.mark.asyncio
     async def test_password_is_hashed_not_stored_plaintext(self, user_service, user_repo, password_service):
@@ -179,7 +172,9 @@ class TestPasswordManagement:
         await user_repo.create(alice)
 
         with pytest.raises(UnauthorizedError):
-            await user_service.change_password(alice.id, ChangePasswordDTO(oldPassword="WrongPass", newPassword="NewPass123"))
+            await user_service.change_password(
+                alice.id, ChangePasswordDTO(oldPassword="WrongPass", newPassword="NewPass123")
+            )
 
     @pytest.mark.asyncio
     async def test_change_password_success(self, user_service, user_repo, password_service):
@@ -187,7 +182,9 @@ class TestPasswordManagement:
         alice.password = password_service.hash_password("OldPass123")
         await user_repo.create(alice)
 
-        await user_service.change_password(alice.id, ChangePasswordDTO(oldPassword="OldPass123", newPassword="NewPass456"))
+        await user_service.change_password(
+            alice.id, ChangePasswordDTO(oldPassword="OldPass123", newPassword="NewPass456")
+        )
 
         stored = await user_repo.get_by_id(alice.id)
         assert password_service.verify_password("NewPass456", stored.password)

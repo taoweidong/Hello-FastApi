@@ -469,23 +469,6 @@ class TestUserService:
         with patch.object(user_service, "repo", mock_user_repo), pytest.raises(NotFoundError):
             await user_service.change_password("non-existent", dto)
 
-    def test_to_response_with_roles_static(self, user_service):
-        """测试 _to_response_with_roles 静态方法。"""
-        from src.domain.entities.role import RoleEntity
-
-        user = UserEntity(id="u1", username="testuser", password="hash", nickname="测试")
-        roles = [RoleEntity(id="r1", name="管理员", code="admin"), RoleEntity(id="r2", name="用户", code="user")]
-        result = user_service._to_response_with_roles(user, roles)
-        assert result.username == "testuser"
-        assert len(result.roles) == 2
-        assert result.roles[0]["name"] == "管理员"
-
-    def test_to_response_with_roles_empty(self, user_service):
-        """测试 _to_response_with_roles 空角色。"""
-        user = UserEntity(id="u1", username="testuser", password="hash")
-        result = user_service._to_response_with_roles(user, [])
-        assert result.roles == []
-
     @pytest.mark.asyncio
     async def test_update_user_self_email_same(self, user_service, mock_user_repo):
         """测试更新时邮箱相同（self-update L112→115 分支：existing.id == user_id，不抛异常）。"""
@@ -967,52 +950,3 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
             await user_service_cached.check_api_permission_cached_or_db("u1", UserRole.USER, "/api/users", "GET")
 
 
-@pytest.mark.unit
-class TestUserServiceGetCachedOrActiveUser:
-    """UserService.get_cached_or_active_user 测试类 — 验证委托到 get_user_info_with_cache。"""
-
-    @pytest.fixture
-    def mock_user_repo(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def mock_role_repo(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def mock_password_service(self):
-        service = AsyncMock()
-        service.hash_password = PasswordService.hash_password
-        service.verify_password = PasswordService.verify_password
-        return service
-
-    @pytest.fixture
-    def mock_cache(self):
-        return AsyncMock()
-
-    @pytest.fixture
-    def user_service(self, mock_user_repo, mock_password_service, mock_role_repo, mock_cache):
-        return UserService(
-            repo=mock_user_repo,
-            password_service=mock_password_service,
-            role_repo=mock_role_repo,
-            cache_service=mock_cache,
-        )
-
-    @pytest.mark.asyncio
-    async def test_get_cached_or_active_user_delegates(self, user_service, mock_cache):
-        """L363：get_cached_or_active_user 委托给 get_user_info_with_cache。"""
-        cached_info = {
-            "id": "u1",
-            "username": "delegated_user",
-            "email": "del@test.com",
-            "is_superuser": UserRole.USER,
-            "is_active": UserStatus.ACTIVE,
-        }
-        mock_cache.get_user_info = AsyncMock(return_value=cached_info)
-
-        with patch.object(user_service, "cache_service", mock_cache):
-            result = await user_service.get_cached_or_active_user("u1")
-
-        assert result.username == "delegated_user"
-        mock_cache.get_user_info.assert_called_once_with("u1")

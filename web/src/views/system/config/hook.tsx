@@ -1,28 +1,48 @@
 import dayjs from "dayjs";
 import editForm from "./form.vue";
-import { message } from "@/utils/message";
 import { usePublicHooks } from "@/views/system/hooks";
-import { addDialog } from "@/components/ReDialog";
+import { useCrudTable, useDialogForm } from "@/composables";
 import { systemConfigApi } from "@/api/system/system_config";
-import type { FormItemProps } from "./utils/types";
-import { ref, onMounted, reactive, h } from "vue";
-import { deviceDetection } from "@pureadmin/utils";
+import { reactive } from "vue";
 
 export function useConfig() {
-  const loading = ref(true);
-  const dataList = ref([]);
-  const formRef = ref();
-  const totalPage = ref(0);
-  const pagination = reactive({
-    currentPage: 1,
-    pageSize: 10
-  });
-
   const form = reactive({
     key: ""
   });
 
   const { tagStyle } = usePublicHooks();
+
+  const {
+    loading,
+    dataList,
+    pagination,
+    onSearch,
+    resetForm,
+    handleDelete,
+    handleSizeChange,
+    handleCurrentChange
+  } = useCrudTable({
+    api: systemConfigApi,
+    searchForm: form,
+    displayField: "key",
+    entityName: "配置"
+  });
+
+  const { openDialog } = useDialogForm({
+    formComponent: editForm,
+    entityName: "配置",
+    api: systemConfigApi,
+    fieldMappings: [
+      { key: "key", defaultValue: "" },
+      { key: "value", defaultValue: "" },
+      { key: "access", defaultValue: 0 },
+      { key: "isActive", defaultValue: 1 },
+      { key: "inherit", defaultValue: 0 },
+      { key: "description", defaultValue: "", nullable: true }
+    ],
+    width: "40%",
+    onSuccess: onSearch
+  });
 
   const columns: TableColumnList = [
     {
@@ -94,108 +114,11 @@ export function useConfig() {
     }
   ];
 
-  async function onSearch() {
-    loading.value = true;
-    try {
-      const { data } = await systemConfigApi.list({
-        key: form.key || undefined,
-        pageNum: pagination.currentPage,
-        pageSize: pagination.pageSize
-      });
-      dataList.value = data.list || [];
-      totalPage.value = data.total || 0;
-    } catch {
-      dataList.value = [];
-    }
-    loading.value = false;
-  }
-
-  function resetForm(formEl) {
-    form.key = "";
-    formEl?.resetFields();
-    onSearch();
-  }
-
-  function handleSizeChange(val: number) {
-    pagination.pageSize = val;
-    onSearch();
-  }
-
-  function handleCurrentChange(val: number) {
-    pagination.currentPage = val;
-    onSearch();
-  }
-
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}配置`,
-      props: {
-        formInline: {
-          id: row?.id ?? "",
-          key: row?.key ?? "",
-          value: row?.value ?? "",
-          access: row?.access ?? 0,
-          isActive: row?.isActive ?? 1,
-          inherit: row?.inherit ?? 0,
-          description: row?.description ?? ""
-        }
-      },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-
-        FormRef.validate(async valid => {
-          if (valid) {
-            try {
-              const payload = {
-                key: curData.key,
-                value: curData.value,
-                access: curData.access,
-                isActive: curData.isActive,
-                inherit: curData.inherit,
-                description: curData.description || undefined
-              };
-
-              if (title === "新增") {
-                await systemConfigApi.create(payload);
-                message("新增成功", { type: "success" });
-              } else {
-                await systemConfigApi.partialUpdate(row.id, payload);
-                message("更新成功", { type: "success" });
-              }
-              done();
-              onSearch();
-            } catch {
-              message(`${title}失败`, { type: "error" });
-            }
-          }
-        });
-      }
-    });
-  }
-
-  async function handleDelete(row) {
-    await systemConfigApi.destroy(row.id);
-    message("删除成功", { type: "success" });
-    onSearch();
-  }
-
-  onMounted(() => {
-    onSearch();
-  });
-
   return {
     loading,
     form,
     columns,
     dataList,
-    totalPage,
     pagination,
     onSearch,
     resetForm,

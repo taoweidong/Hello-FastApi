@@ -5,6 +5,16 @@ from pydantic import ValidationError
 
 from src.config.settings import Settings, get_settings
 
+# 强随机密钥（模拟 openssl rand -hex 32 的合法输入）
+_STRONG_SECRET = "a" * 64
+_STRONG_JWT_SECRET = "b" * 64
+
+
+def _with_strong_secrets(monkeypatch):
+    """为生产环境测试注入合法密钥，绕开占位值 fail-fast 校验。"""
+    monkeypatch.setenv("SECRET_KEY", _STRONG_SECRET)
+    monkeypatch.setenv("JWT_SECRET_KEY", _STRONG_JWT_SECRET)
+
 
 @pytest.mark.unit
 class TestSettings:
@@ -164,15 +174,17 @@ class TestGetSettings:
         assert settings.DEBUG is True
         assert settings.LOG_LEVEL == "DEBUG"
 
-    def test_explicit_prod_env(self):
+    def test_explicit_prod_env(self, monkeypatch):
         """测试显式传入 production 环境，overriding 生效。"""
+        _with_strong_secrets(monkeypatch)
         settings = get_settings(env="production")
         assert isinstance(settings, Settings)
         assert settings.DEBUG is False
         assert settings.LOG_LEVEL == "WARNING"
 
-    def test_all_envs_return_settings(self):
+    def test_all_envs_return_settings(self, monkeypatch):
         """验证所有环境调用都返回 Settings 实例。"""
+        _with_strong_secrets(monkeypatch)
         for env in ("development", "production", "testing"):
             result = get_settings(env=env)
             assert isinstance(result, Settings), f"Expected Settings for env={env}"
@@ -180,4 +192,49 @@ class TestGetSettings:
     def test_invalid_env_falls_back(self):
         """测试无效环境回退到 development。"""
         settings = get_settings(env="invalid")
+        assert isinstance(settings, Settings)
+
+
+@pytest.mark.unit
+class TestProductionSecretGuard:
+    """生产环境密钥占位值 fail-fast 校验测试。"""
+
+    @pytest.mark.parametrize(
+        "secret",
+        [
+            "your-secret-key-change-in-production",  # 模型默认值
+            "your-production-secret-key-must-be-changed",  # .env.production 占位符
+            "change-this-to-a-random-secret-key-in-production",  # docker-compose 默认值
+            "your-jwt-secret-key-change-in-production",
+        ],
+    )
+    def test_production_placeholder_secret_rejected(self, monkeypatch, secret):
+        """生产环境使用占位密钥时 get_settings 应拒绝启动。"""
+        monkeypatch.setenv("SECRET_KEY", secret)
+        monkeypatch.setenv("JWT_SECRET_KEY", _STRONG_JWT_SECRET)
+        with pytest.raises(ValueError, match="SECRET_KEY"):
+            get_settings(env="production")
+
+    def test_production_placeholder_jwt_rejected(self, monkeypatch):
+        """生产环境使用占位 JWT 密钥时 get_settings 应拒绝启动。"""
+        monkeypatch.setenv("SECRET_KEY", _STRONG_SECRET)
+        monkeypatch.setenv("JWT_SECRET_KEY", "test-secret-key-for-testing-only")
+        with pytest.raises(ValueError, match="JWT_SECRET_KEY"):
+            get_settings(env="production")
+
+    def test_production_strong_secrets_accepted(self, monkeypatch):
+        """生产环境使用强随机密钥时正常返回配置。"""
+        _with_strong_secrets(monkeypatch)
+        settings = get_settings(env="production")
+        assert settings.SECRET_KEY == _STRONG_SECRET
+        assert settings.JWT_SECRET_KEY == _STRONG_JWT_SECRET
+
+    def test_development_placeholder_secret_allowed(self):
+        """开发环境允许占位密钥（不触发校验）。"""
+        settings = get_settings(env="development")
+        assert isinstance(settings, Settings)
+
+    def test_testing_placeholder_secret_allowed(self):
+        """测试环境允许占位密钥（不触发校验）。"""
+        settings = get_settings(env="testing")
         assert isinstance(settings, Settings)

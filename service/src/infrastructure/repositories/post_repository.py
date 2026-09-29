@@ -58,10 +58,7 @@ class PostRepository(GenericRepository[Post, PostEntity], PostRepositoryInterfac
         offset = (page_num - 1) * page_size
         stmt = stmt.offset(offset).limit(page_size)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return [self._to_domain(m) for m in items]
 
     async def count(
@@ -77,10 +74,7 @@ class PostRepository(GenericRepository[Post, PostEntity], PostRepositoryInterfac
         """获取全部启用岗位（按排序升序）。"""
         stmt = select(Post).where(Post.is_active == 1).order_by(Post.post_sort)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return [self._to_domain(m) for m in items]
 
     async def get_by_code(self, post_code: str) -> PostEntity | None:
@@ -130,10 +124,7 @@ class PostRepository(GenericRepository[Post, PostEntity], PostRepositoryInterfac
         """获取用户关联的岗位 ID 列表。"""
         stmt = select(UserPostLink.post_id).where(UserPostLink.user_id == user_id)
         result = await self.session.exec(stmt)
-        try:
-            return list(result.scalars().all())
-        except AttributeError:
-            return list(result.all())
+        return self._all_items(result)
 
     async def assign_posts_to_user(self, user_id: str, post_ids: list[str]) -> bool:
         """为用户分配岗位（先清空旧关联再写入新关联）。"""

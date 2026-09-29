@@ -39,10 +39,7 @@ class DepartmentRepository(GenericRepository[Department, DepartmentEntity], Depa
         """获取所有部门，按排序号排序。"""
         stmt = select(Department).order_by(Department.rank)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return [self._to_domain(m) for m in items]
 
     async def get_by_name(self, name: str) -> DepartmentEntity | None:
@@ -57,10 +54,7 @@ class DepartmentRepository(GenericRepository[Department, DepartmentEntity], Depa
         """根据父部门 ID 获取子部门，按排序号排序。"""
         stmt = select(Department).where(Department.parent_id == parent_id).order_by(Department.rank)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return [self._to_domain(m) for m in items]
 
     async def get_child_dept_ids(self, dept_id: str) -> list[str]:
@@ -110,8 +104,5 @@ class DepartmentRepository(GenericRepository[Department, DepartmentEntity], Depa
         if is_active is not None:
             stmt = stmt.where(Department.is_active == is_active)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return [self._to_domain(m) for m in items]

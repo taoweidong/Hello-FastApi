@@ -3,17 +3,12 @@ import editForm from "./form.vue";
 import { message } from "@/utils/message";
 import { usePublicHooks } from "@/views/system/hooks";
 import { IPRuleTypeChoices } from "@/views/system/constants";
-import { addDialog } from "@/components/ReDialog";
+import { useCrudTable, useDialogForm } from "@/composables";
 import { ipRuleApi } from "@/api/system/ip_rule";
-import type { FormItemProps } from "./utils/types";
-import { ref, onMounted, reactive, h } from "vue";
-import { deviceDetection } from "@pureadmin/utils";
+import { ref, reactive } from "vue";
 
 export function useIpRule() {
-  const loading = ref(true);
-  const dataList = ref([]);
-  const formRef = ref();
-  const selectedRows = ref([]);
+  const selectedIds = ref<string[]>([]);
   const { switchStyle } = usePublicHooks();
 
   const form = reactive({
@@ -21,11 +16,37 @@ export function useIpRule() {
     isActive: ""
   });
 
-  const pagination = reactive({
-    total: 0,
-    pageSize: 10,
-    currentPage: 1,
-    background: true
+  const {
+    loading,
+    dataList,
+    pagination,
+    onSearch,
+    resetForm,
+    handleDelete,
+    handleBatchDelete: batchDeleteRows,
+    handleSizeChange,
+    handleCurrentChange
+  } = useCrudTable({
+    api: ipRuleApi,
+    searchForm: form,
+    displayField: "ipAddress",
+    entityName: "IP规则"
+  });
+
+  const { openDialog } = useDialogForm({
+    formComponent: editForm,
+    entityName: "IP规则",
+    api: ipRuleApi,
+    fieldMappings: [
+      { key: "ipAddress", defaultValue: "" },
+      { key: "ruleType", defaultValue: "blacklist" },
+      { key: "reason", defaultValue: "", nullable: true },
+      { key: "isActive", defaultValue: 1 },
+      { key: "expiresAt", defaultValue: "", nullable: true },
+      { key: "description", defaultValue: "", nullable: true }
+    ],
+    width: "40%",
+    onSuccess: onSearch
   });
 
   const columns: TableColumnList = [
@@ -112,125 +133,21 @@ export function useIpRule() {
     }
   ];
 
-  async function onSearch() {
-    loading.value = true;
-    try {
-      const params: Record<string, any> = {
-        pageNum: pagination.currentPage,
-        pageSize: pagination.pageSize,
-        ruleType: form.ruleType || undefined,
-        isActive: form.isActive !== "" ? form.isActive : undefined
-      };
-      const { code, data } = await ipRuleApi.list(params);
-      if (code === 0) {
-        dataList.value = data.list || [];
-        pagination.total = data.total;
-        pagination.pageSize = data.pageSize;
-        pagination.currentPage = data.currentPage;
-      }
-    } catch {
-      dataList.value = [];
-    }
-    loading.value = false;
-  }
-
-  function resetForm(formEl) {
-    form.ruleType = "";
-    form.isActive = "";
-    formEl?.resetFields();
-    pagination.currentPage = 1;
-    onSearch();
-  }
-
-  function handleSizeChange(val: number) {
-    pagination.pageSize = val;
-    onSearch();
-  }
-
-  function handleCurrentChange(val: number) {
-    pagination.currentPage = val;
-    onSearch();
-  }
-
-  function openDialog(title = "新增", row?: FormItemProps) {
-    addDialog({
-      title: `${title}IP规则`,
-      props: {
-        formInline: {
-          id: row?.id ?? "",
-          ipAddress: row?.ipAddress ?? "",
-          ruleType: row?.ruleType ?? "blacklist",
-          reason: row?.reason ?? "",
-          isActive: row?.isActive ?? 1,
-          expiresAt: row?.expiresAt ?? "",
-          description: row?.description ?? ""
-        }
-      },
-      width: "40%",
-      draggable: true,
-      fullscreen: deviceDetection(),
-      fullscreenIcon: true,
-      closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
-        const FormRef = formRef.value.getRef();
-        const curData = options.props.formInline as FormItemProps;
-
-        FormRef.validate(async valid => {
-          if (valid) {
-            try {
-              const payload = {
-                ipAddress: curData.ipAddress,
-                ruleType: curData.ruleType,
-                reason: curData.reason || undefined,
-                isActive: curData.isActive,
-                expiresAt: curData.expiresAt || undefined,
-                description: curData.description || undefined
-              };
-
-              if (title === "新增") {
-                await ipRuleApi.create(payload);
-                message("新增成功", { type: "success" });
-              } else {
-                await ipRuleApi.partialUpdate(row.id, payload);
-                message("更新成功", { type: "success" });
-              }
-              done();
-              onSearch();
-            } catch {
-              message(`${title}失败`, { type: "error" });
-            }
-          }
-        });
-      }
-    });
-  }
-
-  async function handleDelete(row) {
-    await ipRuleApi.destroy(row.id);
-    message("删除成功", { type: "success" });
-    onSearch();
-  }
-
   async function handleUpdateStatus(row) {
     await ipRuleApi.partialUpdate(row.id, { isActive: row.isActive });
     message("状态更新成功", { type: "success" });
   }
 
   function handleSelectionChange(val) {
-    selectedRows.value = val;
+    selectedIds.value = val.map(item => item.id);
   }
 
-  async function handleBatchDelete() {
-    const ids = selectedRows.value.map(item => item.id);
-    if (!ids.length) {
-      message("请选择要删除的数据", { type: "warning" });
+  /** 工具栏批量删除按钮，删除当前勾选的 IP 规则 */
+  function handleBatchDelete() {
+    if (!selectedIds.value.length) {
       return;
     }
-    await ipRuleApi.batchDelete(ids);
-    message("批量删除成功", { type: "success" });
-    selectedRows.value = [];
-    onSearch();
+    return batchDeleteRows(selectedIds.value);
   }
 
   async function handleClear() {
@@ -238,10 +155,6 @@ export function useIpRule() {
     message("清空成功", { type: "success" });
     onSearch();
   }
-
-  onMounted(() => {
-    onSearch();
-  });
 
   return {
     loading,

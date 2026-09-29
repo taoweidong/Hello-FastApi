@@ -271,3 +271,20 @@ export interface SystemNotice extends AuditFields {
   /** 公告内容 */
   content?: string | null;
 }
+
+// ---------------------------------------------------------------- 岗位管理
+
+/** 岗位实体 */
+export interface SystemPost extends AuditFields {
+  id: string;
+  /** 岗位编码 */
+  postCode: string;
+  /** 岗位名称 */
+  postName: string;
+  /** 显示排序 */
+  postSort?: number | null;
+  /** 是否启用：1 启用 / 0 停用 */
+  isActive?: number | null;
+  /** 备注 */
+  remark?: string | null;
+}

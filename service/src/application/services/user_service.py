@@ -1,5 +1,6 @@
 """应用层 - 用户服务。"""
 
+from collections.abc import Callable
 from typing import Any
 
 from src.application.dto.user_dto import (
@@ -421,34 +422,13 @@ class UserService:
 
         复用了原 api/dependencies/auth.py 中 require_permission 的逻辑。
         """
-        if is_superuser == UserRole.SUPERUSER:
-            return UserEntity(id=user_id, username="", password="", is_superuser=UserRole.SUPERUSER)
-
-        if self.cache_service is not None:
-            cached_perms = await self.cache_service.get_user_permissions(user_id)
-            if cached_perms is not None:
-                for perm in cached_perms:
-                    if perm.get("type") == "permission" and perm.get("name") == code:
-                        return UserEntity(id=user_id, username="", password="", is_superuser=UserRole.USER)
-                raise ForbiddenError(f"权限 '{code}' 是必需的")
-
-        user_menus = await self.role_repo.get_user_all_menus(user_id)
-
-        all_perms: list[dict[str, Any]] = []
-        has_permission = False
-        for menu in user_menus:
-            if menu.menu_type == MenuEntity.PERMISSION:
-                all_perms.append({"type": "permission", "name": menu.name})
-                if menu.name == code:
-                    has_permission = True
-
-        if self.cache_service is not None:
-            await self.cache_service.set_user_permissions(user_id, all_perms)
-
-        if has_permission:
-            return UserEntity(id=user_id, username="", password="", is_superuser=UserRole.USER)
-
-        raise ForbiddenError(f"权限 '{code}' 是必需的")
+        return await self._check_permission_cached_or_db(
+            user_id,
+            is_superuser,
+            required_label=f"权限 '{code}'",
+            entry_builder=lambda menu: {"type": "permission", "name": menu.name},
+            entry_matcher=lambda perm: perm.get("type") == "permission" and perm.get("name") == code,
+        )
 
     async def check_api_permission_cached_or_db(
         self, user_id: str, is_superuser: UserRole, path: str, method: str
@@ -457,29 +437,64 @@ class UserService:
 
         复用了原 api/dependencies/auth.py 中 require_menu_permission 的逻辑。
         """
+        return await self._check_permission_cached_or_db(
+            user_id,
+            is_superuser,
+            required_label=f"API权限 '{method} {path}'",
+            entry_builder=self._build_menu_perm_entry,
+            entry_matcher=lambda perm: (
+                perm.get("type") == "api" and perm.get("path") == path and perm.get("method") == method
+            ),
+        )
+
+    @staticmethod
+    def _build_menu_perm_entry(menu: MenuEntity) -> dict[str, Any]:
+        """将权限型菜单转换为可缓存的权限条目。
+
+        同时配置了 path 和 method 的菜单生成 API 级条目，
+        否则退化为按钮级权限条目。
+        """
+        if menu.path and menu.method:
+            return {"type": "api", "path": menu.path, "method": menu.method, "name": menu.name}
+        return {"type": "permission", "name": menu.name}
+
+    async def _check_permission_cached_or_db(
+        self,
+        user_id: str,
+        is_superuser: UserRole,
+        *,
+        required_label: str,
+        entry_builder: Callable[[MenuEntity], dict[str, Any]],
+        entry_matcher: Callable[[dict[str, Any]], bool],
+    ) -> UserEntity:
+        """权限校验统一核心：缓存优先，未命中回源数据库并回填缓存。
+
+        Args:
+            user_id: 用户 ID
+            is_superuser: 用户角色（超级用户直接放行）
+            required_label: 拒绝时提示的权限描述
+            entry_builder: 菜单实体 -> 权限条目的转换函数
+            entry_matcher: 权限条目 -> 是否满足本次校验的判定函数
+
+        Returns:
+            通过校验的用户实体（轻量构造，不含完整档案）
+
+        Raises:
+            ForbiddenError: 缓存与数据库均未匹配到所需权限时抛出。
+        """
         if is_superuser == UserRole.SUPERUSER:
             return UserEntity(id=user_id, username="", password="", is_superuser=UserRole.SUPERUSER)
 
         if self.cache_service is not None:
             cached_perms = await self.cache_service.get_user_permissions(user_id)
             if cached_perms is not None:
-                for perm in cached_perms:
-                    if perm.get("type") == "api" and perm.get("path") == path and perm.get("method") == method:
-                        return UserEntity(id=user_id, username="", password="", is_superuser=UserRole.USER)
-                raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
+                if not any(entry_matcher(perm) for perm in cached_perms):
+                    raise ForbiddenError(f"{required_label}是必需的")
+                return UserEntity(id=user_id, username="", password="", is_superuser=UserRole.USER)
 
         user_menus = await self.role_repo.get_user_all_menus(user_id)
-
-        all_perms: list[dict[str, Any]] = []
-        has_permission = False
-        for menu in user_menus:
-            if menu.menu_type == MenuEntity.PERMISSION:
-                perm_entry: dict[str, Any] = {"type": "permission", "name": menu.name}
-                if menu.path and menu.method:
-                    perm_entry = {"type": "api", "path": menu.path, "method": menu.method, "name": menu.name}
-                    if menu.path == path and menu.method == method:
-                        has_permission = True
-                all_perms.append(perm_entry)
+        all_perms = [entry_builder(menu) for menu in user_menus if menu.menu_type == MenuEntity.PERMISSION]
+        has_permission = any(entry_matcher(entry) for entry in all_perms)
 
         if self.cache_service is not None:
             await self.cache_service.set_user_permissions(user_id, all_perms)
@@ -487,13 +502,4 @@ class UserService:
         if has_permission:
             return UserEntity(id=user_id, username="", password="", is_superuser=UserRole.USER)
 
-        raise ForbiddenError(f"API权限 '{method} {path}' 是必需的")
-
-    async def get_cached_or_active_user(self, user_id: str) -> UserEntity:
-        """从缓存或数据库获取当前活跃用户实体，供 auth.py 依赖注入使用。"""
-        return await self.get_user_info_with_cache(user_id)
-
-    @staticmethod
-    def _to_response_with_roles(user: UserEntity, roles: list) -> UserResponseDTO:
-        """将用户实体和预加载的角色列表转换为响应 DTO（保持向后兼容）。"""
-        return UserMapper.to_response_with_roles(user, roles)
+        raise ForbiddenError(f"{required_label}是必需的")

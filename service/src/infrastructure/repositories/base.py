@@ -75,6 +75,18 @@ class GenericRepository(Generic[ModelT, EntityT]):
         """获取主键列。"""
         return _get_column(self._model_class, self._primary_key)
 
+    @staticmethod
+    def _all_items(result: Any) -> list[Any]:
+        """从查询结果提取模型实例列表。
+
+        SQLModel 的 ``exec()`` 在不同版本/语句下可能返回 ScalarResult 或
+        普通 Result，前者有 ``scalars()``、后者直接 ``all()``，此处统一兼容。
+        """
+        try:
+            return list(result.scalars().all())
+        except AttributeError:
+            return list(result.all())
+
     # ========== 基础 CRUD ==========
 
     async def get_by_id(self, item_id: str) -> EntityT | None:
@@ -93,10 +105,7 @@ class GenericRepository(Generic[ModelT, EntityT]):
         offset = (page_num - 1) * page_size
         stmt = stmt.offset(offset).limit(page_size)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return [self._to_domain(m) for m in items]
 
     async def create(self, entity: EntityT) -> EntityT:

@@ -89,11 +89,12 @@ pnpm test:e2e:headed      # headed mode
 **Proxy:** Vite proxies `/api` → `http://localhost:8000` (`vite.config.ts`). Start backend first for full-stack dev.
 
 **Architecture** — vue-pure-admin v7 conventions:
-- `src/api/system.ts` → `BaseApi` subclass; `BaseApi` (in `src/api/base.ts`) provides `list/retrieve/create/partialUpdate/destroy/batchDelete` for all CRUD modules. Per-module files under `src/api/system/`.
+- `src/api/base.ts` → `BaseApi` generic class providing `list/retrieve/listTree/create/partialUpdate/destroy/batchDelete` for all CRUD modules. Per-module `BaseApi` subclasses under `src/api/system/` (e.g. `userApi`, `roleApi`).
+- `src/composables/` → shared CRUD composables: `useCrudTable` (pagination/search/delete), `useDialogForm` (add/edit dialog), `useSwitchStatus` (status toggle). New modules should compose these instead of hand-rolling hooks.
 - `src/router/` — routes are **fetched from backend after login** (dynamic), not statically defined.
 - `src/views/` — pages mirror backend routers 1:1.
 - `e2e/` — Playwright tests; sample at `e2e/login.spec.ts` (uses default `admin` / `admin123`).
-- `mock/` — `vite-plugin-fake-server` for dev mocks. Real backend calls go to `/api/system/*`.
+- All HTTP calls go through the Vite proxy to the real backend (`/api/system/*`); the old mock layer (`mock/`, `vite-plugin-fake-server`) has been removed.
 - Stack: Vue 3.5 + TypeScript 6 + Element Plus + Pinia 3 + Vite 8 (Rolldown/Oxc) + Tailwind 4.
 
 ## Full-stack Dev

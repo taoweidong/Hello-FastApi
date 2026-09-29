@@ -12,7 +12,6 @@ import { visualizer } from "rollup-plugin-visualizer";
 import removeConsole from "vite-plugin-remove-console";
 import VueI18nPlugin from "@intlify/unplugin-vue-i18n/vite";
 import { codeInspectorPlugin } from "code-inspector-plugin";
-// import { vitePluginFakeServer } from "vite-plugin-fake-server";
 
 export async function getPluginsList(
   VITE_CDN: boolean,
@@ -21,13 +20,7 @@ export async function getPluginsList(
   const lifecycle = process.env.npm_lifecycle_event;
   return [
     tailwindcss(),
-    vue({
-      template: {
-        compilerOptions: {
-          isCustomElement: tag => tag === "deep-chat"
-        }
-      }
-    }),
+    vue(),
     // jsx、tsx语法支持
     vueJsx(),
     VueI18nPlugin({
@@ -50,15 +43,6 @@ export async function getPluginsList(
      * vite-plugin-router-warn只在开发环境下启用，只处理vue-router文件并且只在服务启动或重启时运行一次，性能消耗可忽略不计
      */
     removeNoMatch(),
-    // mock支持，通过环境变量 VITE_MOCK 控制是否启用
-    // vitePluginFakeServer({
-    //   logger: false,
-    //   include: "mock",
-    //   infixName: false,
-    //   enableProd: false,
-    //   // 当 VITE_MOCK 为 "false" 时禁用 Mock，让请求走代理到真实后端
-    //   enable: !process.env.VITE_MOCK || process.env.VITE_MOCK !== "false"
-    // }),
     // svg组件化支持
     svgLoader(),
     // 自动按需加载图标

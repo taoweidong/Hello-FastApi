@@ -29,7 +29,7 @@ sql/*.sqlite3
 *.db-journal
 
 # Logs
-logs/*.log
+logs/
 
 # Docker
 docker/.env

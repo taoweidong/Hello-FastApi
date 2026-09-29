@@ -57,10 +57,7 @@ class NoticeRepository(GenericRepository[Notice, NoticeEntity], NoticeRepository
         offset = (page_num - 1) * page_size
         stmt = stmt.offset(offset).limit(page_size)
         result = await self.session.exec(stmt)
-        try:
-            items = result.scalars().all()
-        except AttributeError:
-            items = result.all()
+        items = self._all_items(result)
         return [self._to_domain(m) for m in items]
 
     async def count(
