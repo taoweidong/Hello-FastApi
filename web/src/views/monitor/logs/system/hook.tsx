@@ -153,15 +153,17 @@ export function useSystemLog(_tableRef: Ref) {
     if (form.createdTime && form.createdTime.length === 2) {
       params.createdTime = form.createdTime;
     }
-    const { code, data } = await getSystemLogsList(params);
-    if (code === 0) {
-      dataList.value = data.list;
-      pagination.total = data.total;
-      pagination.pageSize = data.pageSize;
-      pagination.currentPage = data.currentPage;
+    try {
+      const { code, data } = await getSystemLogsList(params);
+      if (code === 0) {
+        dataList.value = data.list;
+        pagination.total = data.total;
+        pagination.pageSize = data.pageSize;
+        pagination.currentPage = data.currentPage;
+      }
+    } finally {
+      loading.value = false;
     }
-
-    loading.value = false;
   }
 
   const resetForm = formEl => {

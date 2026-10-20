@@ -68,31 +68,55 @@
 
 > 注：`welcome/components/table/columns.tsx` 的 `delay(300)` 是演示页 mock 加载动画（无真实请求），与本次清理的"假延迟"性质不同，保留。
 
+### 2.5 防御性加固（全量测试中发现）
+
+| 文件 | 改动 |
+|---|---|
+| `views/monitor/logs/login/hook.tsx` | `onSearch` 改 `try/finally`，接口异常时不再卡死 loading |
+| `views/monitor/logs/operation/hook.tsx` | 同上 |
+| `views/monitor/logs/system/hook.tsx` | 同上 |
+| `views/monitor/online/hook.tsx` | 同上 |
+
+> 触发原因：后端 `login-logs` 接口 500（dev.db schema drift）时，这 4 个 hook 的按钮会永久转圈。属「后端故障被放大成前端假死」，与本次 UI 优化同属"流畅度"范畴。
+
 ---
 
 ## 3. 验证结果
 
+全量测试（2026-10-21，Redis 就绪、dev.db schema 修复后）：
+
 | 项 | 结果 |
 |---|---|
+| 后端 pytest（unit + integration） | **2171 passed**（237.93s，基线 2166 +5） |
 | `pnpm typecheck`（vue-tsc） | 通过 |
 | `pnpm lint`（eslint + prettier + stylelint） | 通过 |
-| `pnpm build` | 成功 |
-| E2E（Playwright，串行 51 用例） | 50/51；失败用例单独复跑通过 |
+| `pnpm build` | 成功（57s） |
+| E2E（Playwright，串行） | **51/51 通过**（10.7m） |
 
-### E2E flaky 根因（重要，非代码回归）
+### 全量测试中挖出并修复的两个真实缺陷
 
-三轮全量跑**失败用例均不同**（第 1 轮：login 空密码 + monitor 在线用户；第 2 轮基线 A/B：smoke-monitor 5/5 全过；第 3 轮：smoke post），且每个失败用例**单独复跑均通过**。
+**缺陷 1：后端 `sys_userloginlog` 表缺 `username` 列 → 登录日志接口 500**
 
-后端日志定位到根因：
+- 现象：E2E「登录日志按状态筛选」连续两次失败，搜索按钮永久卡在 `disabled` + `is-loading`。
+- 根因（本地复现拿堆栈）：
+  ```
+  sqlalchemy.exc.OperationalError: no such column: sys_userloginlog.username
+  ```
+  dev.db 的 `alembic_version` **已被打到 head（`c4d5e6f7a8b9`）但该迁移的 DDL 从未真正执行**——「版本戳超前、结构落后」。而 lifespan 走 `init_db()`（`create_all`），**只建缺失的表、不会给已存在表加列**，所以模型新增的 `username` 列一直没落到 dev.db。这正是方案文档 **B5（高危）** 的实证。
+- 为什么测试没发现：pytest 用 `.env.testing` 独立库，每用例 `create_all/drop_all`，schema 永远最新；只有走 dev.db 的 E2E 会暴露。
+- 修复（本地数据修复，非代码改动）：
+  ```bash
+  cp sql/dev.db sql/dev.db.bak-<ts>        # 先备份
+  alembic downgrade a3b5c7d9e1f2           # 回退版本戳（迁移本身幂等）
+  alembic upgrade head                     # 重新执行，补齐 username 列
+  ```
+- 根治建议（属方案文档 B5 批次，未在本次自动实施）：lifespan 改 `alembic upgrade head`，消除「版本戳与结构不一致」的空间。
 
-```
-WARNING  Redis 读取缓存失败: menu:all
-INFO     POST /api/system/login | 200 | 3250.79ms   ← 单请求 3.2 秒
-```
+**缺陷 2：前端 4 个 monitor hook 的 `onSearch` 无 `try/finally`，后端一报错 UI 永久转圈**
 
-**Redis 服务在 E2E 启动初期未就绪**，后端全程走降级路径，且每次缓存操作都要等一次连接超时，导致单请求 3.2 秒级延迟。E2E 的 `waitForLoadState("networkidle")` 与 10 秒表格断言均为临界值，慢一点就超时——表现为随机用例失败。
-
-处置：确认 Redis 健康后重启后端，失败用例单独复跑即通过。**与本次 UI 改动无关**（已用 `git stash` 做 A/B 对照验证）。
+- 现象：接口 500 时 axios 走 reject，`await` 之后的 `loading.value = false` 被跳过 → 搜索按钮永久 disabled。这是「后端故障被放大成前端假死」的典型链路。
+- 修复：`monitor/logs/{login,operation,system}/hook.tsx`、`monitor/online/hook.tsx` 的 `onSearch` 统一改 `try/finally`，与第 2.1 节已修的 4 个 hook 保持一致。
+- 顺带修掉一个自己引入的回归：清理 `console.log` 时把 `Profile.vue` 的 else 分支写成 `return false`，导致回调返回 `Promise<boolean>`，与 Element Plus 的 `FormValidateCallback`（`void | Promise<void>`）不兼容，typecheck 报 TS2345。已改回无返回值。
 
 ---
 

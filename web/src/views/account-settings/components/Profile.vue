@@ -112,8 +112,7 @@ const onSubmit = async (formEl: FormInstance) => {
         message("更新信息失败", { type: "error" });
       }
     } else {
-      // 表单校验未通过：el-form 已在界面上标注错误字段
-      return false;
+      // 表单校验未通过：el-form 已在界面上标注错误字段，无需额外处理
     }
   });
 };

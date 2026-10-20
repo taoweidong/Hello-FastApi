@@ -138,15 +138,17 @@ export function useLoginLog(tableRef: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await getLoginLogsList(toRaw(form));
-    if (code === 0) {
-      dataList.value = data.list;
-      pagination.total = data.total;
-      pagination.pageSize = data.pageSize;
-      pagination.currentPage = data.currentPage;
+    try {
+      const { code, data } = await getLoginLogsList(toRaw(form));
+      if (code === 0) {
+        dataList.value = data.list;
+        pagination.total = data.total;
+        pagination.pageSize = data.pageSize;
+        pagination.currentPage = data.currentPage;
+      }
+    } finally {
+      loading.value = false;
     }
-
-    loading.value = false;
   }
 
   const resetForm = formEl => {
