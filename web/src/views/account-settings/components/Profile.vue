@@ -95,7 +95,7 @@ const handleSubmitImage = () => {
 
 // 更新信息
 const onSubmit = async (formEl: FormInstance) => {
-  await formEl.validate(async (valid, fields) => {
+  await formEl.validate(async valid => {
     if (valid) {
       try {
         const { code } = await updateProfile({
@@ -112,7 +112,8 @@ const onSubmit = async (formEl: FormInstance) => {
         message("更新信息失败", { type: "error" });
       }
     } else {
-      console.log("error submit!", fields);
+      // 表单校验未通过：el-form 已在界面上标注错误字段
+      return false;
     }
   });
 };

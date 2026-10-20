@@ -19,6 +19,7 @@ export function useDept() {
   const formRef = ref();
   const dataList = ref([]);
   const loading = ref(true);
+  const selectedRows = ref<any[]>([]);
   const { tagStyle } = usePublicHooks();
 
   const columns: TableColumnList = [
@@ -93,7 +94,7 @@ export function useDept() {
   ];
 
   function handleSelectionChange(val) {
-    console.log("handleSelectionChange", val);
+    selectedRows.value = val;
   }
 
   function resetForm(formEl) {
@@ -104,21 +105,21 @@ export function useDept() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await deptApi.listTree();
-    if (code === 0) {
-      let newData = data;
-      if (!isAllEmpty(form.name)) {
-        newData = newData.filter(item => item.name.includes(form.name));
+    try {
+      const { code, data } = await deptApi.listTree();
+      if (code === 0) {
+        let newData = data;
+        if (!isAllEmpty(form.name)) {
+          newData = newData.filter(item => item.name.includes(form.name));
+        }
+        if (!isAllEmpty(form.isActive)) {
+          newData = newData.filter(item => item.isActive === form.isActive);
+        }
+        dataList.value = handleTree(newData);
       }
-      if (!isAllEmpty(form.isActive)) {
-        newData = newData.filter(item => item.isActive === form.isActive);
-      }
-      dataList.value = handleTree(newData);
-    }
-
-    setTimeout(() => {
+    } finally {
       loading.value = false;
-    }, 500);
+    }
   }
 
   function openDialog(title = "新增", row?: FormItemProps) {

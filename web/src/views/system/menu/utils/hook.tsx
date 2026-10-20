@@ -20,6 +20,7 @@ export function useMenu() {
   const formRef = ref();
   const dataList = ref([]);
   const loading = ref(true);
+  const selectedRows = ref<any[]>([]);
   const { switchStyle } = usePublicHooks();
 
   const columns: TableColumnList = [
@@ -124,7 +125,7 @@ export function useMenu() {
   ];
 
   function handleSelectionChange(val) {
-    console.log("handleSelectionChange", val);
+    selectedRows.value = val;
   }
 
   async function handleMenuStatusChange(row) {
@@ -149,20 +150,20 @@ export function useMenu() {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await menuApi.listTree();
-    if (code === 0) {
-      let newData = data;
-      if (!isAllEmpty(form.title)) {
-        newData = newData.filter(item =>
-          (item.meta?.title ?? item.name).includes(form.title)
-        );
+    try {
+      const { code, data } = await menuApi.listTree();
+      if (code === 0) {
+        let newData = data;
+        if (!isAllEmpty(form.title)) {
+          newData = newData.filter(item =>
+            (item.meta?.title ?? item.name).includes(form.title)
+          );
+        }
+        dataList.value = handleTree(newData);
       }
-      dataList.value = handleTree(newData);
-    }
-
-    setTimeout(() => {
+    } finally {
       loading.value = false;
-    }, 500);
+    }
   }
 
   function openDialog(title = "新增", row?: FormItemProps) {

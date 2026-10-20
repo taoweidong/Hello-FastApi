@@ -79,8 +79,7 @@ export function useColumns() {
     align: "center"
   });
 
-  function onCurrentChange(page: number) {
-    console.log("onCurrentChange", page);
+  function onCurrentChange(_page: number) {
     loading.value = true;
     delay(300).then(() => {
       loading.value = false;

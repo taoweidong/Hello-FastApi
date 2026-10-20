@@ -95,6 +95,7 @@ export function useDialogForm(
   function openDialog(title = "新增", row?: any) {
     addDialog({
       title: `${title}${entityName}`,
+      sureBtnLoading: true,
       props: {
         formInline: buildFormInline(row)
       },
@@ -105,7 +106,7 @@ export function useDialogForm(
       closeOnClickModal: false,
       contentRenderer: () =>
         h(formComponent, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
+      beforeSure: (done, { options, closeLoading }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as Record<string, any>;
 
@@ -127,6 +128,8 @@ export function useDialogForm(
                   });
                   done();
                   onSuccess?.();
+                } else {
+                  closeLoading();
                 }
               } else {
                 const { code } = await api.partialUpdate(row.id, payload);
@@ -140,10 +143,27 @@ export function useDialogForm(
                   });
                   done();
                   onSuccess?.();
+                } else {
+                  closeLoading();
                 }
               }
             } catch {
+              closeLoading();
               message(`${title}${entityName}失败`, { type: "error" });
+            }
+          } else {
+            // 验证失败：停止确认按钮 loading，并把首个错误字段滚动进可视区
+            closeLoading();
+            try {
+              const firstErrorEl = FormRef.$el?.querySelector?.(
+                ".el-form-item.is-error"
+              );
+              firstErrorEl?.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+              });
+            } catch {
+              // 滚动失败不影响主流程
             }
           }
         });

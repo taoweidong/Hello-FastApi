@@ -234,7 +234,8 @@ a:hover {
   cursor: pointer;
 }
 
-div:focus {
+/* 键盘焦点环由 :focus-visible 全局规则接管（见 index.scss），鼠标点击路径不显示 outline */
+div:focus:not(:focus-visible) {
   outline: none;
 }
 

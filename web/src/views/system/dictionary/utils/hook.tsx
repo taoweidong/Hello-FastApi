@@ -20,6 +20,7 @@ export function useDictionary() {
   const allDataList = ref([]);
   const loading = ref(true);
   const treeLoading = ref(true);
+  const selectedRows = ref<any[]>([]);
   const { switchStyle } = usePublicHooks();
 
   /** 根节点列表（左侧树数据） */
@@ -99,7 +100,7 @@ export function useDictionary() {
   }
 
   function handleSelectionChange(val) {
-    console.log("handleSelectionChange", val);
+    selectedRows.value = val;
   }
 
   function resetForm(formEl) {
@@ -111,18 +112,19 @@ export function useDictionary() {
   async function onSearch() {
     loading.value = true;
     treeLoading.value = true;
-    const { code, data } = await dictionaryApi.listTree({});
-    if (code === 0) {
-      allDataList.value = data;
-      // 默认选中第一个根节点
-      if (dictTypeList.value.length > 0 && !selectedDictType.value) {
-        selectedDictType.value = dictTypeList.value[0];
+    try {
+      const { code, data } = await dictionaryApi.listTree({});
+      if (code === 0) {
+        allDataList.value = data;
+        // 默认选中第一个根节点
+        if (dictTypeList.value.length > 0 && !selectedDictType.value) {
+          selectedDictType.value = dictTypeList.value[0];
+        }
       }
-    }
-    setTimeout(() => {
+    } finally {
       loading.value = false;
       treeLoading.value = false;
-    }, 300);
+    }
   }
 
   /** 点击左侧树节点 */

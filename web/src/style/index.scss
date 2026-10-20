@@ -50,3 +50,42 @@
     transform: scale(1);
   }
 }
+
+/* ===== 可达性与动效基线 ===== */
+
+/* 主内容区平滑滚动（el-scrollbar 内部容器不继承，仅作用于原生滚动） */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 键盘焦点可见性：仅键盘导航时显示焦点环，鼠标点击不打扰 */
+:focus-visible {
+  outline: 2px solid var(--el-color-primary);
+  outline-offset: 2px;
+}
+
+/* 尊重系统"减弱动态效果"偏好：关闭非必要过渡与动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* 表格行 hover 过渡限定属性，避免 transition: all 引发重绘放大 */
+.el-table__row {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* 弹窗/抽屉内容首屏渲染优化：长表格所在区域避免滚动期间无关渲染 */
+.el-overlay-dialog,
+.el-drawer__body {
+  contain-intrinsic-size: auto 500px;
+  content-visibility: auto;
+}

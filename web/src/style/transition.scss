@@ -12,7 +12,9 @@
 /* fade-transform */
 .fade-transform-leave-active,
 .fade-transform-enter-active {
-  transition: all 0.5s;
+  transition:
+    opacity 0.25s,
+    transform 0.25s;
 }
 
 .fade-transform-enter-from {
@@ -27,12 +29,16 @@
 
 /* breadcrumb transition */
 .breadcrumb-enter-active {
-  transition: all 0.4s;
+  transition:
+    opacity 0.4s,
+    transform 0.4s;
 }
 
 .breadcrumb-leave-active {
   position: absolute;
-  transition: all 0.3s;
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
 }
 
 .breadcrumb-enter-from,
@@ -46,7 +52,9 @@
  */
 .outer-most .el-collapse-transition-leave-active,
 .outer-most .el-collapse-transition-enter-active {
-  transition: 0.2s all ease-in-out !important;
+  transition:
+    height 0.2s ease-in-out,
+    opacity 0.2s ease-in-out !important;
 }
 
 .horizontal-collapse-transition {

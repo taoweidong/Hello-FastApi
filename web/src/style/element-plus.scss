@@ -129,6 +129,16 @@
   }
 }
 
+/* 表格空态：加大留白与说明文案层级，避免裸 "暂无数据" 的死胡同观感 */
+.el-table__empty-block {
+  min-height: 160px;
+}
+
+.el-table__empty-text {
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
 /* 自定义菜单搜索样式 */
 .pure-search-dialog {
   @media screen and (width > 760px) and (width <= 940px) {

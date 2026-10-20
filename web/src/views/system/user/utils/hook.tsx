@@ -259,9 +259,8 @@ export function useUser(tableRef: Ref) {
       });
   }
 
-  function handleUpdate(row) {
-    console.log(row);
-  }
+  /** 下拉菜单「上传头像」按钮的占位回调（实际入口为 handleUpload） */
+  function handleUpdate(_row) {}
 
   function handleDelete(row) {
     ElMessageBox.confirm(
@@ -286,11 +285,13 @@ export function useUser(tableRef: Ref) {
   }
 
   function handleSizeChange(val: number) {
-    console.log(`${val} items per page`);
+    pagination.pageSize = val;
+    onSearch();
   }
 
   function handleCurrentChange(val: number) {
-    console.log(`current page: ${val}`);
+    pagination.currentPage = val;
+    onSearch();
   }
 
   function handleSelectionChange(val) {
@@ -331,17 +332,17 @@ export function useUser(tableRef: Ref) {
 
   async function onSearch() {
     loading.value = true;
-    const { code, data } = await userApi.list(toRaw(form));
-    if (code === 0) {
-      dataList.value = data.list;
-      pagination.total = data.total;
-      pagination.pageSize = data.pageSize;
-      pagination.currentPage = data.currentPage;
-    }
-
-    setTimeout(() => {
+    try {
+      const { code, data } = await userApi.list(toRaw(form));
+      if (code === 0) {
+        dataList.value = data.list;
+        pagination.total = data.total;
+        pagination.pageSize = data.pageSize;
+        pagination.currentPage = data.currentPage;
+      }
+    } finally {
       loading.value = false;
-    }, 500);
+    }
   }
 
   const resetForm = formEl => {
@@ -448,7 +449,6 @@ export function useUser(tableRef: Ref) {
           onCropper: info => (avatarInfo.value = info)
         }),
       beforeSure: done => {
-        console.log("裁剪后的图片信息：", avatarInfo.value);
         done();
         onSearch();
       },

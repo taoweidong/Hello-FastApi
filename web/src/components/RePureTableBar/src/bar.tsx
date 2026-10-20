@@ -8,16 +8,11 @@ import {
   unref,
   computed,
   nextTick,
+  onUnmounted,
   defineComponent,
   getCurrentInstance
 } from "vue";
-import {
-  delay,
-  cloneDeep,
-  isBoolean,
-  isFunction,
-  getKeyList
-} from "@pureadmin/utils";
+import { cloneDeep, isBoolean, isFunction, getKeyList } from "@pureadmin/utils";
 
 import PinAngle from "~icons/ri/pushpin-line";
 import Fullscreen from "~icons/ri/fullscreen-fill";
@@ -109,11 +104,30 @@ export default defineComponent({
       ];
     });
 
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
     function onReFresh() {
+      // 防抖：连续点击刷新时只触发一次数据请求，避免请求风暴
+      if (loading.value) return;
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
       loading.value = true;
       emit("refresh");
-      delay(500).then(() => (loading.value = false));
+      refreshTimer = setTimeout(() => {
+        loading.value = false;
+        refreshTimer = null;
+      }, 500);
     }
+
+    /** 组件卸载时清理防抖定时器，防止内存泄漏 */
+    onUnmounted(() => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+      }
+    });
 
     function onExpand() {
       isExpandAll.value = !isExpandAll.value;
