@@ -15,6 +15,8 @@
 - **端口**：Playwright `baseURL` 默认 `http://localhost:8848`；vite 默认起 8848，若端口被占用会漂移到 8849，此时 E2E 全部失败（注意排查旧进程）。后端固定 8000。
 - **登录凭据**：`admin` / `admin123`（`web/e2e/utils/auth.setup.ts`）。
 - 前置：后端 `cd service && APP_ENV=development ./.venv/Scripts/python.exe -m scripts.cli runserver`；前端 `cd web && VITE_SKIP_CAPTCHA=true pnpm dev`。
+- **跑前必查 Redis**：`netstat -ano | grep :6379` 确认 LISTENING。Redis 未就绪时后端走降级且每次缓存操作等一次连接超时，单请求可到 3.2s，E2E 的 `networkidle` 与 10s 表格断言均为临界值 → **随机用例假失败**（2026-10-21 实测三轮失败用例均不同、单独复跑全过）。本机 Redis 在 `D:\Program Files\Redis\`（v3.2.100，项目已配 `protocol=2`，RESP3 不是问题）。
+- **E2E flaky 判定法**：全量跑失败用例每次不同 + 单独复跑通过 ⇒ 环境时序问题，不是代码回归。用 `git stash push -- <改动文件>` 做 A/B 对照可确证。
 
 ## 全量验证基线（2026-09-09）
 
@@ -36,3 +38,8 @@
 - vue-router 为 **hash 模式**（`createWebHashHistory`），E2E 导航必须 `/#/path`。
 - `/account-settings` 属 `remaining.ts` 全屏路由，**不渲染** `.app-main` 布局，也没有表格；通用页面断言不可假设「必有表格」。
 - 测试残留数据会让 E2E 反复失败：CRUD 用例用 `makeUniqueName` 命名 + `afterAll` 调 `cleanupByApi` 兜底清理；失败时不会清理，必要时手动清 `service/sql/dev.db`。
+
+## 文档路径勘误
+
+- 后端 Swagger 实际在 `http://localhost:8000/docs`（**不是** `/api/docs`，后者 404）。`CODEBUDDY.md`（根与 service 下）里写的 `/api/docs` 已过时。
+- `service/CODEBUDDY.md` 描述「仓储层用 FastCRUD」已过时，实际已迁移到自研 `GenericRepository`（`infrastructure/repositories/base.py`），`mypy.ini` 里的 `[mypy-fastcrud.*]` 也是死配置。
