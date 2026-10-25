@@ -8,6 +8,7 @@
 """
 
 import json
+import math
 from datetime import datetime, timezone
 from typing import Any
 
@@ -481,12 +482,18 @@ class CacheService(CachePort):
 
     @staticmethod
     def _remaining_seconds(expires_at: datetime) -> int:
-        """计算过期时间距当前时间的剩余秒数。"""
+        """计算过期时间距当前时间的剩余秒数。
+
+        用 ``ceil`` 而非 ``int``：调用方常以「now + 配置秒数」得到 ``expires_at``，
+        两次 ``datetime.now()`` 之间只要有微小间隔，``int`` 就会把 86400 截断成 86399，
+        使实际 TTL 比配置值少 1 秒。向上取整保证条目至少存活到预期时刻
+        （已过期的仍被 ``max(..., 0)`` 收敛为 0，由调用方按「无需处理」分支拦截）。
+        """
         now = datetime.now(timezone.utc)
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         delta = (expires_at - now).total_seconds()
-        return max(int(delta), 0)
+        return max(math.ceil(delta), 0)
 
     def _perms_key(self, user_id: str) -> str:
         """生成用户权限缓存的 Redis Key。"""

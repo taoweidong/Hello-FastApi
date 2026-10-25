@@ -4,18 +4,26 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import pool
+from sqlalchemy import Connection, pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 # 注册所有模型（确保 metadata 包含所有表）
 import src.infrastructure.database.models  # noqa: F401
-from src.config.settings import Settings
+from src.config.settings import get_settings
 
 config = context.config
 
 # 从 .env 文件读取 DATABASE_URL 覆盖 alembic.ini 中的占位符
-_settings = Settings()
+#
+# 必须走 get_settings()，不能用裸 Settings()：
+# 裸构造器的 model_config 只认 ".env"（本项目没有该文件），也不会应用
+# _ENV_OVERRIDES["testing"]["DATABASE_URL"] 的环境覆盖——那些逻辑只在
+# get_settings() 里。于是 APP_ENV=testing 时 alembic 会静默落到模型默认值
+# sqlite+aiosqlite:///./sql/dev.db，即**开发库**。曾因此造成：pytest 中的
+# CLI 子进程测试每次都对 dev.db 执行 downgrade + stamp head，删掉列的同时
+# 把版本戳推回 head，形成「版本戳超前、结构落后」的漂移。
+_settings = get_settings()
 if config.config_file_name is not None:
     config.set_main_option("sqlalchemy.url", _settings.DATABASE_URL)
 
@@ -34,7 +42,7 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection) -> None:
+def do_run_migrations(connection: Connection) -> None:
     """在线模式：实际连接数据库执行迁移。"""
     context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
 

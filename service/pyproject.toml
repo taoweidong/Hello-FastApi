@@ -79,6 +79,13 @@ split-on-trailing-comma = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+# 事件循环作用域设为 session：否则 pytest-asyncio 1.x 会给每个测试新建一个事件循环。
+# Windows 上 ProactorEventLoop 的自管道用 socket.socketpair() 实现（走 TCP loopback），
+# 约 2000 个用例累计会耗尽系统缓冲区，随机用例在 fixture setup 阶段报
+# OSError: [WinError 10055]（表现为与代码无关的假失败）。
+# 另外 test_engine / test_app 本就是会话级，循环作用域与它们对齐才一致。
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 # ui_test.py 为 Playwright 全栈冒烟脚本（需浏览器环境），不参与常规单元/集成测试
 addopts = "--ignore=tests/ui_test.py"
 markers = [

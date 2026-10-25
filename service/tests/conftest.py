@@ -1,8 +1,7 @@
 """测试配置和固件。"""
 
-import asyncio
 import os
-from collections.abc import AsyncGenerator, Generator
+from collections.abc import AsyncGenerator
 from pathlib import Path
 
 os.environ.setdefault("APP_ENV", "testing")
@@ -81,12 +80,10 @@ def test_app():
     return create_app(lifespan_override=empty_lifespan)
 
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """为测试会话创建事件循环。"""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+# 注：不要再定义名为 event_loop 的 fixture。pytest-asyncio 1.0+ 已移除对该覆写的支持，
+# 它会被静默忽略（死代码），容易让人误以为「会话级循环已生效」。
+# 事件循环作用域统一由 pyproject.toml 的
+# asyncio_default_fixture_loop_scope / asyncio_default_test_loop_scope 控制。
 
 
 @pytest_asyncio.fixture(autouse=True)

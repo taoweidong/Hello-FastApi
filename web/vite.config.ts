@@ -12,6 +12,10 @@ import {
 export default async ({ mode }: ConfigEnv): Promise<UserConfigExport> => {
   const { VITE_CDN, VITE_PORT, VITE_COMPRESSION, VITE_PUBLIC_PATH } =
     wrapperEnv(loadEnv(mode, root));
+  // 后端代理目标：默认 8000（显式 127.0.0.1，避免 localhost 解析到 ::1 命中其他 8000 绑定）。
+  // 可用 VITE_BACKEND_PORT 覆盖——本机同时开发多个项目时，另一个服务可能已占用 8000。
+  const backendPort = Number(process.env.VITE_BACKEND_PORT) || 8000;
+  const backendTarget = `http://127.0.0.1:${backendPort}`;
   return {
     base: VITE_PUBLIC_PATH,
     root,
@@ -26,13 +30,13 @@ export default async ({ mode }: ConfigEnv): Promise<UserConfigExport> => {
       // 本地跨域代理 https://cn.vitejs.dev/config/server-options.html#server-proxy
       proxy: {
         "/api": {
-          // 代理到后端 FastAPI 服务（显式 127.0.0.1，避免 localhost 解析到 ::1 命中其他 8000 绑定）
-          target: "http://127.0.0.1:8000",
+          // 代理到后端 FastAPI 服务
+          target: backendTarget,
           changeOrigin: true
         },
         "/media": {
           // 上传静态资源（头像等）代理到后端
-          target: "http://127.0.0.1:8000",
+          target: backendTarget,
           changeOrigin: true
         }
       },

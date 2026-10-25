@@ -1,5 +1,13 @@
 import { request, type Locator, type Page } from "@playwright/test";
 
+/**
+ * 后端 API 基地址。
+ * 默认 127.0.0.1:8000（显式 IP：localhost 可能解析到 ::1 命中其他 8000 绑定）。
+ * 可用 E2E_API_BASE_URL 覆盖——本机同时开发多个项目时，8000 常被别的服务占用，
+ * 此时后端需换端口启动，否则这里会静默打到别的项目上（表现为 API 登录 404）。
+ */
+const API_BASE_URL = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:8000";
+
 /** 冒烟页面注册表：path → 页面关键锚点选择器（存在即可判渲染成功） */
 export const SMOKE_PAGES: Array<{
   path: string;
@@ -68,8 +76,7 @@ export async function fillFormItem(
 
 /** API 登录 admin，返回 accessToken（登录限流 100 次/分钟，全局仅少量调用） */
 async function apiLogin(username: string, password: string): Promise<string> {
-  // 显式 127.0.0.1：localhost 可能解析到 ::1 命中其他 8000 绑定（workbuddy http.server）
-  const ctx = await request.newContext({ baseURL: "http://127.0.0.1:8000" });
+  const ctx = await request.newContext({ baseURL: API_BASE_URL });
   try {
     const res = await ctx.post("/api/system/login", {
       data: { username, password }
@@ -91,7 +98,7 @@ export async function cleanupByApi(
 ): Promise<void> {
   const token = await apiLogin("admin", "admin123");
   const ctx = await request.newContext({
-    baseURL: "http://127.0.0.1:8000",
+    baseURL: API_BASE_URL,
     extraHTTPHeaders: { Authorization: `Bearer ${token}` }
   });
   try {
