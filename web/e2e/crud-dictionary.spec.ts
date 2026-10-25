@@ -77,6 +77,33 @@ test.describe.serial("字典管理 CRUD", () => {
     });
   });
 
+  /**
+   * 回归：树节点行「右键」应弹出「修改/新增子项/删除」菜单。
+   * 曾因实现误用 trigger="click"（仅左键点小图标），右键无任何反应而失效。
+   */
+  test("树节点右键弹出菜单并可触发新增子项", async ({ page }) => {
+    await openDictPage(page);
+    const node = treeNode(page, dictName).first();
+    await expect(node).toBeVisible({ timeout: 10000 });
+
+    // 在节点行任意处右键 → 菜单出现
+    await node.locator(".el-tree-node__content").click({ button: "right" });
+    const menu = page.locator(".el-dropdown-menu:visible");
+    await expect(menu).toBeVisible({ timeout: 5000 });
+    for (const text of ["修改", "新增子项", "删除"]) {
+      await expect(menu.getByText(text, { exact: true })).toBeVisible();
+    }
+
+    // 点「新增子项」→ 打开「新增字典详情」对话框（取消，不落库）
+    await menu
+      .locator(".el-dropdown-menu__item", { hasText: "新增子项" })
+      .click();
+    const dialog = page.locator(".el-dialog", { hasText: "新增字典详情" });
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "取消" }).click();
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+  });
+
   test("修改字典详情", async ({ page }) => {
     await openDictPage(page);
     await treeNode(page, dictName).first().click();

@@ -37,6 +37,15 @@ const {
 
 const { proxy } = getCurrentInstance();
 
+/** 每个树节点行对应的 el-dropdown 实例（用于「更多」图标左键点开菜单） */
+const dropdownRefs = ref<Record<string, any>>({});
+function setDropdownRef(id: string, el: any) {
+  if (el) dropdownRefs.value[id] = el;
+}
+function openDropdown(id: string) {
+  dropdownRefs.value[id]?.handleOpen?.();
+}
+
 /** 树过滤方法 */
 const filterNode = (value: string, data: any) => {
   if (!value) return true;
@@ -95,73 +104,78 @@ function onFullscreen() {
             @node-click="handleNodeClick"
           >
             <template #default="{ data }">
-              <div
-                class="rounded-sm flex items-center select-none hover:text-primary w-full"
-                :style="{
-                  color:
-                    selectedDictType?.id === data.id
-                      ? 'var(--el-color-primary)'
-                      : '',
-                  background:
-                    selectedDictType?.id === data.id
-                      ? 'var(--el-color-primary-light-9)'
-                      : 'transparent'
-                }"
+              <!-- 整行作为右键触发区：trigger=contextmenu → 在节点行任意处右键即弹出「修改/新增子项/删除」 -->
+              <el-dropdown
+                :ref="el => setDropdownRef(data.id, el)"
+                class="dict-node-dropdown w-full"
+                :hide-on-click="false"
+                trigger="contextmenu"
               >
-                <span class="truncate flex-1" :title="data.name">
-                  {{ data.name }}
-                  <span v-if="data.value" class="text-xs text-gray-400 ml-1">
-                    ({{ data.value }})
-                  </span>
-                </span>
-                <!-- 右键菜单按钮 -->
-                <el-dropdown
-                  class="mr-1"
-                  :hide-on-click="false"
-                  trigger="click"
+                <div
+                  class="rounded-sm flex items-center select-none hover:text-primary w-full"
+                  :style="{
+                    color:
+                      selectedDictType?.id === data.id
+                        ? 'var(--el-color-primary)'
+                        : '',
+                    background:
+                      selectedDictType?.id === data.id
+                        ? 'var(--el-color-primary-light-9)'
+                        : 'transparent'
+                  }"
                 >
-                  <el-icon class="cursor-pointer hover:text-primary">
+                  <span class="truncate flex-1" :title="data.name">
+                    {{ data.name }}
+                    <span v-if="data.value" class="text-xs text-gray-400 ml-1">
+                      ({{ data.value }})
+                    </span>
+                  </span>
+                  <!-- 「更多」图标：左键点开同一菜单（保留原有入口，右键同样可用） -->
+                  <el-icon
+                    class="mr-1 cursor-pointer hover:text-primary"
+                    @click.stop="openDropdown(data.id)"
+                  >
                     <IconifyIconOffline icon="ri/more-2-fill" width="14" />
                   </el-icon>
-                  <template #dropdown>
-                    <el-dropdown-menu>
-                      <el-dropdown-item v-auth="'dictionary:edit'">
-                        <el-button
-                          class="reset-margin"
-                          link
-                          type="primary"
-                          :icon="useRenderIcon(EditPen)"
-                          @click="openDialog('修改', data)"
-                        >
-                          修改
-                        </el-button>
-                      </el-dropdown-item>
-                      <el-dropdown-item v-auth="'dictionary:add'">
-                        <el-button
-                          class="reset-margin"
-                          link
-                          type="primary"
-                          :icon="useRenderIcon(AddFill)"
-                          @click="openAddDictDetailForNode(data)"
-                        >
-                          新增子项
-                        </el-button>
-                      </el-dropdown-item>
-                      <el-dropdown-item v-auth="'dictionary:delete'">
-                        <el-button
-                          class="reset-margin"
-                          link
-                          type="danger"
-                          :icon="useRenderIcon(Delete)"
-                          @click="handleDeleteType(data)"
-                        >
-                          删除
-                        </el-button>
-                      </el-dropdown-item>
-                    </el-dropdown-menu>
-                  </template>
-                </el-dropdown>
-              </div>
+                </div>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item v-auth="'dictionary:edit'">
+                      <el-button
+                        class="reset-margin"
+                        link
+                        type="primary"
+                        :icon="useRenderIcon(EditPen)"
+                        @click="openDialog('修改', data)"
+                      >
+                        修改
+                      </el-button>
+                    </el-dropdown-item>
+                    <el-dropdown-item v-auth="'dictionary:add'">
+                      <el-button
+                        class="reset-margin"
+                        link
+                        type="primary"
+                        :icon="useRenderIcon(AddFill)"
+                        @click="openAddDictDetailForNode(data)"
+                      >
+                        新增子项
+                      </el-button>
+                    </el-dropdown-item>
+                    <el-dropdown-item v-auth="'dictionary:delete'">
+                      <el-button
+                        class="reset-margin"
+                        link
+                        type="danger"
+                        :icon="useRenderIcon(Delete)"
+                        @click="handleDeleteType(data)"
+                      >
+                        删除
+                      </el-button>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </template>
           </el-tree>
         </el-scrollbar>
