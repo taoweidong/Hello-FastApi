@@ -2,7 +2,7 @@ import "./reset.css";
 import dayjs from "dayjs";
 import roleForm from "../form/role.vue";
 import editForm from "../form/index.vue";
-import { zxcvbn } from "@zxcvbn-ts/core";
+import { ZxcvbnFactory } from "@zxcvbn-ts/core";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
 import userAvatar from "@/assets/user.jpg";
@@ -207,6 +207,7 @@ export function useUser(tableRef: Ref) {
   ];
   const curScore = ref();
   const roleOptions = ref([]);
+  const zxcvbnFactory = new ZxcvbnFactory();
   /** 启用岗位下拉选项（用户表单岗位多选） */
   const postOptions = ref<PostOption[]>([]);
 
@@ -459,7 +460,9 @@ export function useUser(tableRef: Ref) {
   watch(
     pwdForm,
     ({ newPwd }) =>
-      (curScore.value = isAllEmpty(newPwd) ? -1 : zxcvbn(newPwd).score)
+      (curScore.value = isAllEmpty(newPwd)
+        ? -1
+        : zxcvbnFactory.check(newPwd).score)
   );
 
   function handleReset(row) {

@@ -50,11 +50,7 @@ export function useMenu() {
           size={props.size}
           type={
             getMenuType(row.menuType) as
-              | "primary"
-              | "success"
-              | "warning"
-              | "danger"
-              | "info"
+              "primary" | "success" | "warning" | "danger" | "info"
           }
           effect="plain"
         >
