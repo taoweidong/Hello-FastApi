@@ -20,6 +20,40 @@
   - 排障顺序：`netstat` → 后端日志 → `redis-cli ping`（能通不代表异步能通）→ 用项目 venv 跑 `await get_redis().ping()` 复现。
 - **E2E flaky 判定法**：全量跑失败用例每次不同 + 单独复跑通过 ⇒ 环境/配置问题，不是代码回归。用 `git stash push -- <改动文件>` 做 A/B 对照可确证。
 
+## 前端依赖升级约定（2026-10-25 起）
+
+以上游 `pure-admin/vue-pure-admin` master（本项目 fork 源头，同为 v7.0.0）为「已知良好」基线：
+**同大版本内取最新；跨大版本只升上游已采用的；无上游参照的跨大版本一律不升**。
+上游明确不升的：`typescript` 7（Go 编译器路线）、`@types/node` 26、`@iconify/vue` 5
+（精确锁 4.2.0）、`vxe-table`（精确锁 4.6.25）、`intro.js` 8、`cssnano` 9。
+核对方式：`curl -s https://raw.githubusercontent.com/pure-admin/vue-pure-admin/master/package.json`。
+
+升级后必须复查的两类破坏：
+1. **`defineComponent` 的 props 只写 `default` 不写 `type`** —— Vue 小版本升级会收紧 prop 推断，
+   进而 `typeof` 收窄报 TS2345。修法：补 `type: [...] as PropType<any>`（参考 `ReIcon/src/iconifyIconOffline.ts`）。
+2. **库的顶层便捷导出被删** —— 如 `@zxcvbn-ts/core` v4 只剩 `ZxcvbnFactory`，写法改为
+   `new ZxcvbnFactory().check(pwd).score`（`views/system/user/utils/hook.tsx`）。
+
+### pnpm 12 配置已迁到 `web/pnpm-workspace.yaml`（`package.json` 的 `pnpm` 字段已删除）
+
+pnpm 12 **不再读** `package.json` 的 `pnpm` 字段（`allowedDeprecatedVersions` / `onlyBuiltDependencies`
+静默失效）。设置新家：`allowedDeprecatedVersions:`、`allowBuilds:`、`shellEmulator`、
+`shamefullyHoist`、`enablePrePostScripts`、`strictPeerDependencies`、`minimumReleaseAge`。
+`web/.npmrc` 已删除（四项设置并入 yaml）。
+- **新增带原生构建脚本的依赖会让 `pnpm install` exit 1**（`ERR_PNPM_IGNORED_BUILDS`）：
+  pnpm 自动往 `allowBuilds` 写占位 `xxx: set this to true or false`，必须显式改 `true/false`。
+  当前需显式 `false`：`@tailwindcss/oxide`、`vue3-danmaku`、`node-pty`。
+- **install 中断会打烂 node_modules**（`.pnpm` 清空 + 顶层符号链接悬空），后续 install 报
+  `ERR_PNPM_PACKAGE_MANAGER_REMOVE_MODULES_DIR ... 拒绝访问`。修法
+  `CODEBUDDY_SAFE_DELETE_ENABLED=0 pnpm install --force`；
+  判据 `find node_modules -maxdepth 1 -type l ! -exec test -e {} \; -print | wc -l` 应为 0。
+
+### Playwright 升级后必须补装浏览器
+
+`node node_modules/@playwright/test/cli.js install chromium`。
+漏装时全部用例报 `browserType.launch: Executable doesn't exist`（N failed / M did not run），
+极易误判成代码回归。
+
 ## 样式与配置的两个静默失效陷阱（都真的踩过）
 
 1. **全局 `.scss` 里不能写 `:deep()`**。
@@ -32,13 +66,31 @@
    写错会被当成未知字段、在 `extra="ignore"` 下静默丢弃 → `.env.*` 全部不加载、全站跑默认值。
    判别：`Settings(_env_file=[...]).REDIS_URL` 与 `Settings(env_file=[...]).REDIS_URL` 对比。
 
-## 全量验证基线（2026-09-09）
+## 全量验证基线（2026-10-25 依赖升级后）
 
 | 项 | 结果 |
 |---|---|
-| E2E | 51/51 通过（串行 9.9m） |
-| 后端 pytest | 2166 通过（2002 unit + 164 integration） |
-| vue-tsc / eslint / build | 0 错误 / 0 错误 / 成功 |
+| E2E | 51/51 通过（串行 2.3m） |
+| vue-tsc / eslint / stylelint / prettier | 0 错误 / 0 错误 / 0 错误 / 0 待格式化 |
+| build | vite 8.3.5，26.15s，14.04 MB，产物无 `:deep(` 泄漏 |
+| 后端 pytest | 2171 通过（595s，2026-10-25 前端优化时） |
+
+## schema drift（版本戳超前、结构落后）—— 复发过一次，务必按 SOP 处理
+
+现象：某接口 500，日志 `table sys_xxx has no column named yyy`，但 `alembic current` 已显示 head。
+根因：`alembic_version` 被 stamp 到 head，但对应迁移从未真正执行（或 dev.db 被旧备份覆盖）。
+应用启动只做 `create_all`（只建缺失表、不加列），**不会自愈**。
+
+SOP：
+1. 备份 `service/sql/dev.db`；
+2. `alembic stamp <出错迁移的 down_revision>` → `alembic upgrade head`（迁移本身幂等，回退版本戳后才会真正跑）；
+3. **全表结构核对**，防止还有别的 drift：
+   ```python
+   from sqlmodel import SQLModel; import src.infrastructure.database.models  # 注册全部模型
+   # 逐表比对 SQLModel.metadata.tables[t].columns 与 PRAGMA table_info(t)
+   ```
+已知触发点：`sys_userloginlog.username`（迁移 `c4d5e6f7a8b9_add_login_log_username`，down_revision `a3b5c7d9e1f2`）。
+注意 `service/sql/dev.db` **不受 git 跟踪**（`service/.gitignore` 忽略 `sql/*.db`），换机/换备份会复发。
 
 ## Git 推送认证
 
