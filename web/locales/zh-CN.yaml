@@ -133,13 +133,7 @@ menus:
   pureMenu1-2-2: 菜单1-2-2
   pureMenu1-3: 菜单1-3
   pureMenu2: 菜单二
-  purePermission: 权限管理
-  purePermissionPage: 页面权限
-  purePermissionButton: 按钮权限
-  purePermissionButtonRouter: 路由返回按钮权限
-  purePermissionButtonLogin: 登录接口返回按钮权限
   pureTabs: 标签页操作
-  pureGuide: 引导页
   pureAble: 功能
   pureMenuTree: 菜单树结构
   pureVideoFrame: 视频帧截取-wasm版
@@ -164,10 +158,6 @@ menus:
   pureViteDoc: vite
   purePiniaDoc: pinia
   pureRouterDoc: vue-router
-  pureAbout: 关于
-  pureResult: 结果页面
-  pureSuccess: 成功页面
-  pureFail: 失败页面
   pureIconSelect: 图标选择器
   pureTimeline: 时间线
   pureLineTree: 树形连接线

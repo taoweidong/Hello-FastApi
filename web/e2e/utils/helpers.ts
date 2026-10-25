@@ -29,11 +29,6 @@ export const SMOKE_PAGES: Array<{
   { path: "/monitor/cache", anchor: ".el-card" },
   { path: "/monitor/log/login", anchor: ".el-table" },
   { path: "/monitor/log/operation", anchor: ".el-table" },
-  { path: "/permission/page/index", anchor: ".card-header" }, // 页面描述 header
-  { path: "/permission/button/index", anchor: ".flex" },
-  { path: "/permission/button/perms", anchor: ".el-card" },
-  { path: "/about/index", anchor: ".box-card" }, // about 卡片
-  { path: "/guide/index", anchor: ".card-header" }, // 引导页 title
   { path: "/account-settings", anchor: ".pure-account-settings" }, // 账号设置容器
   { path: "/empty", anchor: ".size-full" } // 空页占位
 ];

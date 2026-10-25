@@ -257,68 +257,6 @@ DEFAULT_MENUS = [
     {"name": "log:delete", "path": "/monitor/log", "menu_type": 2, "method": "DELETE", "parent_id": "Log"},
     {"name": "monitor:view", "path": "/monitor", "menu_type": 2, "method": "GET", "parent_id": "Monitor"},
     {"name": "monitor:manage", "path": "/monitor", "menu_type": 2, "method": "POST", "parent_id": "Monitor"},
-    # === 权限演示目录 ===
-    {
-        "name": "Permission",
-        "path": "/permission",
-        "menu_type": 0,
-        "rank": 3,
-        "meta": {"title": "权限管理", "icon": "ep:lollipop"},
-    },
-    # --- 页面权限 ---
-    {
-        "name": "PermissionPage",
-        "path": "/permission/page/index",
-        "component": "permission/page/index",
-        "menu_type": 1,
-        "rank": 1,
-        "parent_id": "Permission",
-        "meta": {"title": "页面权限", "icon": "ri:window-2-line"},
-        "description": "演示不同角色可见的页面级权限控制",
-    },
-    # --- 按钮权限 ---
-    {
-        "name": "PermissionButton",
-        "path": "/permission/button/index",
-        "component": "permission/button/index",
-        "menu_type": 1,
-        "rank": 2,
-        "parent_id": "Permission",
-        "meta": {"title": "按钮权限", "icon": "ri:radio-button-line"},
-        "description": "演示按钮级别的权限控制（meta.auths）",
-    },
-    {
-        "name": "permission:btn:add",
-        "path": "/permission/button",
-        "menu_type": 2,
-        "method": "POST",
-        "parent_id": "PermissionButton",
-    },
-    {
-        "name": "permission:btn:edit",
-        "path": "/permission/button",
-        "menu_type": 2,
-        "method": "PUT",
-        "parent_id": "PermissionButton",
-    },
-    {
-        "name": "permission:btn:delete",
-        "path": "/permission/button",
-        "menu_type": 2,
-        "method": "DELETE",
-        "parent_id": "PermissionButton",
-    },
-    # --- 按钮权限（组件方式） ---
-    {
-        "name": "PermissionPerms",
-        "path": "/permission/button/perms",
-        "component": "permission/button/perms",
-        "menu_type": 1,
-        "rank": 3,
-        "parent_id": "Permission",
-        "meta": {"title": "按钮权限组件", "icon": "ri:stack-line"},
-        "description": "演示通过 Perms 组件控制按钮可见性",
-    },
 ]
 
 # admin角色默认拥有的菜单name列表（全部菜单）
@@ -354,8 +292,4 @@ USER_MENU_NAMES = [
     "ServerMonitor",
     "CacheMonitor",
     "monitor:view",
-    "Permission",
-    "PermissionPage",
-    "PermissionButton",
-    "PermissionPerms",
 ]

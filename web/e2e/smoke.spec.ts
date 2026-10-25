@@ -3,7 +3,7 @@ import { SMOKE_PAGES, gotoPage, trackPageErrors } from "./utils/helpers";
 
 /**
  * 全页面只读冒烟测试
- * - 遍历 SMOKE_PAGES 注册表（22 个页面：路由权威来源 service/src/domain/rbac_defaults.py 动态菜单 + 前端静态路由）
+ * - 遍历 SMOKE_PAGES 注册表（17 个页面：路由权威来源 service/src/domain/rbac_defaults.py 动态菜单 + 前端静态路由）
  * - 每页断言关键锚点元素渲染成功（表格 / 树 / 卡片等）
  * - 全程收集 console.error / pageerror / /api/system/ 4xx+ 响应，结束后统一断言为零
  */

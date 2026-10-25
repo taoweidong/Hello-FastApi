@@ -133,13 +133,7 @@ menus:
   pureMenu1-2-2: Menu1-2-2
   pureMenu1-3: Menu1-3
   pureMenu2: Menu2
-  purePermission: Permission Manage
-  purePermissionPage: Page Permission
-  purePermissionButton: Button Permission
-  purePermissionButtonRouter: Route return button permission
-  purePermissionButtonLogin: Login interface return button permission
   pureTabs: Tabs Operate
-  pureGuide: Guide
   pureAble: Able
   pureMenuTree: Menu Tree
   pureVideoFrame: Video Frame Capture
@@ -164,10 +158,6 @@ menus:
   pureViteDoc: Vite
   purePiniaDoc: Pinia
   pureRouterDoc: Vue-Router
-  pureAbout: About
-  pureResult: Result Page
-  pureSuccess: Success Page
-  pureFail: Fail Page
   pureIconSelect: Icon Select
   pureTimeline: Time Line
   pureLineTree: LineTree
