@@ -32,6 +32,12 @@ class TestMenuTreeFlow:
         )
         assert r.status_code == 200
         assert r.json()["code"] == 201
+        # meta 必须回传：创建 DTO 早期只声明扁平字段，嵌套 meta 被 pydantic 静默丢弃，
+        # 导致 title 回落为 name（页面填的「菜单名称」不生效，标题变成路由名称）
+        data = r.json()["data"]
+        assert data["meta"]["title"] == "流程目录"
+        assert data["meta"]["isShowMenu"] == 1
+        assert data["meta"]["isKeepalive"] == 0
 
     async def test_create_page_menu_with_parent(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
@@ -49,6 +55,7 @@ class TestMenuTreeFlow:
             },
         )
         parent_id = r.json()["data"]["id"]
+        assert r.json()["data"]["meta"]["title"] == "父菜单"
 
         r = await flow_client.post(
             "/api/system/menu/create",
@@ -66,6 +73,9 @@ class TestMenuTreeFlow:
         )
         assert r.status_code == 200
         assert r.json()["code"] == 201
+        child = r.json()["data"]
+        assert child["meta"]["title"] == "子菜单"
+        assert child["parentId"] == parent_id
 
     async def test_update_menu(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
@@ -90,6 +100,9 @@ class TestMenuTreeFlow:
         )
         assert r.status_code == 200
         assert r.json()["code"] == 0
+        updated = r.json()["data"]
+        assert updated["meta"]["title"] == "已更新菜单"
+        assert updated["rank"] == 99
 
     async def test_delete_menu(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)

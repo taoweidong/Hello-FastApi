@@ -246,7 +246,11 @@ class AuthService:
             登录响应字典
         """
         expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
+        # 必须输出带时区偏移的 ISO 8601（形如 2026-10-25T12:56:40+00:00）。
+        # 旧写法 strftime("%Y/%m/%d %H:%M:%S") 丢掉了时区信息，前端 new Date()
+        # 会按本地时区（UTC+8）解析，前端认为的过期时间比真实早 8 小时 ——
+        # token 一登录就「已过期」，导致每个 API 请求都触发一次 refresh-token。
+        expires_str = expires_time.isoformat(timespec="seconds")
 
         return {
             "avatar": user.avatar or "",
@@ -309,7 +313,11 @@ class AuthService:
         new_refresh_token = self.token_service.create_refresh_token(token_data)
 
         expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        expires_str = expires_time.strftime("%Y/%m/%d %H:%M:%S")
+        # 必须输出带时区偏移的 ISO 8601（形如 2026-10-25T12:56:40+00:00）。
+        # 旧写法 strftime("%Y/%m/%d %H:%M:%S") 丢掉了时区信息，前端 new Date()
+        # 会按本地时区（UTC+8）解析，前端认为的过期时间比真实早 8 小时 ——
+        # token 一登录就「已过期」，导致每个 API 请求都触发一次 refresh-token。
+        expires_str = expires_time.isoformat(timespec="seconds")
 
         return {"accessToken": new_access_token, "refreshToken": new_refresh_token, "expires": expires_str}
 
@@ -376,7 +384,11 @@ class AuthService:
         return menu_dict_to_entity(data)
 
     def _build_route_tree(
-        self, menus: list, parent_id: str | None = None, auths_map: dict[str, list[str]] | None = None
+        self,
+        menus: list,
+        parent_id: str | None = None,
+        auths_map: dict[str, list[str]] | None = None,
+        inherited_auths: list[str] | None = None,
     ) -> list[dict]:
         """将扁平菜单列表构建为嵌套路由树。"""
         routes = []
@@ -384,7 +396,14 @@ class AuthService:
             if menu.parent_id == parent_id:
                 meta = self._build_meta(menu)
                 # 挂载当前菜单的按钮权限码列表，前端通过 meta.auths 做按钮级控制
-                menu_auths = (auths_map or {}).get(menu.id, [])
+                menu_auths = list((auths_map or {}).get(menu.id, []))
+                # 祖先路由的权限码向下传播：按钮权限（PERMISSION 节点）常挂在目录菜单上
+                # （如 log:view/log:delete 挂在「日志管理」目录），而真正使用 v-auth 的
+                # 页面是其子路由（登录日志/操作日志）。不传播则子路由 meta.auths 为 None，
+                # hasAuth 恒判假 → 页面上的删除/清空按钮被静默移除。
+                for code in inherited_auths or []:
+                    if code not in menu_auths:
+                        menu_auths.append(code)
                 if menu_auths:
                     meta["auths"] = menu_auths
                 route = {
@@ -394,7 +413,7 @@ class AuthService:
                     "component": menu.component,
                     "meta": meta,
                 }
-                children = self._build_route_tree(menus, menu.id, auths_map)
+                children = self._build_route_tree(menus, menu.id, auths_map, menu_auths)
                 if children:
                     route["children"] = children
                 routes.append(route)

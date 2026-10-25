@@ -121,7 +121,20 @@ class MenuRepository(GenericRepository[Menu, MenuEntity], MenuRepositoryInterfac
 
     async def update_meta(self, meta: MenuMetaEntity) -> MenuMetaEntity:
         """更新菜单元数据。"""
-        stmt = sa_update(MenuMeta).where(MenuMeta.id == meta.id).values(**self._build_update_values(meta))
+        # 必须显式传 MenuMeta 模型类：基类默认用仓储自身的 _model_class（Menu），
+        # 会把 title/icon 等字段整体过滤掉，UPDATE 只剩审计列甚至空转。
+        # 同时排除审计列，让 created_time 保留、updated_time 走 onupdate。
+        stmt = (
+            sa_update(MenuMeta)
+            .where(MenuMeta.id == meta.id)
+            .values(
+                **self._build_update_values(
+                    meta,
+                    model_class=MenuMeta,
+                    exclude=("id", "created_time", "updated_time", "creator_id", "modifier_id"),
+                )
+            )
+        )
         await self.session.exec(stmt)  # type: ignore[arg-type]
         await self.session.flush()
         return await self.get_meta_by_id(meta.id)  # type: ignore[return-value]

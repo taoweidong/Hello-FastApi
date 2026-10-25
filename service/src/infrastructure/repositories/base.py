@@ -124,7 +124,12 @@ class GenericRepository(Generic[ModelT, EntityT]):
         await self.session.refresh(merged)
         return self._to_domain(merged)
 
-    def _build_update_values(self, entity: EntityT, exclude: tuple[str, ...] = ("id",)) -> dict[str, Any]:
+    def _build_update_values(
+        self,
+        entity: Any,
+        exclude: tuple[str, ...] = ("id",),
+        model_class: type[SQLModel] | None = None,
+    ) -> dict[str, Any]:
         """从领域实体构造 UPDATE 语句的 values 字典。
 
         仅包含模型表中存在的列，自动排除主键（默认 ``id``）及调用方指定的字段。
@@ -133,12 +138,17 @@ class GenericRepository(Generic[ModelT, EntityT]):
         Args:
             entity: 领域实体（dataclass 实例）
             exclude: 额外排除的列名
+            model_class: 目标表模型类。用于「同一仓储更新多张表」的场景
+                （如 MenuRepository 同时维护 Menu 与 MenuMeta）——不传则用
+                仓储自身的模型类。**传错会让字段被整表过滤掉、UPDATE 静默变空转**，
+                曾导致菜单 meta 更新全部不落库。
 
         Returns:
             ``{列名: 值}`` 字典，可直接传给 ``sa_update(Model).values(**...)``。
         """
+        target_model = model_class or self._model_class
         entity_dict = asdict(entity) if hasattr(entity, "__dataclass_fields__") else dict(entity.__dict__)
-        column_names = {c.name for c in self._model_class.__table__.columns}
+        column_names = {c.name for c in target_model.__table__.columns}
         excluded = {self._primary_key, *exclude}
         return {k: v for k, v in entity_dict.items() if k in column_names and k not in excluded}
 

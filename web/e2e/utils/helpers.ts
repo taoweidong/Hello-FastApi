@@ -74,6 +74,20 @@ export async function fillFormItem(
   await item.locator("input, textarea").first().fill(value);
 }
 
+/**
+ * 确认 Element Plus 的 ElMessageBox（删除/强退等二次确认弹窗）。
+ *
+ * useCrudTable 的 handleDelete / handleBatchDelete 在模板 popconfirm 之外，
+ * 还会再弹一层 ElMessageBox.confirm；只点 popconfirm 不会真正发起删除请求。
+ * 该助手在 popconfirm 确认后调用，等待并点击 message-box 的「确定」。
+ */
+export async function confirmMessageBox(page: Page): Promise<void> {
+  const box = page.locator(".el-message-box").last();
+  await box.waitFor({ state: "visible", timeout: 8000 });
+  await box.locator('button:has-text("确定"), button:has-text("确认")').last().click();
+  await page.locator(".el-message-box").last().waitFor({ state: "hidden", timeout: 10000 }).catch(() => {});
+}
+
 /** API 登录 admin，返回 accessToken（登录限流 100 次/分钟，全局仅少量调用） */
 async function apiLogin(username: string, password: string): Promise<string> {
   const ctx = await request.newContext({ baseURL: API_BASE_URL });
@@ -86,6 +100,38 @@ async function apiLogin(username: string, password: string): Promise<string> {
       throw new Error(`API 登录失败: ${res.status()} ${body?.message ?? ""}`);
     }
     return body.data.accessToken as string;
+  } finally {
+    await ctx.dispose();
+  }
+}
+export { apiLogin };
+
+/**
+ * 通用 API 请求助手（造数/清理用，避免测试依赖 UI 流程准备前置数据）。
+ * 用法：apiFetch("POST", "/api/system/user/create", { token, body })
+ */
+export async function apiFetch(
+  method: "GET" | "POST" | "PUT" | "DELETE",
+  path: string,
+  options: { token?: string; body?: unknown } = {}
+): Promise<{ status: number; body: any }> {
+  const ctx = await request.newContext({ baseURL: API_BASE_URL });
+  try {
+    const res = await ctx.fetch(path, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.token ? { Authorization: `Bearer ${options.token}` } : {})
+      },
+      data: options.body
+    });
+    let body: any = null;
+    try {
+      body = await res.json();
+    } catch {
+      body = null;
+    }
+    return { status: res.status(), body };
   } finally {
     await ctx.dispose();
   }
@@ -113,7 +159,17 @@ export async function cleanupByApi(
         ? payload
         : (payload?.list ?? []);
       for (const row of rows) {
-        const hit = [row.name, row.username, row.label]
+        // 覆盖各模块的命名域：user/username、role/name、config/name、
+        // notice/title、post/postName+postCode、menu/meta.title
+        const hit = [
+          row.name,
+          row.username,
+          row.label,
+          row.title,
+          row.postName,
+          row.postCode,
+          row.meta?.title
+        ]
           .filter(Boolean)
           .some(v => String(v).includes(nameLike));
         if (hit && row.id) {

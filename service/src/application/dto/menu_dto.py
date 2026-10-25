@@ -1,10 +1,43 @@
 """应用层 - 菜单领域的数据传输对象。"""
 
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.application.validators import empty_str_to_none, normalize_optional_id
+
+
+class MenuMetaFlattenMixin:
+    """把嵌套 `meta` 载荷提升为顶层扁平字段的 Mixin。
+
+    菜单接口的读写契约都是「嵌套 meta」：响应 DTO 是 `MenuResponseDTO.meta`
+    （MenuMetaDTO），前端表单提交 `meta: {title, icon, ...}`，后端集成测试
+    同样提交嵌套 meta。但创建/更新 DTO 早期只声明了扁平字段，而 pydantic
+    默认忽略额外字段（extra="ignore"）→ 嵌套 meta 被**静默丢弃**，
+    `title` 回落为 `name`（表现为：页面里填的「菜单名称」不生效，
+    菜单标题变成路由名称）。
+
+    这里在 `mode="before"` 阶段做提升，规则：
+    - 嵌套 `meta.<字段>` 优先，写回同名扁平字段；
+    - 扁平字段保留，作为向后兼容的备选（新旧两种载荷都收）；
+    - `None` 值不覆盖，与 `update_info` 的「None 表示不更新」语义一致。
+    """
+
+    @model_validator(mode="before")
+    @classmethod
+    def flatten_meta(cls, values):
+        if not isinstance(values, dict):
+            return values
+        meta = values.get("meta")
+        if not isinstance(meta, dict):
+            return values
+        merged = {k: v for k, v in values.items() if k != "meta"}
+        fields = cls.model_fields
+        for key, val in meta.items():
+            if key != "meta" and key in fields and val is not None:
+                merged[key] = val
+        return merged
 
 
 class MenuStringValidator:
@@ -50,7 +83,7 @@ class MenuMetaDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class MenuCreateDTO(BaseModel, MenuStringValidator):
+class MenuCreateDTO(MenuMetaFlattenMixin, BaseModel, MenuStringValidator):
     """创建菜单请求"""
 
     parentId: str | int | None = None
@@ -82,8 +115,13 @@ class MenuCreateDTO(BaseModel, MenuStringValidator):
     fixedTag: int = Field(default=0, description="固定标签页")
     dynamicLevel: int = Field(default=0, description="动态路由层级")
 
+    # 嵌套 meta 载荷：菜单接口的读写契约都是嵌套 meta（响应为 MenuResponseDTO.meta）。
+    # 声明该字段是为类型标注与接口文档；其值由 MenuMetaFlattenMixin 提升到上方同名
+    # 扁平字段，服务层仍然只读扁平字段。
+    meta: dict[str, Any] | None = Field(default=None, description="菜单元数据（嵌套载荷，字段提升到顶层同名扁平字段）")
 
-class MenuUpdateDTO(BaseModel, MenuStringValidator):
+
+class MenuUpdateDTO(MenuMetaFlattenMixin, BaseModel, MenuStringValidator):
     """更新菜单请求"""
 
     parentId: str | int | None = None
@@ -114,6 +152,9 @@ class MenuUpdateDTO(BaseModel, MenuStringValidator):
     isHiddenTag: int | None = Field(default=None, description="禁止添加到标签页")
     fixedTag: int | None = Field(default=None, description="固定标签页")
     dynamicLevel: int | None = Field(default=None, description="动态路由层级")
+
+    # 同 MenuCreateDTO.meta：声明以便类型标注与接口文档，值由 mixin 提升到扁平字段
+    meta: dict[str, Any] | None = Field(default=None, description="菜单元数据（嵌套载荷，字段提升到顶层同名扁平字段）")
 
 
 class MenuResponseDTO(BaseModel):

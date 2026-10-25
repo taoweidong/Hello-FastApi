@@ -30,8 +30,25 @@ test.describe.serial("字典管理 CRUD", () => {
     return page.locator(".el-table__row", { hasText: text });
   }
 
-  test("新增子典", async ({ page }) => {
+  /**
+   * 导航到字典页并等待树渲染完成。
+   * 全量跑中曾偶发「页面导航成功（路由接口已返回）但组件未发起数据请求」的
+   * dev-server 挂起（15 次定向复现未复现；按项目 flaky 判定法归为环境抖动）。
+   * 这里加一次 reload 韧性重试：真故障仍在重试后失败，不会被掩盖。
+   */
+  async function openDictPage(page: Page): Promise<void> {
     await gotoPage(page, "/system/dictionary");
+    const firstNode = page.locator(".el-tree-node").first();
+    try {
+      await expect(firstNode).toBeVisible({ timeout: 8000 });
+    } catch {
+      await page.reload();
+      await expect(firstNode).toBeVisible({ timeout: 15000 });
+    }
+  }
+
+  test("新增子典", async ({ page }) => {
+    await openDictPage(page);
     await page.getByRole("button", { name: "新增子典" }).click();
     const dialog = page.locator(".el-dialog", { hasText: "新增字典类型" });
     await expect(dialog).toBeVisible();
@@ -44,7 +61,7 @@ test.describe.serial("字典管理 CRUD", () => {
   });
 
   test("新增字典详情", async ({ page }) => {
-    await gotoPage(page, "/system/dictionary");
+    await openDictPage(page);
     const node = treeNode(page, dictName).first();
     await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
@@ -61,7 +78,7 @@ test.describe.serial("字典管理 CRUD", () => {
   });
 
   test("修改字典详情", async ({ page }) => {
-    await gotoPage(page, "/system/dictionary");
+    await openDictPage(page);
     await treeNode(page, dictName).first().click();
     const row = detailRow(page, label).first();
     await expect(row).toBeVisible({ timeout: 10000 });
@@ -77,7 +94,7 @@ test.describe.serial("字典管理 CRUD", () => {
   });
 
   test("删除字典详情", async ({ page }) => {
-    await gotoPage(page, "/system/dictionary");
+    await openDictPage(page);
     await treeNode(page, dictName).first().click();
     const row = detailRow(page, newLabel).first();
     await expect(row).toBeVisible({ timeout: 10000 });
@@ -96,7 +113,7 @@ test.describe.serial("字典管理 CRUD", () => {
   });
 
   test("删除字典类型", async ({ page }) => {
-    await gotoPage(page, "/system/dictionary");
+    await openDictPage(page);
     const node = treeNode(page, dictName).first();
     await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();

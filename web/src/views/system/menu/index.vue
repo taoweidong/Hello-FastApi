@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ADAPTIVE_OFFSET } from "@/config/adaptive";
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { useMenu } from "./utils/hook";
 import { transformI18n } from "@/plugins/i18n";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -17,7 +17,6 @@ defineOptions({
 
 const formRef = ref();
 const tableRef = ref();
-const editFormRef = ref();
 
 const {
   form,
@@ -30,54 +29,6 @@ const {
   handleDelete,
   handleSelectionChange
 } = useMenu();
-
-/** 是否显示编辑面板 */
-const showEditPanel = ref(false);
-/** 编辑面板标题 */
-const editTitle = ref("新增菜单");
-/** 编辑表单数据 */
-const editFormData = ref<any>(null);
-
-/** 从树节点新增子菜单 */
-function handleAddChild(parentNode?: any) {
-  editTitle.value = "新增菜单";
-  showEditPanel.value = true;
-  editFormData.value = {
-    menuType: 0,
-    higherMenuOptions: [],
-    parentId: parentNode?.id ?? 0,
-    name: "",
-    path: "",
-    component: "",
-    rank: 99,
-    isActive: 1,
-    meta: {
-      title: "",
-      icon: "",
-      rSvgName: "",
-      isShowMenu: true,
-      isShowParent: false,
-      isKeepalive: true,
-      frameUrl: "",
-      frameLoading: true,
-      transitionEnter: "",
-      transitionLeave: "",
-      isHiddenTag: false,
-      fixedTag: false,
-      dynamicLevel: null
-    }
-  };
-}
-
-/** 编辑菜单 */
-function handleEdit(row: any) {
-  editTitle.value = "修改菜单";
-  showEditPanel.value = true;
-  editFormData.value = {
-    ...row,
-    meta: { ...row.meta }
-  };
-}
 
 function onFullscreen() {
   tableRef.value?.setAdaptive?.();
@@ -131,7 +82,7 @@ function onFullscreen() {
               v-auth="'menu:add'"
               type="primary"
               :icon="useRenderIcon(AddFill)"
-              @click="handleAddChild()"
+              @click="openDialog('新增')"
             >
               新增根菜单
             </el-button>

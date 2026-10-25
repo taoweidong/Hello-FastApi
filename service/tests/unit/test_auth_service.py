@@ -276,6 +276,56 @@ class TestAuthService:
         assert len(tree[0]["children"]) == 1
         assert tree[0]["children"][0]["name"] == "child"
 
+    def test_build_route_tree_auths_inherited_by_children(self, auth_service):
+        """回归：目录级按钮权限码必须传播到子页面路由。
+
+        真实数据里 log:view/log:delete 挂在「日志管理」目录下，而使用 v-auth 的
+        页面（登录日志/操作日志）是其子路由。传播前子路由 meta.auths 为 None，
+        hasAuth 恒判假 → 页面上的删除/清空按钮被静默移除。
+        """
+        meta = MenuMetaEntity(id="m1", title="日志管理")
+        # 注意：生产里 menu_type=2 的权限节点会被过滤掉（只进 auths_map），
+        # 不会出现在传给 _build_route_tree 的 menus 列表里。这里模拟同一语义。
+        menus = [
+            MenuEntity(id="dir", name="Log", menu_type=0, path="/monitor/log", rank=1, meta=meta),
+            MenuEntity(id="login", name="LoginLog", menu_type=1, path="/monitor/log/login", rank=2, parent_id="dir"),
+            MenuEntity(
+                id="op",
+                name="OperationLog",
+                menu_type=1,
+                path="/monitor/log/operation",
+                rank=3,
+                parent_id="dir",
+            ),
+        ]
+        tree = auth_service._build_route_tree(menus, auths_map={"dir": ["log:view", "log:delete"]})
+
+        assert len(tree) == 1
+        directory = tree[0]
+        assert directory["name"] == "Log"
+        assert directory["meta"]["auths"] == ["log:view", "log:delete"]
+        child_names = [c["name"] for c in directory["children"]]
+        assert child_names == ["LoginLog", "OperationLog"]
+        for child in directory["children"]:
+            assert child["meta"]["auths"] == ["log:view", "log:delete"]
+
+    def test_build_route_tree_auths_inherited_transitively(self, auth_service):
+        """权限码应逐级向下传播（目录 → 子目录 → 页面），且不重复。"""
+        meta = MenuMetaEntity(id="m1", title="权限管理")
+        # 权限节点（menu_type=2）在生产里被过滤掉，只贡献 auths_map
+        menus = [
+            MenuEntity(id="root", name="Permission", menu_type=0, path="/permission", rank=1, meta=meta),
+            MenuEntity(
+                id="page", name="PermissionButton", menu_type=1, path="/permission/button", rank=2, parent_id="root"
+            ),
+        ]
+        tree = auth_service._build_route_tree(
+            menus, auths_map={"root": ["permission:btn:add", "permission:btn:edit"]}
+        )
+        page = tree[0]["children"][0]
+        assert page["name"] == "PermissionButton"
+        assert page["meta"]["auths"] == ["permission:btn:add", "permission:btn:edit"]
+
     def test_build_meta_with_meta(self, auth_service):
         """测试构建meta对象（有meta数据）。"""
         meta = MenuMetaEntity(
