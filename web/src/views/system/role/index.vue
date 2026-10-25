@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ADAPTIVE_OFFSET } from "@/config/adaptive";
 import { useRole } from "./utils/hook";
 import { ref, computed, nextTick, onMounted } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -102,7 +103,7 @@ onMounted(() => {
       ref="formRef"
       :inline="true"
       :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-3 overflow-auto"
+      class="search-form bg-bg_color w-full overflow-auto"
     >
       <el-form-item label="角色名称：" prop="name">
         <el-input
@@ -170,6 +171,7 @@ onMounted(() => {
         <template v-slot="{ size, dynamicColumns }">
           <pure-table
             ref="tableRef"
+            row-key="id"
             align-whole="center"
             showOverflowTooltip
             table-layout="auto"
@@ -177,7 +179,7 @@ onMounted(() => {
             :size="size"
             adaptive
             :row-style="rowStyle"
-            :adaptiveConfig="{ offsetBottom: 108 }"
+            :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.withSelectionBar }"
             :data="dataList"
             :columns="dynamicColumns"
             :pagination="{ ...pagination, size }"
@@ -358,15 +360,5 @@ onMounted(() => {
 <style lang="scss" scoped>
 :deep(.el-dropdown-menu__item i) {
   margin: 0;
-}
-
-.main-content {
-  margin: 8px 8px 0 !important;
-}
-
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
 }
 </style>

@@ -11,8 +11,11 @@
   padding: 0 !important;
 }
 
+/* 深色 tooltip：原为魔法值 9999 !important。
+   Element Plus 会动态给 popper 写内联 z-index，此处必须 !important 才能固定；
+   取值纳入 tokens.scss 的 popper 级（高于弹窗 modal，低于全局浮层 top）。 */
 .is-dark {
-  z-index: 9999 !important;
+  z-index: var(--pure-z-popper) !important;
 }
 
 /* 重置 el-button 中 icon 的 margin */
@@ -169,6 +172,39 @@
       0 -1px 0 0 #e0e3e8,
       0 -3px 6px 0 rgb(69 98 155 / 12%);
   }
+}
+
+/* ============================================================
+ * 布局一致性：由设计令牌（style/tokens.scss）驱动
+ *
+ * 以下两条规则此前被 12 个页面 / 7 个列表页各写一份，出现三种内边距
+ * 与两种表单项间距的分叉。收敛到全局后，窄屏由 tokens.scss 的
+ * @media (width <= 768px) 自动收紧，无需各页面重复适配。
+ * ============================================================ */
+
+/* 搜索表单容器 */
+.search-form {
+  padding: var(--pure-search-form-padding-y) var(--pure-search-form-padding-x) 0;
+
+  /*
+   * 注意：这里是**全局**样式表，不能写 :deep()。
+   * :deep() 由 @vitejs/plugin-vue 在编译 SFC 的 <style scoped> 时重写，
+   * 独立的 .scss 文件不会经过该处理，产物里会保留字面量 `:deep(...)`，
+   * 成为无效选择器并被浏览器整条丢弃。
+   */
+  .el-form-item {
+    margin-bottom: var(--pure-form-item-gap);
+  }
+}
+
+/*
+ * 列表页主内容区外边距。
+ * 注意：error / about 页的 `margin: 0 !important`、frame 页的 `2px 0 0`
+ * 是**有意**的全屏与内嵌布局，写在其自带 scoped 样式中，
+ * 特性值（.main-content[data-v-x]）高于本条，不会被覆盖。
+ */
+.main-content {
+  margin: var(--pure-content-margin) var(--pure-content-margin) 0 !important;
 }
 
 /* 仿 el-scrollbar 滚动条样式，支持大多数浏览器，如Chrome、Edge、Firefox、Safari等。整体暗色风格在 src/style/dark.scss 文件进行了适配 */

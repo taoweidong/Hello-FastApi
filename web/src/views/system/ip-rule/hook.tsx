@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import editForm from "./form.vue";
+import { ElMessageBox } from "element-plus";
 import { message } from "@/utils/message";
 import { usePublicHooks } from "@/views/system/hooks";
 import { IPRuleTypeChoices } from "@/views/system/constants";
@@ -150,10 +151,32 @@ export function useIpRule() {
     return batchDeleteRows(selectedIds.value);
   }
 
+  /**
+   * 清空全部：不可逆的破坏性操作，必须先二次确认。
+   * 此前直接调用接口，误点即全量删除且无任何反馈。
+   */
   async function handleClear() {
-    await ipRuleApi.clear();
-    message("清空成功", { type: "success" });
-    onSearch();
+    try {
+      await ElMessageBox.confirm(
+        "将删除全部 IP 规则（含黑名单与白名单），操作不可恢复。是否继续？",
+        "清空全部 IP 规则",
+        {
+          type: "warning",
+          confirmButtonText: "确认清空",
+          cancelButtonText: "取消",
+          confirmButtonClass: "el-button--danger"
+        }
+      );
+    } catch {
+      return; // 用户取消
+    }
+    try {
+      await ipRuleApi.clear();
+      message("清空成功", { type: "success" });
+      onSearch();
+    } catch {
+      message("清空失败，请重试", { type: "error" });
+    }
   }
 
   return {

@@ -82,7 +82,12 @@
   text-align: center;
   cursor: pointer;
   border-radius: var(--el-border-radius-base);
-  transition: all 0.1s cubic-bezier(0.645, 0.045, 0.355, 1);
+
+  /* 仅过渡会实际变化的三个属性；时长/缓动取自设计令牌 */
+  transition:
+    color var(--pure-duration-fast) var(--pure-ease-standard),
+    background-color var(--pure-duration-fast) var(--pure-ease-standard),
+    box-shadow var(--pure-duration-fast) var(--pure-ease-standard);
 }
 .pure-segmented .pure-segmented-item > div {
   min-height: calc(

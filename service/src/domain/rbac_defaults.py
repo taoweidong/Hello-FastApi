@@ -284,7 +284,7 @@ DEFAULT_MENUS = [
         "menu_type": 1,
         "rank": 2,
         "parent_id": "Permission",
-        "meta": {"title": "按钮权限", "icon": "ri:button-line"},
+        "meta": {"title": "按钮权限", "icon": "ri:radio-button-line"},
         "description": "演示按钮级别的权限控制（meta.auths）",
     },
     {
@@ -316,7 +316,7 @@ DEFAULT_MENUS = [
         "menu_type": 1,
         "rank": 3,
         "parent_id": "Permission",
-        "meta": {"title": "按钮权限组件", "icon": "ri:components-line"},
+        "meta": {"title": "按钮权限组件", "icon": "ri:stack-line"},
         "description": "演示通过 Perms 组件控制按钮可见性",
     },
 ]

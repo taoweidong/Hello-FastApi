@@ -594,7 +594,11 @@ onUnmounted(() => removeMatchMedia);
     cursor: pointer;
     border-radius: 4px;
     box-shadow: rgb(0 0 0 / 15%) 0 0 0 1px inset;
-    transition: all 0.2s ease;
+
+    /* hover 只改 box-shadow 与 transform，不必过渡全部属性 */
+    transition:
+      box-shadow var(--pure-duration-base) var(--pure-ease-standard),
+      transform var(--pure-duration-base) var(--pure-ease-standard);
 
     &:hover {
       box-shadow:

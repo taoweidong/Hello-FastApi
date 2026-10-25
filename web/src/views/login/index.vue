@@ -34,6 +34,30 @@ import User from "~icons/ri/user-3-fill";
 import Info from "~icons/ri/information-line";
 import Keyhole from "~icons/ri/shield-keyhole-line";
 
+/*
+ * 第三方登录图标原先走 IconifyIconOnline，会在运行时依次向
+ * api.iconify.design → api.simplesvg.com → api.unisvg.com 三个外网 CDN 请求
+ * 图标数据（实测首屏因此多等约 23s 才达到 networkidle，弱网/内网下更久甚至挂起）。
+ * 项目已依赖 @iconify-json/ri，这里改为本地打包，首屏不再依赖外网。
+ *
+ * 注意：图标名用 `ri/xxx-fill`（斜杠）而非 `ri:xxx-fill`（冒号）——
+ * useRenderIcon 正是以是否含 ":" 来区分离线与在线图标（见 ReIcon/src/hooks.ts）。
+ */
+import { addIcon } from "@iconify/vue/dist/offline";
+import { getSvgInfo } from "@pureadmin/utils";
+
+import WechatFill from "~icons/ri/wechat-fill?raw";
+import AlipayFill from "~icons/ri/alipay-fill?raw";
+import QqFill from "~icons/ri/qq-fill?raw";
+import WeiboFill from "~icons/ri/weibo-fill?raw";
+
+// `~icons/*?raw` 的模块声明把导入值推断为组件，实际是 SVG 字符串，
+// 故按 offlineIcon.ts 的既有写法加 as string 断言
+addIcon("ri/wechat-fill", getSvgInfo(WechatFill as unknown as string));
+addIcon("ri/alipay-fill", getSvgInfo(AlipayFill as unknown as string));
+addIcon("ri/qq-fill", getSvgInfo(QqFill as unknown as string));
+addIcon("ri/weibo-fill", getSvgInfo(WeiboFill as unknown as string));
+
 defineOptions({
   name: "Login"
 });
@@ -321,8 +345,8 @@ watch(loginDay, value => {
                   :key="index"
                   :title="t(item.title)"
                 >
-                  <IconifyIconOnline
-                    :icon="`ri:${item.icon}-fill`"
+                  <IconifyIconOffline
+                    :icon="`ri/${item.icon}-fill`"
                     width="20"
                     class="cursor-pointer text-gray-500 hover:text-blue-400"
                   />

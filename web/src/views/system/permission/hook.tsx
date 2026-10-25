@@ -106,6 +106,22 @@ export function usePermission() {
     menuLoading.value = false;
   }
 
+  /**
+   * 右侧面板刷新：重新拉取服务端权限并回写到树，丢弃本地未保存的勾选。
+   * 此前该按钮直接绑定 handleSave，点"刷新"会静默提交写操作，属于误触高危。
+   */
+  async function handleRefresh() {
+    if (!currentRoleId.value) {
+      message("请先选择一个角色", { type: "warning" });
+      return;
+    }
+    const current = roleList.value.find(
+      item => item.id === currentRoleId.value
+    );
+    await selectRole(current ?? { id: currentRoleId.value });
+    message("已重新加载该角色的权限", { type: "success" });
+  }
+
   async function handleSave() {
     if (!currentRoleId.value) {
       message("请先选择一个角色", { type: "warning" });
@@ -157,6 +173,7 @@ export function usePermission() {
     roleColumns,
     fetchRoleList,
     selectRole,
+    handleRefresh,
     handleSave
   };
 }

@@ -214,11 +214,17 @@ watch(
 
 <style lang="scss" scoped>
 .icon-item {
+  /* 过渡写在常态而非 :hover，避免移出时瞬间跳回（原先只在 hover 声明，
+     移出无过渡）。0.4s 对 hover 反馈过慢，统一到 --pure-duration-base。 */
+  transition:
+    color var(--pure-duration-base) var(--pure-ease-standard),
+    border-color var(--pure-duration-base) var(--pure-ease-standard),
+    transform var(--pure-duration-base) var(--pure-ease-standard);
+
   &:hover {
     color: var(--el-color-primary);
     border-color: var(--el-color-primary);
     transform: scaleX(1.05);
-    transition: all 0.4s;
   }
 }
 

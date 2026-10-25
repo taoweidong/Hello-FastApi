@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ADAPTIVE_OFFSET } from "@/config/adaptive";
 import { usePermission } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
@@ -20,15 +21,16 @@ const {
   roleColumns,
   fetchRoleList,
   selectRole,
+  handleRefresh,
   handleSave
 } = usePermission();
 </script>
 
 <template>
   <div class="main">
-    <div class="flex gap-4 w-full">
+    <div class="permission-layout flex gap-4 w-full">
       <!-- 左侧角色列表 -->
-      <div class="w-1/3 min-w-75">
+      <div class="permission-roles w-1/3 min-w-75">
         <PureTableBar
           title="角色列表"
           :columns="roleColumns"
@@ -37,9 +39,10 @@ const {
           <template v-slot="{ size, dynamicColumns }">
             <pure-table
               adaptive
-              :adaptiveConfig="{ offsetBottom: 80 }"
+              :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.split }"
               align-whole="center"
               row-key="id"
+              showOverflowTooltip
               table-layout="auto"
               :loading="loading"
               :size="size"
@@ -69,10 +72,10 @@ const {
       </div>
 
       <!-- 右侧菜单权限树 -->
-      <div class="flex-1">
+      <div class="flex-1 min-w-0">
         <PureTableBar
           :title="currentRoleId ? '菜单权限配置' : '请先选择角色'"
-          @refresh="handleSave"
+          @refresh="handleRefresh"
         >
           <template #buttons>
             <el-button
@@ -134,6 +137,21 @@ const {
 </template>
 
 <style lang="scss" scoped>
+/*
+ * 响应式：窄屏下 `w-1/3 min-w-75`（300px）会把右侧权限树挤出可视区，
+ * 改为上下堆叠，角色列表占满宽度。
+ */
+@media (width <= 768px) {
+  .permission-layout {
+    flex-direction: column;
+  }
+
+  .permission-roles {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+
 :deep(.el-tree-node__content) {
   height: 36px;
 }

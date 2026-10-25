@@ -72,6 +72,7 @@ onMounted(() => {
     <h3 class="my-8!">安全日志</h3>
     <pure-table
       row-key="id"
+      showOverflowTooltip
       table-layout="auto"
       :loading="loading"
       :data="dataList"

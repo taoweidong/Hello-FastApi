@@ -1,3 +1,4 @@
+@use "tokens"; /* 设计令牌：间距 / 动效 / 圆角阴影 / 层级，必须先于其他样式 */
 @use "theme";
 @use "transition";
 @use "element-plus";

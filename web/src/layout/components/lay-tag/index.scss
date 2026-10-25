@@ -35,7 +35,18 @@
     padding-left: 6px;
     line-height: 34px;
     cursor: pointer;
-    transition: all 0.4s;
+
+    /*
+     * chrome 风格标签切换时会同时改 padding / margin，故仍需过渡这两个属性；
+     * 但把 0.4s（明显拖沓）统一到 --pure-duration-base，并去掉 all 以减少
+     * 无关属性（如 color）被卷入过渡。
+     */
+    transition:
+      color var(--pure-duration-base) var(--pure-ease-standard),
+      background-color var(--pure-duration-base) var(--pure-ease-standard),
+      box-shadow var(--pure-duration-base) var(--pure-ease-standard),
+      padding var(--pure-duration-base) var(--pure-ease-standard),
+      margin var(--pure-duration-base) var(--pure-ease-standard);
 
     &:not(:first-child) {
       padding-right: 24px;
@@ -99,7 +110,11 @@
       list-style: none;
 
       .scroll-item {
-        transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+        transition:
+          color var(--pure-duration-base) var(--pure-ease-standard),
+          background-color var(--pure-duration-base) var(--pure-ease-standard),
+          box-shadow var(--pure-duration-base) var(--pure-ease-standard),
+          padding var(--pure-duration-base) var(--pure-ease-standard);
 
         &:nth-child(1) {
           padding: 0 12px;

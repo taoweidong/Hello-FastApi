@@ -105,26 +105,29 @@ onBeforeUnmount(() => {
   z-index: -1;
   background: rgb(0 0 0 / 20%);
   opacity: 0;
-  transition: opacity 0.3s cubic-bezier(0.7, 0.3, 0.1, 1);
+  transition: opacity var(--pure-duration-slow) var(--pure-ease-emphasized);
 }
 
 .right-panel {
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 40000;
+
+  /* 原为魔法值 40000，纳入 tokens.scss 的层级刻度：全局浮层最高级 */
+  z-index: var(--pure-z-top);
   width: 100%;
   max-width: 280px;
   box-shadow: 0 0 15px 0 rgb(0 0 0 / 5%);
   transform: translate(100%);
-  transition: all 0.25s cubic-bezier(0.7, 0.3, 0.1, 1);
+  transition: transform var(--pure-duration-panel) var(--pure-ease-emphasized);
 }
 
 .show {
-  transition: all 0.3s cubic-bezier(0.7, 0.3, 0.1, 1);
+  transition: opacity var(--pure-duration-slow) var(--pure-ease-emphasized);
 
   .right-panel-background {
-    z-index: 20000;
+    /* 原为 20000；遮罩应压住内容但低于面板本身 */
+    z-index: calc(var(--pure-z-top) - 1);
     width: 100%;
     height: 100%;
     opacity: 1;

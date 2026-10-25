@@ -161,6 +161,22 @@ class PureHttp {
             useUserStoreHook().logOut();
             PureHttp.isLoggingOut = false;
           }
+        } else if (!$error.isCancelRequest) {
+          /*
+           * 服务端错误（5xx）与网络中断此前被静默吞掉：表格只剩一片空白，
+           * 用户无从判断是"真的没有数据"还是"加载失败"。这里补一条全局提示。
+           *
+           * 只覆盖 5xx / 无响应（断网、超时、后端崩溃）；
+           * 4xx 属业务校验结果，由各页面自行在表单或消息里呈现，避免重复打扰。
+           */
+          if (status === undefined || status >= 500) {
+            message(
+              status === undefined
+                ? "网络连接失败，请检查网络后重试"
+                : "服务暂时不可用，请稍后重试",
+              { type: "error" }
+            );
+          }
         }
 
         // 所有的响应异常 区分来源为取消请求/非取消请求

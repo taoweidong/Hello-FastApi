@@ -97,7 +97,7 @@ defineExpose({ onTreeReset });
   <div
     v-loading="treeLoading"
     class="h-full bg-bg_color overflow-hidden relative"
-    :style="{ minHeight: `calc(100vh - 141px)` }"
+    :style="{ minHeight: 'var(--pure-panel-height)' }"
   >
     <div class="flex items-center h-8.5">
       <el-input

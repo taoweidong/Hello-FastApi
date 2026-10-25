@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ADAPTIVE_OFFSET } from "@/config/adaptive";
 import { ref } from "vue";
 import { useUser } from "./utils/hook";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -52,7 +53,7 @@ const {
         ref="formRef"
         :inline="true"
         :model="form"
-        class="search-form bg-bg_color w-full pl-4 pt-3 overflow-auto"
+        class="search-form bg-bg_color w-full overflow-auto"
       >
         <el-form-item label="用户名称：" prop="username">
           <el-input
@@ -140,8 +141,9 @@ const {
           <pure-table
             ref="tableRef"
             row-key="id"
+            showOverflowTooltip
             adaptive
-            :adaptiveConfig="{ offsetBottom: 108 }"
+            :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.withSelectionBar }"
             align-whole="center"
             table-layout="auto"
             :loading="loading"
@@ -252,17 +254,9 @@ const {
   margin: 0;
 }
 
-:deep(.el-button:focus-visible) {
-  outline: none;
-}
-
-.main-content {
-  margin: 8px 8px 0 !important;
-}
-
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
-}
+/*
+ * 原先此处用 :deep(.el-button:focus-visible){outline:none} 全局抹掉了按钮焦点环，
+ * 键盘 Tab 导航时完全看不到当前焦点位置（违反 WCAG 2.4.7）。
+ * 现交由 style/index.scss 的全局 :focus-visible 规则统一呈现。
+ */
 </style>

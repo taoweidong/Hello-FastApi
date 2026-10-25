@@ -123,7 +123,15 @@ const transitionMain = defineComponent({
                 'flex-wrap': 'wrap',
                 'max-width': getMainWidth,
                 margin: '0 auto',
-                transition: 'all 300ms cubic-bezier(0.4, 0, 0.2, 1)'
+
+                /*
+                 * 原先是 `transition: all 300ms`。侧边栏收起时这里实际只有
+                 * max-width 在变，写 all 会把 margin / display 等无关属性
+                 * 一并纳入过渡计算，每次折叠都触发额外的样式重算。
+                 * 收窄到 max-width，并把时长/缓动统一到设计令牌。
+                 */
+                transition:
+                  'max-width var(--pure-duration-slow) var(--pure-ease-standard)'
               }"
               :view-style="{
                 display: 'flex',

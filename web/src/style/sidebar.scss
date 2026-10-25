@@ -216,7 +216,13 @@
       content: "";
       background-color: var(--pure-theme-menu-active-before);
       transform: translateY(0);
-      transition: all var(--pure-transition-duration) ease-in-out;
+
+      /* 小竖条只在 collapse 切换时改 width / height / 背景色 */
+      transition:
+        width var(--pure-transition-duration) var(--pure-ease-standard),
+        height var(--pure-transition-duration) var(--pure-ease-standard),
+        background-color var(--pure-transition-duration)
+          var(--pure-ease-standard);
     }
 
     .el-menu--collapse .outer-most.el-sub-menu > .el-sub-menu__title::before {
@@ -413,7 +419,11 @@
       height: 100%;
       padding-left: 10px;
       cursor: pointer;
-      transition: all var(--pure-transition-duration) ease;
+
+      /* 侧边栏收起时该区域改变 width 与 padding-left */
+      transition:
+        width var(--pure-transition-duration) var(--pure-ease-standard),
+        padding-left var(--pure-transition-duration) var(--pure-ease-standard);
 
       img {
         display: inline-block;

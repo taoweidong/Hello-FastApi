@@ -119,7 +119,7 @@ async function onSubmitPwd(formEl: FormInstance) {
         ref="pwdFormRef"
         :model="pwdForm"
         :rules="pwdRules"
-        label-width="90px"
+        label-width="82px"
       >
         <el-form-item label="当前密码" prop="oldPassword">
           <el-input

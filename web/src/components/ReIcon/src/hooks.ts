@@ -1,6 +1,7 @@
 import type { iconType } from "./types";
 import { h, defineComponent, type Component } from "vue";
 import { FontIcon, IconifyIconOnline, IconifyIconOffline } from "../index";
+import { OFFLINE_ICON_NAMES } from "./offlineIconNames";
 
 /**
  * 支持 `iconfont`、自定义 `svg` 以及 `iconify` 中所有的图标
@@ -45,16 +46,27 @@ export function useRenderIcon(icon: any, attrs?: iconType): Component {
       }
     });
   } else {
-    // 通过是否存在 : 符号来判断是在线还是本地图标，存在即是在线图标，反之
+    /*
+     * 字符串图标名（如 `ri:settings-3-line` / `ep:menu`）。
+     *
+     * 原逻辑：含 ":" 就用在线组件。但后端菜单图标恰好都是冒号格式，
+     * 于是每次渲染菜单都会去 api.iconify.design 拉数据——弱网/内网下首屏
+     * 被拖到 20s+，甚至请求挂起。
+     *
+     * 现逻辑：先把 ":" 归一成 "/"（本地注册的命名形式），若该名字已在
+     * offlineIconNames 中注册就用离线组件；**未注册才回退在线**，
+     * 保证管理员在图标选择器里选到未预置的图标时仍能显示，不会变空白。
+     */
     return defineComponent({
       name: "Icon",
       render() {
         if (!icon) return;
-        const IconifyIcon = icon.includes(":")
-          ? IconifyIconOnline
-          : IconifyIconOffline;
-        return h(IconifyIcon, {
-          icon,
+        const offlineName = String(icon).replace(":", "/");
+        const useOffline =
+          !String(icon).includes(":") ||
+          OFFLINE_ICON_NAMES.includes(offlineName);
+        return h(useOffline ? IconifyIconOffline : IconifyIconOnline, {
+          icon: useOffline ? offlineName : icon,
           ...attrs
         });
       }

@@ -276,8 +276,4 @@ const optionsBasis: Array<OptionsType> = [
 :deep(.el-timeline.is-start) {
   padding-left: 0;
 }
-
-.main-content {
-  margin: 8px 8px 0 !important;
-}
 </style>

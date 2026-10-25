@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ADAPTIVE_OFFSET } from "@/config/adaptive";
 import { ref } from "vue";
 import { usePost } from "./hook";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -43,7 +44,7 @@ function onFullscreen() {
       ref="formRef"
       :inline="true"
       :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-3 overflow-auto"
+      class="search-form bg-bg_color w-full overflow-auto"
     >
       <el-form-item label="岗位编码" prop="postCode">
         <el-input
@@ -122,7 +123,7 @@ function onFullscreen() {
         <pure-table
           ref="tableRef"
           adaptive
-          :adaptiveConfig="{ offsetBottom: 45 }"
+          :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.base }"
           align-whole="center"
           row-key="id"
           showOverflowTooltip
@@ -185,11 +186,5 @@ function onFullscreen() {
 <style lang="scss" scoped>
 :deep(.el-table__inner-wrapper::before) {
   height: 0;
-}
-
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
 }
 </style>

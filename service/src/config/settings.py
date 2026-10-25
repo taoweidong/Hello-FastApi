@@ -217,7 +217,14 @@ def get_settings(env: str | None = None) -> Settings:
         env = "development"
 
     # 显式指定 env 时以参数为准（进程环境变量中的 APP_ENV 可能指向其他环境）
-    s = Settings(env_file=_ENV_FILES[env], APP_ENV=env, **_ENV_OVERRIDES[env])  # type: ignore[call-arg, arg-type]
+    #
+    # 注意：pydantic-settings v2 在 __init__ 中接收的是 `_env_file`（带下划线前缀），
+    # 写成 `env_file` 会被当作未知字段并在 extra="ignore" 下**静默丢弃**，
+    # 导致 .env / .env.{environment} 从未被加载、整站一直跑在模型默认值上。
+    # 修复前表现为：开发环境 REDIS_URL 取默认的 redis://localhost:6379/0，
+    # Windows 下 localhost 优先解析到 IPv6 ::1，而本机 Redis 只监听 IPv4，
+    # 异步连接必然超时 → 缓存永久降级，单次请求被拖慢到 3s 量级。
+    s = Settings(_env_file=_ENV_FILES[env], APP_ENV=env, **_ENV_OVERRIDES[env])  # type: ignore[call-arg]
     _ensure_production_secrets(s)
     return s
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ADAPTIVE_OFFSET } from "@/config/adaptive";
 import { ref, watch, getCurrentInstance } from "vue";
 import { useDictionary } from "./utils/hook";
 import { PureTableBar } from "@/components/RePureTableBar";
@@ -55,12 +56,12 @@ function onFullscreen() {
 
 <template>
   <div class="main">
-    <div class="flex w-full">
+    <div class="dict-layout flex w-full">
       <!-- 左侧面板：字典类型树 -->
       <div
         v-loading="treeLoading"
-        class="w-70! shrink-0 mr-2 bg-bg_color overflow-hidden relative"
-        :style="{ minHeight: `calc(100vh - 141px)` }"
+        class="dict-tree w-70! shrink-0 mr-2 bg-bg_color overflow-hidden relative"
+        :style="{ minHeight: 'var(--pure-panel-height)' }"
       >
         <div class="flex items-center h-8.5 px-2">
           <el-input
@@ -80,7 +81,7 @@ function onFullscreen() {
           </el-input>
         </div>
         <el-divider style="margin: 0" />
-        <el-scrollbar height="calc(100vh - 210px)">
+        <el-scrollbar height="var(--pure-panel-scroll-height)">
           <el-tree
             ref="treeRef"
             :data="dictTypeList"
@@ -179,7 +180,8 @@ function onFullscreen() {
       </div>
 
       <!-- 右侧面板：字典详情表 -->
-      <div class="flex-1">
+      <!-- min-w-0：防止表格内容过宽时撑破 flex 容器导致整页横向溢出 -->
+      <div class="flex-1 min-w-0">
         <PureTableBar
           title="字典管理（左侧字典树可通过右键单击进行修改和删除）"
           :columns="columns"
@@ -202,7 +204,7 @@ function onFullscreen() {
             <pure-table
               ref="tableRef"
               adaptive
-              :adaptiveConfig="{ offsetBottom: 45 }"
+              :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.base }"
               align-whole="center"
               row-key="id"
               showOverflowTooltip
@@ -255,6 +257,29 @@ function onFullscreen() {
 </template>
 
 <style lang="scss" scoped>
+/*
+ * 响应式：窄屏（手机 / 平板竖屏）下左右分栏会把右侧表格挤出容器，
+ * 改为上下堆叠——字典树占满宽度并限制为 40vh 可滚动，表格顺延其下。
+ * 需要 !important 是因为模板上写了内联 style（minHeight）与
+ * el-scrollbar 的 height 属性，二者优先级均高于普通选择器。
+ */
+@media (width <= 768px) {
+  .dict-layout {
+    flex-direction: column;
+  }
+
+  .dict-tree {
+    width: 100% !important;
+    min-height: 40vh !important;
+    margin-right: 0;
+    margin-bottom: var(--pure-space-2);
+  }
+
+  .dict-tree :deep(.el-scrollbar) {
+    height: 24vh !important;
+  }
+}
+
 :deep(.el-table__inner-wrapper::before) {
   height: 0;
 }

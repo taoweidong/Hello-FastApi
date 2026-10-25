@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ADAPTIVE_OFFSET } from "@/config/adaptive";
 import { ref } from "vue";
 import { useSystemLog } from "./hook";
 import { getPickerShortcuts } from "../../utils";
@@ -36,7 +37,7 @@ const {
       ref="formRef"
       :inline="true"
       :model="form"
-      class="search-form bg-bg_color w-full pl-8 pt-3 overflow-auto"
+      class="search-form bg-bg_color w-full overflow-auto"
     >
       <el-form-item label="所属模块" prop="module">
         <el-input
@@ -80,12 +81,13 @@ const {
         <pure-table
           ref="tableRef"
           row-key="id"
+          showOverflowTooltip
           align-whole="center"
           table-layout="auto"
           :loading="loading"
           :size="size"
           adaptive
-          :adaptiveConfig="{ offsetBottom: 108 }"
+          :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.withSelectionBar }"
           :data="dataList"
           :columns="dynamicColumns"
           :pagination="{ ...pagination, size }"
@@ -118,15 +120,5 @@ const {
 <style lang="scss" scoped>
 :deep(.el-dropdown-menu__item i) {
   margin: 0;
-}
-
-.main-content {
-  margin: 8px 8px 0 !important;
-}
-
-.search-form {
-  :deep(.el-form-item) {
-    margin-bottom: 12px;
-  }
 }
 </style>
