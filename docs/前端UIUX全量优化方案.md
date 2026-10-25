@@ -208,8 +208,12 @@ API 均无），此前一直渲染为空白。已改为 `ri:radio-button-line` /
 | ESLint / Prettier / Stylelint | `pnpm lint` | ✅ 通过（0 error / 0 warning） |
 | 生产构建 | `pnpm build` | ✅ 成功 |
 | 产物校验 | 检查 `dist/static/css` | ✅ `.search-form` / `.main-content` 规则正确输出，`:deep(` 残留 0 处 |
-| 后端 pytest | `pytest -q` | 见下 |
-| E2E | Playwright `--workers=1` | 见下 |
+| 后端 pytest | `pytest -q` | ✅ 2171 通过（595s） |
+| E2E | Playwright `--workers=1` | ✅ 51/51 通过（**2.3m**，基线 9.9m） |
+| 首屏网络（实测） | Playwright 请求打点 | 登录页 networkidle **24.0s → 1.76s**；登录后页面 **60s 超时 → 2.4s**；外部请求 **3 → 0** |
+| 产物校验 | 检查 `dist/static/css` | ✅ `.search-form` / `.main-content` 规则正确输出，`:deep(` 残留 0 处 |
+
+**提交**：`51211a0`（43 文件，+1348 / −537），已推送 `master`。
 
 ---
 
