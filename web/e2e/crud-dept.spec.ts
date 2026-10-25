@@ -39,6 +39,31 @@ test.describe.serial("部门管理 CRUD", () => {
     await expect(row.first()).toBeVisible({ timeout: 10000 });
   });
 
+  test("行内「新增」新增子部门（parentId 预置为父部门）", async ({ page }) => {
+    await gotoPage(page, "/system/dept");
+    await searchDept(page);
+    const parentRow = page.locator(".el-table__row", { hasText: deptName }).first();
+    await expect(parentRow).toBeVisible({ timeout: 10000 });
+
+    // 行内「新增」按钮（非工具栏「新增部门」）会带 parentId=父部门打开对话框
+    await parentRow.getByRole("button", { name: "新增" }).click();
+    const dialog = page.locator(".el-dialog", { hasText: "新增部门" });
+    await expect(dialog).toBeVisible();
+    const childName = `${deptName}子`;
+    await fillFormItem(dialog, "部门名称", childName);
+    await dialog.getByRole("button", { name: "确定" }).click();
+    await expect(dialog).toBeHidden({ timeout: 20000 });
+
+    // 子部门按名称搜索应命中（服务端按 name 子串过滤）
+    await page
+      .locator('.search-form input[placeholder*="请输入部门名称"]')
+      .fill(childName);
+    await page.getByRole("button", { name: "搜索" }).click();
+    await expect(
+      page.locator(".el-table__row", { hasText: childName }).first()
+    ).toBeVisible({ timeout: 10000 });
+  });
+
   test.afterAll(async () => {
     await cleanupByApi("/dept", prefix);
   });
