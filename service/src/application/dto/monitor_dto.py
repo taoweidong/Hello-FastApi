@@ -8,11 +8,15 @@ from src.application.validators import empty_str_to_none
 
 
 class OnlineLogsQueryDTO(BaseModel):
-    """在线用户列表查询请求"""
+    """在线用户列表查询请求
+
+    分页字段与全局 DTO 约定一致使用 camelCase（前端以 pageNum/pageSize 传参）；
+    早期误用 snake_case，pydantic 默认忽略未知字段导致分页参数被静默丢弃。
+    """
 
     username: str | None = None
-    page_num: int = Field(default=1, ge=1, description="页码")
-    page_size: int = Field(default=10, ge=1, le=100, description="每页条数")
+    pageNum: int = Field(default=1, ge=1, description="页码")
+    pageSize: int = Field(default=10, ge=1, le=100, description="每页条数")
 
     @field_validator("username", mode="before")
     @classmethod

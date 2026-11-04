@@ -46,17 +46,49 @@ class TestLimiterConfig:
         request.client.host = "127.0.0.1"
         assert get_real_ip(request) == "127.0.0.1"
 
-    def test_get_real_ip_with_x_forwarded_for(self):
-        """测试有 X-Forwarded-For 头时获取真实 IP。"""
+    def test_get_real_ip_distrusts_xff_by_default(self, monkeypatch):
+        """直连部署（TRUSTED_PROXIES 为空）下必须无视 X-Forwarded-For——否则伪造 XFF 即可绕过限流。"""
+        monkeypatch.setattr(_limiter_mod.settings, "TRUSTED_PROXIES", "")
         request = MagicMock()
         request.headers = {"x-forwarded-for": "203.0.113.50, 70.41.3.18"}
+        request.client = MagicMock()
+        request.client.host = "198.51.100.7"
+        assert get_real_ip(request) == "198.51.100.7"
+
+    def test_get_real_ip_trusts_xff_from_trusted_proxy(self, monkeypatch):
+        """直连对端位于可信代理列表时采信 X-Forwarded-For 首段。"""
+        monkeypatch.setattr(_limiter_mod.settings, "TRUSTED_PROXIES", "127.0.0.1,::1")
+        request = MagicMock()
+        request.headers = {"x-forwarded-for": "203.0.113.50, 70.41.3.18"}
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
         assert get_real_ip(request) == "203.0.113.50"
 
-    def test_get_real_ip_with_single_forwarded_ip(self):
-        """测试单个 X-Forwarded-For IP。"""
+    def test_get_real_ip_trusted_proxy_cidr(self, monkeypatch):
+        """可信代理支持 CIDR 网段。"""
+        monkeypatch.setattr(_limiter_mod.settings, "TRUSTED_PROXIES", "10.0.0.0/8")
         request = MagicMock()
-        request.headers = {"x-forwarded-for": "10.0.0.1"}
-        assert get_real_ip(request) == "10.0.0.1"
+        request.headers = {"x-forwarded-for": "203.0.113.50"}
+        request.client = MagicMock()
+        request.client.host = "10.1.2.3"
+        assert get_real_ip(request) == "203.0.113.50"
+
+    def test_get_real_ip_invalid_trusted_entry_ignored(self, monkeypatch):
+        """无效的 TRUSTED_PROXIES 条目被忽略（不抛异常，回退直连地址）。"""
+        monkeypatch.setattr(_limiter_mod.settings, "TRUSTED_PROXIES", "not-an-ip,127.0.0.1")
+        request = MagicMock()
+        request.headers = {"x-forwarded-for": "203.0.113.50"}
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+        assert get_real_ip(request) == "203.0.113.50"
+
+    def test_get_real_ip_no_client_info(self):
+        """request.client 缺失时回退到 slowapi 默认策略（不抛异常）。"""
+        request = MagicMock()
+        request.headers = {}
+        request.client = None
+        # get_remote_address(None client) 返回 "127.0.0.1"
+        assert get_real_ip(request) in {"127.0.0.1"}
 
 
 class TestRateLimitStorage:

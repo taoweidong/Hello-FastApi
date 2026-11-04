@@ -157,6 +157,12 @@ class MenuUpdateDTO(MenuMetaFlattenMixin, BaseModel, MenuStringValidator):
     meta: dict[str, Any] | None = Field(default=None, description="菜单元数据（嵌套载荷，字段提升到顶层同名扁平字段）")
 
 
+class MenuStatusUpdateDTO(BaseModel):
+    """菜单状态更新请求（启用/禁用开关）"""
+
+    isActive: int = Field(ge=0, le=1, description="是否启用(0-禁用, 1-启用)")
+
+
 class MenuResponseDTO(BaseModel):
     """菜单响应"""
 

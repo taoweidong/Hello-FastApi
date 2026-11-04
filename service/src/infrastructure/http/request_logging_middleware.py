@@ -1,12 +1,15 @@
 """请求日志中间件。
 
 记录所有 HTTP 请求，并对非 GET 请求自动写入 SystemLog 表作为审计日志。
+请求体落库前必须经过敏感字段脱敏（password/token 等），防止明文密码进入审计表。
 """
 
+import json
 import time
 import uuid
 from collections.abc import Callable
 from datetime import datetime, timezone
+from typing import Any
 
 from fastapi import Request, Response
 from jose import JWTError, jwt
@@ -14,6 +17,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.application.utils.user_agent import extract_user_agent_info
 from src.config.settings import settings
+from src.infrastructure.common.sanitizer import DataSanitizer
 from src.infrastructure.logging.logger import log_request, logger
 
 # 不需要写入 SystemLog 审计表的路径前缀集合
@@ -48,6 +52,30 @@ def _try_decode_user_id(authorization: str | None) -> str | None:
     except JWTError:
         pass
     return None
+
+
+def sanitize_body_for_audit(body_str: str | None) -> str | None:
+    """对请求体做敏感字段脱敏后再落审计表。
+
+    JSON 请求体按 key 脱敏（password/token/secret 等字段值替换为 ********）；
+    非 JSON 文本退化为正则脱敏（覆盖 password=xxx 等形态）；
+    二进制/乱码内容（如 multipart 上传）在 decode 阶段已替换为乱码字符，
+    正则脱敏对其无副作用。
+
+    这层脱敏不可省略：/user/create、/user/change-password、/user/{id}/reset-password
+    等路径的请求体都携带明文密码，直接落库等于把密码写进审计表。
+    """
+    if body_str is None:
+        return None
+    try:
+        data: Any = json.loads(body_str)
+    except (json.JSONDecodeError, ValueError):
+        return DataSanitizer.sanitize_string(body_str)
+    if isinstance(data, dict):
+        return json.dumps(DataSanitizer.sanitize_dict(data), ensure_ascii=False)
+    if isinstance(data, list):
+        return json.dumps(DataSanitizer.sanitize_list(data), ensure_ascii=False)
+    return body_str
 
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
@@ -105,7 +133,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         # 非 GET 请求写入 SystemLog 审计表（排除敏感/高频路径，后台异步执行，不阻塞响应）
         if request.method != "GET" and not self._should_skip_log(request.url.path):
             self._write_system_log_async(
-                request=request, response=response, client_ip=client_ip, body=body_str, duration_ms=duration_ms
+                request=request,
+                response=response,
+                client_ip=client_ip,
+                body=sanitize_body_for_audit(body_str),
+                duration_ms=duration_ms,
             )
 
         return response

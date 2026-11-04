@@ -4,6 +4,7 @@
 供监控页面展示。对标 RuoYi 服务器监控与缓存监控。
 """
 
+import asyncio
 import os
 import platform
 import time
@@ -27,6 +28,11 @@ from src.config.settings import settings
 from src.domain.services.cache_port import CachePort
 
 _GB = 1024**3
+
+
+def _process_cpu_percent() -> float:
+    """采集当前进程 CPU 使用率（含 0.1s 阻塞采样，仅供 to_thread 调用）。"""
+    return psutil.Process(os.getpid()).cpu_percent(interval=0.1)
 
 
 def _format_gb(num_bytes: int | float) -> str:
@@ -66,7 +72,7 @@ class MonitorService:
         """获取在线用户会话列表（支持用户名过滤与分页）。
 
         Args:
-            query: 查询参数（username/page_num/page_size）
+            query: 查询参数（username/pageNum/pageSize）
 
         Returns:
             (当前页会话列表, 总条数)；缓存未注入或不可用时降级返回空列表
@@ -80,8 +86,8 @@ class MonitorService:
         # 按登录时间倒序排列
         sessions.sort(key=lambda item: str(item.get("loginTime") or ""), reverse=True)
         total = len(sessions)
-        start = (query.page_num - 1) * query.page_size
-        page_items = sessions[start : start + query.page_size]
+        start = (query.pageNum - 1) * query.pageSize
+        page_items = sessions[start : start + query.pageSize]
         return page_items, total
 
     async def force_offline(self, session_key: str) -> bool:
@@ -114,9 +120,15 @@ class MonitorService:
         return True
 
     async def get_server_info(self) -> ServerInfoDTO:
-        """采集服务器资源信息（CPU/内存/磁盘/系统/进程）。"""
+        """采集服务器资源信息（CPU/内存/磁盘/系统/进程）。
+
+        psutil 的 CPU 采样（interval=0.1）是同步阻塞调用，直接放在事件循环里
+        会让整个服务停顿约 0.2s，必须放入线程池执行。
+        """
         # CPU：采样间隔取较小值，兼顾准确性与接口响应速度
-        cpu_percent = psutil.cpu_percent(interval=0.1)
+        cpu_percent, process_cpu_percent = await asyncio.gather(
+            asyncio.to_thread(psutil.cpu_percent, 0.1), asyncio.to_thread(_process_cpu_percent)
+        )
         core_count = psutil.cpu_count(logical=True) or 1
 
         # 内存
@@ -140,7 +152,7 @@ class MonitorService:
         process_info = ProcessInfoDTO(
             pid=os.getpid(),
             memoryUsed=_format_gb(process.memory_info().rss),
-            cpuPercent=process.cpu_percent(interval=0.1),
+            cpuPercent=process_cpu_percent,
             runningTime=_format_duration(time.time() - process.create_time()),
         )
 

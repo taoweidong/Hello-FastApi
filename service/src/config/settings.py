@@ -92,7 +92,8 @@ class Settings(BaseSettings):
     RATE_LIMIT_TIMES: int = Field(default=100, ge=1)
     RATE_LIMIT_SECONDS: int = Field(default=60, ge=1)
     RATE_LIMIT_STORAGE: str = "redis"  # redis 或 memory
-    RATE_LIMIT_WHITELIST_IPS: str = ""  # 逗号分隔的 IP 白名单
+    LOGIN_RATE_LIMIT: str = "20/minute"  # 登录/注册专属限流（防爆破），testing 环境应放宽
+    TRUSTED_PROXIES: str = ""  # 逗号分隔的可信反向代理 IP/CIDR；为空=直连部署，不信任 X-Forwarded-For
 
     # ============ 日志配置 ============
     LOG_LEVEL: str = "INFO"
@@ -224,7 +225,7 @@ def get_settings(env: str | None = None) -> Settings:
     # 修复前表现为：开发环境 REDIS_URL 取默认的 redis://localhost:6379/0，
     # Windows 下 localhost 优先解析到 IPv6 ::1，而本机 Redis 只监听 IPv4，
     # 异步连接必然超时 → 缓存永久降级，单次请求被拖慢到 3s 量级。
-    s = Settings(_env_file=_ENV_FILES[env], APP_ENV=env, **_ENV_OVERRIDES[env])  # type: ignore[call-arg]
+    s = Settings(_env_file=_ENV_FILES[env], APP_ENV=env, **_ENV_OVERRIDES[env])  # type: ignore[call-arg,arg-type]
     _ensure_production_secrets(s)
     return s
 

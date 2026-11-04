@@ -15,6 +15,7 @@ from src.api.v1 import system_router
 from src.config.settings import UPLOAD_DIR, settings
 from src.infrastructure.http import (
     IPFilterMiddleware,
+    LoginRateLimitMiddleware,
     RequestLoggingMiddleware,
     get_ip_filter_cache,
     register_exception_handlers,
@@ -32,13 +33,15 @@ def create_app(*, lifespan_override: LifespanFactory | None = None) -> FastAPI:
         lifespan_override: 自定义生命周期；默认执行数据库初始化与关闭。
     """
     life = lifespan_override if lifespan_override is not None else application_lifespan
+    # 生产环境不暴露 API 文档与 OpenAPI schema（未认证访问者可借此获取全部路由与 DTO 结构）
+    expose_docs = not settings.is_production
     app = FastAPI(
         title=settings.APP_NAME,
         description="FastAPI + DDD + RBAC API Service",
         version=settings.API_VERSION,
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
+        docs_url="/docs" if expose_docs else None,
+        redoc_url="/redoc" if expose_docs else None,
+        openapi_url="/openapi.json" if expose_docs else None,
         lifespan=life,
     )
 
@@ -51,6 +54,8 @@ def create_app(*, lifespan_override: LifespanFactory | None = None) -> FastAPI:
     )
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(IPFilterMiddleware)
+    # 登录/注册专属限流（防爆破），在 SlowAPI 全局限流之外独立生效
+    app.add_middleware(LoginRateLimitMiddleware)
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]

@@ -24,7 +24,7 @@ class TestPermissionCheckFlow:
             json={
                 "username": "perm_victim",
                 "password": "PermVictim123!",
-                "email": "victim@perm.test",
+                "email": "victim@perm.example",
                 "isActive": True,
             },
         )
@@ -43,7 +43,7 @@ class TestPermissionCheckFlow:
             json={
                 "username": "perm_victim2",
                 "password": "PermVictim123!",
-                "email": "victim2@perm.test",
+                "email": "victim2@perm.example",
                 "isActive": True,
             },
         )
@@ -73,7 +73,7 @@ class TestPermissionCheckFlow:
             json={
                 "username": "perm_fail_create",
                 "password": "PermFail123!",
-                "email": "fail@perm.test",
+                "email": "fail@perm.example",
                 "isActive": True,
             },
         )

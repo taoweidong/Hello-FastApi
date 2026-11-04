@@ -104,7 +104,7 @@ class DataSanitizer:
         return any(pattern.search(key) for pattern in SENSITIVE_PATTERNS)
 
     @staticmethod
-    def _mask_value(value: Any, mask_char: str = "*", show_length: bool = False) -> str:
+    def _mask_value(value: Any, mask_char: str = "*", show_length: bool = False) -> str | None:
         """对值进行脱敏处理。
 
         Args:
@@ -113,7 +113,7 @@ class DataSanitizer:
             show_length: 是否显示原始长度
 
         Returns:
-            脱敏后的值
+            脱敏后的值；入参为 None 时返回 None
         """
         if value is None:
             return None

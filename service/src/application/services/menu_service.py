@@ -10,15 +10,22 @@ from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
+from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.services.cache_port import CachePort
 
 
 class MenuService:
     """菜单领域操作的应用服务。"""
 
-    def __init__(self, menu_repo: MenuRepositoryInterface, cache_service: CachePort | None = None):
+    def __init__(
+        self,
+        menu_repo: MenuRepositoryInterface,
+        cache_service: CachePort | None = None,
+        role_repo: RoleRepositoryInterface | None = None,
+    ):
         self.menu_repo = menu_repo
         self.cache_service = cache_service
+        self.role_repo = role_repo
 
     async def _get_all_menus(self) -> list[MenuEntity]:
         """获取所有菜单（带缓存）。"""
@@ -51,10 +58,19 @@ class MenuService:
         all_menus = await self._get_all_menus()
         return [self._to_response(m) for m in all_menus]
 
-    async def get_user_menus(self, user_id: str, user_roles: list | None = None) -> list[dict]:
-        """获取用户可访问的菜单（根据角色菜单过滤）。"""
-        all_menus = await self._get_all_menus()
-        return self._build_tree(all_menus, None)
+    async def get_user_menus(self, user_id: str, is_superuser: bool = False) -> list[dict]:
+        """获取用户可访问的菜单（按角色菜单过滤后建树）。
+
+        安全语义：非超管只返回其角色关联的菜单，防止任何登录用户通过该接口
+        枚举全系统菜单结构。超管返回全部菜单。
+        role_repo 未注入时退化为返回全部菜单（仅测试/降级场景）。
+        """
+        if is_superuser or self.role_repo is None:
+            all_menus = await self._get_all_menus()
+            return self._build_tree(all_menus, None)
+
+        menus = await self.role_repo.get_user_all_menus(user_id)
+        return self._build_tree(menus, None)
 
     async def create_menu(self, dto: MenuCreateDTO) -> MenuResponseDTO:
         """创建菜单（同时创建MenuMeta）。"""

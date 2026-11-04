@@ -11,12 +11,13 @@ import redis.asyncio as redis_async
 from classy_fastapi import Routable, get, post
 from fastapi import Depends
 
-from src.api.common import error_response, list_response, success_response
+from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission
 from src.api.dependencies.monitor_service import get_monitor_service, get_redis_or_none
 from src.application.dto.monitor_dto import CacheInfoDTO, ForceOfflineDTO, OnlineLogsQueryDTO, ServerInfoDTO
 from src.application.services.monitor_service import MonitorService
+from src.domain.exceptions import BusinessError
 
 
 class MonitorRouter(Routable):
@@ -52,7 +53,7 @@ class MonitorRouter(Routable):
     ) -> dict:
         """获取在线用户会话列表（Redis 实时数据，按用户名过滤 + 分页）。"""
         list_data, total = await service.get_online_logs(query)
-        return list_response(list_data=list_data, total=total, page_size=query.page_size, current_page=query.page_num)
+        return list_response(list_data=list_data, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/online-logs/force-offline", response_model=ApiResponse[None])
     async def force_offline(
@@ -64,7 +65,9 @@ class MonitorRouter(Routable):
         """强制下线指定用户会话（删除 Redis 会话并将 Token 加入黑名单）。"""
         success = await service.force_offline(dto.id)
         if not success:
-            return error_response(message="强制下线失败：缓存服务不可用", code=500)
+            # 走全局异常体系（HTTP 400），而非 200 + body code=500：
+            # 前端拦截器与 HTTP 语义均可正确感知失败
+            raise BusinessError("强制下线失败：缓存服务不可用")
         return success_response(message="强制下线成功")
 
     @get("/get-map-info", response_model=ApiResponse[list[dict]])

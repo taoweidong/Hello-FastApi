@@ -369,3 +369,109 @@ class TestRoleService:
         dto = ChangeDataScopeDTO(dataScope=DataScope.ALL)
         with pytest.raises(NotFoundError):
             await role_service.change_data_scope("non-existent-id", dto)
+
+
+@pytest.mark.unit
+class TestRoleServiceCacheInvalidation:
+    """角色权限变更后必须失效相关用户的权限缓存（防越权窗口）。"""
+
+    @pytest.fixture
+    def mock_role_repo(self):
+        repo = AsyncMock()
+        repo.get_by_id = AsyncMock(return_value=None)
+        repo.get_user_ids_by_role = AsyncMock(return_value=[])
+        repo.delete = AsyncMock(return_value=False)
+        repo.assign_menus_to_role = AsyncMock()
+        repo.assign_depts_to_role = AsyncMock()
+        repo.update = AsyncMock()
+        repo.assign_role_to_user = AsyncMock(return_value=True)
+        repo.remove_role_from_user = AsyncMock(return_value=True)
+        repo.get_role_menu_ids = AsyncMock(return_value=[])
+        return repo
+
+    @pytest.fixture
+    def mock_cache(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def role_service(self, mock_role_repo, mock_cache):
+        return RoleService(role_repo=mock_role_repo, cache_service=mock_cache)
+
+    @pytest.mark.asyncio
+    async def test_assign_menus_invalidates_role_users(self, role_service, mock_role_repo, mock_cache):
+        """分配菜单后失效该角色下所有用户的缓存。"""
+        role = RoleEntity(id="role-1", name="测试", code="test")
+        mock_role_repo.get_by_id = AsyncMock(return_value=role)
+        mock_role_repo.get_user_ids_by_role = AsyncMock(return_value=["u1", "u2"])
+
+        await role_service.assign_menus("role-1", ["m1"])
+
+        mock_cache.invalidate_users_batch.assert_awaited_once_with(["u1", "u2"])
+
+    @pytest.mark.asyncio
+    async def test_change_data_scope_invalidates_role_users(self, role_service, mock_role_repo, mock_cache):
+        """修改数据权限后失效该角色下所有用户的缓存。"""
+        role = RoleEntity(id="role-1", name="测试", code="test")
+        mock_role_repo.get_by_id = AsyncMock(return_value=role)
+        mock_role_repo.get_user_ids_by_role = AsyncMock(return_value=["u1"])
+
+        await role_service.change_data_scope("role-1", ChangeDataScopeDTO(dataScope=DataScope.ALL))
+
+        mock_cache.invalidate_users_batch.assert_awaited_once_with(["u1"])
+
+    @pytest.mark.asyncio
+    async def test_update_role_invalidates_role_users(self, role_service, mock_role_repo, mock_cache):
+        """更新角色（菜单/状态）后失效该角色下所有用户的缓存。"""
+        role = RoleEntity(id="role-1", name="旧名", code="test")
+        mock_role_repo.get_by_id = AsyncMock(side_effect=[role, role])
+        mock_role_repo.get_user_ids_by_role = AsyncMock(return_value=["u1", "u2", "u3"])
+
+        await role_service.update_role("role-1", RoleUpdateDTO(isActive=0))
+
+        mock_cache.invalidate_users_batch.assert_awaited_once_with(["u1", "u2", "u3"])
+
+    @pytest.mark.asyncio
+    async def test_delete_role_invalidates_users_before_delete(self, role_service, mock_role_repo, mock_cache):
+        """删除角色前先取用户列表，删除后失效其缓存。"""
+        mock_role_repo.delete = AsyncMock(return_value=True)
+        mock_role_repo.get_user_ids_by_role = AsyncMock(return_value=["u1"])
+
+        await role_service.delete_role("role-1")
+
+        mock_cache.invalidate_users_batch.assert_awaited_once_with(["u1"])
+
+    @pytest.mark.asyncio
+    async def test_assign_role_to_user_invalidates_target_user(self, role_service, mock_role_repo, mock_cache):
+        """给用户分配角色后失效该用户缓存。"""
+        mock_role_repo.get_by_id = AsyncMock(return_value=RoleEntity(id="role-1", name="r", code="r"))
+
+        await role_service.assign_role_to_user("user-9", "role-1")
+
+        mock_cache.invalidate_users_batch.assert_awaited_once_with(["user-9"])
+
+    @pytest.mark.asyncio
+    async def test_remove_role_from_user_invalidates_target_user(self, role_service, mock_role_repo, mock_cache):
+        """移除用户角色后失效该用户缓存。"""
+        await role_service.remove_role_from_user("user-9", "role-1")
+
+        mock_cache.invalidate_users_batch.assert_awaited_once_with(["user-9"])
+
+    @pytest.mark.asyncio
+    async def test_no_cache_service_skips_invalidation(self, mock_role_repo):
+        """未注入缓存服务时（降级）不报错。"""
+        svc = RoleService(role_repo=mock_role_repo, cache_service=None)
+        mock_role_repo.get_by_id = AsyncMock(return_value=RoleEntity(id="role-1", name="r", code="r"))
+
+        result = await svc.assign_menus("role-1", ["m1"])
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_repo_query_failure_does_not_block_business(self, role_service, mock_role_repo, mock_cache):
+        """用户列表查询失败仅跳过失效，不阻断业务操作（TTL 到期自然一致）。"""
+        role = RoleEntity(id="role-1", name="r", code="r")
+        mock_role_repo.get_by_id = AsyncMock(return_value=role)
+        mock_role_repo.get_user_ids_by_role = AsyncMock(side_effect=RuntimeError("db error"))
+
+        result = await role_service.assign_menus("role-1", ["m1"])
+        assert result is True
+        mock_cache.invalidate_users_batch.assert_not_awaited()

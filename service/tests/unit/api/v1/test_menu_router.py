@@ -94,6 +94,20 @@ class TestMenuRouter:
         assert resp.status_code == 200
         assert resp.json()["message"] == "更新成功"
 
+    def test_update_menu_status(self, client, mock_menu_service):
+        """前端菜单启用开关调用 PUT /{id}/status，路由必须存在且透传 isActive。"""
+        resp = client.put("/api/system/menu/1/status", json={"isActive": 0}, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["code"] == 0
+        # 校验服务层收到仅含 isActive 的更新 DTO
+        called_dto = mock_menu_service.update_menu.await_args.args[1]
+        assert called_dto.isActive == 0
+
+    def test_update_menu_status_rejects_invalid_value(self, client):
+        """isActive 超出 0/1 值域必须 422 拒绝。"""
+        resp = client.put("/api/system/menu/1/status", json={"isActive": 999}, headers=self.auth)
+        assert resp.status_code == 422
+
     def test_delete_menu(self, client):
         resp = client.delete("/api/system/menu/1", headers=self.auth)
         assert resp.status_code == 200

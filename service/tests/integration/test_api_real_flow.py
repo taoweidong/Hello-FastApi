@@ -42,7 +42,7 @@ class TestAuthRealFlow:
                 "username": "flow_registered",
                 "password": "RegPass123!",
                 "nickname": "注册用户",
-                "email": "reg@flow.test",
+                "email": "reg@flow.example",
             },
         )
         assert r.status_code == 200
@@ -63,7 +63,7 @@ class TestRbacRealFlow:
                 "username": "victim_user",
                 "password": "VictimPass123!",
                 "nickname": "待删",
-                "email": "victim@flow.test",
+                "email": "victim@flow.example",
                 "isActive": True,
             },
         )
@@ -94,7 +94,7 @@ class TestUserManagementRealFlow:
                 "username": "crud_user",
                 "password": "CrudPass123!",
                 "nickname": "CRUD",
-                "email": "crud@flow.test",
+                "email": "crud@flow.example",
                 "isActive": True,
             },
         )

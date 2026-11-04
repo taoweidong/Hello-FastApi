@@ -1,5 +1,7 @@
 """应用层 - 角色服务。"""
 
+from loguru import logger
+
 from src.application.dto.role_dto import (
     ChangeDataScopeDTO,
     RoleCreateDTO,
@@ -12,13 +14,15 @@ from src.domain.enums import DataScope
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
+from src.domain.services.cache_port import CachePort
 
 
 class RoleService:
     """角色操作的应用服务。"""
 
-    def __init__(self, role_repo: RoleRepositoryInterface):
+    def __init__(self, role_repo: RoleRepositoryInterface, cache_service: CachePort | None = None):
         self.role_repo = role_repo
+        self.cache_service = cache_service
 
     async def create_role(self, dto: RoleCreateDTO) -> RoleResponseDTO:
         """创建新角色，可选分配菜单。"""
@@ -95,6 +99,9 @@ class RoleService:
         if dto.deptIds is not None:
             await self.role_repo.assign_depts_to_role(role_id, dto.deptIds)
 
+        # 菜单/数据权限/状态变更都会影响该角色下用户的已缓存权限
+        await self._invalidate_role_users_cache(role_id)
+
         updated_role = await self.role_repo.get_by_id(role_id)
         if updated_role is None:
             raise NotFoundError(EM.role_not_found_by_id(role_id))
@@ -102,8 +109,11 @@ class RoleService:
 
     async def delete_role(self, role_id: str) -> bool:
         """删除角色。"""
+        # 删除前先取持有该角色的用户，删除后失效其权限缓存
+        user_ids = await self.role_repo.get_user_ids_by_role(role_id)
         if not await self.role_repo.delete(role_id):
             raise NotFoundError(EM.role_not_found_by_id(role_id))
+        await self._invalidate_users_cache(user_ids)
         return True
 
     async def assign_menus(self, role_id: str, menu_ids: list[str]) -> bool:
@@ -113,6 +123,7 @@ class RoleService:
             raise NotFoundError(EM.role_not_found_by_id(role_id))
 
         await self.role_repo.assign_menus_to_role(role_id, menu_ids)
+        await self._invalidate_role_users_cache(role_id)
         return True
 
     async def change_data_scope(self, role_id: str, dto: ChangeDataScopeDTO) -> bool:
@@ -127,6 +138,7 @@ class RoleService:
         # 仅自定义数据权限时关联部门，其余范围清空历史关联
         dept_ids = dto.deptIds if dto.dataScope == DataScope.CUSTOM else []
         await self.role_repo.assign_depts_to_role(role_id, dept_ids)
+        await self._invalidate_role_users_cache(role_id)
         return True
 
     async def assign_role_to_user(self, user_id: str, role_id: str) -> bool:
@@ -137,12 +149,14 @@ class RoleService:
 
         if not await self.role_repo.assign_role_to_user(user_id, role_id):
             raise ConflictError(EM.ROLE_ALREADY_ASSIGNED)
+        await self._invalidate_users_cache([user_id])
         return True
 
     async def remove_role_from_user(self, user_id: str, role_id: str) -> bool:
         """移除用户的角色。"""
         if not await self.role_repo.remove_role_from_user(user_id, role_id):
             raise NotFoundError(EM.ROLE_ASSIGNMENT_NOT_FOUND)
+        await self._invalidate_users_cache([user_id])
         return True
 
     async def get_user_roles(self, user_id: str) -> list[RoleResponseDTO]:
@@ -154,6 +168,27 @@ class RoleService:
         """获取所有角色简单列表，供 auth_router 使用。"""
         roles = await self.role_repo.get_all(page_num=1, page_size=1000)
         return [{"id": r.id, "name": r.name} for r in roles]
+
+    async def _invalidate_role_users_cache(self, role_id: str) -> None:
+        """使持有该角色的所有用户的权限/信息缓存失效。
+
+        角色的菜单权限、数据范围、启停状态变更都会改变其用户的实际权限，
+        而用户权限缓存 TTL 为 300s，不主动失效会留下越权窗口。
+        仓储查询失败仅告警（缓存在 TTL 到期后自然一致），不阻断业务操作。
+        """
+        if self.cache_service is None:
+            return
+        try:
+            user_ids = await self.role_repo.get_user_ids_by_role(role_id)
+        except Exception:
+            logger.warning(f"查询角色下的用户失败，跳过权限缓存失效：role_id={role_id}", exc_info=True)
+            return
+        await self._invalidate_users_cache(user_ids)
+
+    async def _invalidate_users_cache(self, user_ids: list[str]) -> None:
+        """批量使多个用户的权限/信息缓存失效。"""
+        if self.cache_service is not None and user_ids:
+            await self.cache_service.invalidate_users_batch(user_ids)
 
     async def _role_to_response(self, role: RoleEntity) -> RoleResponseDTO:
         """将角色实体转换为响应DTO。"""

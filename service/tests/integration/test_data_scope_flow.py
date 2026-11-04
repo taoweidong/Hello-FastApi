@@ -46,7 +46,7 @@ async def _setup_scope_env(
     def _make_user(username: str, dept_id: str, password: str = "ScopeUserPass123") -> User:
         return User(
             username=username,
-            email=f"{username}@scope.test",
+            email=f"{username}@scope.example",
             password=pwd(password),
             nickname=username,
             is_active=True,

@@ -13,7 +13,7 @@ from fastapi import Depends
 from src.api.common import success_response
 from src.api.common.response_schemas import ApiResponse
 from src.api.dependencies import get_current_active_user, get_menu_service, require_permission
-from src.application.dto.menu_dto import MenuCreateDTO, MenuUpdateDTO
+from src.application.dto.menu_dto import MenuCreateDTO, MenuStatusUpdateDTO, MenuUpdateDTO
 from src.application.services.menu_service import MenuService
 from src.domain.entities.user import UserEntity
 
@@ -47,8 +47,8 @@ class MenuRouter(Routable):
         menu_service: MenuService = Depends(get_menu_service),
         current_user: UserEntity = Depends(get_current_active_user),
     ) -> dict:
-        """获取当前用户可访问的菜单。"""
-        menus = await menu_service.get_user_menus(current_user.id)
+        """获取当前用户可访问的菜单（超管返回全部，普通用户按角色过滤）。"""
+        menus = await menu_service.get_user_menus(current_user.id, is_superuser=current_user.is_superuser_user)
         return success_response(data=menus)
 
     @post("/create", response_model=ApiResponse[dict])
@@ -73,6 +73,18 @@ class MenuRouter(Routable):
         """更新菜单（含元数据）。"""
         menu = await menu_service.update_menu(menu_id, dto)
         return success_response(data=menu.model_dump(), message="更新成功")
+
+    @put("/{menu_id}/status", response_model=ApiResponse[dict])
+    async def update_menu_status(
+        self,
+        menu_id: str,
+        dto: MenuStatusUpdateDTO,
+        menu_service: MenuService = Depends(get_menu_service),
+        current_user: UserEntity = Depends(require_permission("menu:edit")),
+    ) -> dict:
+        """更新菜单启用状态（前端菜单管理页的启用开关）。"""
+        menu = await menu_service.update_menu(menu_id, MenuUpdateDTO(isActive=dto.isActive))
+        return success_response(data=menu.model_dump(), message="状态更新成功")
 
     @delete("/{menu_id}", response_model=ApiResponse[None])
     async def delete_menu(

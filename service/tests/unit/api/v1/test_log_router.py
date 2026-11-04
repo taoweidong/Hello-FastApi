@@ -30,6 +30,7 @@ def _make_log_entity(log_id: str, **kw):
         "response_code": 200,
         "response_result": "ok",
         "status_code": 200,
+        "description": "POST /login - 45ms",
     }
     defaults.update(kw)
     return type("LogEntity", (), defaults)()

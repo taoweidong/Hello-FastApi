@@ -24,7 +24,7 @@ class TestUserRoleAssignmentFlow:
             json={
                 "username": "role_assign_user",
                 "password": "RoleAssign123!",
-                "email": "assign@flow.test",
+                "email": "assign@flow.example",
                 "isActive": True,
             },
         )
@@ -45,7 +45,7 @@ class TestUserRoleAssignmentFlow:
             json={
                 "username": "role_list_user",
                 "password": "RoleList123!",
-                "email": "rolelist@flow.test",
+                "email": "rolelist@flow.example",
                 "isActive": True,
             },
         )
@@ -89,7 +89,7 @@ class TestUserRoleAssignmentFlow:
             json={
                 "username": "multi_role_user",
                 "password": "MultiRole123!",
-                "email": "multi@flow.test",
+                "email": "multi@flow.example",
                 "isActive": True,
             },
         )

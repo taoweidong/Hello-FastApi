@@ -118,7 +118,7 @@ class TestMonitorRouter:
         assert self._fake_cache.blacklisted == ["hash1"]
 
     def test_force_offline_without_cache_degraded(self, app, mock_user_entity):
-        """缓存服务未注入时强制下线返回 500 失败提示。"""
+        """缓存服务未注入时强制下线走全局异常体系返回 400（HTTP 语义正确）。"""
         from src.api.dependencies import get_current_active_user
         from src.api.dependencies.monitor_service import get_monitor_service
         from src.application.services.monitor_service import MonitorService
@@ -127,8 +127,7 @@ class TestMonitorRouter:
         app.dependency_overrides[get_monitor_service] = lambda: MonitorService()
         client = TestClient(app, raise_server_exceptions=False)
         resp = client.post("/api/system/online-logs/force-offline", json={"id": "hash1"}, headers=self.auth)
-        assert resp.status_code == 200
-        assert resp.json()["code"] == 500
+        assert resp.status_code == 400
         assert "缓存服务不可用" in resp.json()["message"]
 
     def test_get_map_info(self, client):

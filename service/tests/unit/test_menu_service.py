@@ -208,12 +208,12 @@ class TestMenuService:
 
     @pytest.mark.asyncio
     async def test_get_user_menus(self, menu_service, mock_menu_repo):
-        """测试获取用户菜单。"""
+        """测试获取用户菜单（role_repo 未注入时退化为全量菜单）。"""
         meta = MenuMetaEntity(id="m1", title="菜单")
         menus = [MenuEntity(id="1", name="test", menu_type=0, rank=0, meta=meta)]
         mock_menu_repo.get_all = AsyncMock(return_value=menus)
 
-        result = await menu_service.get_user_menus("user-1", [])
+        result = await menu_service.get_user_menus("user-1")
         assert len(result) == 1
 
     @pytest.mark.asyncio

@@ -79,6 +79,11 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def get_user_ids_by_role(self, role_id: str) -> list[str]:
+        """获取持有指定角色的所有用户 ID（用于角色权限变更后批量失效用户缓存）。"""
+        ...
+
+    @abstractmethod
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户批量分配角色（先清除旧角色再分配新的）。"""
         ...

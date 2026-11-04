@@ -11,6 +11,7 @@
 """
 
 import functools
+import ipaddress
 import logging
 from collections.abc import Callable
 
@@ -94,15 +95,49 @@ _slowapi_middleware._check_limits = _patched_check_limits
 
 
 def get_real_ip(request: Request) -> str:
-    """获取真实客户端 IP。
+    """获取真实客户端 IP（作为限流 key）。
 
-    优先从 X-Forwarded-For 获取真实IP，否则使用远程地址。
-    适用于反向代理场景。
+    仅当直连对端（request.client.host，不可伪造）位于可信代理列表时才采信
+    X-Forwarded-For。直连部署（TRUSTED_PROXIES 为空，默认）下 XFF 可被任意
+    伪造——盲信它等于给每个请求一个独立限流桶，全局限流形同虚设。
+
+    本函数绝不抛异常：key_func 异常会触发限流 fail-open（补丁 3 放行），
+    因此所有可预见异常都在此收敛为可用的字符串 key。
+
+    配置示例（nginx 反代在本机）：TRUSTED_PROXIES=127.0.0.1,::1,10.0.0.0/8
     """
-    forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    return get_remote_address(request)
+    try:
+        client_host = request.client.host if request.client else None
+    except AttributeError:
+        client_host = None
+    if client_host and _is_trusted_proxy(client_host):
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+    try:
+        return get_remote_address(request)
+    except Exception:
+        # request.client 为 None 等极端场景：退化为固定 key（共享限流桶，安全侧）
+        return "127.0.0.1"
+
+
+def _is_trusted_proxy(client_host: str) -> bool:
+    """判断直连对端是否为配置的可信反向代理。"""
+    raw = getattr(settings, "TRUSTED_PROXIES", "") or ""
+    try:
+        client_ip = ipaddress.ip_address(client_host)
+    except ValueError:
+        return False
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        try:
+            if client_ip in ipaddress.ip_network(part, strict=False):
+                return True
+        except ValueError:
+            _logger.warning("忽略无效的 TRUSTED_PROXIES 条目: %s", part)
+    return False
 
 
 def _get_storage_uri() -> str:
@@ -144,13 +179,9 @@ async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) 
 
     当请求触发限流时返回统一格式的 429 响应。
     """
+    retry_after = int(str(exc).split(":")[-1].strip()) if ":" in str(exc) else 60
     return JSONResponse(
         status_code=429,
-        content={
-            "code": 429,
-            "msg": "请求过于频繁，请稍后再试",
-            "data": None,
-            "retry_after": int(str(exc).split(":")[-1].strip()) if ":" in str(exc) else 60,
-        },
-        headers={"Retry-After": "60"},
+        content={"code": 429, "msg": "请求过于频繁，请稍后再试", "data": None, "retry_after": retry_after},
+        headers={"Retry-After": str(retry_after)},
     )

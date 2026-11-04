@@ -95,6 +95,12 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
         result = await self.session.exec(stmt)
         return [self._to_domain(m) for m in result.all()]
 
+    async def get_user_ids_by_role(self, role_id: str) -> list[str]:
+        """获取持有指定角色的所有用户 ID（用于角色权限变更后批量失效用户缓存）。"""
+        stmt = select(UserRole.userinfo_id).where(UserRole.userrole_id == role_id)
+        result = await self.session.exec(stmt)
+        return list(result.all())
+
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户批量分配角色（先清除旧角色再分配新的）。"""
         stmt = sa_delete(UserRole).where(UserRole.userinfo_id == user_id)

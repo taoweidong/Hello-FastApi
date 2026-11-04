@@ -26,18 +26,6 @@ class IPFilterCache:
         """设置 FastAPI 应用实例引用，供后续 refresh 使用。"""
         self._app = app
 
-    def _ensure_cache_service(self) -> CacheService:
-        """确保 CacheService 实例可用。"""
-        if self._cache_service is None:
-            try:
-                import asyncio
-
-                redis_client = asyncio.get_event_loop().run_until_complete(get_redis())
-                self._cache_service = CacheService(redis_client)
-            except Exception:
-                self._cache_service = CacheService(None)
-        return self._cache_service
-
     async def _get_cache_service(self) -> CacheService:
         """异步获取 CacheService 实例。"""
         if self._cache_service is None:

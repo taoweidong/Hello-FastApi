@@ -204,12 +204,12 @@ class TestGetOnlineLogs:
         service = MonitorService(cache_service=cache)
 
         # 无过滤：按登录时间倒序
-        items, total = await service.get_online_logs(OnlineLogsQueryDTO(page_size=2))
+        items, total = await service.get_online_logs(OnlineLogsQueryDTO(pageSize=2))
         assert total == 3
         assert [item["id"] for item in items] == ["h2", "h1"]
 
         # 用户名过滤（忽略大小写）、分页取第二页
-        items, total = await service.get_online_logs(OnlineLogsQueryDTO(username="admin", page_num=1, page_size=10))
+        items, total = await service.get_online_logs(OnlineLogsQueryDTO(username="admin", pageNum=1, pageSize=10))
         assert total == 2
         assert sorted(item["username"] for item in items) == ["Admin", "admin"]
 

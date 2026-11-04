@@ -397,10 +397,15 @@ class TestBatchDeleteDTO:
         dto = BatchDeleteDTO(ids=["1", "2", "3"])
         assert dto.ids == ["1", "2", "3"]
 
-    def test_empty_ids(self):
-        """测试空 ID 列表。"""
+    def test_empty_ids_allowed(self):
+        """空 ID 列表保留历史契约（仓储层对空列表安全 no-op）。"""
         dto = BatchDeleteDTO(ids=[])
         assert dto.ids == []
+
+    def test_oversize_ids_rejected(self):
+        """超过 1000 个 ID 的批量删除必须被拒绝（防超大请求）。"""
+        with pytest.raises(ValidationError):
+            BatchDeleteDTO(ids=[str(i) for i in range(1001)])
 
     def test_missing_ids(self):
         """测试缺少 ID 列表。"""

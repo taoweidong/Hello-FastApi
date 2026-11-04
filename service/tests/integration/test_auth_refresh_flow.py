@@ -86,7 +86,7 @@ class TestAuthRefreshFlow:
                 "username": "flow_auth_reg",
                 "password": "FlowAuthReg123!",
                 "nickname": "认证流程用户",
-                "email": "authreg@flow.test",
+                "email": "authreg@flow.example",
             },
         )
         assert r.status_code == 200

@@ -364,3 +364,67 @@ class TestWriteSystemLogAsync:
                 request=request, response=response, client_ip="127.0.0.1", body='{"name": "test"}', duration_ms=50.0
             )
         mock_task.assert_called_once()
+
+
+@pytest.mark.unit
+class TestSanitizeBodyForAudit:
+    """请求体落库前的脱敏逻辑测试（防明文密码进入审计表）。"""
+
+    def test_none_body(self):
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        assert sanitize_body_for_audit(None) is None
+
+    def test_json_password_masked(self):
+        """JSON 请求体中的 password 字段值必须被掩码。"""
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        body = '{"username":"admin","password":"SuperSecret123"}'
+        sanitized = sanitize_body_for_audit(body)
+        assert "SuperSecret123" not in sanitized
+        assert '"username"' in sanitized
+        assert "admin" in sanitized
+
+    def test_json_nested_and_multiple_sensitive_keys(self):
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        body = '{"oldPassword":"A1","newPassword":"B2","confirmPassword":"B2","name":"x"}'
+        sanitized = sanitize_body_for_audit(body)
+        assert "A1" not in sanitized
+        assert "B2" not in sanitized
+        assert '"name"' in sanitized
+
+    def test_json_token_and_secret_masked(self):
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        body = '{"refreshToken":"tok123","apiKey":"key456","remark":"ok"}'
+        sanitized = sanitize_body_for_audit(body)
+        assert "tok123" not in sanitized
+        assert "key456" not in sanitized
+
+    def test_non_json_falls_back_to_regex_masking(self):
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        body = "password=MyPlainPwd&user=1"
+        sanitized = sanitize_body_for_audit(body)
+        assert "MyPlainPwd" not in sanitized
+
+    def test_non_sensitive_json_untouched(self):
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        body = '{"title":"公告","isActive":1}'
+        assert sanitize_body_for_audit(body) == '{"title": "公告", "isActive": 1}'
+
+    def test_json_array_masked(self):
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        body = '[{"password":"p1"},{"password":"p2"}]'
+        sanitized = sanitize_body_for_audit(body)
+        assert "p1" not in sanitized
+        assert "p2" not in sanitized
+
+    def test_binary_garbage_does_not_crash(self):
+        from src.infrastructure.http.request_logging_middleware import sanitize_body_for_audit
+
+        body = "\ufffd\ufffd\ufffd binary-ish content"
+        assert sanitize_body_for_audit(body) is not None

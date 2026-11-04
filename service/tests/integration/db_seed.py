@@ -80,7 +80,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     # 2. 用户
     user_super = User(
         username=out.super_username,
-        email="flow_super@seed.test",
+        email="flow_super@seed.example",
         password=pwd(out.super_password),
         nickname="流程超级管理员",
         is_active=True,
@@ -88,7 +88,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     )
     user_op = User(
         username=out.operator_username,
-        email="flow_operator@seed.test",
+        email="flow_operator@seed.example",
         password=pwd(out.operator_password),
         nickname="流程受限用户",
         is_active=True,

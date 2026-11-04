@@ -25,7 +25,7 @@ class TestUserCrudFlow:
                 "username": "flow_crud_user",
                 "password": "FlowCrud123!",
                 "nickname": "CRUD用户",
-                "email": "crud@flow.test",
+                "email": "crud@flow.example",
                 "isActive": True,
             },
         )
@@ -46,7 +46,7 @@ class TestUserCrudFlow:
                 "username": "flow_update_u",
                 "password": "FlowUpdate123!",
                 "nickname": "原名",
-                "email": "upd@flow.test",
+                "email": "upd@flow.example",
                 "isActive": True,
             },
         )
@@ -64,7 +64,7 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={"username": "flow_delete_u", "password": "FlowDel123!", "email": "del@flow.test", "isActive": True},
+            json={"username": "flow_delete_u", "password": "FlowDel123!", "email": "del@flow.example", "isActive": True},
         )
         uid = r.json()["data"]["id"]
 
@@ -81,7 +81,7 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={"username": "flow_pwd_user", "password": "OldPwd123!", "email": "pwd@flow.test", "isActive": True},
+            json={"username": "flow_pwd_user", "password": "OldPwd123!", "email": "pwd@flow.example", "isActive": True},
         )
         assert r.status_code == 201
 
@@ -105,7 +105,7 @@ class TestUserCrudFlow:
             json={
                 "username": "flow_status_u",
                 "password": "FlowStatus123!",
-                "email": "status@flow.test",
+                "email": "status@flow.example",
                 "isActive": True,
             },
         )
@@ -125,7 +125,7 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={"username": "flow_reset_u", "password": "Original123!", "email": "reset@flow.test", "isActive": True},
+            json={"username": "flow_reset_u", "password": "Original123!", "email": "reset@flow.example", "isActive": True},
         )
         uid = r.json()["data"]["id"]
 

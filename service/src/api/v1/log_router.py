@@ -53,6 +53,8 @@ def _format_operation_log(log: OperationLogEntity) -> dict[str, Any]:
         "responseCode": log.response_code,
         "responseResult": log.response_result or "",
         "statusCode": log.status_code,
+        # 操作概要由审计中间件写入（"POST /path - 123ms"），操作日志页「操作概要」列数据源
+        "description": log.description or "",
         "creatorId": log.creator_id or "",
         "createdTime": log.created_time.isoformat() if log.created_time else None,
     }

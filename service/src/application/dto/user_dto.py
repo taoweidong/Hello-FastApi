@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from src.application.validators import empty_str_or_zero_to_none, empty_str_to_none, normalize_optional_id
 
@@ -41,13 +41,13 @@ class UserCreateDTO(BaseModel, UserProfileValidator):
     nickname: str | None = Field(default=None, max_length=64)
     firstName: str | None = Field(default=None, max_length=64)
     lastName: str | None = Field(default=None, max_length=64)
-    email: str | None = None
+    email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=20)
-    gender: int | None = Field(default=None, description="性别(0-未知, 1-男, 2-女)")
+    gender: int | None = Field(default=None, ge=0, le=2, description="性别(0-未知, 1-男, 2-女)")
     avatar: str | None = None
-    isActive: int = Field(default=1, description="是否启用")
-    isStaff: int = Field(default=0, description="是否为职员")
-    modeType: int = Field(default=0, description="权限模式(0-OR, 1-AND)")
+    isActive: int = Field(default=1, ge=0, le=1, description="是否启用(0-禁用, 1-启用)")
+    isStaff: int = Field(default=0, ge=0, le=1, description="是否为职员")
+    modeType: int = Field(default=0, ge=0, le=1, description="权限模式(0-OR, 1-AND)")
     dept_id: str | None = Field(default=None, alias="deptId")
     description: str | None = None
     postIds: list[str] | None = Field(default=None, description="岗位ID列表（传入则同步分配岗位）")
@@ -66,13 +66,13 @@ class UserUpdateDTO(BaseModel, UserProfileValidator):
     nickname: str | None = Field(default=None, max_length=64)
     firstName: str | None = Field(default=None, max_length=64)
     lastName: str | None = Field(default=None, max_length=64)
-    email: str | None = None
+    email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=20)
-    gender: int | None = Field(default=None, description="性别(0-未知, 1-男, 2-女)")
+    gender: int | None = Field(default=None, ge=0, le=2, description="性别(0-未知, 1-男, 2-女)")
     avatar: str | None = None
-    isActive: int | None = Field(default=None, description="是否启用")
-    isStaff: int | None = Field(default=None, description="是否为职员")
-    modeType: int | None = Field(default=None, description="权限模式(0-OR, 1-AND)")
+    isActive: int | None = Field(default=None, ge=0, le=1, description="是否启用(0-禁用, 1-启用)")
+    isStaff: int | None = Field(default=None, ge=0, le=1, description="是否为职员")
+    modeType: int | None = Field(default=None, ge=0, le=1, description="权限模式(0-OR, 1-AND)")
     dept_id: str | None = Field(default=None, alias="deptId")
     description: str | None = None
     postIds: list[str] | None = Field(default=None, description="岗位ID列表（传入则同步分配岗位）")
@@ -152,9 +152,13 @@ class UpdateStatusDTO(BaseModel):
 
 
 class BatchDeleteDTO(BaseModel):
-    """批量删除请求"""
+    """批量删除请求
 
-    ids: list[str]
+    ids 允许为空（仓储层对空列表安全 no-op，历史契约如此）；
+    上限 1000 防止超大请求体。
+    """
+
+    ids: list[str] = Field(max_length=1000)
 
 
 class AssignRoleDTO(BaseModel):

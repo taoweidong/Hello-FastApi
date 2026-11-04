@@ -11,7 +11,8 @@ class NoticeCreateDTO(BaseModel):
     """创建通知公告请求"""
 
     title: str = Field(min_length=1, max_length=128, description="公告标题")
-    content: str = Field(default="", description="公告内容")
+    # 内容经 WS 全员广播，设置上限防止超大公告撑爆内存与推送链路
+    content: str = Field(default="", max_length=65535, description="公告内容")
     noticeType: int = Field(default=1, ge=1, le=2, description="公告类型（1通知 2公告）")
     isActive: int = Field(default=1, ge=0, le=1, description="状态（1正常 0关闭）")
 
@@ -20,7 +21,7 @@ class NoticeUpdateDTO(BaseModel):
     """更新通知公告请求"""
 
     title: str | None = Field(default=None, min_length=1, max_length=128, description="公告标题")
-    content: str | None = Field(default=None, description="公告内容")
+    content: str | None = Field(default=None, max_length=65535, description="公告内容")
     noticeType: int | None = Field(default=None, ge=1, le=2, description="公告类型（1通知 2公告）")
     isActive: int | None = Field(default=None, ge=0, le=1, description="状态（1正常 0关闭）")
 

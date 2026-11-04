@@ -132,23 +132,6 @@ class TestIPFilterCache:
         assert blacklist == set()
         assert whitelist == set()
 
-    @pytest.mark.asyncio
-    @patch("src.infrastructure.http.ip_filter_cache.CacheService")
-    async def test_ensure_cache_service_creates_service(self, mock_cache_cls, cache):
-        """测试 _ensure_cache_service 创建 CacheService。"""
-        mock_cache_cls.return_value = MagicMock()
-        svc = cache._ensure_cache_service()
-        assert svc is not None
-        assert cache._cache_service is svc
-
-    @pytest.mark.asyncio
-    async def test_ensure_cache_service_return_cached(self, cache):
-        """测试 _ensure_cache_service 返回已缓存的实例。"""
-        mock_svc = MagicMock()
-        cache._cache_service = mock_svc
-        svc = cache._ensure_cache_service()
-        assert svc is mock_svc
-
 
 @pytest.mark.unit
 class TestIPFilterCacheEdgeCases:

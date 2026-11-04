@@ -4,6 +4,7 @@
 路由前缀: /api/system/user
 """
 
+import asyncio
 import uuid
 
 from classy_fastapi import Routable, delete, get, post, put
@@ -182,7 +183,8 @@ class UserRouter(Routable):
 
         filename = f"{uuid.uuid4().hex}{ext}"
         AVATAR_DIR.mkdir(parents=True, exist_ok=True)
-        (AVATAR_DIR / filename).write_bytes(content)
+        # 同步写盘会阻塞事件循环，放入线程池执行
+        await asyncio.to_thread((AVATAR_DIR / filename).write_bytes, content)
         avatar_url = f"/media/avatars/{filename}"
 
         await service.update_avatar(user_id, avatar_url)

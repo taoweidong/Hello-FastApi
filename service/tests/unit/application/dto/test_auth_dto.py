@@ -56,6 +56,25 @@ class TestRegisterDTO:
         with pytest.raises(ValidationError):
             RegisterDTO(password="TestPass123")
 
+    def test_rejects_short_username(self):
+        """注册是匿名可打点面：用户名必须与管理端一致≥3 位。"""
+        with pytest.raises(ValidationError):
+            RegisterDTO(username="ab", password="TestPass123")
+
+    def test_rejects_short_password(self):
+        """密码必须≥8 位，防止 1 位密码弱账号注册。"""
+        with pytest.raises(ValidationError):
+            RegisterDTO(username="newuser", password="Pass1")
+
+    def test_rejects_invalid_email(self):
+        """email 必须是合法邮箱格式。"""
+        with pytest.raises(ValidationError):
+            RegisterDTO(username="newuser", password="TestPass123", email="not-an-email")
+
+    def test_rejects_oversize_username(self):
+        with pytest.raises(ValidationError):
+            RegisterDTO(username="x" * 51, password="TestPass123")
+
 
 @pytest.mark.unit
 class TestRefreshTokenDTO:
