@@ -3,13 +3,9 @@ import { readdir, stat } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { sum, formatBytes } from "@pureadmin/utils";
-import {
-  name,
-  version,
-  engines,
-  dependencies,
-  devDependencies
-} from "../package.json";
+import packageJson from "../package.json" with { type: "json" };
+
+const { name, version, engines, dependencies, devDependencies } = packageJson;
 
 /** 启动`node`进程时所在工作目录的绝对路径 */
 const root: string = process.cwd();
@@ -83,11 +79,7 @@ const fileListTotal: number[] = [];
 const getPackageSize = options => {
   const { folder = "dist", callback, format = true } = options;
   readdir(folder, (err, files: string[]) => {
-    if (err) {
-      // dist目录可能尚未写入完成，静默处理
-      callback(format ? formatBytes(0) : 0);
-      return;
-    }
+    if (err) throw err;
     let count = 0;
     const checkEnd = () => {
       ++count == files.length &&

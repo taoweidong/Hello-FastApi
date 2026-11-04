@@ -1,5 +1,5 @@
-import { getPluginsList } from "./build/plugins";
-import { include, exclude } from "./build/optimize";
+import { getPluginsList } from "./build/plugins.ts";
+import { include, exclude } from "./build/optimize.ts";
 import { type UserConfigExport, type ConfigEnv, loadEnv } from "vite";
 import {
   root,
@@ -7,7 +7,7 @@ import {
   wrapperEnv,
   pathResolve,
   __APP_INFO__
-} from "./build/utils";
+} from "./build/utils.ts";
 
 export default async ({ mode }: ConfigEnv): Promise<UserConfigExport> => {
   const { VITE_CDN, VITE_PORT, VITE_COMPRESSION, VITE_PUBLIC_PATH } =
@@ -30,9 +30,10 @@ export default async ({ mode }: ConfigEnv): Promise<UserConfigExport> => {
       // 本地跨域代理 https://cn.vitejs.dev/config/server-options.html#server-proxy
       proxy: {
         "/api": {
-          // 代理到后端 FastAPI 服务
+          // 代理到后端 FastAPI 服务（含 WebSocket：实时消息推送）
           target: backendTarget,
-          changeOrigin: true
+          changeOrigin: true,
+          ws: true
         },
         "/media": {
           // 上传静态资源（头像等）代理到后端

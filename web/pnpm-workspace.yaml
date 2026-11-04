@@ -17,9 +17,11 @@ allowedDeprecatedVersions:
   gauge: '*'
   abab: '*'
   glob: '*'
+  ini: '*'
 
 allowBuilds:
   '@tailwindcss/oxide': false
+  '@logicflow/core': false
   '@parcel/watcher': true
   vue3-danmaku: false
   node-pty: false
@@ -28,3 +30,10 @@ allowBuilds:
   es5-ext: true
   core-js: true
   typeit: true
+
+
+
+
+
+
+
