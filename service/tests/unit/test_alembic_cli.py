@@ -41,12 +41,7 @@ def _cli_env(tmp_path: Path) -> dict[str, str]:
 
 def _run_cli(args: list[str], env: dict[str, str]) -> subprocess.CompletedProcess[bytes]:
     """执行 ``python -m scripts.cli <args>`` 并捕获输出。"""
-    return subprocess.run(
-        [sys.executable, "-m", "scripts.cli", *args],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        env=env,
-    )
+    return subprocess.run([sys.executable, "-m", "scripts.cli", *args], cwd=PROJECT_ROOT, capture_output=True, env=env)
 
 
 def _output(result: subprocess.CompletedProcess[bytes]) -> str:

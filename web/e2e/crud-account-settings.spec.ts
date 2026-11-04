@@ -26,7 +26,7 @@ test.describe("账号设置页交互", () => {
     const saveBtn = page.getByRole("button", { name: "更新信息" });
     await expect(saveBtn).toBeVisible({ timeout: 10000 });
     await saveBtn.click();
-    await expect(page.getByText(/更新信息成功/)).toBeVisible({ timeout: 6000 });
+    await expect(page.getByText(/更新信息成功/)).toBeVisible({ timeout: 15000 });
 
     expect(errors, `页面报错: ${errors.join("; ")}`).toHaveLength(0);
   });

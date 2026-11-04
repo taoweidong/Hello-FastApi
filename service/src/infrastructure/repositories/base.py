@@ -125,10 +125,7 @@ class GenericRepository(Generic[ModelT, EntityT]):
         return self._to_domain(merged)
 
     def _build_update_values(
-        self,
-        entity: Any,
-        exclude: tuple[str, ...] = ("id",),
-        model_class: type[SQLModel] | None = None,
+        self, entity: Any, exclude: tuple[str, ...] = ("id",), model_class: type[SQLModel] | None = None
     ) -> dict[str, Any]:
         """从领域实体构造 UPDATE 语句的 values 字典。
 

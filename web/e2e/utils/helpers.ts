@@ -6,7 +6,7 @@ import { request, type Locator, type Page } from "@playwright/test";
  * 可用 E2E_API_BASE_URL 覆盖——本机同时开发多个项目时，8000 常被别的服务占用，
  * 此时后端需换端口启动，否则这里会静默打到别的项目上（表现为 API 登录 404）。
  */
-const API_BASE_URL = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:8000";
+export const API_BASE_URL = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 /** 冒烟页面注册表：path → 页面关键锚点选择器（存在即可判渲染成功） */
 export const SMOKE_PAGES: Array<{

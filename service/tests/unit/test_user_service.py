@@ -948,5 +948,3 @@ class TestUserServiceCheckAPIPermissionCachedOrDb:
             pytest.raises(ForbiddenError),
         ):
             await user_service_cached.check_api_permission_cached_or_db("u1", UserRole.USER, "/api/users", "GET")
-
-

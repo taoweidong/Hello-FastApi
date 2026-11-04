@@ -13,12 +13,14 @@
   ```
   单跑某个 spec：`... test --workers=1 --project=crud crud-dept.spec.ts`
 - **端口**：Playwright `baseURL` 默认 `http://localhost:8848`；vite 默认起 8848，若端口被占用会漂移到 8849，此时 E2E 全部失败（注意排查旧进程）。后端固定 8000。
-- **多项目并行开发的端口冲突（2026-10-25 实测）**：本机 `think-m2b` 占用 8848/8000 时，本项目改用
-  `VITE_PORT=8899 VITE_BACKEND_PORT=8001 pnpm dev` + `PORT=8001` 起后端；E2E 侧
-  `E2E_BASE_URL=http://localhost:8899 E2E_API_BASE_URL=http://127.0.0.1:8001`
-  （`playwright.config.ts` 与 `e2e/utils/helpers.ts` 均已支持这两个环境变量）。
-  **排查法**：`netstat -ano | grep LISTENING` 拿 PID，再 `Get-CimInstance Win32_Process` 看
-  CommandLine 归属哪个项目；不要杀别的项目的进程。
+- **多项目并行开发的端口冲突（2026-10-25 实测并修正）**：本机 `think-m2b`（`D:\Program Files\Python3.10\python.exe -m scripts.cli runserver`）后端实际占用 **8001**（不是 8000；8000 当时也常被占）。
+  **本项目后端改跑 8002**、前端 `VITE_PORT=8899 VITE_BACKEND_PORT=8002`，E2E 用
+  `E2E_BASE_URL=http://localhost:8899 E2E_API_BASE_URL=http://127.0.0.1:8002`
+  （`playwright.config.ts` 与 `e2e/utils/helpers.ts` 已支持这两个环境变量）。
+  **不要再走「本项目用 8001」的旧约定**——8001 是 think-m2b 的。
+  **排查法**：`Get-NetTCPConnection -LocalPort <port> -State Listen` 拿 OwningProcess → `Get-Process -Id` 确认是否真实存活（Windows 常有已死 PID 的 phantom TCP 条目，`Get-CimInstance Win32_Process` 查不到）；
+  只用命令行含 `Hello-FastApi\service\.venv` 过滤来精确杀本项目进程，**严禁** `Where-Object { CommandLine -like '*runserver*' }` 全量过滤（会误杀 think-m2b）。
+  PowerShell 只读变量 `$PID` 不能作循环变量（报「无法覆盖变量 PID」），改用 `$id`/`$p`。
 - **登录凭据**：`admin` / `admin123`（`web/e2e/utils/auth.setup.ts`）。
 - 前置：后端 `cd service && APP_ENV=development ./.venv/Scripts/python.exe -m scripts.cli runserver`；前端 `cd web && VITE_SKIP_CAPTCHA=true pnpm dev`。
 - **跑前必查 Redis 是否真的连上**（2026-10-25 更正）：不要只看 `netstat :6379` LISTENING，要直接看后端启动日志是否打印 **`Redis 连接初始化完成`**。出现 `Redis 连接初始化失败，缓存功能将降级为直接查库` 时，每个缓存操作等一次 1s 连接超时，单请求可到 3.2s，E2E 的 `networkidle` 与 10s 表格断言均为临界值 → **随机用例假失败**（2026-10-21 实测三轮失败用例均不同、单独复跑全过）。

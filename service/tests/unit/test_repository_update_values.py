@@ -9,12 +9,11 @@ from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.domain.entities.menu_meta import MenuMetaEntity
-from src.infrastructure.database.models.menu import Menu
 from src.infrastructure.database.models.menu_meta import MenuMeta
 from src.infrastructure.repositories.menu_repository import MenuRepository
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 def _repo() -> MenuRepository:
@@ -35,9 +34,7 @@ class TestBuildUpdateValues:
             transition_enter="animate__fadeIn",
         )
         values = _repo()._build_update_values(
-            meta,
-            model_class=MenuMeta,
-            exclude=("id", "created_time", "updated_time", "creator_id", "modifier_id"),
+            meta, model_class=MenuMeta, exclude=("id", "created_time", "updated_time", "creator_id", "modifier_id")
         )
         assert values["title"] == "用户管理"
         assert values["icon"] == "ri:user-line"
@@ -62,12 +59,7 @@ class TestBuildUpdateValues:
         from src.domain.entities.menu import MenuEntity
 
         menu = MenuEntity.create_new(
-            name="user_mgr",
-            menu_type=1,
-            path="/system/user",
-            component="system/user/index",
-            rank=10,
-            is_active=1,
+            name="user_mgr", menu_type=1, path="/system/user", component="system/user/index", rank=10, is_active=1
         )
         values = _repo()._build_update_values(menu)
         assert values["name"] == "user_mgr"
