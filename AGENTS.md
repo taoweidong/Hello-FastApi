@@ -3,6 +3,23 @@
 Monorepo: FastAPI backend (`service/`) + Vue3 frontend (`web/`).
 Frontend scaffolded from **vue-pure-admin v7**; backend ports pure-admin-backend from Java to Python.
 
+## 协作规范（强制 — 每一次 AI 交互必须遵守）
+
+> 本节为最高优先级的硬性门禁，适用于所有 AI 代理与人类协作者。
+
+1. **每一次 AI 交互结束前（提交代码前）必须执行前后端单元测试，全部通过后才允许提交代码：**
+   ```bash
+   # 后端（service/ 下）
+   ruff check src/ tests/ && python -m mypy src/ && pytest tests/unit/
+   # 前端（web/ 下）
+   pnpm lint && pnpm typecheck && pnpm test:unit
+   ```
+2. **测试未通过时不得提交代码**——禁止使用 `--no-verify` 绕过钩子，禁止注释/跳过失败用例来"变绿"。
+3. 测试失败时，**先定位并修复问题，再重新运行全部验证命令**；连续失败应回退改动而不是放宽断言。
+4. 涉及跨模块改动（路由契约、DTO 字段、中间件、缓存失效、认证）时，除单测外必须跑 `pytest tests/integration/`（或全量 `pytest`），并保证改动前后行为一致。
+5. 修改接口契约（新增/变更路由、DTO 字段、响应结构）时，必须同步更新前端类型（`web/src/api/types.ts`）与对应单测，保证两端契约一致。
+6. 提交信息遵循现有风格（`feat:`/`fix:`/`test:`/`refactor:` 前缀，中文描述）。
+
 ## Backend (service/)
 
 **Coding rules:** All logging must use the `loguru` library. `print()` is strictly prohibited in any source file under `src/`, `scripts/`, or `tests/`. Use `from loguru import logger` and call `logger.info()`, `logger.debug()`, `logger.warning()`, `logger.error()`, etc.
@@ -32,7 +49,7 @@ Default superuser: `admin` / `admin123` (after `initall`).
 
 **Tests:**
 ```bash
-pytest                                  # ~1828 tests
+pytest                                  # ~2100 tests
 pytest tests/unit/                      # unit only
 pytest tests/integration/               # integration only
 pytest -n auto                          # parallel (xdist; safe — each worker gets a temp-file SQLite DB)
@@ -80,6 +97,7 @@ pnpm install
 pnpm dev                  # port 8848 (VITE_PORT in .env.development)
 pnpm lint                 # eslint + prettier + stylelint (eslint uses --max-warnings 0)
 pnpm typecheck            # vue-tsc --noEmit --skipLibCheck
+pnpm test:unit            # vitest unit tests (composables / websocket client)
 pnpm build                # production
 pnpm build:staging        # staging mode
 pnpm test:e2e             # Playwright (requires backend + frontend running)
@@ -107,7 +125,7 @@ pnpm test:e2e:headed      # headed mode
 ## Verification Flow
 
 **Backend:** `ruff check src/ && ruff format src/ --check && mypy src/ && pytest`
-**Frontend:** `pnpm lint && pnpm typecheck`
+**Frontend:** `pnpm lint && pnpm typecheck && pnpm test:unit`
 **Full-stack e2e:**
 ```bash
 # Terminal 1
