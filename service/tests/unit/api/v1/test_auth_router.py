@@ -195,7 +195,7 @@ class TestAuthRouter:
         assert item["system"] == "Windows"
         assert item["status"] == 1
         assert item["loginTime"] is not None
-        mock_auth_service.get_mine_logs.assert_awaited_once_with(username="admin")
+        mock_auth_service.get_mine_logs.assert_awaited_once_with(username="admin", page_num=1, page_size=10)
 
     def test_get_async_routes(self, client):
         resp = client.get("/api/system/get-async-routes", headers={"Authorization": "Bearer test_token"})

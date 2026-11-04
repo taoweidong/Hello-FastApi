@@ -292,13 +292,22 @@ class AuthService:
         }
 
     async def refresh_token(self, refresh_token: str) -> dict:
-        """使用刷新令牌刷新访问令牌。"""
+        """使用刷新令牌刷新访问令牌。
+
+        安全语义：
+        - 刷新令牌受黑名单约束：登出/强制下线后旧 refresh_token 立即失效；
+        - 一次性轮换（rotation）：刷新成功后旧 refresh_token 立即拉黑，
+          防止同一 refresh_token 被重复换发（重放）。
+        """
         payload = self.token_service.decode_token(refresh_token)
         if payload is None:
             raise UnauthorizedError(EM.INVALID_REFRESH_TOKEN)
 
         if not self.token_service.verify_token_type(payload, "refresh"):
             raise UnauthorizedError(EM.INVALID_TOKEN_TYPE)
+
+        if self.cache_service is not None and await self.cache_service.is_token_blacklisted(refresh_token):
+            raise UnauthorizedError(EM.TOKEN_REVOKED)
 
         user_id = payload.get("sub")
         if user_id is None:
@@ -312,6 +321,10 @@ class AuthService:
         new_access_token = self.token_service.create_access_token(token_data)
         new_refresh_token = self.token_service.create_refresh_token(token_data)
 
+        # rotation：旧 refresh_token 用后即焚。失败仅告警，不阻断本次刷新
+        # （此时新令牌已签发，前端已持有新对；旧令牌未拉黑的最坏后果是重放窗口延长）
+        await self._blacklist_token(refresh_token)
+
         expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         # 必须输出带时区偏移的 ISO 8601（形如 2026-10-25T12:56:40+00:00）。
         # 旧写法 strftime("%Y/%m/%d %H:%M:%S") 丢掉了时区信息，前端 new Date()
@@ -321,18 +334,35 @@ class AuthService:
 
         return {"accessToken": new_access_token, "refreshToken": new_refresh_token, "expires": expires_str}
 
-    async def logout(self, access_token: str) -> bool:
-        """登出：将 access_token 写入黑名单。"""
+    async def logout(self, access_token: str | None = None, refresh_token: str | None = None) -> bool:
+        """登出：将 access_token 与 refresh_token 一并写入黑名单。
+
+        两个令牌都允许为空（如令牌已损坏时前端只拿到其中之一）；
+        仅拉黑能成功解码且未过期的令牌，其余情况视为已失效直接返回成功。
+        """
+        ok = True
+        if access_token:
+            ok = await self._blacklist_token(access_token) and ok
+        if refresh_token:
+            ok = await self._blacklist_token(refresh_token) and ok
+        return ok
+
+    async def _blacklist_token(self, token: str) -> bool:
+        """将单个令牌写入黑名单（按其剩余有效期设置 TTL）。
+
+        令牌解码失败或已过期时无需拉黑，返回 True；
+        Redis 未注入/写入失败时返回 False（is_token_blacklisted 同样降级放行，语义一致）。
+        """
         if self.cache_service is None:
             return True
-        payload = self.token_service.decode_token(access_token)
+        payload = self.token_service.decode_token(token)
         if payload is None:
             return True
         exp = payload.get("exp")
         if exp is None:
             return True
         expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
-        return await self.cache_service.add_token_to_blacklist(access_token, expires_at)
+        return await self.cache_service.add_token_to_blacklist(token, expires_at)
 
     async def get_async_routes(self, user_id: str) -> list[dict]:
         """根据用户角色获取动态路由（从数据库Menu+MenuMeta构建）。"""

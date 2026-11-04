@@ -17,6 +17,10 @@ from src.infrastructure.cache.cache_service import CacheService
 
 security_scheme = HTTPBearer()
 
+# 登出接口专用：允许无 Authorization 头调用（持有令牌本身即有权吊销它），
+# 前端在令牌已损坏/过期的场景下也能尽力完成服务端吊销。
+optional_security_scheme = HTTPBearer(auto_error=False)
+
 
 async def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Security(security_scheme),

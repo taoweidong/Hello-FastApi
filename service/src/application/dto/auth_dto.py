@@ -1,6 +1,6 @@
 """应用层 - 认证领域的数据传输对象。"""
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from src.application.validators import empty_str_to_none, normalize_optional_id
 
@@ -13,19 +13,33 @@ class LoginDTO(BaseModel):
 
 
 class RegisterDTO(BaseModel):
-    """注册请求"""
+    """注册请求。
 
-    username: str
-    password: str
-    nickname: str | None = None
-    email: str | None = None
-    phone: str | None = None
+    匿名可打点面，校验与管理端 UserCreateDTO 对齐（用户名≥3 位、密码≥8 位），
+    防止 1 位用户名+1 位密码的弱账号直接注册入库。
+    """
+
+    username: str = Field(min_length=3, max_length=50)
+    password: str = Field(min_length=8, max_length=128)
+    nickname: str | None = Field(default=None, max_length=64)
+    email: EmailStr | None = None
+    phone: str | None = Field(default=None, max_length=20)
 
 
 class RefreshTokenDTO(BaseModel):
     """刷新令牌请求"""
 
     refreshToken: str
+
+
+class LogoutDTO(BaseModel):
+    """登出请求。
+
+    refreshToken 可选：前端登出时携带，后端将 access_token（Header）与
+    refresh_token（Body）一并写入黑名单，防止登出后仍可用 refresh_token 换发新令牌。
+    """
+
+    refreshToken: str | None = None
 
 
 class UserInfoDTO(BaseModel):

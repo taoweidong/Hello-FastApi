@@ -7,6 +7,7 @@
 from src.api.dependencies.auth import (
     get_current_active_user,
     get_current_user_id,
+    optional_security_scheme,
     require_menu_permission,
     require_permission,
     require_superuser,
@@ -30,6 +31,7 @@ __all__ = [
     # 认证依赖
     "get_current_active_user",
     "get_current_user_id",
+    "optional_security_scheme",
     "require_menu_permission",
     "require_permission",
     "require_superuser",

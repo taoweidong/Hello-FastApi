@@ -52,7 +52,11 @@ class TestAuthService:
 
     @pytest.fixture
     def mock_cache_service(self):
-        return AsyncMock()
+        cache = AsyncMock()
+        # 默认令牌不在黑名单（各测试可显式覆盖为 True 模拟已登出令牌）
+        cache.is_token_blacklisted = AsyncMock(return_value=False)
+        cache.add_token_to_blacklist = AsyncMock(return_value=True)
+        return cache
 
     @pytest.fixture
     def mock_log_repo(self):
@@ -213,6 +217,53 @@ class TestAuthService:
             await auth_service.refresh_token(refresh_token)
 
     @pytest.mark.asyncio
+    async def test_refresh_token_rejects_blacklisted(self, auth_service, mock_cache_service, token_service):
+        """黑名单中的 refresh_token（已登出/强制下线）必须被拒绝。"""
+        refresh_token = token_service.create_refresh_token({"sub": "user-1", "username": "testuser"})
+        mock_cache_service.is_token_blacklisted = AsyncMock(return_value=True)
+
+        with pytest.raises(UnauthorizedError) as exc_info:
+            await auth_service.refresh_token(refresh_token)
+        assert "失效" in str(exc_info.value)
+
+    @pytest.mark.asyncio
+    async def test_refresh_token_rotation_blacklists_old(self, auth_service, mock_cache_service, token_service):
+        """刷新成功后旧 refresh_token 必须被拉黑（一次性轮换，防重放）。"""
+        refresh_token = token_service.create_refresh_token({"sub": "user-1", "username": "testuser"})
+        user = UserEntity(id="user-1", username="testuser", password="hash", is_active=1)
+        auth_service.user_repo.get_by_id = AsyncMock(return_value=user)
+
+        await auth_service.refresh_token(refresh_token)
+
+        auth_service.cache_service.add_token_to_blacklist.assert_awaited()
+        blacklisted_token = auth_service.cache_service.add_token_to_blacklist.await_args.args[0]
+        assert blacklisted_token == refresh_token
+
+    @pytest.mark.asyncio
+    async def test_logout_blacklists_both_tokens(self, auth_service, mock_cache_service, token_service):
+        """登出应同时拉黑 access_token 与 refresh_token。"""
+        access_token = token_service.create_access_token({"sub": "user-1"})
+        refresh_token = token_service.create_refresh_token({"sub": "user-1"})
+
+        result = await auth_service.logout(access_token=access_token, refresh_token=refresh_token)
+
+        assert result is True
+        blacklisted = [call.args[0] for call in mock_cache_service.add_token_to_blacklist.await_args_list]
+        assert access_token in blacklisted
+        assert refresh_token in blacklisted
+
+    @pytest.mark.asyncio
+    async def test_logout_only_access_token(self, auth_service, mock_cache_service, token_service):
+        """仅携带 access_token 登出（旧客户端兼容）仍正常工作。"""
+        access_token = token_service.create_access_token({"sub": "user-1"})
+
+        result = await auth_service.logout(access_token=access_token)
+
+        assert result is True
+        blacklisted = [call.args[0] for call in mock_cache_service.add_token_to_blacklist.await_args_list]
+        assert blacklisted == [access_token]
+
+    @pytest.mark.asyncio
     async def test_logout_with_cache(self, auth_service, mock_cache_service, token_service):
         """测试登出（有缓存服务）。"""
         access_token = token_service.create_access_token({"sub": "user-1"})
@@ -290,12 +341,7 @@ class TestAuthService:
             MenuEntity(id="dir", name="Log", menu_type=0, path="/monitor/log", rank=1, meta=meta),
             MenuEntity(id="login", name="LoginLog", menu_type=1, path="/monitor/log/login", rank=2, parent_id="dir"),
             MenuEntity(
-                id="op",
-                name="OperationLog",
-                menu_type=1,
-                path="/monitor/log/operation",
-                rank=3,
-                parent_id="dir",
+                id="op", name="OperationLog", menu_type=1, path="/monitor/log/operation", rank=3, parent_id="dir"
             ),
         ]
         tree = auth_service._build_route_tree(menus, auths_map={"dir": ["log:view", "log:delete"]})
@@ -319,9 +365,7 @@ class TestAuthService:
                 id="page", name="PermissionButton", menu_type=1, path="/permission/button", rank=2, parent_id="root"
             ),
         ]
-        tree = auth_service._build_route_tree(
-            menus, auths_map={"root": ["permission:btn:add", "permission:btn:edit"]}
-        )
+        tree = auth_service._build_route_tree(menus, auths_map={"root": ["permission:btn:add", "permission:btn:edit"]})
         page = tree[0]["children"][0]
         assert page["name"] == "PermissionButton"
         assert page["meta"]["auths"] == ["permission:btn:add", "permission:btn:edit"]
