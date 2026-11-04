@@ -1,17 +1,23 @@
 """应用层 - 通知公告服务。"""
 
+from datetime import datetime, timezone
+
+from loguru import logger
+
 from src.application.dto.notice_dto import NoticeCreateDTO, NoticeListQueryDTO, NoticeResponseDTO, NoticeUpdateDTO
 from src.domain.entities.notice import NoticeEntity
 from src.domain.entities.user import UserEntity
 from src.domain.exceptions import NotFoundError
 from src.domain.repositories.notice_repository import NoticeRepositoryInterface
+from src.domain.services.realtime_port import RealtimePort
 
 
 class NoticeService:
     """通知公告操作的应用服务。"""
 
-    def __init__(self, notice_repo: NoticeRepositoryInterface):
+    def __init__(self, notice_repo: NoticeRepositoryInterface, realtime_port: RealtimePort | None = None):
         self.notice_repo = notice_repo
+        self.realtime_port = realtime_port
 
     async def create_notice(self, dto: NoticeCreateDTO, current_user: UserEntity) -> NoticeResponseDTO:
         """创建通知公告（记录发布人信息）。"""
@@ -25,6 +31,9 @@ class NoticeService:
         notice_entity.is_active = dto.isActive
         notice_entity.creator_id = current_user.id
         created = await self.notice_repo.create(notice_entity)
+        # 实时推送：发布即推（仅启用的公告）
+        if dto.isActive == 1:
+            await self._push_notice(created)
         return self._to_response(created)
 
     async def get_notice(self, notice_id: str) -> NoticeResponseDTO:
@@ -60,6 +69,9 @@ class NoticeService:
         notice.update_info(title=dto.title, content=dto.content, notice_type=dto.noticeType, is_active=dto.isActive)
         notice.modifier_id = current_user.id
         updated = await self.notice_repo.update(notice)
+        # 实时推送：更新后若处于启用状态则推
+        if notice.is_active == 1:
+            await self._push_notice(updated)
         return self._to_response(updated)
 
     async def delete_notice(self, notice_id: str) -> bool:
@@ -72,6 +84,25 @@ class NoticeService:
         """批量删除公告。"""
         deleted_count = await self.notice_repo.batch_delete(notice_ids)
         return {"deleted_count": deleted_count, "total_requested": len(notice_ids)}
+
+    async def _push_notice(self, notice: NoticeEntity) -> None:
+        """向所有在线连接广播一条公告实时推送（best-effort）。
+
+        推送失败（断连、序列化异常等）被隔离，不影响创建/更新接口的 HTTP 响应；
+        realtime_port 未注入时跳过推送（如测试场景）。
+        """
+        if self.realtime_port is None:
+            return
+        try:
+            await self.realtime_port.broadcast(
+                {
+                    "type": "notice",
+                    "data": self._to_response(notice).model_dump(mode="json"),
+                    "ts": int(datetime.now(timezone.utc).timestamp()),
+                }
+            )
+        except Exception as exc:  # 推送异常绝不阻断业务接口
+            logger.warning("公告实时推送失败(忽略): {}", exc)
 
     @staticmethod
     def _to_response(notice: NoticeEntity) -> NoticeResponseDTO:

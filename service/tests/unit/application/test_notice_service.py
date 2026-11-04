@@ -35,6 +35,11 @@ class TestNoticeService:
     def service(self, mock_repo):
         return NoticeService(notice_repo=mock_repo)
 
+    @pytest.fixture
+    def fake_realtime(self):
+        """广播端口替身：记录 broadcast 调用，可注入异常模拟推送失败。"""
+        return AsyncMock()
+
     async def test_create_notice_uses_nickname_as_publisher(self, service, mock_repo):
         """创建时优先使用昵称作为发布人名称。"""
         mock_repo.create = AsyncMock(side_effect=lambda e: e)
@@ -113,3 +118,55 @@ class TestNoticeService:
         result = await service.batch_delete_notices(["a", "b"])
 
         assert result == {"deleted_count": 1, "total_requested": 2}
+
+    async def test_create_notice_broadcasts_when_active(self, mock_repo, fake_realtime):
+        """创建启用公告时经 RealtimePort 广播 notice 推送。"""
+        mock_repo.create = AsyncMock(side_effect=lambda e: e)
+        svc = NoticeService(notice_repo=mock_repo, realtime_port=fake_realtime)
+
+        await svc.create_notice(NoticeCreateDTO(title="推送测试", isActive=1), _make_user())
+
+        fake_realtime.broadcast.assert_awaited_once()
+        msg = fake_realtime.broadcast.await_args.args[0]
+        assert msg["type"] == "notice"
+        assert msg["data"]["title"] == "推送测试"
+
+    async def test_create_notice_no_broadcast_when_inactive(self, mock_repo, fake_realtime):
+        """创建关闭状态公告时不广播。"""
+        mock_repo.create = AsyncMock(side_effect=lambda e: e)
+        svc = NoticeService(notice_repo=mock_repo, realtime_port=fake_realtime)
+
+        await svc.create_notice(NoticeCreateDTO(title="关闭公告", isActive=0), _make_user())
+
+        fake_realtime.broadcast.assert_not_awaited()
+
+    async def test_create_notice_skips_push_without_realtime_port(self, mock_repo):
+        """未注入 RealtimePort 时（如测试场景）跳过推送且不报错。"""
+        mock_repo.create = AsyncMock(side_effect=lambda e: e)
+        svc = NoticeService(notice_repo=mock_repo)
+
+        result = await svc.create_notice(NoticeCreateDTO(title="无端口", isActive=1), _make_user())
+        assert result.title == "无端口"
+
+    async def test_update_notice_broadcasts_when_active(self, mock_repo, fake_realtime):
+        """更新为启用状态后广播 notice 推送。"""
+        mock_repo.get_by_id = AsyncMock(return_value=_make_notice())
+        mock_repo.update = AsyncMock(side_effect=lambda e: e)
+        svc = NoticeService(notice_repo=mock_repo, realtime_port=fake_realtime)
+
+        await svc.update_notice("notice-1", NoticeUpdateDTO(title="新标题", isActive=1), _make_user())
+
+        fake_realtime.broadcast.assert_awaited_once()
+        msg = fake_realtime.broadcast.await_args.args[0]
+        assert msg["type"] == "notice"
+        assert msg["data"]["isActive"] == 1
+
+    async def test_push_notice_isolated_from_broadcast_error(self, mock_repo, fake_realtime):
+        """广播异常被隔离，不影响创建接口的 HTTP 响应。"""
+        mock_repo.create = AsyncMock(side_effect=lambda e: e)
+        fake_realtime.broadcast.side_effect = RuntimeError("推送通道异常")
+        svc = NoticeService(notice_repo=mock_repo, realtime_port=fake_realtime)
+
+        # 不应抛出异常
+        result = await svc.create_notice(NoticeCreateDTO(title="异常推送", isActive=1), _make_user())
+        assert result.title == "异常推送"

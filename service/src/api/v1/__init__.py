@@ -17,6 +17,7 @@ from src.api.v1.post_router import PostRouter
 from src.api.v1.role_router import RoleRouter
 from src.api.v1.system_config_router import SystemConfigRouter
 from src.api.v1.user_router import UserRouter
+from src.api.v1.ws_router import ws_router
 
 # 创建系统级路由聚合器
 system_router = APIRouter()
@@ -56,5 +57,8 @@ system_router.include_router(MonitorRouter().router, tags=["系统监控"])
 
 # IP规则管理路由
 system_router.include_router(IPRuleRouter().router, prefix="/ip-rule", tags=["IP规则管理"])
+
+# 实时消息 WebSocket 路由（路径 /api/system/ws）
+system_router.include_router(ws_router, tags=["实时消息"])
 
 __all__ = ["system_router"]
