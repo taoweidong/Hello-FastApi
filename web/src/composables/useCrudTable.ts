@@ -102,7 +102,9 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
         }
       }
     } catch {
-      dataList.value = [];
+      // 查询失败（4xx/5xx/断网）：保留原数据并提示，避免表格静默空白让用户
+      // 误以为是"真的没有数据"。失败时不清空 dataList。
+      message(`${entityName}列表加载失败，请稍后重试`, { type: "error" });
     } finally {
       loading.value = false;
     }
@@ -129,6 +131,11 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
           draggable: true
         }
       );
+    } catch {
+      // 用户取消确认弹窗
+      return;
+    }
+    try {
       const { code } = await api.destroy(row.id);
       if (code === 0) {
         message(`已成功删除${entityName} ${row[displayField]}`, {
@@ -137,7 +144,8 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
         onSearch();
       }
     } catch {
-      // 用户取消
+      // 删除请求失败：给出明确提示，用户可重试而不是无感知失败
+      message(`删除${entityName}失败，请稍后重试`, { type: "error" });
     }
   }
 
@@ -155,6 +163,11 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
           draggable: true
         }
       );
+    } catch {
+      // 用户取消确认弹窗
+      return;
+    }
+    try {
       const { code } = await api.batchDelete(ids);
       if (code === 0) {
         message(`已成功删除 ${ids.length} 条${entityName}数据`, {
@@ -163,7 +176,8 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
         onSearch();
       }
     } catch {
-      // 用户取消
+      // 删除请求失败：给出明确提示
+      message(`批量删除${entityName}失败，请稍后重试`, { type: "error" });
     }
   }
 

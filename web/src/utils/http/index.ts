@@ -150,8 +150,9 @@ class PureHttp {
         // 处理401未授权：token失效时强制登出并跳转登录页
         const status = error.response?.status;
         if (status === 401) {
-          // 登录和刷新token请求白名单，避免登出流程自身触发401处理
-          const whiteList = ["/refresh-token", "/login"];
+          // 登录/登出/刷新token请求白名单：登出流程自身可能携带失效令牌，
+          // 若其 401 再次触发登出会形成请求循环
+          const whiteList = ["/refresh-token", "/login", "/logout"];
           const url = error.config?.url || "";
           if (!whiteList.some(w => url.endsWith(w)) && !PureHttp.isLoggingOut) {
             PureHttp.isLoggingOut = true;

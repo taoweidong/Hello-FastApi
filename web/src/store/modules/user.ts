@@ -11,10 +11,18 @@ import {
   type UserResult,
   type RefreshTokenResult,
   getLogin,
-  refreshTokenApi
+  refreshTokenApi,
+  logoutApi
 } from "@/api/user";
 import { useMultiTagsStoreHook } from "./multiTags";
-import { type DataInfo, setToken, removeToken, userKey } from "@/utils/auth";
+import {
+  type DataInfo,
+  setToken,
+  removeToken,
+  userKey,
+  getToken
+} from "@/utils/auth";
+import { realtime } from "@/utils/websocket";
 
 export const useUserStore = defineStore("pure-user", {
   state: (): userType => ({
@@ -82,6 +90,7 @@ export const useUserStore = defineStore("pure-user", {
           .then(data => {
             if (data.code === 0) {
               setToken(data.data);
+              realtime.start();
               resolve(data);
             } else {
               reject(data.message);
@@ -92,15 +101,21 @@ export const useUserStore = defineStore("pure-user", {
           });
       });
     },
-    /** 前端登出（不调用接口） */
-    logOut() {
+    /** 前端登出（尽力通知后端吊销双 token 后清理本地状态） */
+    async logOut() {
+      // 在 removeToken 之前同步取出 refreshToken（请求体在此时固化）；
+      // 后端不可达/令牌已失效时静默忽略，本地清理照常执行
+      logoutApi({ refreshToken: getToken()?.refreshToken }).catch(() => {});
       this.username = "";
       this.roles = [];
       this.permissions = [];
+      realtime.stop();
       removeToken();
       useMultiTagsStoreHook().handleTags("equal", [...routerArrays]);
+      // 先跳转登录页再重置路由（上游 v7 顺序修复）：避免 resetRouter
+      // 移除当前路由后 push 触发多余的 PageNotFound 匹配
+      await router.push("/login");
       resetRouter();
-      router.push("/login");
     },
     /** 刷新`token` */
     async handRefreshToken(data) {
@@ -109,6 +124,7 @@ export const useUserStore = defineStore("pure-user", {
           .then(data => {
             if (data.code === 0) {
               setToken(data.data);
+              realtime.start();
               resolve(data);
             } else {
               reject(data.message);

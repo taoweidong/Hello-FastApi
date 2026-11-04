@@ -135,8 +135,14 @@ export function useIpRule() {
   ];
 
   async function handleUpdateStatus(row) {
-    await ipRuleApi.partialUpdate(row.id, { isActive: row.isActive });
-    message("状态更新成功", { type: "success" });
+    try {
+      await ipRuleApi.partialUpdate(row.id, { isActive: row.isActive });
+      message("状态更新成功", { type: "success" });
+    } catch {
+      // 请求失败：回滚开关，保持 UI 与后端状态一致
+      row.isActive = row.isActive === 1 ? 0 : 1;
+      message("状态更新失败", { type: "error" });
+    }
   }
 
   function handleSelectionChange(val) {

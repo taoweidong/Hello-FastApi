@@ -67,8 +67,3 @@ export const getSystemLogsDetail = (data: { id: string }) => {
     data
   });
 };
-
-/** 获取我的安全日志 */
-export const getMineLogs = (data?: LogQueryParams) => {
-  return http.request<ResultTable<LoginLog>>("get", "/mine-logs", { data });
-};

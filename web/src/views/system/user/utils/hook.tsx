@@ -334,13 +334,19 @@ export function useUser(tableRef: Ref) {
   async function onSearch() {
     loading.value = true;
     try {
-      const { code, data } = await userApi.list(toRaw(form));
+      const { code, data } = await userApi.list({
+        ...toRaw(form),
+        pageNum: pagination.currentPage,
+        pageSize: pagination.pageSize
+      });
       if (code === 0) {
         dataList.value = data.list;
         pagination.total = data.total;
         pagination.pageSize = data.pageSize;
         pagination.currentPage = data.currentPage;
       }
+    } catch {
+      message("用户列表加载失败，请稍后重试", { type: "error" });
     } finally {
       loading.value = false;
     }
@@ -587,12 +593,21 @@ export function useUser(tableRef: Ref) {
   onMounted(async () => {
     onSearch();
 
-    const { code, data } = await deptApi.listTree();
-    if (code === 0) {
-      higherDeptOptions.value = handleTree(data);
+    // 下拉数据源各自独立失败收口：任一接口异常不应阻塞其余下拉与页面渲染
+    try {
+      const { code, data } = await deptApi.listTree();
+      if (code === 0) {
+        higherDeptOptions.value = handleTree(data);
+      }
+    } catch {
+      message("部门树加载失败", { type: "error" });
     }
 
-    roleOptions.value = (await userApi.getAllRoleList()).data ?? [];
+    try {
+      roleOptions.value = (await userApi.getAllRoleList()).data ?? [];
+    } catch {
+      message("角色列表加载失败", { type: "error" });
+    }
 
     postOptions.value = (await postApi.options().catch(() => null))?.data ?? [];
   });

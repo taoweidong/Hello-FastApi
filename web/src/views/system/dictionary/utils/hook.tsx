@@ -89,13 +89,19 @@ export function useDictionary() {
 
   /** 更新字典项状态 */
   async function handleUpdateStatus(row) {
-    const { code } = await dictionaryApi.partialUpdate(row.id, {
-      isActive: row.isActive
-    });
-    if (code === 0) {
-      message(`字典 ${row.label} 状态已更新`, { type: "success" });
-    } else {
+    try {
+      const { code } = await dictionaryApi.partialUpdate(row.id, {
+        isActive: row.isActive
+      });
+      if (code === 0) {
+        message(`字典 ${row.label} 状态已更新`, { type: "success" });
+      } else {
+        row.isActive = row.isActive === 1 ? 0 : 1;
+      }
+    } catch {
+      // 网络异常等同样需要回滚开关，保持 UI 与后端状态一致
       row.isActive = row.isActive === 1 ? 0 : 1;
+      message("状态更新失败", { type: "error" });
     }
   }
 

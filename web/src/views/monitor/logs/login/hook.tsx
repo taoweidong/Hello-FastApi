@@ -139,13 +139,19 @@ export function useLoginLog(tableRef: Ref) {
   async function onSearch() {
     loading.value = true;
     try {
-      const { code, data } = await getLoginLogsList(toRaw(form));
+      const { code, data } = await getLoginLogsList({
+        ...toRaw(form),
+        pageNum: pagination.currentPage,
+        pageSize: pagination.pageSize
+      });
       if (code === 0) {
         dataList.value = data.list;
         pagination.total = data.total;
         pagination.pageSize = data.pageSize;
         pagination.currentPage = data.currentPage;
       }
+    } catch {
+      message("登录日志加载失败，请稍后重试", { type: "error" });
     } finally {
       loading.value = false;
     }

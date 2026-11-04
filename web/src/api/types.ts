@@ -210,32 +210,46 @@ export interface LoginLog extends AuditFields {
   createdTime?: string | null;
 }
 
-/** 操作日志 */
+/** 操作日志（后端 _format_operation_log 返回结构） */
 export interface OperationLog extends AuditFields {
   id: string;
   /** 操作模块 */
   module?: string | null;
-  /** 操作描述 */
+  /** 操作概要（如 "POST /user/create - 45ms"） */
   description?: string | null;
   /** HTTP 方法 */
   method?: string | null;
   /** 请求路径 */
   path?: string | null;
+  /** 请求体（敏感字段已由后端脱敏） */
+  body?: string | null;
   ipaddress?: string | null;
-  /** 耗时（毫秒） */
-  costTime?: number | null;
+  system?: string | null;
+  browser?: string | null;
+  /** HTTP 响应码 */
+  responseCode?: number | null;
+  responseResult?: string | null;
+  /** 业务状态码 */
+  statusCode?: number | null;
+  creatorId?: string | null;
   createdTime?: string | null;
 }
 
-/** 系统日志 */
+/** 系统日志（与操作日志共享 sys_logs 表，返回结构一致） */
 export interface SystemLog extends AuditFields {
   id: string;
-  /** 日志级别 */
-  level?: string | null;
-  /** 日志内容 */
-  content?: string | null;
-  /** 日志来源 */
-  source?: string | null;
+  module?: string | null;
+  path?: string | null;
+  body?: string | null;
+  method?: string | null;
+  ipaddress?: string | null;
+  system?: string | null;
+  browser?: string | null;
+  responseCode?: number | null;
+  responseResult?: string | null;
+  statusCode?: number | null;
+  description?: string | null;
+  creatorId?: string | null;
   createdTime?: string | null;
 }
 

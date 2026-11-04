@@ -3,6 +3,7 @@ import dayjs from "dayjs";
 import { getMineLogs } from "@/api/user";
 import { reactive, ref, onMounted } from "vue";
 import { deviceDetection } from "@pureadmin/utils";
+import { message } from "@/utils/message";
 import type { PaginationProps } from "@pureadmin/table";
 
 defineOptions({
@@ -51,20 +52,37 @@ const columns: TableColumnList = [
 
 async function onSearch() {
   loading.value = true;
-  const { code, data } = await getMineLogs();
-  if (code === 0) {
-    dataList.value = data.list;
-    pagination.total = data.total;
-    pagination.pageSize = data.pageSize;
-    pagination.currentPage = data.currentPage;
+  try {
+    const { code, data } = await getMineLogs({
+      pageNum: pagination.currentPage,
+      pageSize: pagination.pageSize
+    });
+    if (code === 0) {
+      dataList.value = data.list;
+      pagination.total = data.total;
+      pagination.pageSize = data.pageSize;
+      pagination.currentPage = data.currentPage;
+    }
+  } catch {
+    message("安全日志加载失败", { type: "error" });
+  } finally {
+    loading.value = false;
   }
-
-  loading.value = false;
 }
 
 onMounted(() => {
   onSearch();
 });
+
+function handleSizeChange(val: number) {
+  pagination.pageSize = val;
+  onSearch();
+}
+
+function handleCurrentChange(val: number) {
+  pagination.currentPage = val;
+  onSearch();
+}
 </script>
 
 <template>
@@ -78,6 +96,8 @@ onMounted(() => {
       :data="dataList"
       :columns="columns"
       :pagination="pagination"
+      @page-size-change="handleSizeChange"
+      @page-current-change="handleCurrentChange"
     />
   </div>
 </template>

@@ -82,6 +82,13 @@ export const refreshTokenApi = (data?: object) => {
   return http.request<RefreshTokenResult>("post", "/refresh-token", { data });
 };
 
+/** 登出：将 accessToken（Header）与 refreshToken（Body）一并交由后端拉黑 */
+export const logoutApi = (data?: { refreshToken?: string }) => {
+  return http.request<{ code: number; message: string }>("post", "/logout", {
+    data
+  });
+};
+
 /** 账户设置-个人信息 */
 export const getMine = (data?: object) => {
   return http.request<UserInfoResult>("get", "/mine", { data });
@@ -114,7 +121,10 @@ export const changeMyPassword = (data?: object) => {
   );
 };
 
-/** 账户设置-个人安全日志 */
-export const getMineLogs = (data?: object) => {
-  return http.request<ResultTable>("get", "/mine-logs", { data });
+/** 账户设置-个人安全日志（GET 查询参数走 params，而非请求体） */
+export const getMineLogs = (params?: {
+  pageNum?: number;
+  pageSize?: number;
+}) => {
+  return http.request<ResultTable>("get", "/mine-logs", { params });
 };
