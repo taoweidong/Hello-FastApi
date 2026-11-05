@@ -5,10 +5,10 @@ from collections.abc import Awaitable, Callable
 from fastapi import Depends, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from src.api.dependencies.authorization_service import get_authorization_service
 from src.api.dependencies.cache_service import get_cache_service
 from src.api.dependencies.domain_services import get_token_service
-from src.api.dependencies.user_service import get_user_service
-from src.application.services.user_service import UserService
+from src.application.services.authorization_service import AuthorizationService
 from src.domain.entities.user import UserEntity
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
@@ -47,10 +47,11 @@ async def get_current_user_id(
 
 
 async def get_current_active_user(
-    user_id: str = Depends(get_current_user_id), user_service: UserService = Depends(get_user_service)
+    user_id: str = Depends(get_current_user_id),
+    authorization_service: AuthorizationService = Depends(get_authorization_service),
 ) -> UserEntity:
     """从缓存或数据库获取当前活跃用户实体。"""
-    return await user_service.get_user_info_with_cache(user_id)
+    return await authorization_service.get_user_info_with_cache(user_id)
 
 
 def require_permission(code: str) -> Callable[..., Awaitable[UserEntity]]:
@@ -62,9 +63,9 @@ def require_permission(code: str) -> Callable[..., Awaitable[UserEntity]]:
 
     async def permission_checker(
         current_user: UserEntity = Depends(get_current_active_user),
-        user_service: UserService = Depends(get_user_service),
+        authorization_service: AuthorizationService = Depends(get_authorization_service),
     ) -> UserEntity:
-        return await user_service.check_permission_cached_or_db(
+        return await authorization_service.check_permission_cached_or_db(
             user_id=current_user.id, is_superuser=current_user.is_superuser, code=code
         )
 
@@ -79,9 +80,9 @@ def require_menu_permission(path: str, method: str) -> Callable[..., Awaitable[U
 
     async def permission_checker(
         current_user: UserEntity = Depends(get_current_active_user),
-        user_service: UserService = Depends(get_user_service),
+        authorization_service: AuthorizationService = Depends(get_authorization_service),
     ) -> UserEntity:
-        return await user_service.check_api_permission_cached_or_db(
+        return await authorization_service.check_api_permission_cached_or_db(
             user_id=current_user.id, is_superuser=current_user.is_superuser, path=path, method=method
         )
 

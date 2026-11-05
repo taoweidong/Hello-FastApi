@@ -61,13 +61,30 @@ class LogRepository(LogRepositoryInterface):
         return [log.to_domain() for log in logs], total
 
     async def create_login_log(self, log: LoginLogEntity) -> LoginLogEntity:
-        """创建登录日志。"""
+        """创建登录日志。
+
+        使用**独立短会话立即提交**（绑定请求会话的同一 AsyncEngine）：
+        登录日志——尤其是认证失败的审计记录——必须在业务事务回滚后仍然存活。
+        若随请求级事务写入，login 失败路径的 raise 会触发整体 rollback，
+        把刚 flush 的失败日志一并丢弃，暴力破解审计出现盲区。
+
+        注意：必须用 ``self.session.bind``（AsyncEngine）构造新会话；
+        ``AsyncSession.get_bind()`` 返回的是内部同步 Engine 代理，传给
+        AsyncSession 会抛 "Engine has no attribute sync_engine"。
+        """
+        from sqlmodel.ext.asyncio.session import AsyncSession as _NewSession
+
         model = LoginLog.from_domain(log)
-        self.session.add(model)
-        await self.session.flush()
-        await self.session.refresh(model)
-        loaded = await self.session.get(LoginLog, model.id)
-        return loaded.to_domain()  # type: ignore[union-attr]
+        engine = self.session.bind
+        if engine is None:
+            # 未绑定引擎的会话（不应出现在正常链路）：退化为请求会话内 flush
+            self.session.add(model)
+            await self.session.flush()
+            return model.to_domain()
+        async with _NewSession(engine, expire_on_commit=False) as session:
+            session.add(model)
+            await session.commit()
+        return model.to_domain()
 
     async def delete_login_logs(self, log_ids: list[str]) -> int:
         """批量删除登录日志。"""

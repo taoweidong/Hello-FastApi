@@ -58,18 +58,29 @@ class TestLogRepository:
 
     @pytest.mark.asyncio
     async def test_create_login_log(self, repo, mock_session):
-        """测试 create_login_log 创建登录日志。"""
+        """测试 create_login_log 经独立短会话提交（审计记录不受业务回滚影响）。"""
         entity = LoginLogEntity(id="1", status=1)
         mock_model = MagicMock()
         mock_model.id = "1"
         mock_model.to_domain.return_value = entity
 
-        with patch("src.infrastructure.repositories.log_repository.LoginLog.from_domain", return_value=mock_model):
-            mock_session.get = AsyncMock(return_value=mock_model)
+        # 短会话基于 self.session.bind（AsyncEngine）构建
+        mock_session.bind = MagicMock()
+        mock_short_session = AsyncMock()
+        mock_short_session.__aenter__ = AsyncMock(return_value=mock_short_session)
+        mock_short_session.__aexit__ = AsyncMock(return_value=False)
+        mock_factory = MagicMock(return_value=mock_short_session)
+
+        with (
+            patch("src.infrastructure.repositories.log_repository.LoginLog.from_domain", return_value=mock_model),
+            patch("sqlmodel.ext.asyncio.session.AsyncSession", mock_factory),
+        ):
             result = await repo.create_login_log(entity)
 
         assert result is not None
         assert result.id == "1"
+        # 短会话内必须显式提交（独立于请求级事务）
+        mock_short_session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_delete_login_logs(self, repo, mock_session):

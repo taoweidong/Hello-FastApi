@@ -7,8 +7,10 @@ from loguru import logger
 
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
 from src.application.utils.menu_mapper import menu_dict_to_entity, menu_entity_to_dict
+from src.application.utils.route_tree import build_route_tree
 from src.application.utils.user_agent import extract_user_agent_info
 from src.config.settings import settings
+from src.domain.constants import FULL_LIST_PAGE_SIZE
 from src.domain.entities.log import LoginLogEntity
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.user import UserEntity
@@ -220,7 +222,7 @@ class AuthService:
             (角色列表, 权限列表) 元组
         """
         if user.is_superuser_user:
-            user_roles = await self.role_repo.get_all(page_num=1, page_size=100)
+            user_roles = await self.role_repo.get_all(page_num=1, page_size=FULL_LIST_PAGE_SIZE)
             user_menus = await self._get_all_menus_cached()
         else:
             user_roles = await self.role_repo.get_user_roles(user.id)
@@ -230,6 +232,18 @@ class AuthService:
         menu_names = [m.name for m in user_menus if m.menu_type == MenuType.PERMISSION]
 
         return role_names, menu_names
+
+    @staticmethod
+    def _expires_iso() -> str:
+        """访问令牌过期时间的 ISO 8601 字符串（带时区偏移）。
+
+        必须输出带时区偏移的 ISO 8601（形如 2026-10-25T12:56:40+00:00）。
+        旧写法 strftime("%Y/%m/%d %H:%M:%S") 丢掉了时区信息，前端 new Date()
+        会按本地时区（UTC+8）解析，前端认为的过期时间比真实早 8 小时 ——
+        token 一登录就「已过期」，导致每个 API 请求都触发一次 refresh-token。
+        """
+        expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        return expires_time.isoformat(timespec="seconds")
 
     def _build_login_response(
         self, user: UserEntity, tokens: dict[str, str], roles: list[str], permissions: list[str]
@@ -245,12 +259,7 @@ class AuthService:
         Returns:
             登录响应字典
         """
-        expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        # 必须输出带时区偏移的 ISO 8601（形如 2026-10-25T12:56:40+00:00）。
-        # 旧写法 strftime("%Y/%m/%d %H:%M:%S") 丢掉了时区信息，前端 new Date()
-        # 会按本地时区（UTC+8）解析，前端认为的过期时间比真实早 8 小时 ——
-        # token 一登录就「已过期」，导致每个 API 请求都触发一次 refresh-token。
-        expires_str = expires_time.isoformat(timespec="seconds")
+        expires_str = self._expires_iso()
 
         return {
             "avatar": user.avatar or "",
@@ -325,12 +334,7 @@ class AuthService:
         # （此时新令牌已签发，前端已持有新对；旧令牌未拉黑的最坏后果是重放窗口延长）
         await self._blacklist_token(refresh_token)
 
-        expires_time = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-        # 必须输出带时区偏移的 ISO 8601（形如 2026-10-25T12:56:40+00:00）。
-        # 旧写法 strftime("%Y/%m/%d %H:%M:%S") 丢掉了时区信息，前端 new Date()
-        # 会按本地时区（UTC+8）解析，前端认为的过期时间比真实早 8 小时 ——
-        # token 一登录就「已过期」，导致每个 API 请求都触发一次 refresh-token。
-        expires_str = expires_time.isoformat(timespec="seconds")
+        expires_str = self._expires_iso()
 
         return {"accessToken": new_access_token, "refreshToken": new_refresh_token, "expires": expires_str}
 
@@ -386,8 +390,8 @@ class AuthService:
             if menu.menu_type == MenuType.PERMISSION and menu.parent_id:
                 auths_map.setdefault(menu.parent_id, []).append(menu.name)
 
-        # 构建树形路由
-        return self._build_route_tree(route_menus, auths_map=auths_map)
+        # 构建树形路由（纯函数，见 application/utils/route_tree.py）
+        return build_route_tree(route_menus, auths_map=auths_map)
 
     async def _get_all_menus_cached(self) -> list[MenuEntity]:
         """获取所有菜单（带缓存），用于超级用户场景。"""
@@ -412,66 +416,6 @@ class AuthService:
     def _menu_dict_to_entity(data: dict) -> MenuEntity:
         """将序列化的字典转回菜单实体。"""
         return menu_dict_to_entity(data)
-
-    def _build_route_tree(
-        self,
-        menus: list,
-        parent_id: str | None = None,
-        auths_map: dict[str, list[str]] | None = None,
-        inherited_auths: list[str] | None = None,
-    ) -> list[dict]:
-        """将扁平菜单列表构建为嵌套路由树。"""
-        routes = []
-        for menu in menus:
-            if menu.parent_id == parent_id:
-                meta = self._build_meta(menu)
-                # 挂载当前菜单的按钮权限码列表，前端通过 meta.auths 做按钮级控制
-                menu_auths = list((auths_map or {}).get(menu.id, []))
-                # 祖先路由的权限码向下传播：按钮权限（PERMISSION 节点）常挂在目录菜单上
-                # （如 log:view/log:delete 挂在「日志管理」目录），而真正使用 v-auth 的
-                # 页面是其子路由（登录日志/操作日志）。不传播则子路由 meta.auths 为 None，
-                # hasAuth 恒判假 → 页面上的删除/清空按钮被静默移除。
-                for code in inherited_auths or []:
-                    if code not in menu_auths:
-                        menu_auths.append(code)
-                if menu_auths:
-                    meta["auths"] = menu_auths
-                route = {
-                    "path": menu.path,
-                    "name": menu.name,
-                    "rank": menu.rank,
-                    "component": menu.component,
-                    "meta": meta,
-                }
-                children = self._build_route_tree(menus, menu.id, auths_map, menu_auths)
-                if children:
-                    route["children"] = children
-                routes.append(route)
-        # 按rank排序
-        return sorted(routes, key=lambda r: r.get("rank", 0))
-
-    def _build_meta(self, menu: MenuEntity) -> dict:
-        """从菜单实体的meta字段构建meta对象。"""
-        meta = menu.meta
-        if meta:
-            return {
-                "title": meta.title or "",
-                "icon": meta.icon or "",
-                "rSvgName": meta.r_svg_name or "",
-                "showLink": bool(meta.is_show_menu),
-                "showParent": bool(meta.is_show_parent),
-                "keepAlive": bool(meta.is_keepalive),
-                "frameUrl": meta.frame_url or "",
-                "frameLoading": bool(meta.frame_loading),
-                "transition": {"enter": meta.transition_enter or "", "leave": meta.transition_leave or ""}
-                if meta.transition_enter or meta.transition_leave
-                else {},
-                "hiddenTag": bool(meta.is_hidden_tag),
-                "fixedTag": bool(meta.fixed_tag),
-                "dynamicLevel": meta.dynamic_level,
-            }
-        # 如果没有meta，返回基本meta
-        return {"title": menu.name, "showLink": True, "keepAlive": False}
 
     async def get_user_role_ids(self, user_id: str) -> list[str]:
         """根据用户ID获取对应角色ID列表。"""

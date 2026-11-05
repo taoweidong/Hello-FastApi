@@ -16,6 +16,7 @@ import redis.asyncio as redis
 
 from src.config.settings import settings
 from src.domain.services.cache_port import CachePort
+from src.domain.services.token_service import TokenService
 from src.infrastructure.logging.logger import logger
 
 
@@ -475,10 +476,12 @@ class CacheService(CachePort):
 
     @staticmethod
     def _token_hash(token: str) -> str:
-        """计算 Token 的 SHA-256 哈希前缀（前 32 位）。"""
-        import hashlib
+        """计算 Token 的哈希前缀。
 
-        return hashlib.sha256(token.encode()).hexdigest()[:32]
+        委托 TokenService.hash_token 单一实现：黑名单 Key 与在线会话 Key
+        必须来自同一算法，任一侧独立改动会导致强制下线静默失效。
+        """
+        return TokenService.hash_token(token)
 
     @staticmethod
     def _remaining_seconds(expires_at: datetime) -> int:

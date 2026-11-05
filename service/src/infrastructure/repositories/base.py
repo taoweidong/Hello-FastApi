@@ -6,6 +6,15 @@
 设计原则：
 - 常用基础功能在仓储层封装（基础 CRUD、简单查询）
 - 复杂业务逻辑在服务层处理（验证、事务、多步骤操作）
+
+事务约定（Unit of Work，必须遵守）：
+- 事务边界 = 请求级单事务：get_db yield 后统一 commit / 异常统一 rollback；
+- 同一请求内的**所有仓储必须共享同一个 AsyncSession**（由 api/dependencies/
+  各工厂统一 `Depends(get_db)` 保证）——"先查重再写"等模式依赖同一 session
+  内 flush 可见，跨 session 会出现查重竞态且事务边界静默分裂；
+- 新增服务工厂时禁止自建 AsyncSession，必须从 `Depends(get_db)` 取；
+- 观测类副作用（登录审计日志）是唯一例外：create_login_log 使用同引擎的
+  独立短会话立即提交，使审计记录在业务事务回滚后仍然存活。
 """
 
 from dataclasses import asdict
