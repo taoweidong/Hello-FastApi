@@ -14,6 +14,7 @@ from src.domain.entities.user import UserEntity
 from src.domain.enums import DataScope
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
+from src.domain.services.cache_port import CachePort
 
 
 class InMemoryUserRepository(UserRepositoryInterface):
@@ -48,11 +49,11 @@ class InMemoryUserRepository(UserRepositoryInterface):
     ) -> list[UserEntity]:
         result = list(self._users.values())
         if username:
-            result = [u for u in result if username in u.username]
+            result = [u for u in result if u.username == username]
         if phone:
             result = [u for u in result if u.phone == phone]
         if email:
-            result = [u for u in result if email in (u.email or "")]
+            result = [u for u in result if (u.email or "") == email]
         if is_active is not None:
             result = [u for u in result if u.is_active == is_active]
         if dept_id:
@@ -88,11 +89,11 @@ class InMemoryUserRepository(UserRepositoryInterface):
     ) -> int:
         rows = [u for u in self._users.values()]
         if username:
-            rows = [u for u in rows if username in u.username]
+            rows = [u for u in rows if u.username == username]
         if phone:
             rows = [u for u in rows if u.phone == phone]
         if email:
-            rows = [u for u in rows if email in (u.email or "")]
+            rows = [u for u in rows if (u.email or "") == email]
         if is_active is not None:
             rows = [u for u in rows if u.is_active == is_active]
         if dept_id:
@@ -118,6 +119,7 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         self._roles: dict[str, RoleEntity] = {}
         self._user_roles: dict[str, list[str]] = {}
         self._role_depts: dict[str, list[str]] = {}
+        self._role_menus: dict[str, list[str]] = {}
 
     async def get_by_id(self, role_id: str) -> RoleEntity | None:
         return self._roles.get(role_id)
@@ -173,22 +175,28 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         return True
 
     async def assign_menus_to_role(self, role_id: str, menu_ids: list[str]) -> bool:  # noqa: D102
+        """先清除旧菜单再分配新的（与真实仓储语义一致）。"""
+        self._role_menus[role_id] = list(menu_ids)
         return True
 
     async def get_role_menus(self, role_id: str) -> list:  # noqa: D102
-        return []
+        return list(self._role_menus.get(role_id, []))
 
     async def get_role_menu_ids(self, role_id: str) -> list[str]:  # noqa: D102
-        return []
+        return list(self._role_menus.get(role_id, []))
 
     async def get_user_all_menus(self, user_id: str) -> list:  # noqa: D102
-        return []
+        """用户所有角色关联菜单的并集（角色菜单 ID 列表，与真实仓储一致返回关联集合）。"""
+        menu_ids: set[str] = set()
+        for rid in self._user_roles.get(user_id, []):
+            menu_ids.update(self._role_menus.get(rid, []))
+        return sorted(menu_ids)
 
     async def get_users_roles_batch(self, user_ids: list[str]) -> dict[str, list[RoleEntity]]:  # noqa: D102
         return {uid: await self.get_user_roles(uid) for uid in user_ids}
 
     async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:  # noqa: D102
-        return {rid: [] for rid in role_ids}
+        return {rid: list(self._role_menus.get(rid, [])) for rid in role_ids}
 
     # ========== 数据权限（data_scope）相关操作 ==========
 
@@ -223,7 +231,7 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         return True
 
 
-class RecordingCacheService:
+class RecordingCacheService(CachePort):
     """记录调用次数的缓存服务替身，用于验证缓存失效行为。
 
     同时实现 ``CachePort`` 的批量失效语义：记录单次调用所失效的用户数量，
@@ -264,4 +272,42 @@ class RecordingCacheService:
         return True
 
     async def invalidate_all_menus(self) -> bool:
+        return True
+
+    # ---- CachePort 其余方法的 no-op 桩（当前用例不触达，仅为满足接口契约） ----
+
+    async def add_token_to_blacklist(self, token, expires_at):  # noqa: D102
+        return True
+
+    async def blacklist_token_hash(self, token_hash, expires_at):  # noqa: D102
+        return True
+
+    async def is_token_blacklisted(self, token):  # noqa: D102
+        return False
+
+    async def get_online_user(self, session_key):  # noqa: D102
+        return None
+
+    async def get_online_users(self):  # noqa: D102
+        return []
+
+    async def set_online_user(self, session_key, info, expires_at):  # noqa: D102
+        return True
+
+    async def delete_online_user(self, session_key):  # noqa: D102
+        return True
+
+    async def get_all_menus(self):  # noqa: D102
+        return None
+
+    async def set_all_menus(self, menus):  # noqa: D102
+        return True
+
+    async def get_dict_items(self, dict_name):  # noqa: D102
+        return None
+
+    async def set_dict_items(self, dict_name, items):  # noqa: D102
+        return True
+
+    async def invalidate_dict(self, dict_name):  # noqa: D102
         return True

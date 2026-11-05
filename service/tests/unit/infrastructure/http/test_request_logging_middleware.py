@@ -224,6 +224,12 @@ class TestExtractModule:
 class TestRequestLoggingMiddleware:
     """RequestLoggingMiddleware 测试类。"""
 
+    @pytest.fixture(autouse=True)
+    def _no_background_audit_write(self, monkeypatch):
+        """拦截 asyncio.create_task：dispatch 测试会触发真实后台审计写库，
+        任务打开的真实 DB 连接（aiosqlite 非守护线程）会阻塞进程退出。"""
+        monkeypatch.setattr("asyncio.create_task", lambda coro, **kw: coro.close())
+
     @pytest.fixture
     def middleware(self):
         return RequestLoggingMiddleware(MagicMock())

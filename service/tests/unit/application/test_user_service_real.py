@@ -303,7 +303,7 @@ class TestUserList:
         await user_repo.create(make_user(username="alice", email="a@example.com"))
         await user_repo.create(make_user(username="bob", email="b@example.com"))
 
-        rows, total = await user_service.get_users(UserListQueryDTO(pageNum=1, pageSize=10, username="ali"))
+        rows, total = await user_service.get_users(UserListQueryDTO(pageNum=1, pageSize=10, username="alice"))
 
         assert total == 1
         assert rows[0].username == "alice"

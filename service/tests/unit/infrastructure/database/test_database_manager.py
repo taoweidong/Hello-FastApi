@@ -130,10 +130,16 @@ class TestModuleLevelSingleton:
 
     @pytest.mark.asyncio
     async def test_get_db_functional(self):
-        """get_db 应产出 AsyncSession。"""
-        async for session in get_db():
-            assert isinstance(session, AsyncSession)
-            break
+        """get_db 应产出 AsyncSession。
+
+        必须显式 aclose 生成器：中途 break 会跳过 get_db 的 finally
+        （commit/rollback），连接不归还池 → aiosqlite 非守护线程
+        阻塞 pytest 进程退出。
+        """
+        agen = get_db()
+        session = await agen.__anext__()
+        assert isinstance(session, AsyncSession)
+        await agen.aclose()
 
     def test_get_engine_functional(self):
         """get_engine 应返回 AsyncEngine。"""
