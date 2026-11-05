@@ -1,7 +1,11 @@
 """领域层 - 缓存抽象端口。
 
-定义缓存服务的抽象接口，遵循依赖倒置原则。
-应用层通过此抽象接口访问缓存，不直接依赖基础设施层的具体实现。
+按**消费方**拆成窄接口（接口隔离原则）：每个应用服务只依赖自己真正调用的那一组方法，
+新增缓存域时往对应窄端口加方法，而不是继续撑大一个所有服务共享的宽接口。
+组合根与完整实现（``CacheService``）使用聚合端口 ``CachePort``，业务服务不应依赖它。
+
+在线会话的登记与查询（Redis 主存储 + 内存镜像双写）语义上不同于"读穿透缓存"，
+独立为 ``src.domain.services.online_session_port.OnlineSessionStore``。
 """
 
 from abc import ABC, abstractmethod
@@ -9,14 +13,13 @@ from datetime import datetime
 from typing import Any
 
 
-class CachePort(ABC):
-    """缓存服务的抽象端口。
+class TokenRevocationPort(ABC):
+    """Token 吊销端口：黑名单写入与校验。
 
-    封装 Token 黑名单、用户信息缓存、用户权限缓存、菜单缓存等操作。
-    所有方法对底层存储做降级处理，确保存储异常不阻塞正常业务。
+    消费方：认证服务（刷新/登出）、认证依赖链（每请求校验）、监控服务（强制下线）。
+    降级语义：存储不可用时 ``is_token_blacklisted`` 返回 False（放行），
+    避免缓存故障阻断全部请求。
     """
-
-    # ---- Token 黑名单 ----
 
     @abstractmethod
     async def add_token_to_blacklist(self, token: str, expires_at: datetime) -> bool:
@@ -59,57 +62,12 @@ class CachePort(ABC):
         """
         ...
 
-    # ---- 在线用户会话 ----
 
-    @abstractmethod
-    async def set_online_user(self, session_key: str, info: dict[str, Any], expires_at: datetime) -> bool:
-        """登记在线用户会话。
+class UserCachePort(ABC):
+    """用户维度缓存端口：基本信息与权限列表的读写、失效。
 
-        登录成功后调用，将会话信息写入缓存，TTL 与访问令牌生命周期一致。
-
-        Args:
-            session_key: 会话 Key（访问令牌哈希前缀）
-            info: 会话信息字典（userId/username/ip/system/browser/loginTime/expiresAt 等）
-            expires_at: 会话过期时间
-
-        Returns:
-            是否成功写入缓存
-        """
-        ...
-
-    @abstractmethod
-    async def get_online_user(self, session_key: str) -> dict[str, Any] | None:
-        """获取在线用户会话。
-
-        Args:
-            session_key: 会话 Key（访问令牌哈希前缀）
-
-        Returns:
-            会话信息字典（命中时），None 表示未命中或存储不可用
-        """
-        ...
-
-    @abstractmethod
-    async def get_online_users(self) -> list[dict[str, Any]]:
-        """获取全部在线用户会话。
-
-        Returns:
-            会话信息字典列表（每项含 id=session_key 供强制下线使用）；
-            存储不可用时返回空列表（降级处理）
-        """
-        ...
-
-    @abstractmethod
-    async def delete_online_user(self, session_key: str) -> bool:
-        """删除在线用户会话（强制下线）。
-
-        Args:
-            session_key: 会话 Key（访问令牌哈希前缀）
-
-        Returns:
-            是否成功删除
-        """
-        ...
+    消费方：授权服务（每请求热路径读写）、用户服务与角色服务（变更后失效）。
+    """
 
     # ---- 用户权限缓存 ----
 
@@ -188,7 +146,12 @@ class CachePort(ABC):
             results.append(ok_info and ok_perms)
         return all(results)
 
-    # ---- 菜单全表缓存 ----
+
+class MenuCachePort(ABC):
+    """菜单全表缓存端口。
+
+    消费方：菜单服务（列表读穿透 + 变更后失效）、认证服务（超管动态路由取数）。
+    """
 
     @abstractmethod
     async def get_all_menus(self) -> list[dict[str, Any]] | None:
@@ -209,7 +172,12 @@ class CachePort(ABC):
         """使菜单全量缓存失效。"""
         ...
 
-    # ---- 字典数据缓存 ----
+
+class DictCachePort(ABC):
+    """字典数据缓存端口（按字典类型名分 Key）。
+
+    消费方：字典服务（字典项读穿透 + 变更后失效）。
+    """
 
     @abstractmethod
     async def get_dict_items(self, dict_name: str) -> list[dict[str, Any]] | None:
@@ -240,6 +208,15 @@ class CachePort(ABC):
     async def invalidate_dict(self, dict_name: str) -> bool:
         """使指定字典类型的数据缓存失效。"""
         ...
+
+
+class CachePort(TokenRevocationPort, UserCachePort, MenuCachePort, DictCachePort):
+    """读穿透类缓存的聚合端口。
+
+    只作为组合根工厂的返回类型与完整实现（``CacheService``）的基类存在；
+    应用服务应按消费方依赖上面四个窄端口，不要注入本聚合类型。
+    在线会话不在本聚合内，见 ``OnlineSessionStore``。
+    """
 
 
 class IPFilterPort(ABC):

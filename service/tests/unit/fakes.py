@@ -14,7 +14,7 @@ from src.domain.entities.user import UserEntity
 from src.domain.enums import DataScope
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import UserCachePort
 
 
 class InMemoryUserRepository(UserRepositoryInterface):
@@ -231,10 +231,11 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         return True
 
 
-class RecordingCacheService(CachePort):
-    """记录调用次数的缓存服务替身，用于验证缓存失效行为。
+class RecordingCacheService(UserCachePort):
+    """记录调用次数的用户缓存替身，用于验证缓存失效行为。
 
-    同时实现 ``CachePort`` 的批量失效语义：记录单次调用所失效的用户数量，
+    只实现 ``UserCachePort``：窄接口下替身不必再为无关的缓存域补 no-op 桩。
+    批量失效语义同样被记录——单次调用所失效的用户数量，
     便于断言「批量操作只触发一次批量失效」而非 N 次单点失效。
     """
 
@@ -269,45 +270,4 @@ class RecordingCacheService(CachePort):
         return None
 
     async def set_user_permissions(self, user_id: str, permissions: list) -> bool:
-        return True
-
-    async def invalidate_all_menus(self) -> bool:
-        return True
-
-    # ---- CachePort 其余方法的 no-op 桩（当前用例不触达，仅为满足接口契约） ----
-
-    async def add_token_to_blacklist(self, token, expires_at):  # noqa: D102
-        return True
-
-    async def blacklist_token_hash(self, token_hash, expires_at):  # noqa: D102
-        return True
-
-    async def is_token_blacklisted(self, token):  # noqa: D102
-        return False
-
-    async def get_online_user(self, session_key):  # noqa: D102
-        return None
-
-    async def get_online_users(self):  # noqa: D102
-        return []
-
-    async def set_online_user(self, session_key, info, expires_at):  # noqa: D102
-        return True
-
-    async def delete_online_user(self, session_key):  # noqa: D102
-        return True
-
-    async def get_all_menus(self):  # noqa: D102
-        return None
-
-    async def set_all_menus(self, menus):  # noqa: D102
-        return True
-
-    async def get_dict_items(self, dict_name):  # noqa: D102
-        return None
-
-    async def set_dict_items(self, dict_name, items):  # noqa: D102
-        return True
-
-    async def invalidate_dict(self, dict_name):  # noqa: D102
         return True

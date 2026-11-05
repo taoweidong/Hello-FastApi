@@ -1,6 +1,6 @@
 """角色应用服务工厂测试。"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,18 +9,16 @@ import pytest
 class TestGetRoleService:
     """get_role_service 函数测试。"""
 
-    @patch("src.api.dependencies.role_service.RoleRepository")
-    async def test_returns_role_service(self, mock_role_repo):
-        """应返回配置好的 RoleService 实例。"""
-        mock_repo_instance = MagicMock()
-        mock_role_repo.return_value = mock_repo_instance
-
+    async def test_returns_role_service(self):
+        """应返回配置好的 RoleService，角色仓储取自请求级仓储束。"""
+        from src.api.dependencies.repositories import RepoBundle
         from src.api.dependencies.role_service import get_role_service
-
-        mock_db = MagicMock()
-        service = await get_role_service(db=mock_db)
         from src.application.services.role_service import RoleService
 
+        repos = RepoBundle(MagicMock())
+        mock_cache = MagicMock()
+        service = await get_role_service(repos=repos, cache_service=mock_cache)
+
         assert isinstance(service, RoleService)
-        assert service.role_repo == mock_repo_instance
-        mock_role_repo.assert_called_once_with(mock_db)
+        assert service.role_repo is repos.role
+        assert service.cache_service is mock_cache

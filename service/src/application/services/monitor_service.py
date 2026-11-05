@@ -25,7 +25,8 @@ from src.application.dto.monitor_dto import (
     SystemInfoDTO,
 )
 from src.config.settings import settings
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import TokenRevocationPort
+from src.domain.services.online_session_port import OnlineSessionStore
 
 _GB = 1024**3
 
@@ -60,13 +61,17 @@ def _format_duration(seconds: float) -> str:
 class MonitorService:
     """系统监控服务：无状态采集器，不依赖数据库。"""
 
-    def __init__(self, cache_service: CachePort | None = None) -> None:
+    def __init__(
+        self, session_store: OnlineSessionStore | None = None, token_revocation: TokenRevocationPort | None = None
+    ) -> None:
         """初始化监控服务。
 
         Args:
-            cache_service: 缓存服务端口（用于在线用户会话查询与强制下线），可为 None 触发降级
+            session_store: 在线会话端口（在册列表与删除），可为 None 触发降级
+            token_revocation: Token 吊销端口（强退时拉黑会话令牌），可为 None 触发降级
         """
-        self.cache_service = cache_service
+        self.session_store = session_store
+        self.token_revocation = token_revocation
 
     async def get_online_logs(self, query: OnlineLogsQueryDTO) -> tuple[list[dict], int]:
         """获取在线用户会话列表（支持用户名过滤与分页）。
@@ -77,9 +82,9 @@ class MonitorService:
         Returns:
             (当前页会话列表, 总条数)；缓存未注入或不可用时降级返回空列表
         """
-        if self.cache_service is None:
+        if self.session_store is None:
             return [], 0
-        sessions = await self.cache_service.get_online_users()
+        sessions = await self.session_store.get_online_users()
         if query.username:
             keyword = query.username.strip().lower()
             sessions = [item for item in sessions if keyword in str(item.get("username") or "").lower()]
@@ -102,11 +107,11 @@ class MonitorService:
         Returns:
             是否执行成功；缓存未注入时返回 False
         """
-        if self.cache_service is None:
+        if self.session_store is None or self.token_revocation is None:
             return False
         # 先读取会话的过期时间（用作黑名单 TTL），再删除会话
-        session = await self.cache_service.get_online_user(session_key)
-        await self.cache_service.delete_online_user(session_key)
+        session = await self.session_store.get_online_user(session_key)
+        await self.session_store.delete_online_user(session_key)
         expires_at: datetime | None = None
         if session and session.get("expiresAt"):
             try:
@@ -116,7 +121,7 @@ class MonitorService:
         if expires_at is None:
             # 会话信息缺失或已过期：兜底使用默认黑名单保留时长
             expires_at = datetime.now(timezone.utc) + timedelta(seconds=settings.CACHE_TOKEN_BLACKLIST_TTL)
-        await self.cache_service.blacklist_token_hash(session_key, expires_at)
+        await self.token_revocation.blacklist_token_hash(session_key, expires_at)
         return True
 
     async def get_server_info(self) -> ServerInfoDTO:

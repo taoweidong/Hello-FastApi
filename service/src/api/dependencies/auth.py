@@ -12,8 +12,8 @@ from src.application.services.authorization_service import AuthorizationService
 from src.domain.entities.user import UserEntity
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
+from src.domain.services.cache_port import TokenRevocationPort
 from src.domain.services.token_service import TokenService
-from src.infrastructure.cache.cache_service import CacheService
 
 security_scheme = HTTPBearer()
 
@@ -25,7 +25,7 @@ optional_security_scheme = HTTPBearer(auto_error=False)
 async def get_current_user_id(
     credentials: HTTPAuthorizationCredentials = Security(security_scheme),
     token_service: TokenService = Depends(get_token_service),
-    cache_service: CacheService = Depends(get_cache_service),
+    token_revocation: TokenRevocationPort = Depends(get_cache_service),
 ) -> str:
     """从 JWT 令牌中提取并验证当前用户 ID。"""
     token = credentials.credentials
@@ -37,7 +37,7 @@ async def get_current_user_id(
         raise UnauthorizedError(EM.INVALID_TOKEN_TYPE)
 
     # 检查 Token 黑名单
-    if await cache_service.is_token_blacklisted(token):
+    if await token_revocation.is_token_blacklisted(token):
         raise UnauthorizedError(EM.TOKEN_REVOKED)
 
     user_id = payload.get("sub")

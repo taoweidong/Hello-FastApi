@@ -16,7 +16,7 @@ from src.domain.entities.dictionary import DictionaryEntity
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import BusinessError, NotFoundError
 from src.domain.repositories.dictionary_repository import DictionaryRepositoryInterface
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import DictCachePort
 
 
 class DictionaryService:
@@ -25,7 +25,7 @@ class DictionaryService:
     # 向上追溯根字典的最大层级，防止异常数据导致死循环
     _MAX_ROOT_TRACE_DEPTH = 32
 
-    def __init__(self, dict_repo: DictionaryRepositoryInterface, cache_service: CachePort | None = None):
+    def __init__(self, dict_repo: DictionaryRepositoryInterface, cache_service: DictCachePort | None = None):
         self.dict_repo = dict_repo
         self.cache_service = cache_service
 

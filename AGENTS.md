@@ -61,10 +61,10 @@ mypy src/                               # typecheck
 
 **Architecture** — DDD 4-layer under `src/`: `api/` → `application/` → `domain/` → `infrastructure/`.
 - `src/api/v1/` — routers (classy-fastapi): `auth`, `user`, `role`, `menu`, `dept`, `dictionary`, `log`, `monitor`, `system_config`, `ip_rule`. Aggregated in `src/api/v1/__init__.py`.
-- `src/api/dependencies/` — one `Depends` provider per service.
+- `src/api/dependencies/` — one `Depends` provider per service. `get_repositories(db) -> RepoBundle` (`repositories.py`) is the **only** place in the composition root that touches the request session: every service factory receives the bundle, so no factory can build its own session. Add new repositories to `RepoBundle`, and never call `get_db` from a service factory.
 - `src/application/services/` — use cases (one per domain); transaction control lives here.
 - `src/application/mappers/` — DTO ↔ entity ↔ dict mappers.
-- `src/domain/entities/`, `src/domain/repositories/` (interfaces), `src/domain/services/` (`CachePort`, `IPFilterPort`, `LoggingPort`, `PasswordService`, `TokenService`).
+- `src/domain/entities/`, `src/domain/repositories/` (interfaces), `src/domain/services/` — ports are split by consumer: `TokenRevocationPort`, `UserCachePort`, `MenuCachePort`, `DictCachePort` (`cache_port.py`), `OnlineSessionStore` (`online_session_port.py`), plus `IPFilterPort`, `LoggingPort`, `PasswordService`, `TokenService`. `CachePort` is the aggregate used only by `CacheService` and the cache provider — services must depend on the narrow port they call.
 - `src/infrastructure/repositories/` — SQLModel impls with `to_domain()` / `from_domain()`.
 - `src/infrastructure/cache/` — Redis cache with auto-degradation.
 - `src/infrastructure/http/` — middleware: CORS, IP filter, rate limit (SlowAPI), request logging.

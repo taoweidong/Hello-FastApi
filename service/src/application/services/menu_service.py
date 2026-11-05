@@ -11,7 +11,7 @@ from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import MenuCachePort
 
 
 class MenuService:
@@ -20,7 +20,7 @@ class MenuService:
     def __init__(
         self,
         menu_repo: MenuRepositoryInterface,
-        cache_service: CachePort | None = None,
+        cache_service: MenuCachePort | None = None,
         role_repo: RoleRepositoryInterface | None = None,
     ):
         self.menu_repo = menu_repo

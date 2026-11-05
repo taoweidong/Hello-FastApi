@@ -15,13 +15,13 @@ from src.domain.enums import DataScope
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import UserCachePort
 
 
 class RoleService:
     """角色操作的应用服务。"""
 
-    def __init__(self, role_repo: RoleRepositoryInterface, cache_service: CachePort | None = None):
+    def __init__(self, role_repo: RoleRepositoryInterface, cache_service: UserCachePort | None = None):
         self.role_repo = role_repo
         self.cache_service = cache_service
 

@@ -1,6 +1,6 @@
-"""用户应用服务和仓储工厂测试。"""
+"""用户应用服务工厂测试。"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,45 +9,21 @@ import pytest
 class TestGetUserService:
     """get_user_service 函数测试。"""
 
-    @patch("src.api.dependencies.user_service.UserRepository")
-    @patch("src.api.dependencies.user_service.RoleRepository")
-    async def test_returns_user_service(self, mock_role_repo, mock_user_repo):
-        """应返回配置好的 UserService 实例。"""
-        mock_user_instance = MagicMock()
-        mock_role_instance = MagicMock()
-        mock_user_repo.return_value = mock_user_instance
-        mock_role_repo.return_value = mock_role_instance
-
+    async def test_returns_user_service(self):
+        """应返回配置好的 UserService，四个仓储全部取自同一个请求级仓储束。"""
+        from src.api.dependencies.repositories import RepoBundle
         from src.api.dependencies.user_service import get_user_service
-
-        mock_db = MagicMock()
-        mock_pwd = MagicMock()
-        mock_cache = MagicMock()
-        service = await get_user_service(db=mock_db, password_service=mock_pwd, cache_service=mock_cache)
         from src.application.services.user_service import UserService
 
+        repos = RepoBundle(MagicMock())
+        mock_pwd = MagicMock()
+        mock_cache = MagicMock()
+        service = await get_user_service(repos=repos, password_service=mock_pwd, cache_service=mock_cache)
+
         assert isinstance(service, UserService)
-        assert service.repo == mock_user_instance
-        assert service.role_repo == mock_role_instance
-        assert service.password_service == mock_pwd
-        assert service.cache_service == mock_cache
-        mock_user_repo.assert_called_once_with(mock_db)
-        mock_role_repo.assert_called_once_with(mock_db)
-
-
-@pytest.mark.unit
-class TestGetUserRepository:
-    """get_user_repository 函数测试。"""
-
-    @patch("src.api.dependencies.user_service.UserRepository")
-    async def test_returns_user_repository(self, mock_user_repo):
-        """应返回 UserRepository 实例。"""
-        mock_repo_instance = MagicMock()
-        mock_user_repo.return_value = mock_repo_instance
-
-        from src.api.dependencies.user_service import get_user_repository
-
-        mock_db = MagicMock()
-        repo = await get_user_repository(db=mock_db)
-        assert repo == mock_repo_instance
-        mock_user_repo.assert_called_once_with(mock_db)
+        assert service.repo is repos.user
+        assert service.role_repo is repos.role
+        assert service.dept_repo is repos.department
+        assert service.post_repo is repos.post
+        assert service.password_service is mock_pwd
+        assert service.cache_service is mock_cache

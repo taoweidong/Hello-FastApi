@@ -1,6 +1,6 @@
 """IP 规则应用服务工厂测试。"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,39 +9,23 @@ import pytest
 class TestGetIpRuleService:
     """get_ip_rule_service 函数测试。"""
 
-    @patch("src.api.dependencies.ip_rule_service.IPRuleRepository")
-    @patch("src.api.dependencies.ip_rule_service.IPFilterPortAdapter")
-    async def test_returns_ip_rule_service(self, mock_filter_adapter, mock_ip_repo):
-        """应返回配置好的 IPRuleService 实例。"""
-        mock_repo_instance = MagicMock()
-        mock_ip_repo.return_value = mock_repo_instance
-        mock_filter_instance = MagicMock()
-        mock_filter_adapter.return_value = mock_filter_instance
-
+    async def test_returns_ip_rule_service(self):
+        """应返回配置好的 IPRuleService，规则仓储取自请求级仓储束。"""
         from src.api.dependencies.ip_rule_service import get_ip_rule_service
-
-        mock_db = MagicMock()
-        service = await get_ip_rule_service(db=mock_db, ip_filter_port=mock_filter_instance, logging_port=MagicMock())
+        from src.api.dependencies.repositories import RepoBundle
         from src.application.services.ip_rule_service import IPRuleService
 
-        assert isinstance(service, IPRuleService)
-        assert service.ip_rule_repo == mock_repo_instance
-        mock_ip_repo.assert_called_once_with(mock_db)
-
-    @patch("src.api.dependencies.ip_rule_service.IPRuleRepository")
-    async def test_passes_ports_correctly(self, mock_ip_repo):
-        """应正确传递 IP 过滤端口和日志端口。"""
-        mock_ip_repo.return_value = MagicMock()
+        repos = RepoBundle(MagicMock())
         mock_filter_port = MagicMock()
         mock_logging_port = MagicMock()
-
-        from src.api.dependencies.ip_rule_service import get_ip_rule_service
-
         service = await get_ip_rule_service(
-            db=MagicMock(), ip_filter_port=mock_filter_port, logging_port=mock_logging_port
+            repos=repos, ip_filter_port=mock_filter_port, logging_port=mock_logging_port
         )
-        assert service.ip_filter_port == mock_filter_port
-        assert service.logging_port == mock_logging_port
+
+        assert isinstance(service, IPRuleService)
+        assert service.ip_rule_repo is repos.ip_rule
+        assert service.ip_filter_port is mock_filter_port
+        assert service.logging_port is mock_logging_port
 
 
 @pytest.mark.unit

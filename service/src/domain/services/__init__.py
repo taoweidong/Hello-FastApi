@@ -4,9 +4,28 @@
 领域服务封装了领域逻辑，不依赖任何外部层（infrastructure、config、api 等）。
 """
 
-from src.domain.services.cache_port import CachePort, IPFilterPort
+from src.domain.services.cache_port import (
+    CachePort,
+    DictCachePort,
+    IPFilterPort,
+    MenuCachePort,
+    TokenRevocationPort,
+    UserCachePort,
+)
 from src.domain.services.logging_port import LoggingPort
+from src.domain.services.online_session_port import OnlineSessionStore
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
 
-__all__ = ["CachePort", "IPFilterPort", "LoggingPort", "PasswordService", "TokenService"]
+__all__ = [
+    "CachePort",
+    "DictCachePort",
+    "IPFilterPort",
+    "LoggingPort",
+    "MenuCachePort",
+    "OnlineSessionStore",
+    "PasswordService",
+    "TokenRevocationPort",
+    "TokenService",
+    "UserCachePort",
+]

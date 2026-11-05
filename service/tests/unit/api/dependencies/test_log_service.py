@@ -1,6 +1,6 @@
 """日志应用服务工厂测试。"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,18 +9,14 @@ import pytest
 class TestGetLogService:
     """get_log_service 函数测试。"""
 
-    @patch("src.api.dependencies.log_service.LogRepository")
-    async def test_returns_log_service(self, mock_log_repo):
-        """应返回配置好的 LogService 实例。"""
-        mock_repo_instance = MagicMock()
-        mock_log_repo.return_value = mock_repo_instance
-
+    async def test_returns_log_service(self):
+        """应返回配置好的 LogService，日志仓储取自请求级仓储束。"""
         from src.api.dependencies.log_service import get_log_service
-
-        mock_db = MagicMock()
-        service = await get_log_service(db=mock_db)
+        from src.api.dependencies.repositories import RepoBundle
         from src.application.services.log_service import LogService
 
+        repos = RepoBundle(MagicMock())
+        service = await get_log_service(repos=repos)
+
         assert isinstance(service, LogService)
-        assert service.log_repo == mock_repo_instance
-        mock_log_repo.assert_called_once_with(mock_db)
+        assert service.log_repo is repos.log

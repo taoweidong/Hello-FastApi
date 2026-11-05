@@ -1,6 +1,6 @@
 """部门应用服务工厂测试。"""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -9,18 +9,14 @@ import pytest
 class TestGetDepartmentService:
     """get_department_service 函数测试。"""
 
-    @patch("src.api.dependencies.department_service.DepartmentRepository")
-    async def test_returns_department_service(self, mock_dept_repo):
-        """应返回配置好的 DepartmentService 实例。"""
-        mock_repo_instance = MagicMock()
-        mock_dept_repo.return_value = mock_repo_instance
-
+    async def test_returns_department_service(self):
+        """应返回配置好的 DepartmentService，部门仓储取自请求级仓储束。"""
         from src.api.dependencies.department_service import get_department_service
-
-        mock_db = MagicMock()
-        service = await get_department_service(db=mock_db)
+        from src.api.dependencies.repositories import RepoBundle
         from src.application.services.department_service import DepartmentService
 
+        repos = RepoBundle(MagicMock())
+        service = await get_department_service(repos=repos)
+
         assert isinstance(service, DepartmentService)
-        assert service.dept_repo == mock_repo_instance
-        mock_dept_repo.assert_called_once_with(mock_db)
+        assert service.dept_repo is repos.department

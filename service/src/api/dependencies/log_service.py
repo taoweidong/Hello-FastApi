@@ -1,17 +1,14 @@
 """日志应用服务工厂。"""
 
 from fastapi import Depends
-from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.api.dependencies.repositories import RepoBundle, get_repositories
 from src.application.services.log_service import LogService
-from src.infrastructure.database import get_db
-from src.infrastructure.repositories.log_repository import LogRepository
 
 
-async def get_log_service(db: AsyncSession = Depends(get_db)) -> LogService:
+async def get_log_service(repos: RepoBundle = Depends(get_repositories)) -> LogService:
     """获取日志服务实例。
 
-    注入日志仓储依赖。
+    注入日志仓储依赖（仓储来自请求级仓储束，事务约定见 repositories.py）。
     """
-    log_repo = LogRepository(db)
-    return LogService(log_repo=log_repo)
+    return LogService(log_repo=repos.log)

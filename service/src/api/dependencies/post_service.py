@@ -1,14 +1,11 @@
 """岗位应用服务工厂。"""
 
 from fastapi import Depends
-from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src.api.dependencies.repositories import RepoBundle, get_repositories
 from src.application.services.post_service import PostService
-from src.infrastructure.database import get_db
-from src.infrastructure.repositories.post_repository import PostRepository
 
 
-async def get_post_service(db: AsyncSession = Depends(get_db)) -> PostService:
-    """获取岗位服务实例。"""
-    post_repo = PostRepository(db)
-    return PostService(post_repo=post_repo)
+async def get_post_service(repos: RepoBundle = Depends(get_repositories)) -> PostService:
+    """获取岗位服务实例（仓储来自请求级仓储束，事务约定见 repositories.py）。"""
+    return PostService(post_repo=repos.post)

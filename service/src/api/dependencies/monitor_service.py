@@ -4,9 +4,10 @@ import redis.asyncio as redis_async
 from fastapi import Depends
 from loguru import logger
 
-from src.api.dependencies.cache_service import get_cache_service
+from src.api.dependencies.cache_service import get_cache_service, get_online_session_store
 from src.application.services.monitor_service import MonitorService
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import TokenRevocationPort
+from src.domain.services.online_session_port import OnlineSessionStore
 from src.infrastructure.cache.redis_manager import get_redis
 
 
@@ -19,6 +20,12 @@ async def get_redis_or_none() -> redis_async.Redis | None:
         return None
 
 
-async def get_monitor_service(cache_service: CachePort = Depends(get_cache_service)) -> MonitorService:
-    """获取监控服务实例（注入缓存服务，用于在线用户会话查询与强制下线）。"""
-    return MonitorService(cache_service=cache_service)
+async def get_monitor_service(
+    session_store: OnlineSessionStore = Depends(get_online_session_store),
+    token_revocation: TokenRevocationPort = Depends(get_cache_service),
+) -> MonitorService:
+    """获取监控服务实例。
+
+    在线用户会话查询走 ``OnlineSessionStore``，强制下线时拉黑令牌走 ``TokenRevocationPort``。
+    """
+    return MonitorService(session_store=session_store, token_revocation=token_revocation)

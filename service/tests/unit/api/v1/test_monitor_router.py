@@ -87,7 +87,9 @@ class TestMonitorRouter:
             ]
         )
         self._fake_cache = fake_cache
-        app.dependency_overrides[get_monitor_service] = lambda: MonitorService(cache_service=fake_cache)
+        app.dependency_overrides[get_monitor_service] = lambda: MonitorService(
+            session_store=fake_cache, token_revocation=fake_cache
+        )
         return TestClient(app, raise_server_exceptions=False)
 
     auth = {"Authorization": "Bearer test_token"}

@@ -21,7 +21,8 @@ from src.domain.repositories.log_repository import LogRepositoryInterface
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import MenuCachePort, TokenRevocationPort
+from src.domain.services.online_session_port import OnlineSessionStore
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
 
@@ -47,7 +48,9 @@ class AuthService:
         menu_repo: MenuRepositoryInterface,
         token_service: TokenService,
         password_service: PasswordService,
-        cache_service: CachePort | None = None,
+        token_revocation: TokenRevocationPort | None = None,
+        session_store: OnlineSessionStore | None = None,
+        menu_cache: MenuCachePort | None = None,
         log_repo: LogRepositoryInterface | None = None,
     ):
         self.user_repo = user_repo
@@ -55,7 +58,9 @@ class AuthService:
         self.menu_repo = menu_repo
         self.token_service = token_service
         self.password_service = password_service
-        self.cache_service = cache_service
+        self.token_revocation = token_revocation
+        self.session_store = session_store
+        self.menu_cache = menu_cache
         self.log_repo = log_repo
 
     async def login(self, dto: LoginDTO, request_info: LoginRequestInfo | None = None) -> dict:
@@ -149,7 +154,7 @@ class AuthService:
         会话 Key 与 Token 黑名单共用同一哈希前缀，便于强制下线直接拉黑；
         Redis 不可用时静默降级，不影响登录主流程。
         """
-        if self.cache_service is None:
+        if self.session_store is None:
             return
         try:
             if request_info is not None:
@@ -169,7 +174,7 @@ class AuthService:
                 "expiresAt": expires_at.isoformat(),
             }
             session_key = self.token_service.hash_token(access_token)
-            await self.cache_service.set_online_user(session_key, info, expires_at)
+            await self.session_store.set_online_user(session_key, info, expires_at)
         except Exception:
             logger.warning(f"登记在线用户会话失败：username={user.username}", exc_info=True)
 
@@ -315,7 +320,7 @@ class AuthService:
         if not self.token_service.verify_token_type(payload, "refresh"):
             raise UnauthorizedError(EM.INVALID_TOKEN_TYPE)
 
-        if self.cache_service is not None and await self.cache_service.is_token_blacklisted(refresh_token):
+        if self.token_revocation is not None and await self.token_revocation.is_token_blacklisted(refresh_token):
             raise UnauthorizedError(EM.TOKEN_REVOKED)
 
         user_id = payload.get("sub")
@@ -357,7 +362,7 @@ class AuthService:
         令牌解码失败或已过期时无需拉黑，返回 True；
         Redis 未注入/写入失败时返回 False（is_token_blacklisted 同样降级放行，语义一致）。
         """
-        if self.cache_service is None:
+        if self.token_revocation is None:
             return True
         payload = self.token_service.decode_token(token)
         if payload is None:
@@ -366,7 +371,7 @@ class AuthService:
         if exp is None:
             return True
         expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
-        return await self.cache_service.add_token_to_blacklist(token, expires_at)
+        return await self.token_revocation.add_token_to_blacklist(token, expires_at)
 
     async def get_async_routes(self, user_id: str) -> list[dict]:
         """根据用户角色获取动态路由（从数据库Menu+MenuMeta构建）。"""
@@ -395,15 +400,15 @@ class AuthService:
 
     async def _get_all_menus_cached(self) -> list[MenuEntity]:
         """获取所有菜单（带缓存），用于超级用户场景。"""
-        if self.cache_service is not None:
-            cached = await self.cache_service.get_all_menus()
+        if self.menu_cache is not None:
+            cached = await self.menu_cache.get_all_menus()
             if cached is not None:
                 return [self._menu_dict_to_entity(m) for m in cached]
 
         menus = await self.menu_repo.get_all()
 
-        if self.cache_service is not None:
-            await self.cache_service.set_all_menus([self._menu_entity_to_dict(m) for m in menus])
+        if self.menu_cache is not None:
+            await self.menu_cache.set_all_menus([self._menu_entity_to_dict(m) for m in menus])
 
         return menus
 

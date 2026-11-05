@@ -73,7 +73,9 @@ class TestAuthService:
             menu_repo=mock_menu_repo,
             token_service=token_service,
             password_service=mock_password_service,
-            cache_service=mock_cache_service,
+            token_revocation=mock_cache_service,
+            session_store=mock_cache_service,
+            menu_cache=mock_cache_service,
         )
 
     @pytest.mark.asyncio
@@ -236,8 +238,8 @@ class TestAuthService:
 
         await auth_service.refresh_token(refresh_token)
 
-        auth_service.cache_service.add_token_to_blacklist.assert_awaited()
-        blacklisted_token = auth_service.cache_service.add_token_to_blacklist.await_args.args[0]
+        auth_service.token_revocation.add_token_to_blacklist.assert_awaited()
+        blacklisted_token = auth_service.token_revocation.add_token_to_blacklist.await_args.args[0]
         assert blacklisted_token == refresh_token
 
     @pytest.mark.asyncio
@@ -284,7 +286,9 @@ class TestAuthService:
             menu_repo=mock_menu_repo,
             token_service=token_service,
             password_service=mock_password_service,
-            cache_service=None,
+            token_revocation=None,
+            session_store=None,
+            menu_cache=None,
         )
 
         result = await service.logout("any-token")
@@ -669,7 +673,9 @@ class TestAuthService:
             menu_repo=mock_menu_repo,
             token_service=token_service,
             password_service=mock_password_service,
-            cache_service=mock_cache_service,
+            token_revocation=mock_cache_service,
+            session_store=mock_cache_service,
+            menu_cache=mock_cache_service,
             log_repo=mock_log_repo,
         )
 

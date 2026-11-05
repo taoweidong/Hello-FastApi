@@ -15,7 +15,7 @@ from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ForbiddenError, UnauthorizedError
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import UserCachePort
 
 
 class AuthorizationService:
@@ -25,7 +25,7 @@ class AuthorizationService:
         self,
         user_repo: UserRepositoryInterface,
         role_repo: RoleRepositoryInterface,
-        cache_service: CachePort | None = None,
+        cache_service: UserCachePort | None = None,
     ):
         self.user_repo = user_repo
         self.role_repo = role_repo

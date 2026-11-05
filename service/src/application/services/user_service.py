@@ -16,7 +16,7 @@ from src.domain.repositories.department_repository import DepartmentRepositoryIn
 from src.domain.repositories.post_repository import PostRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
-from src.domain.services.cache_port import CachePort
+from src.domain.services.cache_port import UserCachePort
 from src.domain.services.password_service import PasswordService
 
 
@@ -28,7 +28,7 @@ class UserService:
         repo: UserRepositoryInterface,
         password_service: PasswordService,
         role_repo: RoleRepositoryInterface,
-        cache_service: CachePort | None = None,
+        cache_service: UserCachePort | None = None,
         dept_repo: DepartmentRepositoryInterface | None = None,
         post_repo: PostRepositoryInterface | None = None,
     ):

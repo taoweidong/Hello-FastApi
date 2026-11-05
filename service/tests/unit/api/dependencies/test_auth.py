@@ -29,7 +29,9 @@ class TestGetCurrentUserId:
 
         with patch("fastapi.security.HTTPBearer.__call__", return_value=MagicMock(credentials="token")):
             result = await get_current_user_id(
-                credentials=MagicMock(credentials="valid_token"), token_service=mock_token_svc, cache_service=mock_cache
+                credentials=MagicMock(credentials="valid_token"),
+                token_service=mock_token_svc,
+                token_revocation=mock_cache,
             )
             assert result == "user123"
 
@@ -50,7 +52,7 @@ class TestGetCurrentUserId:
             await get_current_user_id(
                 credentials=MagicMock(credentials="invalid_token"),
                 token_service=mock_token_svc,
-                cache_service=mock_cache,
+                token_revocation=mock_cache,
             )
 
     @patch("src.api.dependencies.auth.get_token_service")
@@ -70,7 +72,7 @@ class TestGetCurrentUserId:
             await get_current_user_id(
                 credentials=MagicMock(credentials="refresh_token"),
                 token_service=mock_token_svc,
-                cache_service=mock_cache,
+                token_revocation=mock_cache,
             )
 
     @patch("src.api.dependencies.auth.get_token_service")
@@ -91,7 +93,7 @@ class TestGetCurrentUserId:
             await get_current_user_id(
                 credentials=MagicMock(credentials="blacklisted_token"),
                 token_service=mock_token_svc,
-                cache_service=mock_cache,
+                token_revocation=mock_cache,
             )
 
     @patch("src.api.dependencies.auth.get_token_service")
@@ -112,7 +114,7 @@ class TestGetCurrentUserId:
             await get_current_user_id(
                 credentials=MagicMock(credentials="no_sub_token"),
                 token_service=mock_token_svc,
-                cache_service=mock_cache,
+                token_revocation=mock_cache,
             )
 
 

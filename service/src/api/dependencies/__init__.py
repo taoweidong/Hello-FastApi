@@ -14,18 +14,19 @@ from src.api.dependencies.auth import (
     security_scheme,
 )
 from src.api.dependencies.auth_service import get_auth_service
-from src.api.dependencies.cache_service import get_cache_service
+from src.api.dependencies.cache_service import get_cache_service, get_online_session_store
 from src.api.dependencies.department_service import get_department_service
 from src.api.dependencies.dictionary_service import get_dictionary_service
 from src.api.dependencies.domain_services import get_password_service, get_token_service
 from src.api.dependencies.ip_rule_service import get_ip_rule_service
 from src.api.dependencies.log_service import get_log_service
-from src.api.dependencies.menu_service import get_menu_repository, get_menu_service
+from src.api.dependencies.menu_service import get_menu_service
 from src.api.dependencies.notice_service import get_notice_service
 from src.api.dependencies.post_service import get_post_service
+from src.api.dependencies.repositories import RepoBundle, get_repositories
 from src.api.dependencies.role_service import get_role_service
 from src.api.dependencies.system_config_service import get_system_config_service
-from src.api.dependencies.user_service import get_user_repository, get_user_service
+from src.api.dependencies.user_service import get_user_service
 
 __all__ = [
     # 认证依赖
@@ -51,9 +52,10 @@ __all__ = [
     "get_role_service",
     "get_system_config_service",
     "get_user_service",
-    # 仓储工厂
-    "get_menu_repository",
-    "get_user_repository",
+    # 仓储束工厂（组合根唯一的 Session 入口，事务约定见 repositories.py）
+    "RepoBundle",
+    "get_repositories",
     # 缓存服务工厂
     "get_cache_service",
+    "get_online_session_store",
 ]

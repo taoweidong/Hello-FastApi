@@ -201,7 +201,7 @@ class TestGetOnlineLogs:
                 _make_session("h3", "Admin", "2026-03-29T09:00:00"),
             ]
         )
-        service = MonitorService(cache_service=cache)
+        service = MonitorService(session_store=cache, token_revocation=cache)
 
         # 无过滤：按登录时间倒序
         items, total = await service.get_online_logs(OnlineLogsQueryDTO(pageSize=2))
@@ -225,7 +225,7 @@ class TestForceOffline:
     async def test_force_offline_deletes_session_and_blacklists_token(self):
         """强退删除会话并将会话哈希加入黑名单，TTL 取会话过期时间。"""
         cache = _FakeCache(sessions=[_make_session("h1", "admin", "2026-03-29T10:00:00", "2099-01-01T00:00:00+00:00")])
-        service = MonitorService(cache_service=cache)
+        service = MonitorService(session_store=cache, token_revocation=cache)
 
         result = await service.force_offline("h1")
         assert result is True
@@ -236,7 +236,7 @@ class TestForceOffline:
     async def test_force_offline_missing_session_is_idempotent(self):
         """会话不存在时同样删除并拉黑（幂等，不抛异常）。"""
         cache = _FakeCache(sessions=[])
-        service = MonitorService(cache_service=cache)
+        service = MonitorService(session_store=cache, token_revocation=cache)
 
         result = await service.force_offline("unknown-hash")
         assert result is True
@@ -250,7 +250,7 @@ class TestForceOffline:
         cache = _FakeCache(
             sessions=[{"id": "h1", "username": "admin", "loginTime": "2026-03-29T10:00:00", "expiresAt": "bad-value"}]
         )
-        service = MonitorService(cache_service=cache)
+        service = MonitorService(session_store=cache, token_revocation=cache)
 
         result = await service.force_offline("h1")
         assert result is True
