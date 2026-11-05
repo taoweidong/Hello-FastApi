@@ -106,3 +106,19 @@ class CacheInfoDTO(BaseModel):
     hitRate: float | None = Field(default=None, description="命中率（%）")
     clients: int | None = Field(default=None, description="已连接客户端数")
     commandStats: list[CacheCommandStatDTO] = Field(default_factory=list, description="命令调用统计（Top10）")
+
+
+class CacheGroupDTO(BaseModel):
+    """缓存分组清单条目（Redis 状态监控页）"""
+
+    key: str = Field(description="分组标识（清理接口的入参）")
+    name: str = Field(description="分组中文名")
+    prefix: str = Field(description="键前缀")
+    count: int = Field(description="当前键数量")
+    clearable: bool = Field(description="是否允许清理（令牌黑名单为安全红线不可清理）")
+
+
+class CacheClearDTO(BaseModel):
+    """缓存清理请求"""
+
+    group: str = Field(min_length=1, description="要清理的分组标识；all 表示清理全部可清理业务组")

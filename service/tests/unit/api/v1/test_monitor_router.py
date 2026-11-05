@@ -164,3 +164,117 @@ class TestMonitorRouter:
         assert data["code"] == 0
         assert data["data"]["connected"] is False
         assert data["data"]["message"]
+
+
+@pytest.mark.unit
+class TestCacheAdminRouter:
+    """缓存清单与清理接口：权限（仅管理员）与降级语义。"""
+
+    @pytest.fixture
+    def app(self):
+        _app = FastAPI()
+        register_exception_handlers(_app)
+        from src.api.v1.monitor_router import MonitorRouter
+
+        _app.include_router(MonitorRouter().router, prefix="/api/system")
+        return _app
+
+    @pytest.fixture
+    def mock_admin_service(self):
+        from unittest.mock import AsyncMock
+
+        from src.application.dto.monitor_dto import CacheGroupDTO
+
+        svc = AsyncMock()
+        # 服务层契约：返回 CacheGroupDTO 列表（路由层负责 model_dump）
+        svc.get_cache_groups.return_value = [
+            CacheGroupDTO(key="user_info", name="用户信息缓存", prefix="user:info:", count=3, clearable=True),
+            CacheGroupDTO(
+                key="token_blacklist", name="令牌黑名单", prefix="token:blacklist:", count=1, clearable=False
+            ),
+        ]
+        svc.clear_cache_group.return_value = 3
+        svc.clear_all_cache.return_value = 7
+        return svc
+
+    def _build_client(self, app, service, user_entity):
+        from src.api.dependencies import get_current_active_user
+        from src.api.dependencies.monitor_service import get_monitor_service
+
+        app.dependency_overrides[get_current_active_user] = lambda: user_entity
+        app.dependency_overrides[get_monitor_service] = lambda: service
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_cache_groups_requires_admin(self, app, mock_admin_service):
+        """cache-groups 属 monitor:view，但清理按钮的权限码由前端 v-auth 控制；
+        该接口本身普通登录用户（monitor:view 权限）即可访问。"""
+        # 管理员可访问
+        client = self._build_client(
+            app, mock_admin_service, UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
+        )
+        resp = client.get("/api/system/cache-groups", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert {g["key"] for g in data} == {"user_info", "token_blacklist"}
+
+    def test_cache_clear_requires_superuser(self, app, mock_admin_service):
+        """非管理员调用清理接口必须 403（require_superuser）。"""
+        normal_user = UserEntity(id="2", username="user", password="", is_superuser=UserRole.USER)
+        client = self._build_client(app, mock_admin_service, normal_user)
+        resp = client.post(
+            "/api/system/cache-clear", json={"group": "user_info"}, headers={"Authorization": "Bearer t"}
+        )
+        assert resp.status_code == 403
+        resp = client.post("/api/system/cache-clear-all", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 403
+        mock_admin_service.clear_cache_group.assert_not_awaited()
+
+    def test_cache_clear_by_superuser(self, app, mock_admin_service):
+        client = self._build_client(
+            app, mock_admin_service, UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
+        )
+        resp = client.post(
+            "/api/system/cache-clear", json={"group": "user_info"}, headers={"Authorization": "Bearer t"}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["data"] == {"group": "user_info", "deleted": 3}
+
+        resp = client.post("/api/system/cache-clear-all", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 200
+        assert resp.json()["data"] == {"group": "all", "deleted": 7}
+
+    def test_cache_clear_unknown_group_400(self, app):
+        """未知分组：端口抛 ValueError，服务层转 BusinessError → 400。
+
+        必须注入真实 MonitorService（错误映射发生在服务层），
+        仅 mock CacheAdminPort。
+        """
+        from unittest.mock import AsyncMock
+
+        from src.application.services.monitor_service import MonitorService
+
+        mock_admin = AsyncMock()
+        mock_admin.clear_cache_group.side_effect = ValueError("未知的缓存分组: nope")
+        svc = MonitorService(cache_admin=mock_admin)
+        client = self._build_client(
+            app, svc, UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
+        )
+        resp = client.post("/api/system/cache-clear", json={"group": "nope"}, headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 400
+
+    def test_cache_clear_unavailable_400(self, app):
+        """Redis 不可用时服务层抛 BusinessError → 400（与强制下线语义一致）。"""
+        from unittest.mock import AsyncMock
+
+        from src.application.services.monitor_service import MonitorService
+
+        mock_admin = AsyncMock()
+        # Redis 不可用：端口返回 None（而非抛错），服务层转 BusinessError
+        mock_admin.clear_all_business_cache.return_value = None
+        svc = MonitorService(cache_admin=mock_admin)
+        client = self._build_client(
+            app, svc, UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
+        )
+        resp = client.post("/api/system/cache-clear-all", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 400
+        assert "缓存服务不可用" in resp.json()["message"]

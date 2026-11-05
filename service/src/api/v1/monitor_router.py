@@ -13,9 +13,16 @@ from fastapi import Depends
 
 from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
-from src.api.dependencies import require_permission
+from src.api.dependencies import require_permission, require_superuser
 from src.api.dependencies.monitor_service import get_monitor_service, get_redis_or_none
-from src.application.dto.monitor_dto import CacheInfoDTO, ForceOfflineDTO, OnlineLogsQueryDTO, ServerInfoDTO
+from src.application.dto.monitor_dto import (
+    CacheClearDTO,
+    CacheGroupDTO,
+    CacheInfoDTO,
+    ForceOfflineDTO,
+    OnlineLogsQueryDTO,
+    ServerInfoDTO,
+)
 from src.application.services.monitor_service import MonitorService
 from src.domain.exceptions import BusinessError
 
@@ -43,6 +50,38 @@ class MonitorRouter(Routable):
         """获取缓存监控数据（Redis info + 键统计），Redis 不可用时降级返回。"""
         data = await service.get_cache_info(redis_client)
         return success_response(data=data.model_dump())
+
+    @get("/cache-groups", response_model=ApiResponse[list[CacheGroupDTO]])
+    async def get_cache_groups(
+        self,
+        _: dict = Depends(require_permission("monitor:view")),
+        service: MonitorService = Depends(get_monitor_service),
+    ) -> dict:
+        """获取缓存分组清单（各业务缓存分组的键数量，Redis 状态监控页）。"""
+        groups = await service.get_cache_groups()
+        return success_response(data=[g.model_dump() for g in groups])
+
+    @post("/cache-clear", response_model=ApiResponse[dict])
+    async def clear_cache_group(
+        self,
+        dto: CacheClearDTO,
+        _: dict = Depends(require_superuser()),
+        service: MonitorService = Depends(get_monitor_service),
+    ) -> dict:
+        """清理指定分组缓存（仅管理员）。
+
+        令牌黑名单组为安全红线不可清理；未知分组返回 400。
+        """
+        deleted = await service.clear_cache_group(dto)
+        return success_response(data={"group": dto.group, "deleted": deleted}, message=f"已清理 {deleted} 个缓存键")
+
+    @post("/cache-clear-all", response_model=ApiResponse[dict])
+    async def clear_all_cache(
+        self, _: dict = Depends(require_superuser()), service: MonitorService = Depends(get_monitor_service)
+    ) -> dict:
+        """清理全部可清理业务缓存（仅管理员；不含令牌黑名单与限流计数键）。"""
+        deleted = await service.clear_all_cache()
+        return success_response(data={"group": "all", "deleted": deleted}, message=f"已清理 {deleted} 个缓存键")
 
     @post("/online-logs", response_model=PaginatedResponse[dict])
     async def get_online_logs(

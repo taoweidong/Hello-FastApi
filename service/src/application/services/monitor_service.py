@@ -14,7 +14,9 @@ import psutil
 from loguru import logger
 
 from src.application.dto.monitor_dto import (
+    CacheClearDTO,
     CacheCommandStatDTO,
+    CacheGroupDTO,
     CacheInfoDTO,
     CpuInfoDTO,
     DiskInfoDTO,
@@ -25,6 +27,8 @@ from src.application.dto.monitor_dto import (
     SystemInfoDTO,
 )
 from src.config.settings import settings
+from src.domain.exceptions import BusinessError
+from src.domain.services.cache_admin_port import CacheAdminPort
 from src.domain.services.cache_port import TokenRevocationPort
 from src.domain.services.online_session_port import OnlineSessionStore
 
@@ -62,16 +66,21 @@ class MonitorService:
     """系统监控服务：无状态采集器，不依赖数据库。"""
 
     def __init__(
-        self, session_store: OnlineSessionStore | None = None, token_revocation: TokenRevocationPort | None = None
+        self,
+        session_store: OnlineSessionStore | None = None,
+        token_revocation: TokenRevocationPort | None = None,
+        cache_admin: CacheAdminPort | None = None,
     ) -> None:
         """初始化监控服务。
 
         Args:
             session_store: 在线会话端口（在册列表与删除），可为 None 触发降级
             token_revocation: Token 吊销端口（强退时拉黑会话令牌），可为 None 触发降级
+            cache_admin: 缓存管理端口（分组清单与清理），可为 None 触发降级
         """
         self.session_store = session_store
         self.token_revocation = token_revocation
+        self.cache_admin = cache_admin
 
     async def get_online_logs(self, query: OnlineLogsQueryDTO) -> tuple[list[dict], int]:
         """获取在线用户会话列表（支持用户名过滤与分页）。
@@ -229,3 +238,44 @@ class MonitorService:
             clients=int(info.get("connected_clients") or 0) or None,
             commandStats=command_stats[:10],
         )
+
+    async def get_cache_groups(self) -> list[CacheGroupDTO]:
+        """获取缓存分组清单（Redis 状态监控页"已有缓存数据"区）。
+
+        缓存管理端口未注入或存储不可用时降级为空列表，前端呈现为"暂无数据"。
+        """
+        if self.cache_admin is None:
+            return []
+        groups = await self.cache_admin.get_cache_groups()
+        if groups is None:
+            return []
+        return [CacheGroupDTO(**g) for g in groups]
+
+    async def clear_cache_group(self, dto: CacheClearDTO) -> int:
+        """清理指定分组缓存，返回删除键数量。
+
+        Raises:
+            BusinessError: 缓存服务不可用（端口未注入/Redis 不可达）时抛出；
+        """
+        if self.cache_admin is None:
+            raise BusinessError("缓存服务不可用")
+        try:
+            deleted = await self.cache_admin.clear_cache_group(dto.group)
+        except ValueError as exc:
+            raise BusinessError(str(exc)) from exc
+        if deleted is None:
+            raise BusinessError("缓存服务不可用")
+        return deleted
+
+    async def clear_all_cache(self) -> int:
+        """清理全部可清理业务缓存（不含令牌黑名单与限流计数键）。
+
+        Raises:
+            BusinessError: 缓存服务不可用时抛出。
+        """
+        if self.cache_admin is None:
+            raise BusinessError("缓存服务不可用")
+        deleted = await self.cache_admin.clear_all_business_cache()
+        if deleted is None:
+            raise BusinessError("缓存服务不可用")
+        return deleted

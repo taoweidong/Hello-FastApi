@@ -1,6 +1,7 @@
 """缓存服务。
 
-实现读穿透类缓存的四个领域端口：Token 黑名单、用户信息/权限、菜单全表、字典项。
+实现读穿透类缓存的四个领域端口（Token 黑名单、用户信息/权限、菜单全表、字典项）
+与缓存管理端口 CacheAdminPort（分组清单与清理，供管理员监控页使用）。
 所有方法对 Redis 操作做 try/except 降级处理，确保 Redis 异常不阻塞正常请求。
 
 通用 JSON 读写的降级语义由 ``_get_json`` / ``_set_json`` / ``_delete_keys``
@@ -15,13 +16,14 @@ from typing import Any
 import redis.asyncio as redis
 
 from src.config.settings import settings
+from src.domain.services.cache_admin_port import CacheAdminPort
 from src.domain.services.cache_port import CachePort
 from src.domain.services.token_service import TokenService
 from src.infrastructure.cache.ttl import remaining_seconds
 from src.infrastructure.logging.logger import logger
 
 
-class CacheService(CachePort):
+class CacheService(CachePort, CacheAdminPort):
     """缓存服务，封装黑名单与权限缓存的 Redis 操作。"""
 
     # Key 前缀
@@ -378,3 +380,91 @@ class CacheService(CachePort):
     def _user_info_key(self, user_id: str) -> str:
         """生成用户信息缓存的 Redis Key。"""
         return f"{self._USER_INFO_PREFIX}{user_id}"
+
+    # ---- CacheAdminPort：缓存清单与清理（管理员监控页） ----
+
+    # 分组注册表：(分组标识, 中文名, 键前缀, 是否可清理)。
+    # token_blacklist 只读不清理——清除黑名单会使已登出/被强制下线的令牌
+    # 复活至自然过期，属安全红线；全量清理也跳过该组与限流计数键。
+    _CACHE_GROUPS: tuple[tuple[str, str, str, bool], ...] = (
+        ("user_info", "用户信息缓存", _USER_INFO_PREFIX, True),
+        ("user_perms", "用户权限缓存", _PERMS_PREFIX, True),
+        ("menu_cache", "菜单全量缓存", _MENU_ALL_KEY, True),
+        ("dict_cache", "字典缓存", _DICT_PREFIX, True),
+        ("ip_rules", "IP 规则缓存", _IP_RULES_KEY, True),
+        ("token_blacklist", "令牌黑名单", _BLACKLIST_PREFIX, False),
+    )
+
+    async def _count_keys(self, prefix: str) -> int:
+        """统计匹配前缀的键数量（SCAN 增量遍历，不阻塞 Redis）。"""
+        assert self._redis is not None
+        count = 0
+        async for _key in self._redis.scan_iter(match=f"{prefix}*"):
+            count += 1
+        return count
+
+    async def _delete_by_prefix(self, prefix: str) -> int:
+        """删除匹配前缀的全部键，返回删除数量。"""
+        assert self._redis is not None
+        keys = [key async for key in self._redis.scan_iter(match=f"{prefix}*")]
+        if not keys:
+            return 0
+        return int(await self._redis.delete(*keys))
+
+    async def get_cache_groups(self) -> list[dict[str, Any]] | None:
+        """返回缓存分组清单（含各分组当前键数量）。
+
+        Redis 未配置/不可用时返回 None，由调用方转为业务错误提示。
+        """
+        if self._redis is None:
+            return None
+        try:
+            groups = []
+            for key, name, prefix, clearable in self._CACHE_GROUPS:
+                count = await self._count_keys(prefix)
+                groups.append({"key": key, "name": name, "prefix": prefix, "count": count, "clearable": clearable})
+            return groups
+        except Exception:
+            logger.warning("Redis 统计缓存分组失败", exc_info=True)
+            return None
+
+    async def clear_cache_group(self, group: str) -> int | None:
+        """清理指定分组的全部键，返回删除数量。
+
+        Raises:
+            ValueError: 分组不存在，或该组不允许清理（如令牌黑名单）时抛出。
+        """
+        spec = next((g for g in self._CACHE_GROUPS if g[0] == group), None)
+        if spec is None:
+            raise ValueError(f"未知的缓存分组: {group}")
+        if not spec[3]:
+            raise ValueError(f"缓存分组 '{spec[1]}' 不允许清理（清理会带来安全风险）")
+        if self._redis is None:
+            return None
+        try:
+            return await self._delete_by_prefix(spec[2])
+        except Exception:
+            logger.warning(f"Redis 清理缓存分组失败: {group}", exc_info=True)
+            return None
+
+    async def clear_all_business_cache(self) -> int | None:
+        """清理全部可清理业务组（不含令牌黑名单与限流计数键）。
+
+        逐组执行而非 FLUSHDB：限流计数与令牌黑名单同库，
+        整库清空会让已登出令牌复活并重置限流窗口。
+        """
+        if self._redis is None:
+            return None
+        deleted = 0
+        try:
+            for key, _name, _prefix, clearable in self._CACHE_GROUPS:
+                if not clearable:
+                    continue
+                count = await self.clear_cache_group(key)
+                if count is None:
+                    return None
+                deleted += count
+            return deleted
+        except Exception:
+            logger.warning("Redis 清理全部业务缓存失败", exc_info=True)
+            return None
