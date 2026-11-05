@@ -64,3 +64,37 @@ export const getServerInfo = () =>
 /** 获取缓存监控数据（Redis info + 键统计） */
 export const getCacheInfo = () =>
   http.request<Result<CacheInfo>>("get", "/cache-info");
+
+/** 缓存分组清单条目 */
+export type CacheGroup = {
+  /** 分组标识（清理接口的入参） */
+  key: string;
+  /** 分组中文名 */
+  name: string;
+  /** 键前缀 */
+  prefix: string;
+  /** 当前键数量 */
+  count: number;
+  /** 是否允许清理（令牌黑名单为安全红线不可清理） */
+  clearable: boolean;
+};
+
+/** 缓存清理结果 */
+export type CacheClearResult = {
+  group: string;
+  deleted: number;
+};
+
+/** 获取缓存分组清单（各业务缓存分组的键数量） */
+export const getCacheGroups = () =>
+  http.request<Result<CacheGroup[]>>("get", "/cache-groups");
+
+/** 清理指定分组缓存（仅管理员） */
+export const clearCacheGroup = (group: string) =>
+  http.request<Result<CacheClearResult>>("post", "/cache-clear", {
+    data: { group }
+  });
+
+/** 清空全部可清理业务缓存（仅管理员；不含令牌黑名单与限流计数键） */
+export const clearAllCache = () =>
+  http.request<Result<CacheClearResult>>("post", "/cache-clear-all");
