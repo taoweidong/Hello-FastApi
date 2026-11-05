@@ -9,6 +9,7 @@ from src.application.dto.role_dto import (
     RoleResponseDTO,
     RoleUpdateDTO,
 )
+from src.domain.constants import FULL_LIST_PAGE_SIZE
 from src.domain.entities.role import RoleEntity
 from src.domain.enums import DataScope
 from src.domain.error_messages import ErrorMessages as EM
@@ -166,7 +167,7 @@ class RoleService:
 
     async def get_all_simple_roles(self) -> list[dict]:
         """获取所有角色简单列表，供 auth_router 使用。"""
-        roles = await self.role_repo.get_all(page_num=1, page_size=1000)
+        roles = await self.role_repo.get_all(page_num=1, page_size=FULL_LIST_PAGE_SIZE)
         return [{"id": r.id, "name": r.name} for r in roles]
 
     async def _invalidate_role_users_cache(self, role_id: str) -> None:

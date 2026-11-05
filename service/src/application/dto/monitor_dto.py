@@ -4,10 +4,11 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.application.dto.common import BaseListQueryDTO
 from src.application.validators import empty_str_to_none
 
 
-class OnlineLogsQueryDTO(BaseModel):
+class OnlineLogsQueryDTO(BaseListQueryDTO):
     """在线用户列表查询请求
 
     分页字段与全局 DTO 约定一致使用 camelCase（前端以 pageNum/pageSize 传参）；

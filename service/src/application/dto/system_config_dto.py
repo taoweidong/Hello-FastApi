@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.application.dto.common import BaseListQueryDTO
 from src.application.validators import empty_str_or_zero_to_none, empty_str_to_none
 
 
@@ -65,11 +66,9 @@ class SystemConfigResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class SystemConfigListQueryDTO(BaseModel):
+class SystemConfigListQueryDTO(BaseListQueryDTO):
     """系统配置列表查询"""
 
-    pageNum: int = Field(default=1, ge=1)
-    pageSize: int = Field(default=10, ge=1, le=100)
     key: str | None = None
     isActive: int | None = None
 

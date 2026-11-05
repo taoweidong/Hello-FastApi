@@ -7,6 +7,7 @@ from src.application.dto.system_config_dto import (
     SystemConfigUpdateDTO,
 )
 from src.domain.entities.system_config import SystemConfigEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.system_config_repository import SystemConfigRepositoryInterface
 
@@ -22,7 +23,7 @@ class SystemConfigService:
         # 检查key唯一性
         existing = await self.config_repo.get_by_key(dto.key)
         if existing:
-            raise ConflictError(f"配置键 '{dto.key}' 已存在")
+            raise ConflictError(EM.config_key_exists(dto.key))
 
         config_entity = SystemConfigEntity.create_new(key=dto.key, value=dto.value, description=dto.description)
         if dto.isActive is not None:
@@ -39,7 +40,7 @@ class SystemConfigService:
         """根据ID获取配置。"""
         config = await self.config_repo.get_by_id(config_id)
         if config is None:
-            raise NotFoundError(f"配置 ID '{config_id}' 不存在")
+            raise NotFoundError(EM.config_not_found_by_id(config_id))
         return self._to_response(config)
 
     async def get_configs(self, query: SystemConfigListQueryDTO) -> tuple[list[SystemConfigResponseDTO], int]:
@@ -54,12 +55,12 @@ class SystemConfigService:
         """更新配置。"""
         config = await self.config_repo.get_by_id(config_id)
         if config is None:
-            raise NotFoundError(f"配置 ID '{config_id}' 不存在")
+            raise NotFoundError(EM.config_not_found_by_id(config_id))
 
         if dto.key is not None:
             existing = await self.config_repo.get_by_key(dto.key)
             if existing and existing.id != config_id:
-                raise ConflictError(f"配置键 '{dto.key}' 已存在")
+                raise ConflictError(EM.config_key_exists(dto.key))
 
         config.update_info(
             value=dto.value,
@@ -75,7 +76,7 @@ class SystemConfigService:
     async def delete_config(self, config_id: str) -> bool:
         """删除配置。"""
         if not await self.config_repo.delete(config_id):
-            raise NotFoundError(f"配置 ID '{config_id}' 不存在")
+            raise NotFoundError(EM.config_not_found_by_id(config_id))
         return True
 
     @staticmethod

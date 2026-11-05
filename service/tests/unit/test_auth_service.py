@@ -7,6 +7,7 @@ import pytest
 
 from src.application.dto.auth_dto import LoginDTO, RegisterDTO
 from src.application.services.auth_service import AuthService, LoginRequestInfo
+from src.application.utils.route_tree import build_meta, build_route_tree
 from src.domain.entities.log import LoginLogEntity
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
@@ -321,7 +322,7 @@ class TestAuthService:
             MenuEntity(id="1", name="root", menu_type=0, path="/root", rank=1, meta=meta1),
             MenuEntity(id="2", name="child", menu_type=1, path="/child", rank=2, parent_id="1", meta=meta2),
         ]
-        tree = auth_service._build_route_tree(menus)
+        tree = build_route_tree(menus)
         assert len(tree) == 1
         assert tree[0]["name"] == "root"
         assert len(tree[0]["children"]) == 1
@@ -344,7 +345,7 @@ class TestAuthService:
                 id="op", name="OperationLog", menu_type=1, path="/monitor/log/operation", rank=3, parent_id="dir"
             ),
         ]
-        tree = auth_service._build_route_tree(menus, auths_map={"dir": ["log:view", "log:delete"]})
+        tree = build_route_tree(menus, auths_map={"dir": ["log:view", "log:delete"]})
 
         assert len(tree) == 1
         directory = tree[0]
@@ -365,7 +366,7 @@ class TestAuthService:
                 id="page", name="PermissionButton", menu_type=1, path="/permission/button", rank=2, parent_id="root"
             ),
         ]
-        tree = auth_service._build_route_tree(menus, auths_map={"root": ["permission:btn:add", "permission:btn:edit"]})
+        tree = build_route_tree(menus, auths_map={"root": ["permission:btn:add", "permission:btn:edit"]})
         page = tree[0]["children"][0]
         assert page["name"] == "PermissionButton"
         assert page["meta"]["auths"] == ["permission:btn:add", "permission:btn:edit"]
@@ -389,7 +390,7 @@ class TestAuthService:
             dynamic_level=2,
         )
         menu = MenuEntity(id="1", name="test", meta=meta)
-        result = auth_service._build_meta(menu)
+        result = build_meta(menu)
 
         assert result["title"] == "测试"
         assert result["icon"] == "home"
@@ -400,7 +401,7 @@ class TestAuthService:
     def test_build_meta_without_meta(self, auth_service):
         """测试构建meta对象（无meta数据）。"""
         menu = MenuEntity(id="1", name="test", meta=None)
-        result = auth_service._build_meta(menu)
+        result = build_meta(menu)
 
         assert result["title"] == "test"
         assert result["showLink"] is True
@@ -465,14 +466,14 @@ class TestAuthService:
 
     def test_build_route_tree_empty(self, auth_service):
         """测试构建空路由树。"""
-        tree = auth_service._build_route_tree([])
+        tree = build_route_tree([])
         assert tree == []
 
     def test_build_route_tree_single(self, auth_service):
         """测试构建单节点路由树。"""
         meta = MenuMetaEntity(id="m1", title="首页", icon="home")
         menus = [MenuEntity(id="1", name="home", menu_type=0, path="/home", rank=1, meta=meta)]
-        tree = auth_service._build_route_tree(menus)
+        tree = build_route_tree(menus)
         assert len(tree) == 1
         assert tree[0]["name"] == "home"
         assert "children" not in tree[0]
@@ -610,7 +611,7 @@ class TestAuthService:
         """测试构建 meta 对象（只有部分字段）。"""
         meta = MenuMetaEntity(id="m1", title="部分")
         menu = MenuEntity(id="1", name="test", meta=meta)
-        result = auth_service._build_meta(menu)
+        result = build_meta(menu)
         assert result["title"] == "部分"
         assert result["icon"] == ""
         assert result["transition"] == {}

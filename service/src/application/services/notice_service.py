@@ -7,6 +7,7 @@ from loguru import logger
 from src.application.dto.notice_dto import NoticeCreateDTO, NoticeListQueryDTO, NoticeResponseDTO, NoticeUpdateDTO
 from src.domain.entities.notice import NoticeEntity
 from src.domain.entities.user import UserEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import NotFoundError
 from src.domain.repositories.notice_repository import NoticeRepositoryInterface
 from src.domain.services.realtime_port import RealtimePort
@@ -40,7 +41,7 @@ class NoticeService:
         """根据ID获取公告。"""
         notice = await self.notice_repo.get_by_id(notice_id)
         if notice is None:
-            raise NotFoundError(f"公告 ID '{notice_id}' 不存在")
+            raise NotFoundError(EM.notice_not_found_by_id(notice_id))
         return self._to_response(notice)
 
     async def get_notices(self, query: NoticeListQueryDTO) -> tuple[list[NoticeResponseDTO], int]:
@@ -64,7 +65,7 @@ class NoticeService:
         """更新公告。"""
         notice = await self.notice_repo.get_by_id(notice_id)
         if notice is None:
-            raise NotFoundError(f"公告 ID '{notice_id}' 不存在")
+            raise NotFoundError(EM.notice_not_found_by_id(notice_id))
 
         notice.update_info(title=dto.title, content=dto.content, notice_type=dto.noticeType, is_active=dto.isActive)
         notice.modifier_id = current_user.id
@@ -77,7 +78,7 @@ class NoticeService:
     async def delete_notice(self, notice_id: str) -> bool:
         """删除公告。"""
         if not await self.notice_repo.delete(notice_id):
-            raise NotFoundError(f"公告 ID '{notice_id}' 不存在")
+            raise NotFoundError(EM.notice_not_found_by_id(notice_id))
         return True
 
     async def batch_delete_notices(self, notice_ids: list[str]) -> dict:

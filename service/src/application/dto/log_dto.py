@@ -4,14 +4,14 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from src.application.dto.common import BaseListQueryDTO
+
 # ============ 登录日志 DTO ============
 
 
-class LoginLogListQueryDTO(BaseModel):
+class LoginLogListQueryDTO(BaseListQueryDTO):
     """登录日志列表查询请求"""
 
-    pageNum: int = Field(default=1, ge=1)
-    pageSize: int = Field(default=10, ge=1, le=100)
     status: str | None = None  # 前端传递的是字符串 "0" 或 "1"
     loginType: str | None = None  # 登录类型
     createdTime: str | list | None = None  # 前端可能传递空字符串或时间范围数组
@@ -37,11 +37,9 @@ class LoginLogResponseDTO(BaseModel):
 # ============ 操作日志 DTO ============
 
 
-class OperationLogListQueryDTO(BaseModel):
+class OperationLogListQueryDTO(BaseListQueryDTO):
     """操作日志列表查询请求"""
 
-    pageNum: int = Field(default=1, ge=1)
-    pageSize: int = Field(default=10, ge=1, le=100)
     module: str | None = None
     status: str | None = None
     createdTime: str | list | None = None  # 前端可能传递空字符串或时间范围数组
@@ -71,11 +69,9 @@ class OperationLogResponseDTO(BaseModel):
 # ============ 系统日志 DTO ============
 
 
-class SystemLogListQueryDTO(BaseModel):
+class SystemLogListQueryDTO(BaseListQueryDTO):
     """系统日志列表查询请求"""
 
-    pageNum: int = Field(default=1, ge=1)
-    pageSize: int = Field(default=10, ge=1, le=100)
     module: str | None = None
     status: str | None = None
     createdTime: str | list | None = None

@@ -107,3 +107,46 @@ class ErrorMessages:
     def role_code_exists(code: str) -> str:
         """角色编码已存在。"""
         return f"角色编码 '{code}' 已存在"
+
+    # ---- 岗位 ----
+
+    @staticmethod
+    def post_not_found_by_id(post_id: str) -> str:
+        """按 ID 查不到岗位时的标准化消息。"""
+        return f"岗位 ID '{post_id}' 不存在"
+
+    @staticmethod
+    def post_code_exists(code: str) -> str:
+        """岗位编码已存在。"""
+        return f"岗位编码 '{code}' 已存在"
+
+    # ---- 系统配置 ----
+
+    @staticmethod
+    def config_not_found_by_id(config_id: str) -> str:
+        """按 ID 查不到系统配置时的标准化消息。"""
+        return f"配置 ID '{config_id}' 不存在"
+
+    @staticmethod
+    def config_key_exists(key: str) -> str:
+        """配置键已存在。"""
+        return f"配置键 '{key}' 已存在"
+
+    # ---- 通知公告 ----
+
+    @staticmethod
+    def notice_not_found_by_id(notice_id: str) -> str:
+        """按 ID 查不到公告时的标准化消息。"""
+        return f"公告 ID '{notice_id}' 不存在"
+
+    # ---- 菜单 ----
+
+    @staticmethod
+    def menu_name_exists(name: str) -> str:
+        """菜单名称已存在。"""
+        return f"菜单名称 '{name}' 已存在"
+
+    @staticmethod
+    def permission_required(required_label: str) -> str:
+        """缺少指定权限（label 为"权限 'xxx'"或"API权限 'GET /path'"形式）。"""
+        return f"{required_label}是必需的"

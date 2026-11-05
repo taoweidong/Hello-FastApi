@@ -64,7 +64,12 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={"username": "flow_delete_u", "password": "FlowDel123!", "email": "del@flow.example", "isActive": True},
+            json={
+                "username": "flow_delete_u",
+                "password": "FlowDel123!",
+                "email": "del@flow.example",
+                "isActive": True,
+            },
         )
         uid = r.json()["data"]["id"]
 
@@ -125,7 +130,12 @@ class TestUserCrudFlow:
         r = await flow_client.post(
             "/api/system/user/create",
             headers=h,
-            json={"username": "flow_reset_u", "password": "Original123!", "email": "reset@flow.example", "isActive": True},
+            json={
+                "username": "flow_reset_u",
+                "password": "Original123!",
+                "email": "reset@flow.example",
+                "isActive": True,
+            },
         )
         uid = r.json()["data"]["id"]
 

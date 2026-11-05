@@ -14,7 +14,7 @@ from src.api.common.model_utils import (
     safe_int,
     safe_str,
 )
-from src.api.common.response_builder import error_response, list_response, page_response, success_response
+from src.api.common.response_builder import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse, PaginationData
 from src.api.common.user_formatter import format_user_list_row
 
@@ -27,9 +27,7 @@ __all__ = [
     "PaginatedResponse",
     "PaginationData",
     # 响应构建函数
-    "error_response",
     "list_response",
-    "page_response",
     "success_response",
     # 用户格式化
     "format_user_list_row",

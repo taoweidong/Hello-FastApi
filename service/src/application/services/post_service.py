@@ -3,6 +3,7 @@
 from src.application.dto.post_dto import PostCreateDTO, PostListQueryDTO, PostResponseDTO, PostUpdateDTO
 from src.domain.entities.post import PostEntity
 from src.domain.entities.user import UserEntity
+from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.post_repository import PostRepositoryInterface
 
@@ -17,7 +18,7 @@ class PostService:
         """创建岗位（编码唯一校验）。"""
         existing = await self.post_repo.get_by_code(dto.postCode)
         if existing:
-            raise ConflictError(f"岗位编码 '{dto.postCode}' 已存在")
+            raise ConflictError(EM.post_code_exists(dto.postCode))
 
         post_entity = PostEntity.create_new(
             post_code=dto.postCode, post_name=dto.postName, post_sort=dto.postSort, remark=dto.remark or ""
@@ -31,7 +32,7 @@ class PostService:
         """根据ID获取岗位。"""
         post = await self.post_repo.get_by_id(post_id)
         if post is None:
-            raise NotFoundError(f"岗位 ID '{post_id}' 不存在")
+            raise NotFoundError(EM.post_not_found_by_id(post_id))
         return self._to_response(post)
 
     async def get_posts(self, query: PostListQueryDTO) -> tuple[list[PostResponseDTO], int]:
@@ -59,12 +60,12 @@ class PostService:
         """更新岗位。"""
         post = await self.post_repo.get_by_id(post_id)
         if post is None:
-            raise NotFoundError(f"岗位 ID '{post_id}' 不存在")
+            raise NotFoundError(EM.post_not_found_by_id(post_id))
 
         if dto.postCode is not None:
             existing = await self.post_repo.get_by_code(dto.postCode)
             if existing and existing.id != post_id:
-                raise ConflictError(f"岗位编码 '{dto.postCode}' 已存在")
+                raise ConflictError(EM.post_code_exists(dto.postCode))
 
         post.update_info(
             post_code=dto.postCode,
@@ -80,7 +81,7 @@ class PostService:
     async def delete_post(self, post_id: str) -> bool:
         """删除岗位。"""
         if not await self.post_repo.delete(post_id):
-            raise NotFoundError(f"岗位 ID '{post_id}' 不存在")
+            raise NotFoundError(EM.post_not_found_by_id(post_id))
         return True
 
     async def batch_delete_posts(self, post_ids: list[str]) -> dict:

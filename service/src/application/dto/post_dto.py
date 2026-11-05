@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.application.dto.common import BaseListQueryDTO
 from src.application.validators import empty_str_to_none
 
 
@@ -56,11 +57,9 @@ class PostResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class PostListQueryDTO(BaseModel):
+class PostListQueryDTO(BaseListQueryDTO):
     """岗位列表查询"""
 
-    pageNum: int = Field(default=1, ge=1)
-    pageSize: int = Field(default=10, ge=1, le=100)
     postCode: str | None = None
     postName: str | None = None
     isActive: int | None = None

@@ -4,14 +4,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.application.dto.common import BaseListQueryDTO
 from src.application.validators import empty_str_to_none
 
 
-class IPRuleListQueryDTO(BaseModel):
+class IPRuleListQueryDTO(BaseListQueryDTO):
     """IP 规则列表查询"""
 
-    pageNum: int = Field(default=1, ge=1)
-    pageSize: int = Field(default=10, ge=1, le=100)
     ruleType: str | None = None
     isActive: int | None = None
     createdTime: str | list[str] | None = None

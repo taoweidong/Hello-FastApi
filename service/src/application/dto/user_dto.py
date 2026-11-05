@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from src.application.dto.common import BaseListQueryDTO
 from src.application.validators import empty_str_or_zero_to_none, empty_str_to_none, normalize_optional_id
 
 
@@ -110,11 +111,9 @@ class UserResponseDTO(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class UserListQueryDTO(BaseModel):
+class UserListQueryDTO(BaseListQueryDTO):
     """用户列表查询请求"""
 
-    pageNum: int = Field(default=1, ge=1)
-    pageSize: int = Field(default=10, ge=1, le=100)
     username: str | None = None
     phone: str | None = None
     email: str | None = None

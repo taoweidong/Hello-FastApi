@@ -77,7 +77,7 @@ class MenuService:
         # 验证名称唯一性
         existing = await self.menu_repo.get_by_name(dto.name)
         if existing:
-            raise ConflictError(f"菜单名称 '{dto.name}' 已存在")
+            raise ConflictError(EM.menu_name_exists(dto.name))
 
         # 验证父菜单
         parent_id = dto.parentId
@@ -150,7 +150,7 @@ class MenuService:
             # 检查名称唯一性
             existing = await self.menu_repo.get_by_name(dto.name)
             if existing and existing.id != menu_id:
-                raise ConflictError(f"菜单名称 '{dto.name}' 已存在")
+                raise ConflictError(EM.menu_name_exists(dto.name))
 
         menu.update_info(
             menu_type=dto.menuType,
