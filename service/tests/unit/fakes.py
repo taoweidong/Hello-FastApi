@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+from src.domain.entities.menu import MenuEntity
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
 from src.domain.enums import DataScope
@@ -115,11 +116,14 @@ class InMemoryUserRepository(UserRepositoryInterface):
 class InMemoryRoleRepository(RoleRepositoryInterface):
     """角色仓储的内存实现。"""
 
-    def __init__(self, session=None) -> None:
+    def __init__(self, session=None, menu_entities: dict[str, MenuEntity] | None = None) -> None:
         self._roles: dict[str, RoleEntity] = {}
         self._user_roles: dict[str, list[str]] = {}
         self._role_depts: dict[str, list[str]] = {}
         self._role_menus: dict[str, list[str]] = {}
+        # 可选的菜单实体注册表：get_user_all_menus 按它还原真实 menu_type；
+        # 未注册的 ID 退化为 PERMISSION 类型（接口只传 ID，类型信息需外部提供）
+        self._menu_entities: dict[str, MenuEntity] = dict(menu_entities or {})
 
     async def get_by_id(self, role_id: str) -> RoleEntity | None:
         return self._roles.get(role_id)
@@ -186,11 +190,27 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         return list(self._role_menus.get(role_id, []))
 
     async def get_user_all_menus(self, user_id: str) -> list:  # noqa: D102
-        """用户所有角色关联菜单的并集（角色菜单 ID 列表，与真实仓储一致返回关联集合）。"""
+        """用户所有角色关联菜单的并集（按接口契约返回 MenuEntity 列表）。
+
+        消费方（AuthorizationService / auth_service）按实体过滤 menu_type
+        并读取 name，因此返回实体——返回 ID 字符串列表会违反接口契约
+        （真实仓储 join menu 表返回实体）。类型语义优先取注册表，
+        未注册的 ID 退化为 PERMISSION 类型并在契约测试中显式对拍。
+        """
         menu_ids: set[str] = set()
         for rid in self._user_roles.get(user_id, []):
             menu_ids.update(self._role_menus.get(rid, []))
-        return sorted(menu_ids)
+        entities = []
+        for mid in sorted(menu_ids):
+            known = self._menu_entities.get(mid)
+            if known is not None:
+                entities.append(known)
+            else:
+                from src.domain.entities.menu import MenuEntity
+                from src.domain.enums import MenuType
+
+                entities.append(MenuEntity(id=mid, name=mid, menu_type=int(MenuType.PERMISSION), rank=0))
+        return entities
 
     async def get_users_roles_batch(self, user_ids: list[str]) -> dict[str, list[RoleEntity]]:  # noqa: D102
         return {uid: await self.get_user_roles(uid) for uid in user_ids}
