@@ -1,6 +1,6 @@
 # Hello-FastApi 全量测试用例文档
 
-> 版本：v1.0 ｜ 最后更新：2026-08-21
+> 版本：v1.1 ｜ 最后更新：2026-11-07（补充 2026-11 新增端点与前端交互；历史章节保留 2026-08-21 快照）
 > 适用仓库：`e:\GitHub\Hello-FastApi`（FastAPI 后端 `service/` + Vue3 前端 `web/`）
 > 用途：供人工或 AI Agent 按本文档执行全量功能验证，保证所有功能可用。
 
@@ -342,6 +342,8 @@ $headers = @{ Authorization = "Bearer $token" }
 |---|---|---|---|---|
 | FE-20 服务器监控 | `/monitor/server` | 打开页面 | CPU/内存/磁盘/系统/进程指标渲染 | MON-01 |
 | FE-21 缓存监控 | `/monitor/cache` | 打开页面 | 指标卡片渲染；Redis 缺失时展示降级提示 | MON-02 |
+| FE-22 缓存清理 | `/monitor/cache` | 管理员点击分组「快速清理」/「清空全部缓存」 | popconfirm 确认后返回删除键数并联动刷新；非管理员按钮隐藏且后端 403 | MON-02 |
+| FE-23 日志文件 | `/monitor/server` | 管理员打开「日志文件」卡片，查看尾部/下载 | 清单按修改时间倒序；尾读对话框展示末 200 行；穿越文件名被拒绝 | MON-02 |
 | FE-22 登录日志 | `/monitor/logs/login` | 列表加载/筛选/批量删除/清空 | 展示最近的登录记录 | LOG-01/07/08 |
 | FE-23 操作日志 | `/monitor/logs/operation` | 列表加载/筛选/批量删除/清空 | 展示操作记录（增删改产生的新记录可见） | LOG-02/09/10 |
 | FE-24 系统日志 | `/monitor/logs/system` | 列表加载/点击查看详情 | 详情弹窗展示完整日志 | LOG-03/04 |
@@ -585,6 +587,23 @@ POST  /api/system/ip-rule                                 [鉴权] 分页列表
 ```
 
 ---
+
+### 10.1 2026-11 新增端点补充（对拍 commit `2a2f0f4` / `bb41750` / `e9fbf75`）
+
+```
+WS   /api/system/ws                                          [鉴权] WebSocket 实时消息（query: token）
+GET  /api/system/cache-groups                                [鉴权 monitor:view] 缓存分组清单
+POST /api/system/cache-clear                                 [仅管理员] body: group
+POST /api/system/cache-clear-all                             [仅管理员] 清空全部可清理业务组
+GET  /api/system/log-files                                   [仅管理员] 日志文件清单
+GET  /api/system/log-files/{filename}/tail?lines=N           [仅管理员] 日志尾读（默认 200，上限 1000）
+GET  /api/system/log-files/{filename}?download=true          [仅管理员] 日志内容/附件下载
+```
+
+说明：
+- 缓存清理的分组注册表见 `cache_service.py` `_CACHE_GROUPS`；令牌黑名单组为安全红线不可清理；
+- 登录/注册专属限流由 `LoginRateLimitMiddleware` 承担（详见 `docs/rate-limit.md`，2026-11-07 重写）；
+- 服务器监控页新增「日志文件」卡片（尾读/下载），缓存监控页新增「缓存数据」清单与清理。
 
 ## 执行检查单（给 Agent）
 

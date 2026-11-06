@@ -49,7 +49,7 @@ Default superuser: `admin` / `admin123` (after `initall`).
 
 **Tests:**
 ```bash
-pytest                                  # ~2100 tests
+pytest                                  # ~2288 tests (unit 2117 + integration 171)
 pytest tests/unit/                      # unit only
 pytest tests/integration/               # integration only
 pytest -n auto                          # parallel (xdist; safe — each worker gets a temp-file SQLite DB)
@@ -70,7 +70,7 @@ mypy src/                               # typecheck
 - `src/infrastructure/http/` — middleware: CORS, IP filter, rate limit (SlowAPI), request logging.
 - `src/infrastructure/database/models/` — SQLModel table definitions imported by Alembic env and by `tests/conftest.py` (`autouse setup_database`).
 
-**API prefix:** `/api/system` (`src/api/constants.py`). Docs at `/docs`, `/redoc`, `/openapi.json`.
+**API prefix:** `/api/system` (`src/api/constants.py`). Docs at `/docs`, `/redoc`, `/openapi.json` — **development only**; production disables them (`main.py` gates on `settings.is_production`).
 
 **Database:** SQLite for dev (`sql/dev.db`) and test (`sql/test.db`); PostgreSQL for production. Redis for cache + rate-limit. Migrations via **Alembic** (`alembic/`, `alembic.ini`) — do not use `create_all` outside tests.
 
@@ -82,6 +82,7 @@ mypy src/                               # typecheck
 - `auth_headers` — auto-creates a superuser and yields `{"Authorization": "Bearer <jwt>"}`.
 - `test_user_data` — sample user-create dict.
 - `os.environ.setdefault("APP_ENV", "testing")` runs at import time so `Settings` picks up `.env.testing`.
+- `tests/unit/conftest.py` overrides `setup_database` with a no-op (pure-logic unit tests skip per-test DDL; ~117s → ~45s full unit run) and disposes leaked engines after each test (aiosqlite worker threads are non-daemon and would block pytest exit). DB-backed contract tests live in `tests/integration/`.
 
 **Lint (ruff):** `line-length=120`, `select = E,F,W,I,N,UP,B,A,SIM`, `ignore = B008`, `skip-magic-trailing-comma = true`. Per-file ignores: `N803` + `N815` in `src/api/`, `N815` in `src/application/dto/` (frontend uses camelCase JSON, so PEP8 is intentionally violated for DTO field names).
 
