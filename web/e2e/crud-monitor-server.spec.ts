@@ -35,8 +35,9 @@ test.describe("服务器监控页交互验证", () => {
     // 进程信息区块
     await expect(page.getByText("进程 ID").first()).toBeVisible();
 
-    // 点击「刷新」：重新拉取数据，不应报错
-    await page.getByRole("button", { name: "刷新" }).click();
+    // 点击「刷新」：重新拉取数据，不应报错。
+    // 必须精确匹配——页面上另有「刷新日志」按钮，子串匹配会命中两个导致 strict mode 报错
+    await page.getByRole("button", { name: "刷新", exact: true }).click();
     await expect(page.locator(".el-progress").first()).toBeVisible({
       timeout: 15000
     });
