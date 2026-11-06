@@ -22,7 +22,7 @@ const ruleFormRef = ref();
 const { switchStyle } = usePublicHooks();
 const newFormInline = ref(props.formInline);
 
-/** 是否为根级字典类型（新增子典时 parentId 为 0 或空） */
+/** 是否为根级字典类型（新增字典时 parentId 为 0 或空） */
 const isRootType = computed(() => {
   return (
     !newFormInline.value.parentId ||

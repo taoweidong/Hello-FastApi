@@ -181,6 +181,7 @@ function onFullscreen() {
         </el-scrollbar>
         <el-divider style="margin: 0" />
         <div class="p-2">
+          <!-- 树内快捷入口，与右侧「新增字典」等价；文案修正原错别字「新增子典」 -->
           <el-button
             v-auth="'dictionary:add'"
             type="primary"
@@ -188,7 +189,7 @@ function onFullscreen() {
             :icon="useRenderIcon(AddFill)"
             @click="openAddDictType"
           >
-            新增子典
+            新增类型
           </el-button>
         </div>
       </div>
@@ -204,6 +205,17 @@ function onFullscreen() {
           @fullscreen="onFullscreen"
         >
           <template #buttons>
+            <!-- 新增字典主入口：与 user/dept 等页面一致，放表格工具条首位、实心主按钮。
+                 绑定 openAddDictType（无前置选中条件），保证点击必定进入新增字典流程 -->
+            <el-button
+              v-auth="'dictionary:add'"
+              type="primary"
+              :icon="useRenderIcon(AddFill)"
+              @click="openAddDictType"
+            >
+              新增字典
+            </el-button>
+            <!-- 子项入口：文案与左侧树右键菜单「新增子项」保持一致 -->
             <el-button
               v-auth="'dictionary:add'"
               type="primary"
@@ -211,7 +223,7 @@ function onFullscreen() {
               :icon="useRenderIcon(AddFill)"
               @click="openAddDictDetail"
             >
-              新增字典详情
+              新增子项
             </el-button>
           </template>
           <template v-slot="{ size, dynamicColumns }">

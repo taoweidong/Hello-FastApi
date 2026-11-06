@@ -138,7 +138,7 @@ export function useDictionary() {
     selectedDictType.value = data;
   }
 
-  /** 新增子典（根级字典类型） */
+  /** 新增字典（根级字典类型） */
   function openAddDictType() {
     addDialog({
       title: "新增字典类型",

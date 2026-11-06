@@ -8,7 +8,7 @@ import {
 
 /**
  * 字典管理 CRUD 全流程（最复杂交互链路）：
- * 新增子典（类型）→ 新增字典详情 → 修改详情 → 删除详情 → 删除类型
+ * 新增字典（类型）→ 新增子项（详情）→ 修改详情 → 删除详情 → 删除类型
  * - 必须先删详情再删类型：handleDeleteType 检测到子项时会拒绝删除
  * - 树节点更多操作走 el-dropdown（trigger=click，菜单渲染在 body 下）
  * - 数据唯一命名（e2e_ 前缀），类型与详情同表，afterAll 统一按 API 兜底清理
@@ -47,9 +47,14 @@ test.describe.serial("字典管理 CRUD", () => {
     }
   }
 
-  test("新增子典", async ({ page }) => {
+  test("新增字典", async ({ page }) => {
     await openDictPage(page);
-    await page.getByRole("button", { name: "新增子典" }).click();
+    // 主入口必须清晰可见、样式为实心主按钮，且全页文案唯一（避免歧义/误点）
+    const addBtn = page.getByRole("button", { name: "新增字典" });
+    await expect(addBtn).toHaveCount(1);
+    await expect(addBtn).toBeVisible();
+    await expect(addBtn).toHaveClass(/el-button--primary/);
+    await addBtn.click();
     const dialog = page.locator(".el-dialog", { hasText: "新增字典类型" });
     await expect(dialog).toBeVisible();
     await fillFormItem(dialog, "字典名称", dictName);
@@ -65,7 +70,10 @@ test.describe.serial("字典管理 CRUD", () => {
     const node = treeNode(page, dictName).first();
     await expect(node).toBeVisible({ timeout: 10000 });
     await node.click();
-    await page.getByRole("button", { name: "新增字典详情" }).click();
+    await page
+      .getByRole("button", { name: "新增子项", exact: true })
+      .first()
+      .click();
     const dialog = page.locator(".el-dialog", { hasText: "新增字典详情" });
     await expect(dialog).toBeVisible();
     await fillFormItem(dialog, "显示标签", label);
