@@ -66,12 +66,18 @@ defineExpose({ getRef });
 
       <re-col>
         <el-form-item label="数据权限" prop="dataScope">
-          <el-radio-group v-model="newFormInline.dataScope">
-            <el-radio :value="1">全部数据权限</el-radio>
-            <el-radio :value="2">自定义数据权限</el-radio>
-            <el-radio :value="3">本部门数据权限</el-radio>
-            <el-radio :value="4">本部门及以下数据权限</el-radio>
-            <el-radio :value="5">仅本人数据权限</el-radio>
+          <!-- 5 个选项在窄弹窗内会换行，逐项加外边距保证换行后行首对齐 -->
+          <el-radio-group
+            v-model="newFormInline.dataScope"
+            class="flex flex-wrap"
+          >
+            <el-radio :value="1" class="mr-6 mb-2">全部数据权限</el-radio>
+            <el-radio :value="2" class="mr-6 mb-2">自定义数据权限</el-radio>
+            <el-radio :value="3" class="mr-6 mb-2">本部门数据权限</el-radio>
+            <el-radio :value="4" class="mr-6 mb-2"
+              >本部门及以下数据权限</el-radio
+            >
+            <el-radio :value="5" class="mr-6 mb-2">仅本人数据权限</el-radio>
           </el-radio-group>
         </el-form-item>
       </re-col>

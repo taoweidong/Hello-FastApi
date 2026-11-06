@@ -64,7 +64,7 @@ function onFullscreen() {
 </script>
 
 <template>
-  <div class="main">
+  <div>
     <div class="dict-layout flex w-full">
       <!-- 左侧面板：字典类型树 -->
       <div

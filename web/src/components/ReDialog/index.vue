@@ -79,7 +79,9 @@ const fullscreenClass = computed(() => {
     "el-dialog__close",
     "-translate-x-2",
     "cursor-pointer",
-    "hover:text-[red]!"
+    "bg-transparent",
+    "border-0",
+    "hover:text-[var(--el-color-danger)]!"
   ];
 });
 
@@ -125,9 +127,12 @@ function handleClose(
     >
       <div v-if="options?.fullscreenIcon" class="flex-bc">
         <span :id="titleId" :class="titleClass">{{ options?.title }}</span>
-        <i
+        <button
           v-if="!options?.fullscreen"
+          type="button"
           :class="fullscreenClass"
+          :aria-label="fullscreen ? '退出全屏' : '全屏'"
+          :title="fullscreen ? '退出全屏' : '全屏'"
           @click="
             () => {
               fullscreen = !fullscreen;
@@ -150,7 +155,7 @@ function handleClose(
                   : Fullscreen
             "
           />
-        </i>
+        </button>
       </div>
       <component
         :is="options?.headerRenderer({ close, titleId, titleClass })"

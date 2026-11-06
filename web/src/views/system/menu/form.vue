@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import ReCol from "@/components/ReCol";
-import { formRules } from "./utils/rule";
+import { dirFormRules, menuFormRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
 import { IconSelect } from "@/components/ReIcon";
 import Segmented from "@/components/ReSegmented";
@@ -47,6 +47,16 @@ const props = withDefaults(defineProps<FormProps>(), {
 const ruleFormRef = ref();
 const newFormInline = ref(props.formInline);
 
+/**
+ * 校验规则按菜单类型切换：
+ * 目录（menuType=0）不需要组件路径，页面（menuType=1）才需要。
+ * 组件路径用 v-show 隐藏但仍会参与校验，因此必须在规则层面区分，
+ * 否则目录类型提交会被「组件路径为必填项」拦下。
+ */
+const rules = computed(() =>
+  newFormInline.value.menuType === 1 ? menuFormRules : dirFormRules
+);
+
 function getRef() {
   return ruleFormRef.value;
 }
@@ -58,10 +68,15 @@ defineExpose({ getRef });
   <el-form
     ref="ruleFormRef"
     :model="newFormInline"
-    :rules="formRules"
+    :rules="rules"
     label-width="82px"
   >
     <el-row :gutter="30">
+      <!-- 分组：基础信息 -->
+      <re-col :value="24" :xs="24" :sm="24">
+        <div class="form-section-title form-section-title--top">基础信息</div>
+      </re-col>
+
       <re-col>
         <el-form-item label="菜单类型">
           <Segmented
@@ -98,7 +113,7 @@ defineExpose({ getRef });
       </re-col>
 
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="菜单名称" prop="name">
+        <el-form-item label="菜单名称" prop="meta.title">
           <el-input
             v-model="newFormInline.meta.title"
             clearable
@@ -131,7 +146,7 @@ defineExpose({ getRef });
         :xs="24"
         :sm="24"
       >
-        <el-form-item label="组件路径">
+        <el-form-item label="组件路径" prop="component">
           <el-input
             v-model="newFormInline.component"
             clearable
@@ -152,7 +167,24 @@ defineExpose({ getRef });
         </el-form-item>
       </re-col>
 
-      <!-- 以下为meta元数据字段 -->
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-form-item label="是否启用">
+          <el-switch
+            v-model="newFormInline.isActive"
+            :active-value="1"
+            :inactive-value="0"
+            inline-prompt
+            active-text="启用"
+            inactive-text="停用"
+          />
+        </el-form-item>
+      </re-col>
+
+      <!-- 分组：高级设置（meta 元数据） -->
+      <re-col :value="24" :xs="24" :sm="24">
+        <div class="form-section-title">高级设置</div>
+      </re-col>
+
       <re-col :value="12" :xs="24" :sm="24">
         <el-form-item label="菜单图标">
           <IconSelect v-model="newFormInline.meta.icon" class="w-full" />
@@ -312,19 +344,6 @@ defineExpose({ getRef });
                 newFormInline.meta.fixedTag = value;
               }
             "
-          />
-        </el-form-item>
-      </re-col>
-
-      <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="是否启用">
-          <el-switch
-            v-model="newFormInline.isActive"
-            :active-value="1"
-            :inactive-value="0"
-            inline-prompt
-            active-text="启用"
-            inactive-text="停用"
           />
         </el-form-item>
       </re-col>

@@ -35,14 +35,14 @@ function onFullscreen() {
 </script>
 
 <template>
-  <div class="main">
+  <div>
     <el-form
       ref="formRef"
       :inline="true"
       :model="form"
       class="search-form bg-bg_color w-full overflow-auto"
     >
-      <el-form-item label="部门名称：" prop="name">
+      <el-form-item label="部门名称" prop="name">
         <el-input
           v-model="form.name"
           placeholder="请输入部门名称"
@@ -50,15 +50,15 @@ function onFullscreen() {
           class="w-45!"
         />
       </el-form-item>
-      <el-form-item label="状态：" prop="isActive">
+      <el-form-item label="状态" prop="isActive">
         <el-select
           v-model="form.isActive"
           placeholder="请选择状态"
           clearable
           class="w-45!"
         >
-          <el-option label="启用" :value="true" />
-          <el-option label="停用" :value="false" />
+          <el-option label="启用" :value="1" />
+          <el-option label="停用" :value="0" />
         </el-select>
       </el-form-item>
       <el-form-item>

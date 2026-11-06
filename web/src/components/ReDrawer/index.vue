@@ -103,7 +103,6 @@ function handleClose(
     :key="index"
     v-bind="options"
     v-model="options.visible"
-    class="pure-drawer"
     :append-to-body="!!options?.appendToBody"
     :append-to="options?.appendTo ? options.appendTo : 'body'"
     :destroy-on-close="!!options?.destroyOnClose"

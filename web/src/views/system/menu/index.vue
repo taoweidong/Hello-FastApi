@@ -36,14 +36,14 @@ function onFullscreen() {
 </script>
 
 <template>
-  <div class="main">
+  <div>
     <el-form
       ref="formRef"
       :inline="true"
       :model="form"
       class="search-form bg-bg_color w-full overflow-auto"
     >
-      <el-form-item label="菜单名称：" prop="title">
+      <el-form-item label="菜单名称" prop="title">
         <el-input
           v-model="form.title"
           placeholder="请输入菜单名称"
@@ -66,92 +66,88 @@ function onFullscreen() {
       </el-form-item>
     </el-form>
 
-    <div class="w-full" style="height: calc(100vh - 180px); min-height: 300px">
-      <!-- 右侧：表格/编辑 -->
-      <div class="bg-bg_color rounded-md overflow-hidden h-full">
-        <PureTableBar
-          title="菜单管理"
-          :columns="columns"
-          :isExpandAll="false"
-          :tableRef="tableRef?.getTableRef()"
-          @refresh="onSearch"
-          @fullscreen="onFullscreen"
+    <!-- 表格：与其它列表页保持一致，直接使用 PureTableBar（自带背景与内边距） -->
+    <PureTableBar
+      title="菜单管理"
+      :columns="columns"
+      :isExpandAll="false"
+      :tableRef="tableRef?.getTableRef()"
+      @refresh="onSearch"
+      @fullscreen="onFullscreen"
+    >
+      <template #buttons>
+        <el-button
+          v-auth="'menu:add'"
+          type="primary"
+          :icon="useRenderIcon(AddFill)"
+          @click="openDialog('新增')"
         >
-          <template #buttons>
+          新增根菜单
+        </el-button>
+      </template>
+      <template v-slot="{ size, dynamicColumns }">
+        <pure-table
+          ref="tableRef"
+          adaptive
+          :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.base }"
+          align-whole="center"
+          row-key="id"
+          showOverflowTooltip
+          table-layout="auto"
+          :loading="loading"
+          :size="size"
+          :data="dataList"
+          :columns="dynamicColumns"
+          :header-cell-style="{
+            background: 'var(--el-fill-color-light)',
+            color: 'var(--el-text-color-primary)'
+          }"
+          @selection-change="handleSelectionChange"
+        >
+          <template #operation="{ row }">
+            <el-button
+              v-auth="'menu:edit'"
+              class="reset-margin"
+              link
+              type="primary"
+              :size="size"
+              :icon="useRenderIcon(EditPen)"
+              @click="openDialog('修改', row)"
+            >
+              修改
+            </el-button>
             <el-button
               v-auth="'menu:add'"
+              class="reset-margin"
+              link
               type="primary"
-              :icon="useRenderIcon(AddFill)"
-              @click="openDialog('新增')"
-            >
-              新增根菜单
-            </el-button>
-          </template>
-          <template v-slot="{ size, dynamicColumns }">
-            <pure-table
-              ref="tableRef"
-              adaptive
-              :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.base }"
-              align-whole="center"
-              row-key="id"
-              showOverflowTooltip
-              table-layout="auto"
-              :loading="loading"
               :size="size"
-              :data="dataList"
-              :columns="dynamicColumns"
-              :header-cell-style="{
-                background: 'var(--el-fill-color-light)',
-                color: 'var(--el-text-color-primary)'
-              }"
-              @selection-change="handleSelectionChange"
+              :icon="useRenderIcon(AddFill)"
+              @click="openDialog('新增', { parentId: row.id } as any)"
             >
-              <template #operation="{ row }">
+              新增
+            </el-button>
+            <el-popconfirm
+              :title="`是否确认删除菜单名称为${transformI18n(row.title)}的这条数据${row?.children?.length > 0 ? '。注意下级菜单也会一并删除，请谨慎操作' : ''}`"
+              @confirm="handleDelete(row)"
+            >
+              <template #reference>
                 <el-button
-                  v-auth="'menu:edit'"
+                  v-auth="'menu:delete'"
                   class="reset-margin"
                   link
                   type="primary"
                   :size="size"
-                  :icon="useRenderIcon(EditPen)"
-                  @click="openDialog('修改', row)"
+                  :icon="useRenderIcon(Delete)"
                 >
-                  修改
+                  删除
                 </el-button>
-                <el-button
-                  v-auth="'menu:add'"
-                  class="reset-margin"
-                  link
-                  type="primary"
-                  :size="size"
-                  :icon="useRenderIcon(AddFill)"
-                  @click="openDialog('新增', { parentId: row.id } as any)"
-                >
-                  新增
-                </el-button>
-                <el-popconfirm
-                  :title="`是否确认删除菜单名称为${transformI18n(row.title)}的这条数据${row?.children?.length > 0 ? '。注意下级菜单也会一并删除，请谨慎操作' : ''}`"
-                  @confirm="handleDelete(row)"
-                >
-                  <template #reference>
-                    <el-button
-                      v-auth="'menu:delete'"
-                      class="reset-margin"
-                      link
-                      type="primary"
-                      :size="size"
-                      :icon="useRenderIcon(Delete)"
-                    >
-                      删除
-                    </el-button>
-                  </template>
-                </el-popconfirm>
               </template>
-            </pure-table>
+            </el-popconfirm>
           </template>
-        </PureTableBar>
-      </div>
-    </div>
+        </pure-table>
+      </template>
+    </PureTableBar>
   </div>
 </template>
 

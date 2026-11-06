@@ -1,7 +1,14 @@
+/* ============================================================
+ * 路由 / 面包屑过渡
+ *
+ * 时长与缓动统一走 tokens.scss 的动效刻度（--pure-duration-* / --pure-ease-*），
+ * 消除各处硬编码毫秒值与私有缓动曲线，动效节奏可一处调参。
+ * ============================================================ */
+
 /* fade */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.28s;
+  transition: opacity var(--pure-duration-slow) var(--pure-ease-standard);
 }
 
 .fade-enter,
@@ -13,8 +20,8 @@
 .fade-transform-leave-active,
 .fade-transform-enter-active {
   transition:
-    opacity 0.25s,
-    transform 0.25s;
+    opacity var(--pure-duration-panel) var(--pure-ease-standard),
+    transform var(--pure-duration-panel) var(--pure-ease-standard);
 }
 
 .fade-transform-enter-from {
@@ -30,15 +37,15 @@
 /* breadcrumb transition */
 .breadcrumb-enter-active {
   transition:
-    opacity 0.4s,
-    transform 0.4s;
+    opacity var(--pure-duration-slow) var(--pure-ease-standard),
+    transform var(--pure-duration-slow) var(--pure-ease-standard);
 }
 
 .breadcrumb-leave-active {
   position: absolute;
   transition:
-    opacity 0.3s,
-    transform 0.3s;
+    opacity var(--pure-duration-slow) var(--pure-ease-standard),
+    transform var(--pure-duration-slow) var(--pure-ease-standard);
 }
 
 .breadcrumb-enter-from,
@@ -53,10 +60,6 @@
 .outer-most .el-collapse-transition-leave-active,
 .outer-most .el-collapse-transition-enter-active {
   transition:
-    height 0.2s ease-in-out,
-    opacity 0.2s ease-in-out !important;
-}
-
-.horizontal-collapse-transition {
-  transition: var(--pure-transition-duration) all !important;
+    height var(--pure-duration-base) var(--pure-ease-standard),
+    opacity var(--pure-duration-base) var(--pure-ease-standard) !important;
 }

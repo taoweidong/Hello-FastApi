@@ -60,7 +60,7 @@ export function useNotice() {
       { key: "noticeType", defaultValue: 1 },
       { key: "isActive", defaultValue: 1 }
     ],
-    width: "45%",
+    width: "46%",
     onSuccess: onSearch
   });
 
@@ -143,7 +143,7 @@ export function useNotice() {
       const { data } = await noticeApi.retrieve(row.id);
       addDialog({
         title: data.title,
-        width: "45%",
+        width: "46%",
         draggable: true,
         fullscreen: deviceDetection(),
         fullscreenIcon: true,

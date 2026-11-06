@@ -63,7 +63,7 @@
     background: #f0f2f5;
 
     /* main-content 属性动画 */
-    transition: margin-left var(--pure-transition-duration);
+    transition: margin-left var(--pure-duration-slow);
 
     .el-scrollbar__wrap {
       height: 100%;
@@ -79,7 +79,7 @@
     width: calc(100% - #{$sideBarWidth});
 
     /* fixed-header 属性左上角动画 */
-    transition: width var(--pure-transition-duration);
+    transition: width var(--pure-duration-slow);
   }
 
   .main-hidden {
@@ -108,7 +108,7 @@
     border-right: 1px solid var(--pure-border-color);
 
     /* 展开动画 */
-    transition: width var(--pure-transition-duration);
+    transition: width var(--pure-duration-slow);
 
     .scrollbar-wrapper {
       overflow-x: hidden !important;
@@ -226,7 +226,10 @@
       content: "";
       background-color: var(--pure-theme-menu-active-before);
       transform: translateY(0);
-      transition: all var(--pure-transition-duration) ease-in-out;
+      transition:
+        background-color var(--pure-duration-slow) var(--pure-ease-standard),
+        color var(--pure-duration-slow) var(--pure-ease-standard),
+        transform var(--pure-duration-slow) var(--pure-ease-standard);
     }
 
     .el-menu--collapse .outer-most.el-sub-menu > .el-sub-menu__title::before {
@@ -423,7 +426,10 @@
       height: 100%;
       padding-left: 10px;
       cursor: pointer;
-      transition: all var(--pure-transition-duration) ease;
+      transition:
+        width var(--pure-duration-slow) var(--pure-ease-standard),
+        background-color var(--pure-duration-slow) var(--pure-ease-standard),
+        color var(--pure-duration-slow) var(--pure-ease-standard);
 
       img {
         display: inline-block;
@@ -553,7 +559,7 @@
   .mobile {
     .fixed-header {
       width: 100% !important;
-      transition: width var(--pure-transition-duration);
+      transition: width var(--pure-duration-slow);
     }
 
     .main-container {
@@ -563,7 +569,7 @@
     .sidebar-container {
       z-index: 2001;
       width: $sideBarWidth;
-      transition: transform var(--pure-transition-duration);
+      transition: transform var(--pure-duration-slow);
     }
 
     &.hideSidebar {
@@ -592,12 +598,12 @@ body[layout="vertical"] {
   .hideSidebar {
     .fixed-header {
       width: calc(100% - 54px);
-      transition: width var(--pure-transition-duration);
+      transition: width var(--pure-duration-slow);
     }
 
     .sidebar-container {
       width: 54px !important;
-      transition: width var(--pure-transition-duration);
+      transition: width var(--pure-duration-slow);
 
       .is-active.submenu-title-noDropdown.outer-most {
         background: transparent !important;
@@ -635,20 +641,19 @@ body[layout="vertical"] {
     }
   }
 
-  /* 搜索 */
+  /*
+   * 搜索 / 国际化 / 全屏 / 通知 / 用户名 / 设置 图标的悬停底色。
+   * 原为硬编码 #f6f6f6：深色主题下会出现浅灰块（body[layout="vertical"] 的
+   * 特异性还压过了上方使用主题变量的同名规则），改用主题变量后各主题自适配。
+   */
   .search-container,
-  /* 国际化 */
   .globalization-icon,
-  /* 全屏 */
   .fullscreen-icon,
-  /* 消息通知 */
   .dropdown-badge,
-  /* 用户名 */
   .el-dropdown-link,
-  /* 设置 */
   .set-icon {
     &:hover {
-      background: #f6f6f6;
+      background: var(--pure-theme-menu-hover);
     }
   }
 }
@@ -689,12 +694,12 @@ body[layout="mix"] {
   .hideSidebar {
     .fixed-header {
       width: calc(100% - 54px);
-      transition: width var(--pure-transition-duration);
+      transition: width var(--pure-duration-slow);
     }
 
     .sidebar-container {
       width: 54px !important;
-      transition: width var(--pure-transition-duration);
+      transition: width var(--pure-duration-slow);
 
       .is-active.submenu-title-noDropdown.outer-most {
         background: transparent !important;

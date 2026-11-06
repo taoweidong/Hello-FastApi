@@ -55,7 +55,7 @@ const {
         :model="form"
         class="search-form bg-bg_color w-full overflow-auto"
       >
-        <el-form-item label="用户名称：" prop="username">
+        <el-form-item label="用户名称" prop="username">
           <el-input
             v-model="form.username"
             placeholder="请输入用户名称"
@@ -63,7 +63,7 @@ const {
             class="w-45!"
           />
         </el-form-item>
-        <el-form-item label="手机号码：" prop="phone">
+        <el-form-item label="手机号码" prop="phone">
           <el-input
             v-model="form.phone"
             placeholder="请输入手机号码"
@@ -71,7 +71,7 @@ const {
             class="w-45!"
           />
         </el-form-item>
-        <el-form-item label="状态：" prop="isActive">
+        <el-form-item label="状态" prop="isActive">
           <el-select
             v-model="form.isActive"
             placeholder="请选择"

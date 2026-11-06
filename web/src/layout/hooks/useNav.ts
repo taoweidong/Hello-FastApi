@@ -57,7 +57,7 @@ export function useNav() {
     return (locale, t) => {
       return {
         background: locale === t ? useEpThemeStoreHook().epThemeColor : "",
-        color: locale === t ? "#f4f4f5" : "#000"
+        color: locale === t ? "#f4f4f5" : "var(--el-text-color-regular)"
       };
     };
   });

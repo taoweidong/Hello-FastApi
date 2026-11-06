@@ -174,14 +174,30 @@ html.dark {
     --el-card-bg-color: var(--el-bg-color);
   }
 
+  /*
+   * Element Plus 的标签列 / 进度槽默认是浅灰底，深色下叠在深色卡片上对比度不足。
+   * 覆盖为深色下的填充色变量，浅色模式不受影响（monitor 系列页面在用 descriptions）。
+   */
+  .el-descriptions {
+    --el-descriptions-item-bordered-label-background: var(
+      --el-fill-color-light
+    );
+  }
+
+  .el-progress-bar__outer {
+    background-color: var(--el-fill-color-light);
+  }
+
   .el-backtop {
     --el-backtop-bg-color: rgb(72 72 78);
     --el-backtop-hover-bg-color: var(--el-color-primary);
 
-    transition: background-color 0.25s cubic-bezier(0.7, 0.3, 0.1, 1);
+    transition: background-color var(--pure-duration-panel)
+      var(--pure-ease-standard);
   }
 
   .el-dropdown-menu__item:not(.is-disabled):hover {
+    color: var(--el-text-color-regular);
     background: transparent;
   }
 

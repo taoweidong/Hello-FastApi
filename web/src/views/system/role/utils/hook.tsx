@@ -73,7 +73,7 @@ export function useRole(treeRef: Ref) {
       { key: "dataScope", defaultValue: DataScope.ALL },
       { key: "description", defaultValue: "", nullable: true }
     ],
-    width: "40%",
+    width: "46%",
     onSuccess: onSearch
   });
 

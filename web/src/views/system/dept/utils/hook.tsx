@@ -139,7 +139,8 @@ export function useDept() {
           description: row?.description ?? ""
         }
       },
-      width: "40%",
+      width: "46%",
+      sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

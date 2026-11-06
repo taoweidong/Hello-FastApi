@@ -79,6 +79,7 @@
   --pure-z-modal: 2001; /* 弹窗 / 侧边栏 */
   --pure-z-popper: 3000; /* tooltip / popconfirm */
   --pure-z-top: 4000; /* 设置面板等全局浮层 */
+  --pure-z-tooltip: 4100; /* 需盖住全局浮层的提示气泡（设置面板内的 tippy） */
 }
 
 /* 深色模式下的阴影需要加强，否则层级感丢失 */

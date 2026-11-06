@@ -190,9 +190,13 @@ export function useUser(tableRef: Ref) {
     return [
       "h-5!",
       "reset-margin",
-      "text-gray-500!",
-      "dark:text-white!",
-      "dark:hover:text-primary!"
+      /*
+       * 原为 text-gray-500! + dark:text-white! + dark:hover:text-primary!：
+       * 两套固定灰阶靠 dark 变体硬切，与主题色体系脱节。
+       * 改用 Element 文本色变量后浅/深色自动适配。
+       */
+      "text-[var(--el-text-color-secondary)]!",
+      "hover:text-primary!"
     ];
   });
   const pwdForm = reactive({

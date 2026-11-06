@@ -37,6 +37,24 @@ const { title, getLogo } = useNav();
 </template>
 
 <style lang="scss" scoped>
+/*
+ * 侧栏折叠 / 展开时 logo 的淡入淡出过渡。
+ * <transition name="sidebarLogoFade"> 此前没有对应的过渡类定义，
+ * 折叠时 logo 是瞬间切换的，缺少过渡。
+ */
+.sidebarLogoFade-enter-active,
+.sidebarLogoFade-leave-active {
+  transition:
+    opacity var(--pure-duration-base) var(--pure-ease-standard),
+    transform var(--pure-duration-base) var(--pure-ease-standard);
+}
+
+.sidebarLogoFade-enter-from,
+.sidebarLogoFade-leave-to {
+  opacity: 0;
+  transform: translateX(-8px);
+}
+
 .sidebar-logo-container {
   position: relative;
   width: 100%;

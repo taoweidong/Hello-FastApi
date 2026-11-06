@@ -35,7 +35,7 @@ const {
 </script>
 
 <template>
-  <div class="main">
+  <div>
     <el-form
       ref="formRef"
       :inline="true"

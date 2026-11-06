@@ -252,7 +252,9 @@ onMounted(() => {
                 </el-button>
               </template>
             </el-popconfirm>
-            <span v-else class="text-gray-400">安全数据，不可清理</span>
+            <span v-else class="text-(--el-text-color-secondary)"
+              >安全数据，不可清理</span
+            >
           </template>
         </el-table-column>
       </el-table>

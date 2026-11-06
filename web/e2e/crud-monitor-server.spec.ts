@@ -44,4 +44,41 @@ test.describe("服务器监控页交互验证", () => {
 
     expect(errors, "监控页出现 /api/system/ 4xx 以上错误").toEqual([]);
   });
+
+  test("日志查看：全屏放大撑满内容区、退出全屏、全屏下重新读取", async ({
+    page
+  }) => {
+    await gotoPage(page, "/monitor/server");
+    await expect(page.getByText("日志文件").first()).toBeVisible();
+
+    // 日志清单依赖运行环境，无文件时跳过，避免环境差异造成假失败
+    const firstRow = page.locator(".el-table__row").first();
+    try {
+      await expect(firstRow).toBeVisible({ timeout: 15000 });
+    } catch {
+      test.skip(true, "当前环境无日志文件，跳过全屏交互验证");
+      return;
+    }
+
+    await firstRow.getByRole("button", { name: "查看尾部" }).click();
+    const dialog = page.locator(".el-dialog.log-tail-dialog");
+    const pre = dialog.locator("pre");
+    await expect(pre).toBeVisible({ timeout: 15000 });
+    const normalBox = await pre.boundingBox();
+
+    await dialog.getByRole("button", { name: "全屏查看" }).click();
+    await expect(dialog).toHaveClass(/log-tail-dialog--full/);
+    const fullBox = await pre.boundingBox();
+    // 全屏不只是弹窗铺满：<pre> 也必须跟着撑高，否则下方留大片空白
+    expect(fullBox!.height).toBeGreaterThan(normalBox!.height);
+    expect(fullBox!.height).toBeGreaterThan(600);
+
+    // 全屏状态下重新读取，不应把弹窗缩回去
+    await dialog.getByRole("button", { name: "重新读取" }).click();
+    await expect(pre).toBeVisible({ timeout: 15000 });
+    await expect(dialog).toHaveClass(/log-tail-dialog--full/);
+
+    await dialog.getByRole("button", { name: "退出全屏" }).click();
+    await expect(dialog).not.toHaveClass(/log-tail-dialog--full/);
+  });
 });

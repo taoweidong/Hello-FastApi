@@ -154,7 +154,8 @@ export function useDictionary() {
           description: ""
         }
       },
-      width: "40%",
+      width: "46%",
+      sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -225,7 +226,8 @@ export function useDictionary() {
           description: ""
         }
       },
-      width: "40%",
+      width: "46%",
+      sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -281,7 +283,8 @@ export function useDictionary() {
           description: row?.description ?? ""
         }
       },
-      width: "40%",
+      width: "46%",
+      sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

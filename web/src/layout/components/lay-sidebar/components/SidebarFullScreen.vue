@@ -26,7 +26,11 @@ watch(
 <template>
   <span
     class="fullscreen-icon navbar-bg-hover hover:[&>svg]:animate-scale-bounce"
+    role="button"
+    tabindex="0"
+    aria-label="全屏切换"
     @click="toggle"
+    @keyup.enter="toggle"
   >
     <IconifyIconOffline :icon="screenIcon" />
   </span>

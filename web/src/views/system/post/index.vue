@@ -39,7 +39,7 @@ function onFullscreen() {
 </script>
 
 <template>
-  <div class="main">
+  <div>
     <el-form
       ref="formRef"
       :inline="true"
@@ -67,7 +67,7 @@ function onFullscreen() {
           v-model="form.isActive"
           placeholder="请选择状态"
           clearable
-          class="w-40!"
+          class="w-45!"
         >
           <el-option label="正常" :value="1" />
           <el-option label="停用" :value="0" />

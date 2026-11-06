@@ -26,6 +26,23 @@ const iconClass = computed(() => {
 const { t } = useI18n();
 const { onReset } = useDataThemeChange();
 
+/**
+ * 读取 CSS 变量中的层级数值。
+ * tippy 的 zIndex 只接受 number，无法直接写 var(--pure-z-tooltip)，
+ * 这里在 setup 阶段解析一次，值与 tokens.scss 中的层级刻度保持同源。
+ */
+function readCssVarNumber(name: string, fallback: number): number {
+  if (typeof window === "undefined") return fallback;
+  const raw = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+/** 提示气泡需盖住设置面板本身（--pure-z-top），故用更高级的 --pure-z-tooltip */
+const tooltipZIndex = readCssVarNumber("--pure-z-tooltip", 4100);
+
 onClickOutside(target, (event: any) => {
   if (event.clientX > target.value.offsetLeft) return;
   show.value = false;
@@ -57,7 +74,7 @@ onBeforeUnmount(() => {
           v-tippy="{
             content: t('panel.pureCloseSystemSet'),
             placement: 'bottom-start',
-            zIndex: 41000
+            zIndex: tooltipZIndex
           }"
           :class="iconClass"
         >
@@ -83,7 +100,7 @@ onBeforeUnmount(() => {
           v-tippy="{
             content: t('panel.pureClearCacheAndToLogin'),
             placement: 'left-start',
-            zIndex: 41000
+            zIndex: tooltipZIndex
           }"
           type="danger"
           text
@@ -117,7 +134,7 @@ onBeforeUnmount(() => {
   z-index: var(--pure-z-top);
   width: 100%;
   max-width: 280px;
-  box-shadow: 0 0 15px 0 rgb(0 0 0 / 5%);
+  box-shadow: var(--pure-shadow-3);
   transform: translate(100%);
   transition: transform var(--pure-duration-panel) var(--pure-ease-emphasized);
 }

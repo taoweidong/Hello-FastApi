@@ -10,10 +10,13 @@ import {
 } from "@/api/system/monitor";
 import { message } from "@/utils/message";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
+import { deviceDetection } from "@pureadmin/utils";
 
 import Download from "~icons/ep/download";
 import Refresh from "~icons/ep/refresh";
 import View from "~icons/ep/view";
+import Fullscreen from "~icons/ri/fullscreen-fill";
+import ExitFullscreen from "~icons/ri/fullscreen-exit-fill";
 
 defineOptions({
   name: "ServerMonitor"
@@ -79,9 +82,15 @@ async function fetchLogFiles() {
   }
 }
 
-async function openTail(filename: string) {
-  tailDialog.name = filename;
-  tailDialog.visible = true;
+/** 日志查看弹窗是否全屏（窄屏默认全屏，与项目其它弹窗的 deviceDetection 惯例一致） */
+const tailFullscreen = ref(false);
+
+function toggleTailFullscreen() {
+  tailFullscreen.value = !tailFullscreen.value;
+}
+
+/** 拉取日志尾部内容：「打开」与「重新读取」共用，刷新时不重置全屏状态 */
+async function loadTail(filename: string) {
   tailDialog.loading = true;
   tailDialog.content = "";
   try {
@@ -93,6 +102,18 @@ async function openTail(filename: string) {
   } finally {
     tailDialog.loading = false;
   }
+}
+
+function openTail(filename: string) {
+  tailDialog.name = filename;
+  tailDialog.visible = true;
+  tailFullscreen.value = deviceDetection();
+  loadTail(filename);
+}
+
+/** 全屏状态下也能重新读取，不必关掉弹窗再打开 */
+function refreshTail() {
+  if (tailDialog.name) loadTail(tailDialog.name);
 }
 
 async function handleDownload(filename: string) {
@@ -144,7 +165,7 @@ onMounted(() => {
                   type="dashboard"
                   :percentage="percent(serverInfo.cpu.usedPercent)"
                 />
-                <div class="mt-2 text-gray-500">
+                <div class="mt-2 text-(--el-text-color-secondary)">
                   逻辑核心数：{{ serverInfo.cpu.coreCount }}
                 </div>
               </div>
@@ -158,10 +179,10 @@ onMounted(() => {
                   type="dashboard"
                   :percentage="percent(serverInfo.memory.usedPercent)"
                 />
-                <div class="mt-2 text-gray-500">
+                <div class="mt-2 text-(--el-text-color-secondary)">
                   总大小：{{ serverInfo.memory.total }}
                 </div>
-                <div class="text-gray-500">
+                <div class="text-(--el-text-color-secondary)">
                   已用：{{ serverInfo.memory.used }} / 可用：{{
                     serverInfo.memory.free
                   }}
@@ -177,10 +198,10 @@ onMounted(() => {
                   type="dashboard"
                   :percentage="percent(serverInfo.disk.usedPercent)"
                 />
-                <div class="mt-2 text-gray-500">
+                <div class="mt-2 text-(--el-text-color-secondary)">
                   总大小：{{ serverInfo.disk.total }}
                 </div>
-                <div class="text-gray-500">
+                <div class="text-(--el-text-color-secondary)">
                   已用：{{ serverInfo.disk.used }} / 可用：{{
                     serverInfo.disk.free
                   }}
@@ -288,16 +309,85 @@ onMounted(() => {
 
     <el-dialog
       v-model="tailDialog.visible"
-      :title="`日志尾部：${tailDialog.name}`"
+      :fullscreen="tailFullscreen"
+      class="log-tail-dialog"
+      :class="{ 'log-tail-dialog--full': tailFullscreen }"
       width="860"
       top="6vh"
+      @closed="tailFullscreen = false"
     >
-      <div v-loading="tailDialog.loading">
+      <template #header="{ titleId, titleClass }">
+        <div class="flex-bc w-full pr-8">
+          <span :id="titleId" :class="[titleClass, 'truncate']">
+            日志尾部：{{ tailDialog.name }}
+          </span>
+          <div class="flex items-center gap-1 shrink-0">
+            <el-button
+              text
+              size="small"
+              :icon="useRenderIcon(Refresh)"
+              :loading="tailDialog.loading"
+              @click="refreshTail"
+            >
+              重新读取
+            </el-button>
+            <el-button
+              text
+              size="small"
+              :icon="
+                useRenderIcon(tailFullscreen ? ExitFullscreen : Fullscreen)
+              "
+              @click="toggleTailFullscreen"
+            >
+              {{ tailFullscreen ? "退出全屏" : "全屏查看" }}
+            </el-button>
+          </div>
+        </div>
+      </template>
+
+      <div v-loading="tailDialog.loading" class="log-tail-body">
         <pre
           v-if="!tailDialog.loading"
-          class="max-h-[60vh] overflow-auto rounded bg-gray-950 p-3 text-xs/5 text-gray-100 whitespace-pre-wrap break-all"
+          class="overflow-auto rounded bg-gray-950 p-3 text-gray-100 whitespace-pre-wrap break-all"
+          :class="
+            tailFullscreen
+              ? 'flex-1 min-h-0 text-sm/6'
+              : 'max-h-[60vh] text-xs/5'
+          "
           >{{ tailDialog.content || "（空文件）" }}</pre>
       </div>
     </el-dialog>
   </div>
 </template>
+
+<style lang="scss">
+/*
+ * 全屏日志：Element Plus 的 fullscreen 只把弹窗铺到视口，正文区仍按内容高度收缩，
+ * 这里让 header/body/pre 形成 flex 链，使 <pre> 真正撑满剩余高度（否则下方大片空白）。
+ * 非 scoped：el-dialog 经 Teleport 挂到 body 下，scoped 的祖先作用域选择器不可靠；
+ * 类名 log-tail-dialog--full 仅在本页全屏时存在，不会污染其它页面。
+ */
+.log-tail-dialog--full {
+  display: flex;
+  flex-direction: column;
+  height: 100vh !important;
+  margin: 0 !important;
+  border-radius: 0;
+
+  > .el-dialog__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding-top: 8px;
+    overflow: hidden;
+  }
+
+  .log-tail-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+</style>

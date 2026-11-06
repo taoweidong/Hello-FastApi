@@ -569,7 +569,11 @@ onBeforeUnmount(() => {
 <template>
   <div v-if="!showTags" ref="containerDom" class="tags-view">
     <span v-show="isShowArrow" class="arrow-left">
-      <IconifyIconOffline :icon="ArrowLeftSLine" @click="handleScroll(200)" />
+      <IconifyIconOffline
+        :icon="ArrowLeftSLine"
+        aria-label="向左滚动标签"
+        @click="handleScroll(200)"
+      />
     </span>
     <div
       ref="scrollbarDom"
@@ -607,7 +611,11 @@ onBeforeUnmount(() => {
                     (index === activeIndex && index !== 0)
               "
               class="el-icon-close"
+              role="button"
+              tabindex="0"
+              aria-label="关闭标签页"
               @click.stop="deleteMenu(item)"
+              @keyup.enter.stop="deleteMenu(item)"
             >
               <IconifyIconOffline :icon="Close" />
             </span>
@@ -631,7 +639,11 @@ onBeforeUnmount(() => {
             <span
               v-if="isFixedTag(item) ? false : index !== 0"
               class="chrome-close-btn"
+              role="button"
+              tabindex="0"
+              aria-label="关闭标签页"
               @click.stop="deleteMenu(item)"
+              @keyup.enter.stop="deleteMenu(item)"
             >
               <IconifyIconOffline :icon="Close" />
             </span>
@@ -640,7 +652,11 @@ onBeforeUnmount(() => {
       </div>
     </div>
     <span v-show="isShowArrow" class="arrow-right">
-      <IconifyIconOffline :icon="ArrowRightSLine" @click="handleScroll(-200)" />
+      <IconifyIconOffline
+        :icon="ArrowRightSLine"
+        aria-label="向右滚动标签"
+        @click="handleScroll(-200)"
+      />
     </span>
     <!-- 右键菜单按钮 -->
     <transition name="el-zoom-in-top">

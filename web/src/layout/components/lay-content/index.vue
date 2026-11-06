@@ -222,6 +222,10 @@ const transitionMain = defineComponent({
 
 .main-content {
   flex: 1;
-  margin: 8px;
+
+  /*
+   * 外边距统一由 style/element-plus.scss 的 .main-content token 版本接管
+   * （含 !important），此处不再重复声明，避免两处各改一半。
+   */
 }
 </style>

@@ -27,7 +27,7 @@ const {
 </script>
 
 <template>
-  <div class="main">
+  <div>
     <div class="permission-layout flex gap-4 w-full">
       <!-- 左侧角色列表 -->
       <div class="permission-roles w-1/3 min-w-75">
@@ -57,6 +57,7 @@ const {
             >
               <template #operation="{ row }">
                 <el-button
+                  class="reset-margin"
                   link
                   type="primary"
                   :size="size"

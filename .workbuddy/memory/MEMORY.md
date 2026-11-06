@@ -27,6 +27,11 @@
   - **真根因已定位并修复**：`service/src/config/settings.py` 里 `Settings(env_file=...)` 参数名写错，应为 `_env_file=`；写错时 pydantic-settings 静默丢弃，`.env.development` 从未加载，`REDIS_URL` 落到默认值 `redis://localhost:6379/0`，Windows 下 `localhost` 解析到 IPv6 `::1`，而本机 Redis（v3.2.100，`D:\Program Files\Redis\`）只监听 IPv4 → 异步连接必超时。**不是** RESP3/protocol 问题，项目早已正确配 `protocol=2`。
   - 排障顺序：`netstat` → 后端日志 → `redis-cli ping`（能通不代表异步能通）→ 用项目 venv 跑 `await get_redis().ping()` 复现。
 - **E2E flaky 判定法**：全量跑失败用例每次不同 + 单独复跑通过 ⇒ 环境/配置问题，不是代码回归。用 `git stash push -- <改动文件>` 做 A/B 对照可确证。
+- **`getByRole` 的 `name` 是子串匹配**（2026-11-06 实测踩坑 2 次）：`{ name: "搜索" }` 会同时命中
+  `aria-label="全局搜索"` 的图标入口 → strict mode violation，一次性打挂 14 个用例。
+  **新增 `aria-label` / `title` 前，先 `grep -rh 'getByRole("button"' web/e2e` 列出既有按钮名，
+  确认新标签不是其中任一名称的子串**；实在避不开就改用不冲突的措辞（如「全局检索」），
+  不要去改 13 个 spec 的定位代码。同类坑：「刷新」vs「刷新日志」→ 用 `exact: true`。
 
 ## 前端依赖升级约定（2026-10-25 起）
 

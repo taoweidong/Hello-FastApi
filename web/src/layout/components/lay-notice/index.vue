@@ -117,7 +117,7 @@ const onMarkAsRead = () => {
     >
       <el-badge is-dot :hidden="!hasAnyNoticeData">
         <span class="header-notice-icon" :class="{ 'bell-ring': bellRing }">
-          <IconifyIconOffline :icon="BellIcon" />
+          <IconifyIconOffline :icon="BellIcon" aria-label="消息通知" />
         </span>
       </el-badge>
     </span>

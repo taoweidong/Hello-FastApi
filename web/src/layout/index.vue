@@ -18,7 +18,6 @@ import {
   defineComponent
 } from "vue";
 import {
-  useDark,
   useGlobal,
   deviceDetection,
   useResizeObserver
@@ -34,7 +33,6 @@ import BackTopIcon from "@/assets/svg/back_top.svg?component";
 
 const { t } = useI18n();
 const appWrapperRef = ref();
-const { isDark } = useDark();
 const { layout } = useLayout();
 const isMobile = deviceDetection();
 const pureSetting = useSettingStoreHook();
@@ -134,10 +132,13 @@ const LayHeader = defineComponent({
       {
         class: { "fixed-header": set.fixedHeader },
         style: [
+          /*
+           * 原为深浅两套硬编码阴影（#0d0d0d / rgba(0,21,41,0.08)），
+           * 改用设计令牌的 --pure-shadow-1：深色模式下 tokens.scss 已自动
+           * 切换为加强版阴影，无需在模板里再判断主题。
+           */
           set.hideTabs && layout.value.includes("horizontal")
-            ? isDark.value
-              ? "box-shadow: 0 1px 4px #0d0d0d"
-              : "box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08)"
+            ? "box-shadow: var(--pure-shadow-1)"
             : ""
         ]
       },
@@ -224,7 +225,9 @@ const LayHeader = defineComponent({
 .app-mask {
   position: absolute;
   top: 0;
-  z-index: 2001;
+
+  /* 移动端侧栏遮罩：与侧栏同级（--pure-z-modal），盖住内容不盖住侧栏 */
+  z-index: var(--pure-z-modal);
   width: 100%;
   height: 100%;
   background: #000;

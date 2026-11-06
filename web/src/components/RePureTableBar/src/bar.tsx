@@ -85,9 +85,9 @@ export default defineComponent({
         "text-black",
         "dark:text-white",
         "duration-100",
+        "transition-colors",
         "hover:text-primary!",
-        "cursor-pointer",
-        "outline-hidden"
+        "cursor-pointer"
       ];
     });
 
@@ -96,11 +96,11 @@ export default defineComponent({
         "flex",
         "justify-between",
         "pt-0.75",
-        "px-2.75",
+        "px-3",
         "border-b",
         "border-b-solid",
-        "border-[#dcdfe6]",
-        "dark:border-[#303030]"
+        // 边框色走 Element 变量，浅/深色自动适配，无需再写 dark: 变体
+        "border-[var(--el-border-color-lighter)]"
       ];
     });
 
@@ -276,6 +276,7 @@ export default defineComponent({
       reference: () => (
         <SettingIcon
           class={["w-4", iconClass.value]}
+          aria-label={transformI18n($t("tableBar.pureColumnSettings"))}
           v-tippy={rendTippyProps(
             transformI18n($t("tableBar.pureColumnSettings"))
           )}
@@ -293,24 +294,35 @@ export default defineComponent({
             "pb-2",
             "bg-bg_color",
             isFullscreen.value
-              ? ["h-full!", "z-2002", "fixed", "inset-0"]
+              ? ["h-full!", "z-(--pure-z-overlay)", "fixed", "inset-0"]
               : "mt-2"
           ]}
         >
-          <div class="flex justify-between w-full h-15 p-4">
-            {slots?.title ? (
-              slots.title()
-            ) : (
-              <p class="font-bold truncate">{transformI18n(props.title)}</p>
-            )}
-            <div class="flex-ac">
+          <div class="flex justify-between w-full h-15 p-4 gap-3">
+            {/*
+              标题容器加 flex-1 + min-w-0：flex 子项默认 min-width:auto，
+              长标题会把容器撑开，导致 truncate 失效
+            */}
+            <div class="flex-1 min-w-0">
+              {slots?.title ? (
+                slots.title()
+              ) : (
+                <p class="font-bold truncate">{transformI18n(props.title)}</p>
+              )}
+            </div>
+            <div class="flex-ac flex-wrap shrink-0">
               {slots?.buttons ? (
-                <div class="flex mr-4">{slots.buttons()}</div>
+                <div class="flex flex-wrap mr-4">{slots.buttons()}</div>
               ) : null}
               {props.tableRef?.size ? (
                 <>
                   <ExpandIcon
                     class={["w-4", iconClass.value]}
+                    aria-label={transformI18n(
+                      isExpandAll.value
+                        ? $t("tableBar.pureCollapse")
+                        : $t("tableBar.pureExpand")
+                    )}
                     style={{
                       transform: isExpandAll.value ? "none" : "rotate(-90deg)"
                     }}
@@ -330,6 +342,7 @@ export default defineComponent({
                   iconClass.value,
                   loading.value ? "animate-spin" : ""
                 ]}
+                aria-label={transformI18n($t("tableBar.pureRefresh"))}
                 v-tippy={rendTippyProps(
                   transformI18n($t("tableBar.pureRefresh"))
                 )}
@@ -343,7 +356,10 @@ export default defineComponent({
                   transformI18n($t("tableBar.pureDensity"))
                 )}
               >
-                <CollapseIcon class={["w-4", iconClass.value]} />
+                <CollapseIcon
+                  class={["w-4", iconClass.value]}
+                  aria-label={transformI18n($t("tableBar.pureDensity"))}
+                />
               </el-dropdown>
               <el-divider direction="vertical" />
 
@@ -416,6 +432,11 @@ export default defineComponent({
                                   left ? "text-primary" : ""
                                 ]}
                                 icon={left ? PinAngleFill : PinAngle}
+                                aria-label={transformI18n(
+                                  left
+                                    ? $t("tableBar.pureUnpin")
+                                    : $t("tableBar.purePinLeft")
+                                )}
                                 v-tippy={
                                   left
                                     ? transformI18n($t("tableBar.pureUnpin"))
@@ -438,6 +459,11 @@ export default defineComponent({
                                   right ? "text-primary" : ""
                                 ]}
                                 icon={right ? PinAngleFill : PinAngle}
+                                aria-label={transformI18n(
+                                  right
+                                    ? $t("tableBar.pureUnpin")
+                                    : $t("tableBar.purePinRight")
+                                )}
                                 v-tippy={
                                   right
                                     ? transformI18n($t("tableBar.pureUnpin"))
@@ -463,6 +489,11 @@ export default defineComponent({
               <iconify-icon-offline
                 class={["w-4", iconClass.value]}
                 icon={isFullscreen.value ? ExitFullscreen : Fullscreen}
+                aria-label={transformI18n(
+                  isFullscreen.value
+                    ? $t("tableBar.pureExitFullScreen")
+                    : $t("tableBar.pureFullScreen")
+                )}
                 v-tippy={
                   isFullscreen.value
                     ? transformI18n($t("tableBar.pureExitFullScreen"))

@@ -46,7 +46,7 @@ export function useIpRule() {
       { key: "expiresAt", defaultValue: "", nullable: true },
       { key: "description", defaultValue: "", nullable: true }
     ],
-    width: "40%",
+    width: "46%",
     onSuccess: onSearch
   });
 

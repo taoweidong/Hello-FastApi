@@ -192,7 +192,8 @@ export function useMenu() {
           }
         }
       },
-      width: "45%",
+      width: "46%",
+      sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

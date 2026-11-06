@@ -44,7 +44,7 @@ export function usePost() {
       { key: "isActive", defaultValue: 1 },
       { key: "remark", defaultValue: "", nullable: true }
     ],
-    width: "45%",
+    width: "46%",
     onSuccess: onSearch
   });
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
 import ReCol from "@/components/ReCol";
-import { formRules } from "./utils/rule";
+import { dictItemRules, dictTypeRules } from "./utils/rule";
 import { FormProps } from "./utils/types";
 import { usePublicHooks } from "@/views/system/hooks";
 
@@ -31,6 +31,15 @@ const isRootType = computed(() => {
   );
 });
 
+/**
+ * 校验规则按形态切换：
+ * 根级（字典类型）只校验字典名称，子项（字典详情）只校验显示标签。
+ * 此前靠 `:prop="isRootType ? '' : 'label'"` 规避，必填星号会随模式闪变。
+ */
+const rules = computed(() =>
+  isRootType.value ? dictTypeRules : dictItemRules
+);
+
 function getRef() {
   return ruleFormRef.value;
 }
@@ -42,7 +51,7 @@ defineExpose({ getRef });
   <el-form
     ref="ruleFormRef"
     :model="newFormInline"
-    :rules="formRules"
+    :rules="rules"
     label-width="82px"
   >
     <el-row :gutter="30">
@@ -69,7 +78,7 @@ defineExpose({ getRef });
       </re-col>
 
       <re-col :value="12" :xs="24" :sm="24">
-        <el-form-item label="显示标签" :prop="isRootType ? '' : 'label'">
+        <el-form-item label="显示标签" prop="label">
           <el-input
             v-model="newFormInline.label"
             clearable

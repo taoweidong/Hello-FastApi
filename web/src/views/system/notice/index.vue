@@ -40,7 +40,7 @@ function onFullscreen() {
 </script>
 
 <template>
-  <div class="main">
+  <div>
     <el-form
       ref="formRef"
       :inline="true"
@@ -60,7 +60,7 @@ function onFullscreen() {
           v-model="form.noticeType"
           placeholder="请选择公告类型"
           clearable
-          class="w-40!"
+          class="w-45!"
         >
           <el-option
             v-for="item in typeOptions()"
@@ -75,7 +75,7 @@ function onFullscreen() {
           v-model="form.isActive"
           placeholder="请选择状态"
           clearable
-          class="w-40!"
+          class="w-45!"
         >
           <el-option label="正常" :value="1" />
           <el-option label="关闭" :value="0" />

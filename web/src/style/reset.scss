@@ -174,7 +174,7 @@ textarea {
 
 input::placeholder,
 textarea::placeholder {
-  color: #9ca3af;
+  color: var(--el-text-color-placeholder);
   opacity: 1;
 }
 
@@ -211,9 +211,11 @@ video {
   color-scheme: dark;
 }
 
-label {
-  font-weight: 700;
-}
+/*
+ * label 字重不再全局加粗：原先的裸 `label` 选择器会把「可选字段」的标签也一起加粗，
+ * 必填与可选无法一眼分辨。改由 Element Plus 的 `.el-form-item__label` 统一接管，
+ * 仅 `.is-required` 的标签加粗（见 element-plus.scss）。
+ */
 
 *,
 *::before,
