@@ -98,3 +98,39 @@ export const clearCacheGroup = (group: string) =>
 /** 清空全部可清理业务缓存（仅管理员；不含令牌黑名单与限流计数键） */
 export const clearAllCache = () =>
   http.request<Result<CacheClearResult>>("post", "/cache-clear-all");
+
+/** 日志文件清单条目 */
+export type LogFileInfo = {
+  /** 文件名 */
+  name: string;
+  /** 文件大小（字节） */
+  sizeBytes: number;
+  /** 最后修改时间（本地时间字符串） */
+  modifiedTime: string;
+};
+
+/** 日志尾部内容 */
+export type LogTail = {
+  name: string;
+  lines: number;
+  content: string;
+};
+
+/** 获取日志文件清单（仅管理员） */
+export const getLogFiles = () =>
+  http.request<Result<LogFileInfo[]>>("get", "/log-files");
+
+/** 读取日志文件末尾 N 行（仅管理员） */
+export const tailLogFile = (filename: string, lines = 200) =>
+  http.request<Result<LogTail>>(
+    "get",
+    `/log-files/${encodeURIComponent(filename)}/tail`,
+    { params: { lines } }
+  );
+
+/** 下载日志文件（仅管理员；blob 由调用方触发保存） */
+export const downloadLogFile = (filename: string) =>
+  http.request<Blob>("get", `/log-files/${encodeURIComponent(filename)}`, {
+    params: { download: true },
+    responseType: "blob"
+  });

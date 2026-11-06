@@ -278,3 +278,89 @@ class TestCacheAdminRouter:
         resp = client.post("/api/system/cache-clear-all", headers={"Authorization": "Bearer t"})
         assert resp.status_code == 400
         assert "缓存服务不可用" in resp.json()["message"]
+
+
+@pytest.mark.unit
+class TestLogFileRouter:
+    """日志文件浏览接口：仅管理员 + 路径安全。"""
+
+    @pytest.fixture
+    def app(self):
+        _app = FastAPI()
+        register_exception_handlers(_app)
+        from src.api.v1.monitor_router import MonitorRouter
+
+        _app.include_router(MonitorRouter().router, prefix="/api/system")
+        return _app
+
+    @pytest.fixture
+    def logs_dir(self, tmp_path):
+        (tmp_path / "app.log").write_text("2026-11-06 boot ok\nboom trace\n", encoding="utf-8")
+        return tmp_path
+
+    def _build_client(self, app, user_entity, logs_dir):
+        from src.api.dependencies import get_current_active_user
+        from src.api.dependencies.monitor_service import get_log_file_service
+        from src.application.services.log_file_service import LogFileService
+
+        app.dependency_overrides[get_current_active_user] = lambda: user_entity
+        app.dependency_overrides[get_log_file_service] = lambda: LogFileService(logs_dir=logs_dir)
+        return TestClient(app, raise_server_exceptions=False)
+
+    @staticmethod
+    def _admin():
+        return UserEntity(id="1", username="admin", password="", is_superuser=UserRole.SUPERUSER)
+
+    @staticmethod
+    def _user():
+        return UserEntity(id="2", username="user", password="", is_superuser=UserRole.USER)
+
+    def test_list_files_admin_ok(self, app, logs_dir):
+        client = self._build_client(app, self._admin(), logs_dir)
+        resp = client.get("/api/system/log-files", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 200
+        names = [f["name"] for f in resp.json()["data"]]
+        assert "app.log" in names
+
+    def test_list_files_non_admin_403(self, app, logs_dir):
+        client = self._build_client(app, self._user(), logs_dir)
+        resp = client.get("/api/system/log-files", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 403
+
+    def test_tail_returns_content(self, app, logs_dir):
+        client = self._build_client(app, self._admin(), logs_dir)
+        resp = client.get("/api/system/log-files/app.log/tail?lines=10", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 200
+        data = resp.json()["data"]
+        assert data["name"] == "app.log"
+        assert "boom trace" in data["content"]
+
+    def test_tail_non_admin_403(self, app, logs_dir):
+        client = self._build_client(app, self._user(), logs_dir)
+        resp = client.get("/api/system/log-files/app.log/tail", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 403
+
+    def test_tail_missing_file_404(self, app, logs_dir):
+        client = self._build_client(app, self._admin(), logs_dir)
+        resp = client.get("/api/system/log-files/nope.log/tail", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 404
+
+    def test_tail_traversal_400(self, app, tmp_path):
+        """穿越逃逸：服务层 ValueError → BusinessError 400。"""
+        secret = tmp_path / "secret.txt"
+        secret.write_text("top secret", encoding="utf-8")
+        client = self._build_client(app, self._admin(), tmp_path / "logs" if (tmp_path / "logs").exists() else tmp_path)
+        resp = client.get("/api/system/log-files/..%2Fsecret.txt/tail", headers={"Authorization": "Bearer t"})
+        assert resp.status_code in (400, 404)
+
+    def test_download_inline_by_default(self, app, logs_dir):
+        client = self._build_client(app, self._admin(), logs_dir)
+        resp = client.get("/api/system/log-files/app.log", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 200
+        assert "boot ok" in resp.text
+
+    def test_download_attachment_disposition(self, app, logs_dir):
+        client = self._build_client(app, self._admin(), logs_dir)
+        resp = client.get("/api/system/log-files/app.log?download=true", headers={"Authorization": "Bearer t"})
+        assert resp.status_code == 200
+        assert "attachment" in resp.headers.get("content-disposition", "")

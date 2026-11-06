@@ -10,21 +10,25 @@ import random
 import redis.asyncio as redis_async
 from classy_fastapi import Routable, get, post
 from fastapi import Depends
+from fastapi.responses import FileResponse
 
 from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission, require_superuser
-from src.api.dependencies.monitor_service import get_monitor_service, get_redis_or_none
+from src.api.dependencies.monitor_service import get_log_file_service, get_monitor_service, get_redis_or_none
 from src.application.dto.monitor_dto import (
     CacheClearDTO,
     CacheGroupDTO,
     CacheInfoDTO,
     ForceOfflineDTO,
+    LogFileInfoDTO,
+    LogTailDTO,
     OnlineLogsQueryDTO,
     ServerInfoDTO,
 )
+from src.application.services.log_file_service import LogFileNotFoundError, LogFileService
 from src.application.services.monitor_service import MonitorService
-from src.domain.exceptions import BusinessError
+from src.domain.exceptions import BusinessError, NotFoundError
 
 
 class MonitorRouter(Routable):
@@ -160,3 +164,53 @@ class MonitorRouter(Routable):
                 }
             )
         return success_response(data={"list": card_list})
+
+    # ============ 日志文件浏览（仅管理员；远程排查替代登录服务器） ============
+
+    @get("/log-files", response_model=ApiResponse[list[LogFileInfoDTO]])
+    async def list_log_files(
+        self, _: dict = Depends(require_superuser()), log_file_service: LogFileService = Depends(get_log_file_service)
+    ) -> dict:
+        """列出日志目录下的全部文件（按修改时间倒序）。
+
+        日志含敏感信息，端点强制超级管理员；未走静态目录匿名挂载。
+        """
+        files = await log_file_service.list_files()
+        return success_response(data=[f.model_dump() for f in files])
+
+    @get("/log-files/{filename}/tail", response_model=ApiResponse[LogTailDTO])
+    async def tail_log_file(
+        self,
+        filename: str,
+        lines: int = 200,
+        _: dict = Depends(require_superuser()),
+        log_file_service: LogFileService = Depends(get_log_file_service),
+    ) -> dict:
+        """读取日志文件末尾 N 行（默认 200，上限 1000）。"""
+        try:
+            content = await log_file_service.tail(filename, lines=lines)
+        except LogFileNotFoundError as exc:
+            raise NotFoundError(str(exc)) from exc
+        except ValueError as exc:
+            raise BusinessError(str(exc)) from exc
+        return success_response(data=LogTailDTO(name=filename, lines=lines, content=content).model_dump())
+
+    @get("/log-files/{filename}", response_class=FileResponse)
+    async def download_log_file(
+        self,
+        filename: str,
+        download: bool = False,
+        _: dict = Depends(require_superuser()),
+        log_file_service: LogFileService = Depends(get_log_file_service),
+    ) -> FileResponse:
+        """获取日志文件内容（download=true 时作为附件下载）。
+
+        路径穿越/非法文件名在服务层校验，逃逸尝试返回 400。
+        """
+        try:
+            path = await log_file_service.open_path(filename)
+        except LogFileNotFoundError as exc:
+            raise NotFoundError(str(exc)) from exc
+        except ValueError as exc:
+            raise BusinessError(str(exc)) from exc
+        return FileResponse(path=path, filename=filename if download else None, media_type="text/plain; charset=utf-8")

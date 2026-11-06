@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { getServerInfo, type ServerInfo } from "@/api/system/monitor";
+import { onMounted, reactive, ref } from "vue";
+import {
+  downloadLogFile,
+  getLogFiles,
+  getServerInfo,
+  tailLogFile,
+  type LogFileInfo,
+  type ServerInfo
+} from "@/api/system/monitor";
 import { message } from "@/utils/message";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 
+import Download from "~icons/ep/download";
 import Refresh from "~icons/ep/refresh";
+import View from "~icons/ep/view";
 
 defineOptions({
   name: "ServerMonitor"
@@ -35,7 +44,75 @@ async function fetchInfo() {
   }
 }
 
-onMounted(() => fetchInfo());
+/** ====== 日志文件卡片（仅管理员可见，按钮按 monitor:manage 权限码显隐） ====== */
+const logsLoading = ref(false);
+const logFiles = ref<LogFileInfo[]>([]);
+const tailDialog = reactive({
+  visible: false,
+  name: "",
+  content: "",
+  loading: false
+});
+
+function formatSize(sizeBytes: number): string {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  const units = ["KB", "MB", "GB"];
+  let value = sizeBytes / 1024;
+  let unitIdx = 0;
+  while (value >= 1024 && unitIdx < units.length - 1) {
+    value /= 1024;
+    unitIdx += 1;
+  }
+  return `${value.toFixed(1)} ${units[unitIdx]}`;
+}
+
+async function fetchLogFiles() {
+  logsLoading.value = true;
+  try {
+    const { data } = await getLogFiles();
+    logFiles.value = data ?? [];
+  } catch {
+    // 非管理员/网络异常：卡片留空，不阻塞监控主体
+    logFiles.value = [];
+  } finally {
+    logsLoading.value = false;
+  }
+}
+
+async function openTail(filename: string) {
+  tailDialog.name = filename;
+  tailDialog.visible = true;
+  tailDialog.loading = true;
+  tailDialog.content = "";
+  try {
+    const { data } = await tailLogFile(filename, 200);
+    tailDialog.content = data?.content ?? "";
+  } catch {
+    message("读取日志尾部失败", { type: "error" });
+    tailDialog.visible = false;
+  } finally {
+    tailDialog.loading = false;
+  }
+}
+
+async function handleDownload(filename: string) {
+  try {
+    const blob = await downloadLogFile(filename);
+    const url = URL.createObjectURL(new Blob([blob as unknown as BlobPart]));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    message("下载失败：需要管理员权限", { type: "error" });
+  }
+}
+
+onMounted(() => {
+  fetchInfo();
+  fetchLogFiles();
+});
 </script>
 
 <template>
@@ -152,5 +229,75 @@ onMounted(() => fetchInfo());
         </el-descriptions>
       </template>
     </el-card>
+
+    <!-- 日志文件（仅管理员：按钮按 monitor:manage 权限码显隐，后端 require_superuser 双重校验） -->
+    <el-card v-loading="logsLoading" shadow="never" class="mt-4">
+      <template #header>
+        <div class="flex-bc">
+          <span class="font-bold">日志文件</span>
+          <el-button
+            text
+            :icon="useRenderIcon(Refresh)"
+            :loading="logsLoading"
+            @click="fetchLogFiles"
+          >
+            刷新日志
+          </el-button>
+        </div>
+      </template>
+
+      <el-table :data="logFiles" border stripe>
+        <el-table-column
+          label="文件名"
+          prop="name"
+          min-width="220"
+          show-overflow-tooltip
+        />
+        <el-table-column label="大小" min-width="100" align="right">
+          <template #default="{ row }">
+            {{ formatSize(row.sizeBytes) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="最后修改" prop="modifiedTime" min-width="170" />
+        <el-table-column label="操作" min-width="160" align="center">
+          <template #default="{ row }">
+            <el-button
+              v-auth="'monitor:manage'"
+              type="primary"
+              text
+              size="small"
+              :icon="useRenderIcon(View)"
+              @click="openTail(row.name)"
+            >
+              查看尾部
+            </el-button>
+            <el-button
+              v-auth="'monitor:manage'"
+              type="default"
+              text
+              size="small"
+              :icon="useRenderIcon(Download)"
+              @click="handleDownload(row.name)"
+            >
+              下载
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog
+      v-model="tailDialog.visible"
+      :title="`日志尾部：${tailDialog.name}`"
+      width="860"
+      top="6vh"
+    >
+      <div v-loading="tailDialog.loading">
+        <pre
+          v-if="!tailDialog.loading"
+          class="max-h-[60vh] overflow-auto rounded bg-gray-950 p-3 text-xs/5 text-gray-100 whitespace-pre-wrap break-all"
+          >{{ tailDialog.content || "（空文件）" }}</pre>
+      </div>
+    </el-dialog>
   </div>
 </template>

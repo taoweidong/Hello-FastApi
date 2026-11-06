@@ -5,6 +5,7 @@ from fastapi import Depends
 from loguru import logger
 
 from src.api.dependencies.cache_service import get_cache_service, get_online_session_store
+from src.application.services.log_file_service import LogFileService
 from src.application.services.monitor_service import MonitorService
 from src.domain.services.cache_admin_port import CacheAdminPort
 from src.domain.services.cache_port import TokenRevocationPort
@@ -32,3 +33,13 @@ async def get_monitor_service(
     缓存清单与清理走 ``CacheAdminPort``（三者为同一 CacheService 的不同窄端口视图）。
     """
     return MonitorService(session_store=session_store, token_revocation=token_revocation, cache_admin=cache_admin)
+
+
+def get_log_file_service() -> LogFileService:
+    """获取日志文件浏览服务实例（日志目录来自 settings.LOGS_DIR）。
+
+    返回类型声明为具体服务类（无外部依赖端口，目录为进程内配置）。
+    """
+    from src.config.settings import LOGS_DIR
+
+    return LogFileService(logs_dir=LOGS_DIR)

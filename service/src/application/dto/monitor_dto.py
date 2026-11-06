@@ -122,3 +122,19 @@ class CacheClearDTO(BaseModel):
     """缓存清理请求"""
 
     group: str = Field(min_length=1, description="要清理的分组标识；all 表示清理全部可清理业务组")
+
+
+class LogFileInfoDTO(BaseModel):
+    """日志文件清单条目（服务器监控页·日志文件卡片）"""
+
+    name: str = Field(description="文件名")
+    sizeBytes: int = Field(description="文件大小（字节）")
+    modifiedTime: str = Field(description="最后修改时间（本地时间字符串）")
+
+
+class LogTailDTO(BaseModel):
+    """日志尾部内容响应"""
+
+    name: str = Field(description="文件名")
+    lines: int = Field(description="返回行数")
+    content: str = Field(description="尾部日志内容")
