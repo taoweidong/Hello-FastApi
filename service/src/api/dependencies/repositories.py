@@ -15,6 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.infrastructure.database import get_db
 from src.infrastructure.repositories.department_repository import DepartmentRepository
 from src.infrastructure.repositories.dictionary_repository import DictionaryRepository
+from src.infrastructure.repositories.example_data_repository import ExampleDataRepository
 from src.infrastructure.repositories.ip_rule_repository import IPRuleRepository
 from src.infrastructure.repositories.log_repository import LogRepository
 from src.infrastructure.repositories.menu_repository import MenuRepository
@@ -39,6 +40,7 @@ class RepoBundle:
         self.menu = MenuRepository(session)
         self.department = DepartmentRepository(session)
         self.post = PostRepository(session)
+        self.example_data = ExampleDataRepository(session)
         self.dictionary = DictionaryRepository(session)
         self.log = LogRepository(session)
         self.notice = NoticeRepository(session)

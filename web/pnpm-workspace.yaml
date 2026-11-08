@@ -30,6 +30,7 @@ allowBuilds:
   es5-ext: true
   core-js: true
   typeit: true
+  protobufjs: set this to true or false
 
 
 

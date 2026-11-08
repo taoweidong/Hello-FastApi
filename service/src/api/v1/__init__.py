@@ -8,6 +8,7 @@ from fastapi import APIRouter
 from src.api.v1.auth_router import AuthRouter
 from src.api.v1.dept_router import DeptRouter
 from src.api.v1.dictionary_router import DictionaryRouter
+from src.api.v1.example_data_router import ExampleDataRouter
 from src.api.v1.ip_rule_router import IPRuleRouter
 from src.api.v1.log_router import LogRouter
 from src.api.v1.menu_router import MenuRouter
@@ -57,6 +58,9 @@ system_router.include_router(MonitorRouter().router, tags=["系统监控"])
 
 # IP规则管理路由
 system_router.include_router(IPRuleRouter().router, prefix="/ip-rule", tags=["IP规则管理"])
+
+# 示例数据（Univer 表格 CRUD 示例）
+system_router.include_router(ExampleDataRouter().router, prefix="/example-data", tags=["示例数据"])
 
 # 实时消息 WebSocket 路由（路径 /api/system/ws）
 system_router.include_router(ws_router, tags=["实时消息"])

@@ -344,6 +344,7 @@ $headers = @{ Authorization = "Bearer $token" }
 | FE-21 缓存监控 | `/monitor/cache` | 打开页面 | 指标卡片渲染；Redis 缺失时展示降级提示 | MON-02 |
 | FE-22 缓存清理 | `/monitor/cache` | 管理员点击分组「快速清理」/「清空全部缓存」 | popconfirm 确认后返回删除键数并联动刷新；非管理员按钮隐藏且后端 403 | MON-02 |
 | FE-23 日志文件 | `/monitor/server` | 管理员打开「日志文件」卡片，查看尾部/下载 | 清单按修改时间倒序；尾读对话框展示末 200 行；穿越文件名被拒绝 | MON-02 |
+| FE-24 示例数据表 | `/system/example-data` | Univer 表格加载/新增行/选区删除/保存变更 | 画布渲染；空行保存被跳过；差异单事务回写后刷新 | SYS-XX |
 | FE-22 登录日志 | `/monitor/logs/login` | 列表加载/筛选/批量删除/清空 | 展示最近的登录记录 | LOG-01/07/08 |
 | FE-23 操作日志 | `/monitor/logs/operation` | 列表加载/筛选/批量删除/清空 | 展示操作记录（增删改产生的新记录可见） | LOG-02/09/10 |
 | FE-24 系统日志 | `/monitor/logs/system` | 列表加载/点击查看详情 | 详情弹窗展示完整日志 | LOG-03/04 |
@@ -598,6 +599,12 @@ POST /api/system/cache-clear-all                             [仅管理员] 清�
 GET  /api/system/log-files                                   [仅管理员] 日志文件清单
 GET  /api/system/log-files/{filename}/tail?lines=N           [仅管理员] 日志尾读（默认 200，上限 1000）
 GET  /api/system/log-files/{filename}?download=true          [仅管理员] 日志内容/附件下载
+POST /api/system/example-data                                [鉴权 example:view] 分页列表
+POST /api/system/example-data/create                         [鉴权 example:add]
+PUT  /api/system/example-data/{row_id}                       [鉴权 example:edit]
+DELETE /api/system/example-data/{row_id}                     [鉴权 example:delete]
+POST /api/system/example-data/batch-delete                   [鉴权 example:delete]
+POST /api/system/example-data/batch-save                     [鉴权 example:edit] Univer 差异回写
 ```
 
 说明：

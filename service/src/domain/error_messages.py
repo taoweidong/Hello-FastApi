@@ -150,3 +150,15 @@ class ErrorMessages:
     def permission_required(required_label: str) -> str:
         """缺少指定权限（label 为"权限 'xxx'"或"API权限 'GET /path'"形式）。"""
         return f"{required_label}是必需的"
+
+    # ---- 示例数据 ----
+
+    @staticmethod
+    def example_data_not_found_by_id(row_id: str) -> str:
+        """按 ID 查不到示例数据时的标准化消息。"""
+        return f"示例数据 ID '{row_id}' 不存在"
+
+    @staticmethod
+    def example_data_name_exists(name: str) -> str:
+        """示例数据名称已存在。"""
+        return f"示例数据名称 '{name}' 已存在"

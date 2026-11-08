@@ -25,6 +25,7 @@
 | 缓存监控 | `monitor/cache` | `monitor_router.py` | `monitor:view` + `monitor:manage` | Redis 状态 + **缓存分组清单与清理**（管理员） |
 | 在线用户 | `monitor/online` | `monitor_router.py` | `monitor:view/manage` | 在线会话列表 + 强制下线 |
 | 通知公告 | `system/notice` | `notice_router.py` + `ws_router.py` | 公告相关码 | 公告 CRUD + WebSocket 实时推送（顶栏铃铛） |
+| 示例数据表 | `system/example-data` | `example_data_router.py` | `example:view/add/edit/delete` | **Univer 电子表格**单表 CRUD 示例（行内编辑/差异保存） |
 | 个人中心 | `account-settings` | `auth_router.py`/`user_router.py` | 登录即可 | 资料/密码/头像/安全日志 |
 
 ## 2. 横切能力（不属于单一模块）

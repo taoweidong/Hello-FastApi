@@ -18,6 +18,7 @@ from src.api.dependencies.cache_service import get_cache_service, get_online_ses
 from src.api.dependencies.department_service import get_department_service
 from src.api.dependencies.dictionary_service import get_dictionary_service
 from src.api.dependencies.domain_services import get_password_service, get_token_service
+from src.api.dependencies.example_data_service import get_example_data_service
 from src.api.dependencies.ip_rule_service import get_ip_rule_service
 from src.api.dependencies.log_service import get_log_service
 from src.api.dependencies.menu_service import get_menu_service
@@ -43,6 +44,7 @@ __all__ = [
     # 应用服务工厂
     "get_auth_service",
     "get_department_service",
+    "get_example_data_service",
     "get_dictionary_service",
     "get_ip_rule_service",
     "get_log_service",

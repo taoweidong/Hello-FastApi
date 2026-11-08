@@ -21,6 +21,7 @@ from src.infrastructure.database.models.user_post_link import UserPostLink
 from src.infrastructure.database.models.user_role import UserRole
 
 __all__ = [
+    "ExampleData",
     "Department",
     "Dictionary",
     "IPRule",
@@ -38,3 +39,4 @@ __all__ = [
     "UserPostLink",
     "UserRole",
 ]
+from src.infrastructure.database.models.example_data import ExampleData

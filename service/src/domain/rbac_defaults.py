@@ -257,6 +257,45 @@ DEFAULT_MENUS = [
     {"name": "log:delete", "path": "/monitor/log", "menu_type": 2, "method": "DELETE", "parent_id": "Log"},
     {"name": "monitor:view", "path": "/monitor", "menu_type": 2, "method": "GET", "parent_id": "Monitor"},
     {"name": "monitor:manage", "path": "/monitor", "menu_type": 2, "method": "POST", "parent_id": "Monitor"},
+    # --- 示例数据表（Univer 表格 CRUD 示例） ---
+    {
+        "name": "ExampleData",
+        "path": "/system/example-data",
+        "component": "system/example-data/index",
+        "menu_type": 1,
+        "rank": 6,
+        "parent_id": "System",
+        "meta": {"title": "示例数据表", "icon": "ri:table-line"},
+        "description": "Univer 电子表格单表 CRUD 示例",
+    },
+    {
+        "name": "example:view",
+        "path": "/system/example-data",
+        "menu_type": 2,
+        "method": "POST",
+        "parent_id": "ExampleData",
+    },
+    {
+        "name": "example:add",
+        "path": "/system/example-data",
+        "menu_type": 2,
+        "method": "POST",
+        "parent_id": "ExampleData",
+    },
+    {
+        "name": "example:edit",
+        "path": "/system/example-data",
+        "menu_type": 2,
+        "method": "PUT",
+        "parent_id": "ExampleData",
+    },
+    {
+        "name": "example:delete",
+        "path": "/system/example-data",
+        "menu_type": 2,
+        "method": "DELETE",
+        "parent_id": "ExampleData",
+    },
 ]
 
 # admin角色默认拥有的菜单name列表（全部菜单）
