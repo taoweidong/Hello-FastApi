@@ -602,7 +602,7 @@ GET  /api/system/log-files/{filename}?download=true          [仅管理员] 日�
 
 说明：
 - 缓存清理的分组注册表见 `cache_service.py` `_CACHE_GROUPS`；令牌黑名单组为安全红线不可清理；
-- 登录/注册专属限流由 `LoginRateLimitMiddleware` 承担（详见 `docs/rate-limit.md`，2026-11-07 重写）；
+- 登录/注册专属限流由 `LoginRateLimitMiddleware` 承担（详见 `../features/rate-limit.md`，2026-11-07 重写）；
 - 服务器监控页新增「日志文件」卡片（尾读/下载），缓存监控页新增「缓存数据」清单与清理。
 
 ## 执行检查单（给 Agent）

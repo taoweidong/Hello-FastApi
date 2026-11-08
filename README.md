@@ -59,7 +59,7 @@ Hello-FastApi/
 │   ├── docker/       # Docker 配置
 │   └── scripts/      # CLI 管理脚本
 ├── web/              # 前端项目（Vue3）
-└── docs/             # 项目文档
+└── docs/             # 项目文档（导航入口 docs/README.md）
 ```
 
 ## 文档导航
@@ -74,6 +74,7 @@ Hello-FastApi/
 | [部署指南](service/docs/guide/deployment.md) | Docker Compose、生产环境部署 |
 | [架构设计](service/docs/design/项目架构设计与约束.md) | DDD 四层架构、依赖约束、代码示例 |
 | [代码质量报告](service/docs/code-quality-report.md) | Lint/Typecheck/测试结果、改进建议 |
+| [项目文档导航](docs/README.md) | 快速开始 / 操作指导 / 功能介绍 / 开发指南 / 设计架构 / 参考 |
 
 ## 修改记录
 
