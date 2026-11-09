@@ -9,11 +9,13 @@ from src.application.dto.role_dto import (
     RoleResponseDTO,
     RoleUpdateDTO,
 )
+from src.application.utils.menu_tree import build_parent_map, complete_ancestor_ids
 from src.domain.constants import FULL_LIST_PAGE_SIZE
 from src.domain.entities.role import RoleEntity
 from src.domain.enums import DataScope
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
+from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.services.cache_port import UserCachePort
 
@@ -21,9 +23,16 @@ from src.domain.services.cache_port import UserCachePort
 class RoleService:
     """角色操作的应用服务。"""
 
-    def __init__(self, role_repo: RoleRepositoryInterface, cache_service: UserCachePort | None = None):
+    def __init__(
+        self,
+        role_repo: RoleRepositoryInterface,
+        cache_service: UserCachePort | None = None,
+        menu_repo: MenuRepositoryInterface | None = None,
+    ):
         self.role_repo = role_repo
         self.cache_service = cache_service
+        # 菜单仓储用于授权时祖先补全（None 时跳过补全，仅测试场景）
+        self.menu_repo = menu_repo
 
     async def create_role(self, dto: RoleCreateDTO) -> RoleResponseDTO:
         """创建新角色，可选分配菜单。"""
@@ -40,9 +49,9 @@ class RoleService:
 
         created_role = await self.role_repo.create(role_entity)
 
-        # 如果提供了菜单ID列表，则分配菜单
+        # 如果提供了菜单ID列表，则分配菜单（补全祖先链）
         if dto.menuIds:
-            await self.role_repo.assign_menus_to_role(created_role.id, dto.menuIds)
+            await self.role_repo.assign_menus_to_role(created_role.id, await self._complete_menu_ancestors(dto.menuIds))
 
         # 自定义数据权限时分配部门范围
         if created_role.data_scope == DataScope.CUSTOM and dto.deptIds:
@@ -92,9 +101,9 @@ class RoleService:
         )
         await self.role_repo.update(role)
 
-        # 如果提供了菜单ID列表，则重新分配菜单
+        # 如果提供了菜单ID列表，则重新分配菜单（补全祖先链）
         if dto.menuIds is not None:
-            await self.role_repo.assign_menus_to_role(role_id, dto.menuIds)
+            await self.role_repo.assign_menus_to_role(role_id, await self._complete_menu_ancestors(dto.menuIds))
 
         # 如果提供了部门ID列表，则重新分配自定义数据权限部门
         if dto.deptIds is not None:
@@ -123,7 +132,8 @@ class RoleService:
         if role is None:
             raise NotFoundError(EM.role_not_found_by_id(role_id))
 
-        await self.role_repo.assign_menus_to_role(role_id, menu_ids)
+        completed = await self._complete_menu_ancestors(menu_ids)
+        await self.role_repo.assign_menus_to_role(role_id, completed)
         await self._invalidate_role_users_cache(role_id)
         return True
 
@@ -169,6 +179,20 @@ class RoleService:
         """获取所有角色简单列表，供 auth_router 使用。"""
         roles = await self.role_repo.get_all(page_num=1, page_size=FULL_LIST_PAGE_SIZE)
         return [{"id": r.id, "name": r.name} for r in roles]
+
+    async def _complete_menu_ancestors(self, menu_ids: list[str]) -> list[str]:
+        """补全授权菜单的全部祖先（防御客户端半选丢失父级）。
+
+        父级缺失会让动态路由出现孤儿页面；菜单仓储未注入时原样返回。
+        """
+        if not menu_ids or self.menu_repo is None:
+            return menu_ids
+        try:
+            all_menus = await self.menu_repo.get_all()
+            return complete_ancestor_ids(menu_ids, build_parent_map(all_menus))
+        except Exception:
+            logger.warning("菜单祖先补全失败，按原样授权", exc_info=True)
+            return menu_ids
 
     async def _invalidate_role_users_cache(self, role_id: str) -> None:
         """使持有该角色的所有用户的权限/信息缓存失效。

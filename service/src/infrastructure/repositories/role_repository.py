@@ -101,6 +101,20 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
         result = await self.session.exec(stmt)
         return list(result.all())
 
+    async def get_user_ids_by_menu(self, menu_id: str) -> list[str]:
+        """获取（经任意角色）关联指定菜单的所有用户 ID。
+
+        用于菜单节点变更（权限码改名/删除）后批量失效受影响用户的权限缓存，
+        避免"按钮码已删、缓存仍放行"的窗口。
+        """
+        stmt = (
+            select(UserRole.userinfo_id)
+            .join(RoleMenuLink, UserRole.userrole_id == RoleMenuLink.role_id)
+            .where(RoleMenuLink.menu_id == menu_id)
+        )
+        result = await self.session.exec(stmt)
+        return list(set(result.all()))
+
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户批量分配角色（先清除旧角色再分配新的）。"""
         stmt = sa_delete(UserRole).where(UserRole.userinfo_id == user_id)

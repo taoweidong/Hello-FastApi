@@ -563,3 +563,81 @@ class TestMenuService:
         result = await menu_service.create_menu(dto)
         assert result.name == "full_menu"
         assert result.menuType == 1
+
+
+@pytest.mark.unit
+class TestMenuServiceUserCacheInvalidation:
+    """菜单变更后失效关联用户的权限缓存（RBAC 一致性）。"""
+
+    @pytest.fixture
+    def mock_menu_repo(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_role_repo(self):
+        repo = AsyncMock()
+        repo.get_user_ids_by_menu = AsyncMock(return_value=["u1", "u2"])
+        repo.get_by_parent_id = AsyncMock(return_value=[])
+        return repo
+
+    @pytest.fixture
+    def mock_user_cache(self):
+        cache = AsyncMock()
+        cache.invalidate_users_batch = AsyncMock(return_value=True)
+        return cache
+
+    @pytest.fixture
+    def service(self, mock_menu_repo, mock_role_repo, mock_user_cache):
+        return MenuService(
+            menu_repo=mock_menu_repo,
+            cache_service=AsyncMock(),
+            role_repo=mock_role_repo,
+            user_cache=mock_user_cache,
+        )
+
+    async def test_delete_menu_invalidates_affected_users(
+        self, service, mock_menu_repo, mock_role_repo, mock_user_cache
+    ):
+        """删除菜单后，经角色关联该菜单的用户权限缓存必须失效。"""
+        meta = MenuMetaEntity(id="meta-1", title="按钮")
+        menu = MenuEntity(id="btn-1", name="user:add", menu_type=0, rank=0, meta=meta, meta_id="meta-1")
+        mock_menu_repo.get_by_id = AsyncMock(return_value=menu)
+        mock_menu_repo.get_by_parent_id = AsyncMock(return_value=[])  # 无子菜单
+        mock_menu_repo.delete = AsyncMock(return_value=True)
+        mock_menu_repo.delete_meta = AsyncMock()
+
+        await service.delete_menu("btn-1")
+
+        mock_user_cache.invalidate_users_batch.assert_awaited_once_with(["u1", "u2"])
+
+    async def test_update_menu_invalidates_affected_users(self, service, mock_menu_repo, mock_user_cache):
+        """更新菜单（权限码改名等）后失效关联用户的权限缓存。"""
+        meta = MenuMetaEntity(id="meta-1", title="按钮")
+        menu = MenuEntity(id="btn-1", name="user:add", menu_type=0, rank=0, meta=meta, meta_id="meta-1")
+        mock_menu_repo.get_by_id = AsyncMock(side_effect=lambda _id: menu if _id == "btn-1" else None)
+        mock_menu_repo.get_by_name = AsyncMock(return_value=None)
+        mock_menu_repo.update = AsyncMock(side_effect=lambda m: m)
+        mock_menu_repo.update_meta = AsyncMock()
+
+        await service.update_menu("btn-1", MenuUpdateDTO(name="user:export"))
+
+        mock_user_cache.invalidate_users_batch.assert_awaited_once_with(["u1", "u2"])
+
+    async def test_invalidate_failure_does_not_block(self, mock_menu_repo, mock_user_cache):
+        """反查失败仅告警，不阻断菜单操作（TTL 到期自然一致）。"""
+        role_repo = AsyncMock()
+        role_repo.get_user_ids_by_menu = AsyncMock(side_effect=RuntimeError("db error"))
+        svc = MenuService(
+            menu_repo=mock_menu_repo, cache_service=AsyncMock(), role_repo=role_repo, user_cache=mock_user_cache
+        )
+
+        meta = MenuMetaEntity(id="meta-1", title="按钮")
+        menu = MenuEntity(id="btn-1", name="user:add", menu_type=0, rank=0, meta=meta, meta_id="meta-1")
+        mock_menu_repo.get_by_id = AsyncMock(return_value=menu)
+        mock_menu_repo.get_by_name = AsyncMock(return_value=None)
+        mock_menu_repo.update = AsyncMock(side_effect=lambda m: m)
+        mock_menu_repo.update_meta = AsyncMock()
+
+        row = await svc.update_menu("btn-1", MenuUpdateDTO(name="user:export"))
+        assert row.name == "user:export"
+        mock_user_cache.invalidate_users_batch.assert_not_awaited()

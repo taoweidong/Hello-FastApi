@@ -475,3 +475,65 @@ class TestRoleServiceCacheInvalidation:
         result = await role_service.assign_menus("role-1", ["m1"])
         assert result is True
         mock_cache.invalidate_users_batch.assert_not_awaited()
+
+
+@pytest.mark.unit
+class TestRoleServiceMenuAncestorCompletion:
+    """角色授权的祖先补全：防御客户端半选丢失父级导致路由孤儿。"""
+
+    @pytest.fixture
+    def mock_user_cache(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_role_repo(self):
+        repo = AsyncMock()
+        repo.get_by_id = AsyncMock(return_value=RoleEntity(id="role-1", name="r", code="r"))
+        repo.assign_menus_to_role = AsyncMock()
+        repo.get_role_menu_ids = AsyncMock(return_value=[])
+        repo.get_user_ids_by_role = AsyncMock(return_value=[])
+        return repo
+
+    @pytest.fixture
+    def mock_menu_repo(self):
+        from src.domain.entities.menu import MenuEntity
+        from src.domain.entities.menu_meta import MenuMetaEntity
+
+        repo = AsyncMock()
+        meta = MenuMetaEntity(id="m0", title="x")
+        # System(dir) -> User(page) -> user:add(btn) 层级
+        repo.get_all = AsyncMock(
+            return_value=[
+                MenuEntity(id="System", name="System", menu_type=0, rank=0, parent_id=None, meta=meta),
+                MenuEntity(id="User", name="User", menu_type=1, rank=1, parent_id="System", meta=meta),
+                MenuEntity(id="user:add", name="user:add", menu_type=2, rank=2, parent_id="User", meta=meta),
+            ]
+        )
+        return repo
+
+    @pytest.fixture
+    def service(self, mock_role_repo, mock_menu_repo, mock_user_cache):
+        from src.application.services.role_service import RoleService
+
+        return RoleService(role_repo=mock_role_repo, cache_service=mock_user_cache, menu_repo=mock_menu_repo)
+
+    async def test_assign_menus_completes_ancestors(self, service, mock_role_repo):
+        """仅传叶子按钮码时，父目录/页面节点自动补全。"""
+        await service.assign_menus("role-1", ["user:add"])
+        mock_role_repo.assign_menus_to_role.assert_awaited_once()
+        completed = mock_role_repo.assign_menus_to_role.await_args.args[1]
+        assert set(completed) == {"user:add", "User", "System"}
+
+    async def test_unknown_ids_ignored(self, service, mock_role_repo):
+        """未知 ID 静默忽略（防御脏输入）。"""
+        await service.assign_menus("role-1", ["user:add", "ghost-id"])
+        completed = mock_role_repo.assign_menus_to_role.await_args.args[1]
+        assert set(completed) == {"user:add", "User", "System"}
+
+    async def test_menu_repo_missing_returns_original(self, mock_role_repo, mock_user_cache):
+        """菜单仓储未注入时原样返回（仅测试场景）。"""
+        from src.application.services.role_service import RoleService
+
+        svc = RoleService(role_repo=mock_role_repo, cache_service=mock_user_cache, menu_repo=None)
+        result = await svc._complete_menu_ancestors(["m1"])
+        assert result == ["m1"]

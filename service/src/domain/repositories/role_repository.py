@@ -84,6 +84,11 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def get_user_ids_by_menu(self, menu_id: str) -> list[str]:
+        """获取（经角色）关联指定菜单的所有用户 ID（菜单变更后失效其权限缓存）。"""
+        ...
+
+    @abstractmethod
     async def assign_roles_to_user(self, user_id: str, role_ids: list[str]) -> bool:
         """为用户批量分配角色（先清除旧角色再分配新的）。"""
         ...

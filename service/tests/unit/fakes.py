@@ -245,6 +245,19 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
         """持有指定角色的用户 ID（从用户-角色关联反查）。"""
         return [uid for uid, rids in self._user_roles.items() if role_id in rids]
 
+    async def get_user_ids_by_menu(self, menu_id: str) -> list[str]:  # noqa: D102
+        """经角色关联指定菜单的用户 ID（与真实仓储语义一致）。
+
+        _role_menus 是 role_id → menu_ids 映射：遍历各角色的菜单集合，
+        含目标菜单的角色，再反查持有这些角色的用户。
+        """
+        role_ids = [rid for rid, mids in self._role_menus.items() if menu_id in mids]
+        user_ids: set[str] = set()
+        for uid, rids in self._user_roles.items():
+            if any(rid in rids for rid in role_ids):
+                user_ids.add(uid)
+        return sorted(user_ids)
+
     async def assign_depts_to_role(self, role_id: str, dept_ids: list[str]) -> bool:  # noqa: D102
         """先清除旧部门再分配新的。"""
         self._role_depts[role_id] = list(dept_ids)

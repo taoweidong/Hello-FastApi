@@ -5,13 +5,14 @@
 
 from src.application.dto.menu_dto import MenuCreateDTO, MenuMetaDTO, MenuResponseDTO, MenuUpdateDTO
 from src.application.utils.menu_mapper import menu_dict_to_entity, menu_entity_to_dict
+from src.application.utils.menu_tree import build_parent_map, complete_ancestor_ids
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.menu_meta import MenuMetaEntity
 from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
-from src.domain.services.cache_port import MenuCachePort
+from src.domain.services.cache_port import MenuCachePort, UserCachePort
 
 
 class MenuService:
@@ -22,10 +23,13 @@ class MenuService:
         menu_repo: MenuRepositoryInterface,
         cache_service: MenuCachePort | None = None,
         role_repo: RoleRepositoryInterface | None = None,
+        user_cache: UserCachePort | None = None,
     ):
         self.menu_repo = menu_repo
         self.cache_service = cache_service
         self.role_repo = role_repo
+        # 用户权限缓存端口：菜单权限码变更/删除后失效受影响用户的权限缓存
+        self.user_cache = user_cache
 
     async def _get_all_menus(self) -> list[MenuEntity]:
         """获取所有菜单（带缓存）。"""
@@ -47,6 +51,13 @@ class MenuService:
     async def get_all_menus_raw(self) -> list[MenuEntity]:
         """获取所有菜单实体列表（不转换为 dict），供 auth_router 使用。"""
         return await self._get_all_menus()
+
+    async def complete_ancestor_ids(self, menu_ids: list[str]) -> list[str]:
+        """补全菜单 ID 集合的全部祖先节点（角色授权防御层，见 menu_tree.py）。"""
+        if not menu_ids:
+            return []
+        all_menus = await self.menu_repo.get_all()
+        return complete_ancestor_ids(menu_ids, build_parent_map(all_menus))
 
     async def get_menu_tree(self) -> list[dict]:
         """获取完整菜单树。"""
@@ -189,6 +200,7 @@ class MenuService:
         if updated is None:
             raise NotFoundError(EM.MENU_NOT_FOUND)
         await self._invalidate_menu_cache()
+        await self._invalidate_menu_users_cache(menu_id)
         return self._to_response_dto(updated)
 
     async def delete_menu(self, menu_id: str) -> bool:
@@ -209,12 +221,31 @@ class MenuService:
             await self.menu_repo.delete_meta(meta_id)
 
         await self._invalidate_menu_cache()
+        await self._invalidate_menu_users_cache(menu_id)
         return result
 
     async def _invalidate_menu_cache(self) -> None:
         """使菜单全量缓存失效。"""
         if self.cache_service is not None:
             await self.cache_service.invalidate_all_menus()
+
+    async def _invalidate_menu_users_cache(self, menu_id: str) -> None:
+        """使关联该菜单的用户权限缓存失效。
+
+        PERMISSION 节点的权限码（name）与 API 语义（path/method）变更或节点删除后，
+        已缓存 user:perms 的用户仍按旧码放行——按菜单反查用户并批量失效。
+        查询失败仅告警（TTL 到期自然一致），不阻断菜单操作。
+        """
+        if self.user_cache is None or self.role_repo is None:
+            return
+        try:
+            user_ids = await self.role_repo.get_user_ids_by_menu(menu_id)
+            if user_ids:
+                await self.user_cache.invalidate_users_batch(user_ids)
+        except Exception:
+            from loguru import logger
+
+            logger.warning(f"按菜单失效用户权限缓存失败：menu_id={menu_id}", exc_info=True)
 
     def _entity_to_dict(self, menu: MenuEntity) -> dict:
         """将菜单实体转为可序列化的字典。"""

@@ -130,7 +130,14 @@ export function useRole(treeRef: Ref) {
       isShow.value = true;
       const { code, data } = await roleApi.getRoleMenuIds({ id });
       if (code === 0) {
+        // 回显期间临时关闭父子联动：级联模式下 setCheckedKeys(父节点)
+        // 会自动勾选其全部子孙，把未授权的兄弟节点污染成已授权
+        const prevLinkage = isLinkage.value;
+        isLinkage.value = false; // check-strictly=true，精确按授权集合回显
+        await nextTick();
         treeRef.value.setCheckedKeys(data);
+        await nextTick();
+        isLinkage.value = prevLinkage;
       }
     } else {
       curRow.value = null;
@@ -149,7 +156,12 @@ export function useRole(treeRef: Ref) {
   /** 菜单权限-保存 */
   async function handleSave() {
     const { id, name } = curRow.value;
-    const menuIds = treeRef.value.getCheckedKeys();
+    // 全选 + 半选父级一并提交：联动模式下勾选叶子时父目录呈半选态，
+    // getCheckedKeys 不含半选节点，漏掉会导致父目录未授权 → 动态路由孤儿
+    const menuIds = [
+      ...(treeRef.value.getCheckedKeys() || []),
+      ...(treeRef.value.getHalfCheckedKeys() || [])
+    ].map(String);
 
     try {
       const { code } = await roleApi.saveRoleMenu(id, menuIds);

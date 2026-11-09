@@ -84,6 +84,9 @@ class ConcreteRoleRepository(RoleRepositoryInterface):
     async def get_user_ids_by_role(self, role_id: str) -> list[str]:
         return []
 
+    async def get_user_ids_by_menu(self, menu_id: str) -> list[str]:
+        return []
+
     async def assign_depts_to_role(self, role_id: str, dept_ids: list[str]) -> bool:
         return True
 
