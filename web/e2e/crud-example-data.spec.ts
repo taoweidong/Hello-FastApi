@@ -10,14 +10,6 @@ test.describe("示例数据表（Univer 表格 CRUD）", () => {
     );
   }
 
-  test.beforeEach(async ({ page }, testInfo) => {
-    page.on("console", m => {
-      if (m.text().includes("[example-data]") || m.type() === "error") {
-        console.log(`[browser:${testInfo.title}] ${m.type()}: ${m.text().slice(0, 200)}`);
-      }
-    });
-    page.on("pageerror", e => console.log(`[browser:${testInfo.title}] PAGEERROR: ${String(e).slice(0, 300)}`));
-  });
 
   test("页面加载：Univer 画布渲染、工具栏按钮就位", async ({ page }) => {
     await gotoPage(page, "/system/example-data");

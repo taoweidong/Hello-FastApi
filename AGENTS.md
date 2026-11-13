@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Monorepo: FastAPI backend (`service/`) + Vue3 frontend (`web/`).
+Monorepo: FastAPI backend (`service/`) + Vue3 frontend (`web/`) + React frontend exploration (`web-react/`, same backend API).
 Frontend scaffolded from **vue-pure-admin v7**; backend ports pure-admin-backend from Java to Python.
 
 ## 协作规范（强制 — 每一次 AI 交互必须遵守）
