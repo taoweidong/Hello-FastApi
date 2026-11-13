@@ -49,7 +49,7 @@ Default superuser: `admin` / `admin123` (after `initall`).
 
 **Tests:**
 ```bash
-pytest                                  # ~2288 tests (unit 2117 + integration 171)
+pytest                                  # ~2311 tests (unit 2138 + integration 173)
 pytest tests/unit/                      # unit only
 pytest tests/integration/               # integration only
 pytest -n auto                          # parallel (xdist; safe — each worker gets a temp-file SQLite DB)
@@ -60,11 +60,11 @@ mypy src/                               # typecheck
 ```
 
 **Architecture** — DDD 4-layer under `src/`: `api/` → `application/` → `domain/` → `infrastructure/`.
-- `src/api/v1/` — routers (classy-fastapi): `auth`, `user`, `role`, `menu`, `dept`, `dictionary`, `log`, `monitor`, `system_config`, `ip_rule`. Aggregated in `src/api/v1/__init__.py`.
+- `src/api/v1/` — routers (classy-fastapi): `auth`, `user`, `role`, `menu`, `dept`, `dictionary`, `log`, `monitor`, `system_config`, `ip_rule`, `example_data`; plus `ws_router` (APIRouter, WebSocket `/api/system/ws`). Aggregated in `src/api/v1/__init__.py`.
 - `src/api/dependencies/` — one `Depends` provider per service. `get_repositories(db) -> RepoBundle` (`repositories.py`) is the **only** place in the composition root that touches the request session: every service factory receives the bundle, so no factory can build its own session. Add new repositories to `RepoBundle`, and never call `get_db` from a service factory.
 - `src/application/services/` — use cases (one per domain); transaction control lives here.
 - `src/application/mappers/` — DTO ↔ entity ↔ dict mappers.
-- `src/domain/entities/`, `src/domain/repositories/` (interfaces), `src/domain/services/` — ports are split by consumer: `TokenRevocationPort`, `UserCachePort`, `MenuCachePort`, `DictCachePort` (`cache_port.py`), `OnlineSessionStore` (`online_session_port.py`), plus `IPFilterPort`, `LoggingPort`, `PasswordService`, `TokenService`. `CachePort` is the aggregate used only by `CacheService` and the cache provider — services must depend on the narrow port they call.
+- `src/domain/entities/`, `src/domain/repositories/` (interfaces), `src/domain/services/` — ports are split by consumer: `TokenRevocationPort`, `UserCachePort`, `MenuCachePort`, `DictCachePort` (`cache_port.py`), `OnlineSessionStore` (`online_session_port.py`), plus `CacheAdminPort` (`cache_admin_port.py`), `RealtimePort` (`realtime_port.py`), `IPFilterPort`, `LoggingPort`, `PasswordService`, `TokenService`. `CachePort` is the aggregate used only by `CacheService` and the cache provider — services must depend on the narrow port they call.
 - `src/infrastructure/repositories/` — SQLModel impls with `to_domain()` / `from_domain()`.
 - `src/infrastructure/cache/` — Redis cache with auto-degradation.
 - `src/infrastructure/http/` — middleware: CORS, IP filter, rate limit (SlowAPI), request logging.
@@ -114,7 +114,7 @@ pnpm test:e2e:headed      # headed mode
 - `src/views/` — pages mirror backend routers 1:1.
 - `e2e/` — Playwright tests; sample at `e2e/login.spec.ts` (uses default `admin` / `admin123`).
 - All HTTP calls go through the Vite proxy to the real backend (`/api/system/*`); the old mock layer (`mock/`, `vite-plugin-fake-server`) has been removed.
-- Stack: Vue 3.5 + TypeScript 6 + Element Plus + Pinia 3 + Vite 8 (Rolldown/Oxc) + Tailwind 4.
+- Stack: Vue 3.5 + TypeScript 6 + Element Plus + Pinia 3 + Vite 8 (Rolldown/Oxc) + Tailwind 4 + Univer 1.4 (电子表格, `@univerjs/presets` + `@univerjs/preset-sheets-core`).
 
 ## Full-stack Dev
 

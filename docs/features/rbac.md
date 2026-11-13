@@ -54,7 +54,24 @@
 > 历史教训：角色侧变更曾不失效缓存，造成最长 5 分钟越权窗口——现已批量失效
 > （`role_service._invalidate_role_users_cache`）。
 
-## 5. 二次开发：新增一个权限码
+## 5. 授权与菜单变更的一致性保障
+
+> 落地于 commit `6a62621`。
+
+**授权祖先补全（服务端防御层）**：角色授权菜单时，服务端基于全量菜单
+自动补全所选节点的全部祖先（`MenuService.complete_ancestor_ids`，
+纯函数实现见 `application/utils/menu_tree.py`）。这层防御的原因：
+前端父子联动模式下保存回传的是"全选 + 半选"，若客户端缺陷导致半选
+父级丢失，动态路由会出现**孤儿页面**（页面节点存在而父目录缺失，
+无法挂载）。无论客户端传什么，服务端都保证授权集合完整。
+
+**菜单变更失效受影响用户权限缓存**：PERMISSION 节点的权限码（name）
+或 API 语义（path/method）变更、节点删除后，经角色关联该菜单的用户
+其 `user:perms` 缓存会立即批量失效（`RoleRepository.get_user_ids_by_menu`
+反查 → `invalidate_users_batch`）——消除"权限码已删、缓存仍放行"最长
+5 分钟的窗口。反查失败仅告警不阻断菜单操作（TTL 到期自然一致）。
+
+## 6. 二次开发：新增一个权限码
 
 1. 菜单管理页（或 `rbac_defaults.py` 种子）在目标页面节点下新增
    `menu_type=2` 子节点，`name=你的权限码`（如 `export:user`）；
