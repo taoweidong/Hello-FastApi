@@ -157,10 +157,7 @@ describe('requestErrorConfig', () => {
       };
 
       errorHandler(error, {});
-      // cancel the real navigation triggered by REDIRECT before it tears down the test page
-      window.stop();
-
-      // REDIRECT 分支不应触发任何消息/通知提示
+      // REDIRECT 分支当前不执行导航，也不应触发任何消息/通知提示
       expect(message.warning).not.toHaveBeenCalled();
       expect(message.error).not.toHaveBeenCalled();
       expect(notification.open).not.toHaveBeenCalled();
@@ -196,8 +193,9 @@ describe('requestErrorConfig', () => {
       const error: any = new Error('Network error');
       error.request = {};
 
-      const originalOnLine = navigator.onLine;
+      const originalOnLine = Object.getOwnPropertyDescriptor(navigator, 'onLine');
       Object.defineProperty(navigator, 'onLine', {
+        configurable: true,
         writable: true,
         value: false,
       });
@@ -209,10 +207,11 @@ describe('requestErrorConfig', () => {
           'Network unavailable. Please check your connection and try again.',
         );
       } finally {
-        Object.defineProperty(navigator, 'onLine', {
-          writable: true,
-          value: originalOnLine,
-        });
+        if (originalOnLine) {
+          Object.defineProperty(navigator, 'onLine', originalOnLine);
+        } else {
+          delete (navigator as { onLine?: boolean }).onLine;
+        }
       }
     });
 
@@ -240,29 +239,53 @@ describe('requestErrorConfig', () => {
 
   describe('requestInterceptors', () => {
     // The interceptor is registered as a plain function (not a tuple),
-    // so narrow the union type to a callable for the test.
+    // so narrow the union type to a callable for the test. It is async and
+    // injects the Authorization header from the stored login state.
     const interceptor = errorConfig.requestInterceptors?.[0] as (config: {
+      headers?: Record<string, unknown>;
       url?: string;
       method?: string;
-    }) => { url?: string };
+    }) => Promise<{ headers?: Record<string, unknown>; url?: string }>;
 
-    it('should pass through config without modification', () => {
+    it('should pass through config without modification when no token stored', async () => {
       const config = {
         url: 'https://api.example.com/users',
         method: 'GET',
       };
 
-      const result = interceptor(config);
+      const result = await interceptor(config);
 
-      // Token attachment is intentionally commented out in the source;
-      // interceptor currently returns config as-is
+      // 令牌注入依赖 localStorage，测试环境（node）未存储登录态时原样透传
       expect(result.url).toBe('https://api.example.com/users');
     });
 
-    it('should handle URL without config', () => {
+    it('should attach Authorization header from stored login state', async () => {
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) =>
+          key === 'react-admin-auth'
+            ? JSON.stringify({ state: { accessToken: 'token-abc' } })
+            : null,
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+      });
+      try {
+        const result = await interceptor({
+          url: 'https://api.example.com/users',
+          method: 'GET',
+          headers: {},
+        });
+
+        expect(result.headers).toEqual({ Authorization: 'Bearer token-abc' });
+        expect(result.url).toBe('https://api.example.com/users');
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('should handle URL without config', async () => {
       const config = {};
 
-      const result = interceptor(config);
+      const result = await interceptor(config);
 
       expect(result.url).toBeUndefined();
     });

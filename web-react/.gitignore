@@ -55,3 +55,4 @@ requestRecord.mock.js
 
 .vitest
 e2e-out
+.playwright-cli/

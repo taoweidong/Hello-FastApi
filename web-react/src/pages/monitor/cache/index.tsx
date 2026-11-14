@@ -1,0 +1,230 @@
+import { ReloadOutlined } from '@ant-design/icons';
+import { useModel } from '@umijs/max';
+import {
+  App,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Popconfirm,
+  Row,
+  Spin,
+  Tag,
+} from 'antd';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  type CacheGroup,
+  type CacheInfo,
+  clearAllCache,
+  clearCacheGroup,
+  getCacheGroups,
+  getCacheInfo,
+} from '@/services/api';
+
+/** 运行时长（秒）转人性化文本 */
+function formatUptime(seconds?: number): string {
+  if (seconds === undefined || seconds === null) {
+    return '-';
+  }
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (days > 0) {
+    return `${days}天${hours}小时${minutes}分`;
+  }
+  if (hours > 0) {
+    return `${hours}小时${minutes}分`;
+  }
+  return `${minutes}分`;
+}
+
+/** 缓存监控：Redis 运行状态 + 缓存分组（清理操作仅管理员） */
+export default function CachePage(): React.ReactNode {
+  const { message } = App.useApp();
+  const { initialState } = useModel('@@initialState');
+  const isAdmin =
+    initialState?.permissions?.includes('monitor:manage') ?? false;
+
+  const [info, setInfo] = useState<CacheInfo | null>(null);
+  const [groups, setGroups] = useState<CacheGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+  // 正在清理的分组 key；'__all__' 表示清空全部
+  const [clearingKey, setClearingKey] = useState('');
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [cacheInfo, cacheGroupList] = await Promise.all([
+        getCacheInfo(),
+        getCacheGroups(),
+      ]);
+      setInfo(cacheInfo);
+      setGroups(cacheGroupList);
+    } catch (error) {
+      message.error((error as Error).message || '获取缓存信息失败');
+    } finally {
+      setLoading(false);
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  async function handleClearGroup(group: CacheGroup): Promise<void> {
+    setClearingKey(group.key);
+    try {
+      const count = await clearCacheGroup(group.key);
+      message.success(`已清理「${group.name}」分组 ${count} 个键`);
+      await fetchData();
+    } catch (error) {
+      message.error((error as Error).message || '清理缓存失败');
+    } finally {
+      setClearingKey('');
+    }
+  }
+
+  async function handleClearAll(): Promise<void> {
+    setClearingKey('__all__');
+    try {
+      const count = await clearAllCache();
+      message.success(`已清空全部缓存 ${count} 个键`);
+      await fetchData();
+    } catch (error) {
+      message.error((error as Error).message || '清空缓存失败');
+    } finally {
+      setClearingKey('');
+    }
+  }
+
+  if (loading && !info) {
+    return (
+      <Spin
+        style={{ display: 'flex', justifyContent: 'center', padding: 100 }}
+      />
+    );
+  }
+
+  const statusItems = [
+    { key: 'version', label: '版本', children: info?.version ?? '-' },
+    { key: 'mode', label: '模式', children: info?.mode ?? '-' },
+    {
+      key: 'uptime',
+      label: '运行时长',
+      children: formatUptime(info?.uptimeSeconds),
+    },
+    { key: 'usedMemory', label: '已用内存', children: info?.usedMemory ?? '-' },
+    {
+      key: 'usedMemoryPeak',
+      label: '内存峰值',
+      children: info?.usedMemoryPeak ?? '-',
+    },
+    {
+      key: 'clients',
+      label: '连接数',
+      children: info ? String(info.clients ?? '-') : '-',
+    },
+    {
+      key: 'keyCount',
+      label: '键总数',
+      children: info ? String(info.keyCount ?? '-') : '-',
+    },
+    {
+      key: 'hitRate',
+      label: '命中率',
+      children: info ? `${info.hitRate ?? '-'}%` : '-',
+    },
+  ];
+
+  return (
+    <div style={{ padding: 24 }}>
+      <Card
+        title="Redis 运行状态"
+        extra={
+          <span
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+          >
+            {info?.connected ? (
+              <Tag color="green">连接正常</Tag>
+            ) : (
+              <Tag color="red">缓存服务不可用</Tag>
+            )}
+            <Button
+              icon={<ReloadOutlined />}
+              loading={loading}
+              onClick={() => void fetchData()}
+            >
+              刷新
+            </Button>
+          </span>
+        }
+      >
+        {info?.connected ? (
+          <Descriptions
+            column={{ xs: 1, md: 2, lg: 4 }}
+            size="small"
+            items={statusItems}
+          />
+        ) : (
+          <div style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
+            {info?.message || 'Redis 连接不可用，无法读取缓存状态。'}
+          </div>
+        )}
+      </Card>
+
+      <Card
+        title="缓存数据分组"
+        style={{ marginTop: 16 }}
+        extra={
+          isAdmin && (
+            <Popconfirm
+              title="确定清空全部缓存吗？"
+              description="该操作会删除所有业务缓存键"
+              onConfirm={() => void handleClearAll()}
+            >
+              <Button danger loading={clearingKey === '__all__'}>
+                清空全部缓存
+              </Button>
+            </Popconfirm>
+          )
+        }
+      >
+        {groups.length === 0 ? (
+          <div style={{ color: 'rgba(0, 0, 0, 0.45)' }}>暂无缓存分组数据</div>
+        ) : (
+          <Row gutter={[16, 16]}>
+            {groups.map((group) => (
+              <Col xs={24} sm={12} lg={8} key={group.key}>
+                <Card
+                  size="small"
+                  title={group.name}
+                  extra={
+                    isAdmin &&
+                    group.clearable && (
+                      <Popconfirm
+                        title={`确定清理「${group.name}」分组吗？`}
+                        onConfirm={() => void handleClearGroup(group)}
+                      >
+                        <Button
+                          size="small"
+                          type="link"
+                          danger
+                          loading={clearingKey === group.key}
+                        >
+                          快速清理
+                        </Button>
+                      </Popconfirm>
+                    )
+                  }
+                >
+                  <div>键前缀：{group.prefix || '-'}</div>
+                  <div>键数量：{group.count}</div>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
+      </Card>
+    </div>
+  );
+}

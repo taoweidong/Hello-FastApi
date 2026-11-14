@@ -1,10 +1,17 @@
-import type { Settings as LayoutSettings } from '@ant-design/pro-components';
+import type {
+  Settings as LayoutSettings,
+  MenuDataItem,
+} from '@ant-design/pro-components';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history, Link } from '@umijs/max';
-import { App as AntApp } from 'antd';
+import {
+  type AsyncRouteNode,
+  getAsyncRoutes,
+  getMine,
+  type MineInfo,
+} from '@/services/api';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
-import { getMine, getAsyncRoutes, type AsyncRouteNode, type MineInfo } from '@/services/api';
 
 const loginPath = '/user/login';
 
@@ -14,6 +21,7 @@ export interface InitialState {
   permissions?: string[];
   menus?: AsyncRouteNode[];
   loading?: boolean;
+  settingDrawerOpen?: boolean;
   fetchUserInfo?: () => Promise<MineInfo | undefined>;
 }
 
@@ -33,18 +41,36 @@ export async function getInitialState(): Promise<InitialState> {
     try {
       const currentUser = await fetchUserInfo();
       const routes = await getAsyncRoutes();
+      // 从 localStorage 读取登录时存储的权限码
+      let permissions: string[] = [];
+      try {
+        const raw = localStorage.getItem('react-admin-auth');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          permissions = parsed?.state?.permissions ?? [];
+        }
+      } catch {
+        /* 忽略 */
+      }
       return {
         fetchUserInfo,
         currentUser,
+        permissions,
         menus: routes,
         settings: defaultSettings as Partial<LayoutSettings>,
       };
     } catch {
       history.replace(loginPath);
-      return { fetchUserInfo, settings: defaultSettings as Partial<LayoutSettings> };
+      return {
+        fetchUserInfo,
+        settings: defaultSettings as Partial<LayoutSettings>,
+      };
     }
   }
-  return { fetchUserInfo, settings: defaultSettings as Partial<LayoutSettings> };
+  return {
+    fetchUserInfo,
+    settings: defaultSettings as Partial<LayoutSettings>,
+  };
 }
 
 // ProLayout 运行时配置（Ant Design Pro 布局能力）
@@ -52,8 +78,8 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
   const menus = (initialState?.menus ?? []) as AsyncRouteNode[];
   function toMenuData(nodes: AsyncRouteNode[]): MenuDataItem[] {
     return nodes
-      .filter(n => n.meta?.showLink !== false)
-      .map(n => ({
+      .filter((n) => n.meta?.showLink !== false)
+      .map((n) => ({
         path: n.path,
         name: n.meta?.title ?? n.name,
         children: n.children ? toMenuData(n.children) : undefined,
@@ -67,14 +93,28 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
     fixedHeader: true,
     menu: { locale: false },
     menuDataRender: () => toMenuData(menus),
-    menuItemRender: (item, dom) => <Link to={item.path}>{dom}</Link>,
+    menuItemRender: (item, dom) => <Link to={item.path ?? '/'}>{dom}</Link>,
     avatarProps: {
-      title: initialState?.currentUser?.nickname || initialState?.currentUser?.username || 'Admin',
+      title:
+        initialState?.currentUser?.nickname ||
+        initialState?.currentUser?.username ||
+        'Admin',
       render: (_props, dom) => (
-        <div onClick={() => history.push('/account-settings')} style={{ cursor: 'pointer' }}>{dom}</div>
+        <div
+          onClick={() => history.push('/account-settings')}
+          style={{ cursor: 'pointer' }}
+        >
+          {dom}
+        </div>
       ),
     },
-    menuFooterRender: () => <div style={{ textAlign: 'center', fontSize: 12, color: 'rgba(0,0,0,0.45)' }}>Hello-FastApi · React 管理端</div>,
+    menuFooterRender: () => (
+      <div
+        style={{ textAlign: 'center', fontSize: 12, color: 'rgba(0,0,0,0.45)' }}
+      >
+        Hello-FastApi · React 管理端
+      </div>
+    ),
   };
 };
 
