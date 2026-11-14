@@ -1,13 +1,15 @@
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { LoginForm, ProFormText } from '@ant-design/pro-components';
 import { history, useModel } from '@umijs/max';
-import { Button, Form, message } from 'antd';
+import { Button, message } from 'antd';
 import { useState } from 'react';
+import { getAsyncRoutes, type MineInfo } from '@/services/api';
+import { realtime } from '@/utils/websocket';
 import Settings from '../../../../config/defaultSettings';
 
 /** 登录页：调用 Hello-FastApi 后端 /api/system/login */
 export default function LoginPage(): React.ReactNode {
-  const { initialState } = useModel('@@initialState');
+  const { initialState, setInitialState } = useModel('@@initialState');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(values: {
@@ -26,13 +28,14 @@ export default function LoginPage(): React.ReactNode {
         message.error(body.message || '登录失败');
         return;
       }
-      // 存储令牌到 localStorage（app.tsx 的请求拦截器会读取）
+      // 存储令牌到 localStorage（app.tsx 的请求拦截器会读取；expires 用于令牌续期）
       localStorage.setItem(
         'react-admin-auth',
         JSON.stringify({
           state: {
             accessToken: body.data.accessToken,
             refreshToken: body.data.refreshToken,
+            expires: body.data.expires,
             username: body.data.username,
             nickname: body.data.nickname,
             avatar: body.data.avatar,
@@ -40,8 +43,29 @@ export default function LoginPage(): React.ReactNode {
           },
         }),
       );
-      // 刷新 initialState（触发重新获取用户信息+路由）
-      await initialState?.fetchUserInfo?.();
+      // SPA 登录：刷新 initialState（用户信息 + 权限码 + 动态菜单）并建立实时通道
+      try {
+        const routes = await getAsyncRoutes();
+        const mine: MineInfo = {
+          username: body.data.username,
+          nickname: body.data.nickname,
+          avatar: body.data.avatar,
+          email: '',
+          phone: '',
+        };
+        setInitialState((s) => ({
+          ...s,
+          currentUser: mine,
+          permissions: body.data.permissions,
+          menus: routes,
+          settings: Settings as never,
+        }));
+      } catch {
+        /* 动态菜单拉取失败时回退到整页刷新路径 */
+        window.location.href = '/welcome';
+        return;
+      }
+      realtime.start();
       history.push('/welcome');
     } catch {
       message.error('网络错误');

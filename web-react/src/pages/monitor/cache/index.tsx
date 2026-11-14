@@ -1,6 +1,8 @@
 import { ReloadOutlined } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
+import type { TableProps } from 'antd';
 import {
+  Alert,
   App,
   Button,
   Card,
@@ -9,10 +11,12 @@ import {
   Popconfirm,
   Row,
   Spin,
+  Table,
   Tag,
 } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  type CacheCommandStat,
   type CacheGroup,
   type CacheInfo,
   clearAllCache,
@@ -20,6 +24,8 @@ import {
   getCacheGroups,
   getCacheInfo,
 } from '@/services/api';
+
+type CommandStatColumns = TableProps<CacheCommandStat>['columns'];
 
 /** 运行时长（秒）转人性化文本 */
 function formatUptime(seconds?: number): string {
@@ -37,6 +43,18 @@ function formatUptime(seconds?: number): string {
   }
   return `${minutes}分`;
 }
+
+/** 命令调用统计（Top10）表格列 */
+const commandStatColumns: CommandStatColumns = [
+  { title: '命令', dataIndex: 'name', key: 'name' },
+  { title: '调用次数', dataIndex: 'calls', key: 'calls', width: 140 },
+  {
+    title: '累计耗时（微秒）',
+    dataIndex: 'usec',
+    key: 'usec',
+    width: 180,
+  },
+];
 
 /** 缓存监控：Redis 运行状态 + 缓存分组（清理操作仅管理员） */
 export default function CachePage(): React.ReactNode {
@@ -160,11 +178,28 @@ export default function CachePage(): React.ReactNode {
         }
       >
         {info?.connected ? (
-          <Descriptions
-            column={{ xs: 1, md: 2, lg: 4 }}
-            size="small"
-            items={statusItems}
-          />
+          <>
+            <Descriptions
+              column={{ xs: 1, md: 2, lg: 4 }}
+              size="small"
+              items={statusItems}
+            />
+            {(info.commandStats?.length ?? 0) > 0 && (
+              <>
+                <div style={{ margin: '16px 0 8px', fontWeight: 600 }}>
+                  命令调用统计（Top10）
+                </div>
+                <Table<CacheCommandStat>
+                  rowKey="name"
+                  size="small"
+                  bordered
+                  columns={commandStatColumns}
+                  dataSource={info.commandStats}
+                  pagination={false}
+                />
+              </>
+            )}
+          </>
         ) : (
           <div style={{ color: 'rgba(0, 0, 0, 0.45)' }}>
             {info?.message || 'Redis 连接不可用，无法读取缓存状态。'}
@@ -176,10 +211,11 @@ export default function CachePage(): React.ReactNode {
         title="缓存数据分组"
         style={{ marginTop: 16 }}
         extra={
-          isAdmin && (
+          isAdmin &&
+          groups.some((g) => g.clearable) && (
             <Popconfirm
               title="确定清空全部缓存吗？"
-              description="该操作会删除所有业务缓存键"
+              description="将清空全部可清理业务缓存（不含令牌黑名单与限流键），确认继续？"
               onConfirm={() => void handleClearAll()}
             >
               <Button danger loading={clearingKey === '__all__'}>
@@ -189,6 +225,12 @@ export default function CachePage(): React.ReactNode {
           )
         }
       >
+        <Alert
+          style={{ marginBottom: 16 }}
+          type="info"
+          showIcon
+          message="清理缓存后相关数据将回源数据库重建；令牌黑名单为安全数据不可清理。"
+        />
         {groups.length === 0 ? (
           <div style={{ color: 'rgba(0, 0, 0, 0.45)' }}>暂无缓存分组数据</div>
         ) : (
@@ -200,9 +242,10 @@ export default function CachePage(): React.ReactNode {
                   title={group.name}
                   extra={
                     isAdmin &&
-                    group.clearable && (
+                    (group.clearable ? (
                       <Popconfirm
                         title={`确定清理「${group.name}」分组吗？`}
+                        description={`将删除该分组全部 ${group.count} 个缓存键`}
                         onConfirm={() => void handleClearGroup(group)}
                       >
                         <Button
@@ -214,10 +257,18 @@ export default function CachePage(): React.ReactNode {
                           快速清理
                         </Button>
                       </Popconfirm>
-                    )
+                    ) : (
+                      <span
+                        style={{ fontSize: 12, color: 'rgba(0, 0, 0, 0.45)' }}
+                      >
+                        安全数据，不可清理
+                      </span>
+                    ))
                   }
                 >
-                  <div>键前缀：{group.prefix || '-'}</div>
+                  <div>
+                    键前缀：<code>{group.prefix || '-'}*</code>
+                  </div>
                   <div>键数量：{group.count}</div>
                 </Card>
               </Col>

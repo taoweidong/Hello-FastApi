@@ -1,12 +1,24 @@
-/** IP 规则管理页面 */
-import { ClearOutlined, PlusOutlined } from '@ant-design/icons';
+/** IP 规则管理页面（对齐 Vue useIpRule：状态开关/过期时间/描述/清空全部） */
+import { PlusOutlined } from '@ant-design/icons';
 import {
   type ActionType,
   type ProColumns,
   ProTable,
 } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
-import { App, Button, Form, Input, Modal, Popconfirm, Select, Tag } from 'antd';
+import {
+  App,
+  Button,
+  DatePicker,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Switch,
+  Tag,
+} from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import { useRef, useState } from 'react';
 import {
   batchDeleteIpRules,
@@ -24,13 +36,15 @@ interface IpRuleFormValues {
   ipAddress: string;
   ruleType: string;
   reason?: string;
-  isActive: number;
+  isActive: boolean;
+  expiresAt?: Dayjs | null;
+  description?: string;
 }
 
-/** 规则类型选项 */
+/** 规则类型选项（对齐 Vue IPRuleTypeChoices） */
 const RULE_TYPE_OPTIONS = [
-  { label: '黑名单', value: 'blacklist' },
   { label: '白名单', value: 'whitelist' },
+  { label: '黑名单', value: 'blacklist' },
 ];
 
 /** 状态选项 */
@@ -39,8 +53,13 @@ const STATUS_OPTIONS = [
   { label: '停用', value: 0 },
 ];
 
+/** 时间格式化（对齐 Vue dayjs YYYY-MM-DD HH:mm:ss） */
+function fmtTime(v: string | null | undefined): string {
+  return v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-';
+}
+
 export default function IpRulePage(): React.ReactNode {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { initialState } = useModel('@@initialState');
   // 按钮级权限：超管直接放行（与 access.ts 的 isAdmin 口径一致），普通用户按权限码判断
   const can = (code: string): boolean =>
@@ -66,7 +85,9 @@ export default function IpRulePage(): React.ReactNode {
       ipAddress: row.ipAddress,
       ruleType: row.ruleType,
       reason: row.reason ?? '',
-      isActive: row.isActive,
+      isActive: row.isActive === 1,
+      expiresAt: row.expiresAt ? dayjs(row.expiresAt) : null,
+      description: row.description ?? '',
     });
     setModalOpen(true);
   }
@@ -79,15 +100,20 @@ export default function IpRulePage(): React.ReactNode {
       const payload: IpRulePayload = {
         ipAddress: values.ipAddress,
         ruleType: values.ruleType,
-        reason: values.reason,
-        isActive: values.isActive,
+        reason: values.reason || null,
+        isActive: values.isActive === false ? 0 : 1,
+        // 留空则永不过期（对齐 Vue value-format YYYY-MM-DDTHH:mm:ss）
+        expiresAt: values.expiresAt
+          ? values.expiresAt.format('YYYY-MM-DDTHH:mm:ss')
+          : null,
+        description: values.description || null,
       };
       if (editing) {
         await updateIpRule(editing.id, payload);
-        message.success('更新成功');
+        message.success(`成功更新IP规则 ${values.ipAddress}`);
       } else {
         await createIpRule(payload);
-        message.success('创建成功');
+        message.success(`成功创建IP规则 ${values.ipAddress}`);
       }
       setModalOpen(false);
       actionRef.current?.reload();
@@ -98,10 +124,24 @@ export default function IpRulePage(): React.ReactNode {
     }
   }
 
+  /** 状态开关（对齐 Vue handleUpdateStatus：失败提示，无确认弹窗） */
+  async function handleToggleStatus(
+    row: IpRuleRow,
+    checked: boolean,
+  ): Promise<void> {
+    try {
+      await updateIpRule(row.id, { isActive: checked ? 1 : 0 });
+      message.success('状态更新成功');
+      actionRef.current?.reload();
+    } catch {
+      message.error('状态更新失败');
+    }
+  }
+
   async function handleDelete(row: IpRuleRow): Promise<void> {
     try {
       await deleteIpRule(row.id);
-      message.success('删除成功');
+      message.success(`已成功删除IP规则 ${row.ipAddress}`);
       setSelectedIds((prev) => prev.filter((key) => key !== row.id));
       actionRef.current?.reload();
     } catch (error) {
@@ -109,40 +149,63 @@ export default function IpRulePage(): React.ReactNode {
     }
   }
 
-  async function handleBatchDelete(): Promise<void> {
-    if (selectedIds.length === 0) return;
-    try {
-      const count = await batchDeleteIpRules(selectedIds.map(String));
-      message.success(`已删除 ${count} 条规则`);
-      setSelectedIds([]);
-      actionRef.current?.reload();
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '批量删除失败');
-    }
+  /** 批量删除（对齐 Vue useCrudTable.handleBatchDelete：ElMessageBox 确认） */
+  function handleBatchDelete(): void {
+    const ids = selectedIds.map(String);
+    if (ids.length === 0) return;
+    modal.confirm({
+      title: '系统提示',
+      content: `确认要删除选中的 ${ids.length} 条IP规则数据吗?`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await batchDeleteIpRules(ids);
+          message.success(`已成功删除 ${ids.length} 条IP规则数据`);
+          setSelectedIds([]);
+          actionRef.current?.reload();
+        } catch (error) {
+          message.error(
+            error instanceof Error ? error.message : '批量删除失败',
+          );
+        }
+      },
+    });
   }
 
-  async function handleClear(): Promise<void> {
-    try {
-      const count = await clearIpRules();
-      message.success(`已清空 ${count} 条规则`);
-      setSelectedIds([]);
-      actionRef.current?.reload();
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '清空失败');
-    }
+  /** 清空全部（对齐 Vue handleClear：不可逆破坏性操作二次确认） */
+  function handleClear(): void {
+    modal.confirm({
+      title: '清空全部 IP 规则',
+      content:
+        '将删除全部 IP 规则（含黑名单与白名单），操作不可恢复。是否继续？',
+      okText: '确认清空',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await clearIpRules();
+          message.success('清空成功');
+          setSelectedIds([]);
+          actionRef.current?.reload();
+        } catch {
+          message.error('清空失败，请重试');
+        }
+      },
+    });
   }
 
   const columns: ProColumns<IpRuleRow>[] = [
-    { title: 'IP地址', dataIndex: 'ipAddress', ellipsis: true, search: false },
+    { title: 'IP地址', dataIndex: 'ipAddress', ellipsis: true },
     {
-      title: '类型',
+      title: '规则类型',
       dataIndex: 'ruleType',
       width: 100,
       valueType: 'select',
       fieldProps: { options: RULE_TYPE_OPTIONS },
       render: (_, record) => (
-        <Tag color={record.ruleType === 'blacklist' ? 'red' : 'green'}>
-          {record.ruleType === 'blacklist' ? '黑名单' : '白名单'}
+        <Tag color={record.ruleType === 'whitelist' ? 'green' : 'red'}>
+          {record.ruleType === 'whitelist' ? '白名单' : '黑名单'}
         </Tag>
       ),
     },
@@ -154,17 +217,43 @@ export default function IpRulePage(): React.ReactNode {
       valueType: 'select',
       fieldProps: { options: STATUS_OPTIONS },
       render: (_, record) => (
-        <Tag color={record.isActive === 1 ? 'success' : 'default'}>
-          {record.isActive === 1 ? '启用' : '停用'}
-        </Tag>
+        <Switch
+          checked={record.isActive === 1}
+          checkedChildren="启用"
+          unCheckedChildren="停用"
+          disabled={!can('ip-rule:edit')}
+          onChange={(checked) => void handleToggleStatus(record, checked)}
+        />
       ),
+    },
+    {
+      title: '过期时间',
+      dataIndex: 'expiresAt',
+      width: 170,
+      search: false,
+      render: (_, record) =>
+        record.expiresAt ? fmtTime(record.expiresAt) : '永不过期',
+    },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      ellipsis: true,
+      search: false,
+      render: (_, record) => record.description || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'createdTime',
       width: 170,
-      valueType: 'dateTime',
       search: false,
+      render: (_, record) => fmtTime(record.createdTime),
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedTime',
+      width: 170,
+      search: false,
+      render: (_, record) => fmtTime(record.updatedTime),
     },
     {
       title: '操作',
@@ -174,14 +263,14 @@ export default function IpRulePage(): React.ReactNode {
       render: (_, record) => [
         can('ip-rule:edit') ? (
           <a key="edit" onClick={() => openEditModal(record)}>
-            编辑
+            修改
           </a>
         ) : null,
         can('ip-rule:delete') ? (
           <Popconfirm
             key="delete"
-            title={`确定删除 IP【${record.ipAddress}】的规则吗？`}
-            onConfirm={() => handleDelete(record)}
+            title={`是否确认删除IP为${record.ipAddress}的这条规则`}
+            onConfirm={() => void handleDelete(record)}
           >
             <a style={{ color: '#ff4d4f' }}>删除</a>
           </Popconfirm>
@@ -193,7 +282,7 @@ export default function IpRulePage(): React.ReactNode {
   return (
     <div>
       <ProTable<IpRuleRow>
-        headerTitle="IP 规则管理"
+        headerTitle="IP规则管理"
         actionRef={actionRef}
         rowKey="id"
         search={{ labelWidth: 'auto' }}
@@ -206,17 +295,14 @@ export default function IpRulePage(): React.ReactNode {
               }
             : undefined
         }
-        tableAlertOptionRender={() =>
-          can('ip-rule:delete') ? (
-            <Popconfirm
-              title={`确定删除选中的 ${selectedIds.length} 条规则吗？`}
-              onConfirm={handleBatchDelete}
-            >
-              <Button danger size="small">
-                批量删除
-              </Button>
-            </Popconfirm>
-          ) : null
+        tableAlertOptionRender={
+          can('ip-rule:delete')
+            ? () => (
+                <Button danger size="small" onClick={handleBatchDelete}>
+                  批量删除
+                </Button>
+              )
+            : undefined
         }
         request={async (params) => {
           const { current, pageSize, ...filters } = params as Record<
@@ -242,50 +328,53 @@ export default function IpRulePage(): React.ReactNode {
             </Button>
           ) : null,
           can('ip-rule:delete') ? (
-            <Popconfirm
-              key="clear"
-              title="确定清空全部 IP 规则吗？"
-              onConfirm={handleClear}
-            >
-              <Button danger icon={<ClearOutlined />}>
-                一键清空
-              </Button>
-            </Popconfirm>
+            <Button key="clear" danger onClick={handleClear}>
+              清空全部
+            </Button>
           ) : null,
         ]}
       />
       <Modal
-        title={editing ? '编辑规则' : '新增规则'}
+        title={editing ? '修改IP规则' : '新增IP规则'}
         open={modalOpen}
         confirmLoading={submitting}
         forceRender
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        destroyOnHidden
       >
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ ruleType: 'blacklist', isActive: 1 }}
+          initialValues={{ ruleType: 'blacklist', isActive: true }}
         >
           <Form.Item
             name="ipAddress"
             label="IP地址"
-            rules={[{ required: true, message: '请输入IP地址' }]}
+            rules={[{ required: true, message: 'IP地址为必填项' }]}
           >
-            <Input placeholder="请输入IP地址，如 192.168.1.1" />
+            <Input placeholder="请输入IP地址" />
           </Form.Item>
-          <Form.Item
-            name="ruleType"
-            label="规则类型"
-            rules={[{ required: true, message: '请选择规则类型' }]}
-          >
+          <Form.Item name="ruleType" label="规则类型">
             <Select options={RULE_TYPE_OPTIONS} placeholder="请选择规则类型" />
+          </Form.Item>
+          <Form.Item name="isActive" label="状态" valuePropName="checked">
+            <Switch checkedChildren="启用" unCheckedChildren="停用" />
+          </Form.Item>
+          <Form.Item name="expiresAt" label="过期时间">
+            {/* 留空则永不过期 */}
+            <DatePicker
+              showTime
+              format="YYYY-MM-DD HH:mm:ss"
+              placeholder="留空则永不过期"
+              style={{ width: '100%' }}
+            />
           </Form.Item>
           <Form.Item name="reason" label="原因">
             <Input.TextArea rows={2} placeholder="请输入原因" />
           </Form.Item>
-          <Form.Item name="isActive" label="状态">
-            <Select options={STATUS_OPTIONS} placeholder="请选择状态" />
+          <Form.Item name="description" label="描述">
+            <Input.TextArea rows={2} placeholder="请输入描述信息" />
           </Form.Item>
         </Form>
       </Modal>

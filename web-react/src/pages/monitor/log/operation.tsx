@@ -1,6 +1,7 @@
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { App, Button, Modal, Popconfirm, Space, Tag } from 'antd';
+import dayjs from 'dayjs';
 import type { Key } from 'react';
 import { useRef, useState } from 'react';
 import {
@@ -69,7 +70,42 @@ export default function OperationLogPage(): React.ReactNode {
   }
 
   const columns: ProColumns<OperationLogRow>[] = [
-    { title: '模块', dataIndex: 'module', key: 'module' },
+    {
+      title: '所属模块',
+      dataIndex: 'module',
+      key: 'module',
+      ellipsis: true,
+    },
+    {
+      // 仅出现在搜索表单中（对齐 Vue「操作状态」筛选：200 成功 / 其余失败）
+      title: '操作状态',
+      dataIndex: 'status',
+      key: 'status',
+      hideInTable: true,
+      valueType: 'select',
+      fieldProps: {
+        options: [
+          { label: '成功', value: 200 },
+          { label: '失败', value: 500 },
+        ],
+      },
+    },
+    {
+      // 仅出现在搜索表单中（datetimerange，后端按 createdTime 数组解析起止时间）
+      title: '操作时间',
+      dataIndex: 'createdTime',
+      key: 'createdTime',
+      valueType: 'dateTimeRange',
+      hideInTable: true,
+    },
+    {
+      title: '操作人员',
+      dataIndex: 'creatorId',
+      key: 'creatorId',
+      search: false,
+      ellipsis: true,
+      render: (_, record) => record.creatorId || '-',
+    },
     {
       title: '方法',
       dataIndex: 'method',
@@ -83,7 +119,7 @@ export default function OperationLogPage(): React.ReactNode {
       ),
     },
     {
-      title: '路径',
+      title: '请求地址',
       dataIndex: 'path',
       key: 'path',
       search: false,
@@ -98,13 +134,6 @@ export default function OperationLogPage(): React.ReactNode {
       ),
     },
     {
-      title: 'IP地址',
-      dataIndex: 'ipaddress',
-      key: 'ipaddress',
-      width: 130,
-      search: false,
-    },
-    {
       title: '操作概要',
       dataIndex: 'description',
       key: 'description',
@@ -112,11 +141,50 @@ export default function OperationLogPage(): React.ReactNode {
       ellipsis: true,
     },
     {
-      title: '时间',
-      dataIndex: 'createdTime',
-      key: 'createdTime',
+      title: 'IP地址',
+      dataIndex: 'ipaddress',
+      key: 'ipaddress',
+      width: 130,
+      search: false,
+    },
+    {
+      title: '操作系统',
+      dataIndex: 'system',
+      key: 'system',
+      width: 100,
+      search: false,
+      render: (_, record) => record.system || '-',
+    },
+    {
+      title: '浏览器类型',
+      dataIndex: 'browser',
+      key: 'browser',
+      width: 110,
+      search: false,
+      render: (_, record) => record.browser || '-',
+    },
+    {
+      title: '操作状态',
+      dataIndex: 'statusCode',
+      key: 'statusCode',
+      width: 90,
+      search: false,
+      render: (_, record) => (
+        <Tag
+          color={record.statusCode === 200 ? 'green' : 'red'}
+          bordered={false}
+        >
+          {record.statusCode === 200 ? '成功' : '失败'}
+        </Tag>
+      ),
+    },
+    {
+      title: '操作时间',
+      dataIndex: 'createdTimeTable',
+      key: 'createdTimeTable',
       width: 170,
       search: false,
+      render: (_, record) => record.createdTime ?? '-',
     },
   ];
 
@@ -155,10 +223,18 @@ export default function OperationLogPage(): React.ReactNode {
         }}
         onRow={(record) => ({ onClick: () => setDetail(record) })}
         request={async (params) => {
+          // 时间范围归一化为字符串数组（后端按 [start, end] 解析）
+          const range = Array.isArray(params.createdTime)
+            ? params.createdTime.map((v) =>
+                dayjs(v as string | Date).format('YYYY-MM-DD HH:mm:ss'),
+              )
+            : undefined;
           const page = await getOperationLogs({
             pageNum: params.current ?? 1,
             pageSize: params.pageSize ?? 10,
             module: params.module,
+            status: params.status,
+            ...(range && range.length === 2 ? { createdTime: range } : {}),
           });
           return { data: page.list, success: true, total: page.total };
         }}

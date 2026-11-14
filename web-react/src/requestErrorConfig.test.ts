@@ -1,3 +1,4 @@
+import { request } from '@umijs/max';
 import { message, notification } from 'antd';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { errorConfig } from './requestErrorConfig';
@@ -16,6 +17,8 @@ vi.mock('@umijs/max', () => ({
   getIntl: vi.fn(() => ({
     formatMessage: vi.fn(({ defaultMessage }) => defaultMessage),
   })),
+  // 401 续期重放路径使用
+  request: vi.fn(),
 }));
 
 describe('requestErrorConfig', () => {
@@ -23,6 +26,12 @@ describe('requestErrorConfig', () => {
   const errorThrower = errorConfig.errorConfig!.errorThrower!;
   // biome-ignore lint/style/noNonNullAssertion: config handlers are always defined
   const errorHandler = errorConfig.errorConfig!.errorHandler!;
+  // 401 续期重放逻辑位于响应拦截器的 rejection 处理器（tuple 第二项）
+  const responseRejection = (
+    errorConfig.responseInterceptors as Array<
+      [(response: unknown) => unknown, (error: unknown) => Promise<unknown>]
+    >
+  )[0][1];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -77,13 +86,12 @@ describe('requestErrorConfig', () => {
   });
 
   describe('errorHandler', () => {
-    it('should rethrow error when skipErrorHandler is true', () => {
+    it('should rethrow error when skipErrorHandler is true', async () => {
       const error = new Error('Test error');
       const opts = { skipErrorHandler: true };
 
-      expect(() => {
-        errorHandler(error, opts);
-      }).toThrow('Test error');
+      // errorHandler 为 async：skipErrorHandler 时以 Promise rejection 透传
+      await expect(errorHandler(error, opts)).rejects.toThrow('Test error');
     });
 
     it('should handle SILENT showType', () => {
@@ -189,11 +197,99 @@ describe('requestErrorConfig', () => {
       expect(message.error).toHaveBeenCalledWith('Response status:500');
     });
 
+    it('should refresh token and retry once on 401', async () => {
+      localStorage.setItem(
+        'react-admin-auth',
+        JSON.stringify({
+          state: { accessToken: 'old', refreshToken: 'r1', username: 'admin' },
+        }),
+      );
+      vi.mocked(request).mockResolvedValueOnce({
+        code: 0,
+        data: {
+          accessToken: 'new-a',
+          refreshToken: 'r2',
+          expires: '2026-01-01T00:00:00+00:00',
+        },
+      });
+      vi.mocked(request).mockResolvedValueOnce({ code: 0, data: {} });
+
+      const error: any = new Error('Unauthorized');
+      // axios 错误对象：请求配置同时挂在 error.config 与 error.response.config
+      error.config = { url: '/api/system/mine', method: 'GET' };
+      error.response = {
+        status: 401,
+        config: { url: '/api/system/mine', method: 'GET' },
+      };
+
+      // 重放逻辑在响应拦截器 rejection 处理器中：成功续期 → 返回重放响应
+      const ret = await responseRejection(error);
+
+      expect(request).toHaveBeenCalledWith(
+        '/api/system/refresh-token',
+        expect.objectContaining({ method: 'POST' }),
+      );
+      expect(request).toHaveBeenCalledWith(
+        '/api/system/mine',
+        expect.objectContaining({ method: 'GET', __isRetry: true }),
+      );
+      expect(ret).toEqual({ code: 0, data: {} });
+      // 新令牌写回本地登录态
+      const stored = JSON.parse(
+        localStorage.getItem('react-admin-auth') as string,
+      );
+      expect(stored.state.accessToken).toBe('new-a');
+      expect(stored.state.refreshToken).toBe('r2');
+    });
+
+    it('should not refresh for whitelisted 401 (login/refresh/logout)', async () => {
+      const error: any = new Error('Unauthorized');
+      error.config = { url: '/api/system/login', method: 'POST' };
+      error.response = {
+        status: 401,
+        config: { url: '/api/system/login', method: 'POST' },
+      };
+
+      await expect(responseRejection(error)).rejects.toThrow('Unauthorized');
+
+      expect(request).not.toHaveBeenCalled();
+      expect(message.warning).not.toHaveBeenCalled();
+    });
+
+    it('should logout when refresh fails on 401', async () => {
+      localStorage.setItem(
+        'react-admin-auth',
+        JSON.stringify({
+          state: { accessToken: 'old', refreshToken: 'r-bad' },
+        }),
+      );
+      vi.mocked(request).mockRejectedValueOnce(
+        new Error('invalid refresh token'),
+      );
+
+      const error: any = new Error('Unauthorized');
+      // axios 错误对象：请求配置同时挂在 error.config 与 error.response.config
+      error.config = { url: '/api/system/mine', method: 'GET' };
+      error.response = {
+        status: 401,
+        config: { url: '/api/system/mine', method: 'GET' },
+      };
+
+      await expect(responseRejection(error)).rejects.toThrow('Unauthorized');
+
+      expect(request).toHaveBeenCalledTimes(1);
+      expect(message.warning).toHaveBeenCalledWith('登录已过期，请重新登录');
+      expect(localStorage.getItem('react-admin-auth')).toBeNull();
+    });
+
     it('should handle offline error', () => {
       const error: any = new Error('Network error');
       error.request = {};
 
-      const originalOnLine = Object.getOwnPropertyDescriptor(navigator, 'onLine');
+      const originalOnLine = Object.getOwnPropertyDescriptor(
+        navigator,
+        'onLine',
+      );
       Object.defineProperty(navigator, 'onLine', {
         configurable: true,
         writable: true,

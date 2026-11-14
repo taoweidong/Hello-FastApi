@@ -1,6 +1,7 @@
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { App, Button, Popconfirm, Space, Tag } from 'antd';
+import dayjs from 'dayjs';
 import type { Key } from 'react';
 import { useRef, useState } from 'react';
 import {
@@ -49,19 +50,18 @@ export default function LoginLogPage(): React.ReactNode {
   }
 
   const columns: ProColumns<LoginLogRow>[] = [
-    // 仅出现在搜索表单中（后端按 username 过滤）
     {
-      title: '用户名',
-      dataIndex: 'username',
-      key: 'username',
-      hideInTable: true,
-    },
-    {
-      title: '状态',
+      title: '登录状态',
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      search: false,
+      valueType: 'select',
+      fieldProps: {
+        options: [
+          { label: '成功', value: 1 },
+          { label: '失败', value: 0 },
+        ],
+      },
       render: (_, record) => (
         <Tag color={record.status === 1 ? 'green' : 'red'}>
           {record.status === 1 ? '成功' : '失败'}
@@ -69,27 +69,52 @@ export default function LoginLogPage(): React.ReactNode {
       ),
     },
     {
+      title: '登录类型',
+      dataIndex: 'loginType',
+      key: 'loginType',
+      width: 100,
+      valueType: 'select',
+      fieldProps: {
+        options: [
+          { label: '密码', value: 0 },
+          { label: '短信', value: 1 },
+          { label: 'OAuth', value: 2 },
+        ],
+      },
+      render: (_, record) =>
+        LOGIN_TYPE_MAP[record.loginType] ?? record.loginType,
+    },
+    {
+      // 仅出现在搜索表单中（datetimerange，后端按 createdTime 数组解析起止时间）
+      title: '登录时间',
+      dataIndex: 'createdTime',
+      key: 'createdTime',
+      valueType: 'dateTimeRange',
+      hideInTable: true,
+    },
+    {
+      title: '登录时间',
+      dataIndex: 'createdTimeTable',
+      key: 'createdTimeTable',
+      width: 170,
+      search: false,
+      render: (_, record) => record.createdTime ?? '-',
+    },
+    {
       title: 'IP地址',
       dataIndex: 'ipaddress',
       key: 'ipaddress',
       search: false,
     },
-    { title: '浏览器', dataIndex: 'browser', key: 'browser', search: false },
     { title: '操作系统', dataIndex: 'system', key: 'system', search: false },
+    { title: '浏览器', dataIndex: 'browser', key: 'browser', search: false },
     {
-      title: '登录类型',
-      dataIndex: 'loginType',
-      key: 'loginType',
-      width: 100,
+      title: 'User-Agent',
+      dataIndex: 'agent',
+      key: 'agent',
       search: false,
-      render: (_, record) =>
-        LOGIN_TYPE_MAP[record.loginType] ?? record.loginType,
-    },
-    {
-      title: '时间',
-      dataIndex: 'createdTime',
-      key: 'createdTime',
-      search: false,
+      ellipsis: true,
+      render: (_, record) => record.agent || '-',
     },
   ];
 
@@ -126,10 +151,18 @@ export default function LoginLogPage(): React.ReactNode {
         onChange: (keys) => setSelectedRowKeys(keys),
       }}
       request={async (params) => {
+        // 时间范围归一化为字符串数组（后端按 [start, end] 解析）
+        const range = Array.isArray(params.createdTime)
+          ? params.createdTime.map((v) =>
+              dayjs(v as string | Date).format('YYYY-MM-DD HH:mm:ss'),
+            )
+          : undefined;
         const page = await getLoginLogs({
           pageNum: params.current ?? 1,
           pageSize: params.pageSize ?? 10,
-          username: params.username,
+          loginType: params.loginType,
+          status: params.status,
+          ...(range && range.length === 2 ? { createdTime: range } : {}),
         });
         return { data: page.list, success: true, total: page.total };
       }}

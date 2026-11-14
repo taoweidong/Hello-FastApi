@@ -1,11 +1,19 @@
-/** 用户管理页：ProTable 分页列表 + 新增/编辑/分配角色/重置密码 Modal */
-import { PlusOutlined } from '@ant-design/icons';
+/** 用户管理页：ProTable 分页列表 + 新增/编辑/分配角色/重置密码/上传头像 Modal（对齐 Vue useUser） */
+import {
+  LockOutlined,
+  MoreOutlined,
+  PlusOutlined,
+  TeamOutlined,
+  UploadOutlined,
+} from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
 import {
   App,
+  Avatar,
   Button,
+  Dropdown,
   Form,
   Input,
   Modal,
@@ -16,6 +24,7 @@ import {
   Tag,
   TreeSelect,
 } from 'antd';
+import dayjs from 'dayjs';
 import { useEffect, useRef, useState } from 'react';
 import {
   assignRoles,
@@ -25,7 +34,10 @@ import {
   deleteUser,
   getAllRoles,
   getDeptTree,
+  getDictByType,
   getPostOptions,
+  getUserPosts,
+  getUserRoleIds,
   getUsers,
   type PostOption,
   type RoleOption,
@@ -47,10 +59,33 @@ type UserFormValues = {
   username?: string;
   password?: string;
   nickname?: string;
+  phone?: string;
   email?: string;
+  gender?: number;
   deptId?: string;
   postIds?: string[];
+  isActive?: boolean;
+  description?: string;
 };
+
+/** 性别选项（对齐 Vue form genderOptions：0-男 1-女） */
+const GENDER_OPTIONS = [
+  { label: '男', value: 0 },
+  { label: '女', value: 1 },
+];
+
+/** 性别字典兜底（sys_user_sex 未命中时使用，对齐 Vue GenderChoices） */
+const GENDER_DICT_FALLBACK = [
+  { label: '男', value: '0' },
+  { label: '女', value: '1' },
+];
+
+/** 默认头像（与 Vue userAvatar 占位一致使用内联 SVG，避免二进制资源依赖） */
+const DEFAULT_AVATAR =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#d9e2ec"/><circle cx="32" cy="24" r="12" fill="#94a3b8"/><path d="M10 58c0-12 10-20 22-20s22 8 22 20" fill="#94a3b8"/></svg>',
+  );
 
 /** 后端部门树 → TreeSelect treeData */
 function toTreeSelectData(nodes: DeptTreeNode[]): TreeSelectNode[] {
@@ -64,13 +99,38 @@ function toTreeSelectData(nodes: DeptTreeNode[]): TreeSelectNode[] {
   }));
 }
 
+/** 时间格式化（对齐 Vue dayjs YYYY-MM-DD HH:mm:ss） */
+function fmtTime(v: string | null | undefined): string {
+  return v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-';
+}
+
+/** 手机号脱敏：下标 3-6 打码（对齐 Vue hideTextAtIndex(phone, { start: 3, end: 6 })） */
+function maskPhone(phone: string): string {
+  const chars = phone.split('');
+  for (let i = 3; i <= 6 && i < chars.length; i += 1) chars[i] = '*';
+  return chars.join('');
+}
+
+/** 字典项取标签（对齐 Vue dictLabel） */
+function dictLabel(
+  options: Array<{ label: string; value: string }>,
+  value: number | null | undefined,
+): string {
+  if (value === null || value === undefined) return '未知';
+  const hit = options.find((o) => o.value === String(value));
+  return hit ? hit.label : '未知';
+}
+
 /** 权限切换后的错误提示文案 */
 function errText(e: unknown): string {
   return e instanceof Error ? e.message : '操作失败';
 }
 
+/** 手机号格式校验（对齐 Vue isPhone） */
+const PHONE_PATTERN = /^1[3-9]\d{9}$/;
+
 export default function UserPage(): React.ReactNode {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { initialState } = useModel('@@initialState');
   const actionRef = useRef<ActionType>(null);
   const [form] = Form.useForm<UserFormValues>();
@@ -82,23 +142,27 @@ export default function UserPage(): React.ReactNode {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pwdForm] = Form.useForm<{ newPassword: string }>();
 
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  // 下拉数据（部门树 / 岗位）
+  // 下拉数据（部门树 / 岗位 / 角色 / 性别字典）
   const [deptTree, setDeptTree] = useState<DeptTreeNode[]>([]);
   const [postOptions, setPostOptions] = useState<PostOption[]>([]);
+  const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
+  const [genderDict, setGenderDict] = useState(GENDER_DICT_FALLBACK);
 
   // 分配角色
   const [roleUser, setRoleUser] = useState<UserRow | null>(null);
   const [roleIds, setRoleIds] = useState<string[]>([]);
-  const [roleOptions, setRoleOptions] = useState<RoleOption[]>([]);
   const [roleSaving, setRoleSaving] = useState(false);
 
   // 重置密码
   const [pwdUser, setPwdUser] = useState<UserRow | null>(null);
-  const [newPassword, setNewPassword] = useState('');
   const [pwdSaving, setPwdSaving] = useState(false);
+
+  // 上传头像（与 Vue handleUpload 一致：裁剪预览占位，确认后仅刷新列表）
+  const [avatarUser, setAvatarUser] = useState<UserRow | null>(null);
 
   useEffect(() => {
     getDeptTree()
@@ -111,6 +175,18 @@ export default function UserPage(): React.ReactNode {
       .catch(() => {
         /* 岗位选项加载失败时静默 */
       });
+    getAllRoles()
+      .then(setRoleOptions)
+      .catch(() => {
+        /* 角色列表加载失败时分配角色弹窗内重试，此处静默 */
+      });
+    getDictByType('sys_user_sex')
+      .then((items) => {
+        if (items.length > 0) setGenderDict(items);
+      })
+      .catch(() => {
+        /* 字典取数失败时使用本地兜底 */
+      });
   }, []);
 
   /** 打开新增弹窗 */
@@ -120,16 +196,25 @@ export default function UserPage(): React.ReactNode {
     setFormOpen(true);
   }
 
-  /** 打开编辑弹窗（不含 password，username 仅展示不可改） */
-  function openEdit(row: UserRow): void {
+  /** 打开编辑弹窗（username 仅展示不可改：后端 UserUpdateDTO 不含 username；回填已分配岗位） */
+  async function openEdit(row: UserRow): Promise<void> {
     setEditing(row);
     form.setFieldsValue({
       username: row.username,
       nickname: row.nickname ?? '',
+      phone: row.phone ?? '',
       email: row.email ?? '',
+      gender: row.gender ?? undefined,
       deptId: row.dept?.id,
+      description: row.description ?? '',
     });
     setFormOpen(true);
+    try {
+      const postIds = await getUserPosts(row.id);
+      form.setFieldsValue({ postIds });
+    } catch {
+      form.setFieldsValue({ postIds: [] });
+    }
   }
 
   /** 提交新增/编辑表单 */
@@ -137,13 +222,28 @@ export default function UserPage(): React.ReactNode {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
+      // 空值转 null 的映射对齐 Vue openDialog 的 payload 构造
+      const payload: Record<string, unknown> = {
+        nickname: values.nickname || null,
+        email: values.email || null,
+        phone: values.phone || null,
+        gender: values.gender ?? null,
+        deptId: values.deptId || null,
+        postIds: values.postIds ?? [],
+        description: values.description || null,
+      };
       if (editing) {
+        // 编辑态 isActive 不在表单中展示，取行数据原值（对齐 Vue 行为）
+        payload.isActive = editing.isActive;
         const { username: _u, ...rest } = values;
-        await updateUser(editing.id, rest);
-        message.success('修改用户成功');
+        await updateUser(editing.id, { ...payload, ...rest });
+        message.success(`成功更新用户 ${values.username}`);
       } else {
-        await createUser(values);
-        message.success('创建用户成功');
+        payload.username = values.username;
+        payload.password = values.password;
+        payload.isActive = values.isActive === false ? 0 : 1;
+        await createUser(payload);
+        message.success(`成功创建用户 ${values.username}`);
       }
       setFormOpen(false);
       actionRef.current?.reload();
@@ -156,16 +256,41 @@ export default function UserPage(): React.ReactNode {
     }
   }
 
-  /** 打开分配角色弹窗 */
+  /** 状态切换（对齐 Vue onChange：先确认，再调用接口） */
+  function handleToggleStatus(row: UserRow, checked: boolean): void {
+    const next = checked ? 1 : 0;
+    modal.confirm({
+      title: '系统提示',
+      content: `确认要${checked ? '启用' : '停用'} ${row.username} 用户吗?`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await updateUserStatus(row.id, next);
+          message.success('已成功修改用户状态');
+          actionRef.current?.reload();
+        } catch {
+          message.error('修改用户状态失败');
+        }
+      },
+    });
+  }
+
+  /** 打开分配角色弹窗：角色 ID 以后端接口回显为准（对齐 Vue handleRole） */
   async function openAssignRoles(row: UserRow): Promise<void> {
     setRoleUser(row);
-    setRoleIds(row.roles.map((r) => r.id));
+    setRoleIds([]);
     if (roleOptions.length === 0) {
       try {
         setRoleOptions(await getAllRoles());
       } catch (e) {
         message.error(errText(e));
       }
+    }
+    try {
+      setRoleIds(await getUserRoleIds(row.id));
+    } catch (e) {
+      message.error(errText(e));
     }
   }
 
@@ -175,11 +300,11 @@ export default function UserPage(): React.ReactNode {
     try {
       setRoleSaving(true);
       await assignRoles(roleUser.id, roleIds);
-      message.success('分配角色成功');
+      message.success(`已成功为用户 ${roleUser.username} 分配角色`);
       setRoleUser(null);
       actionRef.current?.reload();
-    } catch (e) {
-      message.error(errText(e));
+    } catch {
+      message.error('分配角色失败');
     } finally {
       setRoleSaving(false);
     }
@@ -188,58 +313,105 @@ export default function UserPage(): React.ReactNode {
   /** 提交重置密码 */
   async function handleResetPassword(): Promise<void> {
     if (!pwdUser) return;
-    if (!newPassword || newPassword.length < 8) {
-      message.warning('新密码长度不能少于 8 位');
-      return;
-    }
     try {
+      const { newPassword } = await pwdForm.validateFields();
       setPwdSaving(true);
       await resetUserPassword(pwdUser.id, newPassword);
-      message.success('重置密码成功');
+      message.success(`已成功重置 ${pwdUser.username} 用户的密码`);
       setPwdUser(null);
-      setNewPassword('');
+      actionRef.current?.reload();
     } catch (e) {
-      message.error(errText(e));
+      const err = e as { errorFields?: unknown };
+      if (!err?.errorFields) message.error('重置密码失败');
     } finally {
       setPwdSaving(false);
     }
   }
 
+  /** 删除单个用户 */
+  async function handleDelete(row: UserRow): Promise<void> {
+    try {
+      await deleteUser(row.id);
+      message.success(`已成功删除用户 ${row.username}`);
+      actionRef.current?.reload();
+    } catch (e) {
+      message.error(errText(e));
+    }
+  }
+
+  /** 批量删除选中用户（对齐 Vue onbatchDel：ElMessageBox 确认） */
+  function handleBatchDelete(): void {
+    const ids = selectedRowKeys.map(String);
+    if (ids.length === 0) return;
+    modal.confirm({
+      title: '系统提示',
+      content: `确认要删除选中的 ${ids.length} 个用户吗?`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await batchDeleteUsers(ids);
+          message.success(`已成功删除 ${ids.length} 个用户`);
+          setSelectedRowKeys([]);
+          actionRef.current?.reload();
+        } catch (e) {
+          message.error(errText(e));
+        }
+      },
+    });
+  }
+
   const columns: ProColumns<UserRow>[] = [
-    { title: '用户名', dataIndex: 'username', copyable: true, ellipsis: true },
     {
-      title: '昵称',
+      title: '用户编号',
+      dataIndex: 'id',
+      width: 90,
+      search: false,
+    },
+    {
+      title: '用户头像',
+      dataIndex: 'avatar',
+      width: 90,
+      search: false,
+      render: (_, r) => <Avatar src={r.avatar || DEFAULT_AVATAR} size={32} />,
+    },
+    { title: '用户名称', dataIndex: 'username', ellipsis: true },
+    {
+      title: '用户昵称',
       dataIndex: 'nickname',
       search: false,
+      ellipsis: true,
       render: (_, r) => r.nickname ?? '-',
     },
     {
-      title: '角色',
-      dataIndex: 'roles',
+      title: '性别',
+      dataIndex: 'gender',
+      width: 80,
       search: false,
-      render: (_, r) =>
-        r.roles.length > 0 ? (
-          <Space size={4} wrap>
-            {r.roles.map((role) => (
-              <Tag key={role.id} color="blue">
-                {role.name}
-              </Tag>
-            ))}
-          </Space>
-        ) : (
-          '-'
-        ),
+      render: (_, r) => (
+        <Tag color={r.gender === 1 ? 'red' : 'default'}>
+          {dictLabel(genderDict, r.gender)}
+        </Tag>
+      ),
     },
     {
       title: '部门',
       dataIndex: 'dept',
       search: false,
+      ellipsis: true,
       render: (_, r) => r.dept?.name ?? '-',
+    },
+    {
+      title: '手机号码',
+      dataIndex: 'phone',
+      ellipsis: true,
+      render: (_, r) => (r.phone ? maskPhone(r.phone) : '-'),
     },
     {
       title: '邮箱',
       dataIndex: 'email',
       search: false,
+      ellipsis: true,
       render: (_, r) => r.email ?? '-',
     },
     {
@@ -247,24 +419,16 @@ export default function UserPage(): React.ReactNode {
       dataIndex: 'isActive',
       width: 90,
       valueEnum: {
-        1: { text: '启用', status: 'Success' },
-        0: { text: '禁用', status: 'Error' },
+        1: { text: '已开启', status: 'Success' },
+        0: { text: '已关闭', status: 'Error' },
       },
       render: (_, r) => (
         <Switch
           checked={r.isActive === 1}
-          checkedChildren="启用"
-          unCheckedChildren="禁用"
+          checkedChildren="已启用"
+          unCheckedChildren="已停用"
           disabled={!can('user:edit')}
-          onChange={async (checked) => {
-            try {
-              await updateUserStatus(r.id, checked ? 1 : 0);
-              message.success('状态更新成功');
-              actionRef.current?.reload();
-            } catch (e) {
-              message.error(errText(e));
-            }
-          }}
+          onChange={(checked) => handleToggleStatus(r, checked)}
         />
       ),
     },
@@ -273,70 +437,77 @@ export default function UserPage(): React.ReactNode {
       dataIndex: 'createdTime',
       width: 170,
       search: false,
-      render: (_, r) => r.createdTime ?? '-',
+      render: (_, r) => fmtTime(r.createdTime),
+    },
+    {
+      title: '描述',
+      dataIndex: 'description',
+      search: false,
+      ellipsis: true,
+      render: (_, r) => r.description ?? '-',
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedTime',
+      width: 170,
+      search: false,
+      render: (_, r) => fmtTime(r.updatedTime),
     },
     {
       title: '操作',
       valueType: 'option',
-      width: 220,
+      width: 200,
       fixed: 'right',
       render: (_, r) => (
         <Space size={4} wrap>
-          {can('user:edit') ? <a onClick={() => openEdit(r)}>编辑</a> : null}
           {can('user:edit') ? (
-            <a onClick={() => void openAssignRoles(r)}>分配角色</a>
-          ) : null}
-          {can('user:edit') ? (
-            <a
-              onClick={() => {
-                setPwdUser(r);
-                setNewPassword('');
-              }}
-            >
-              重置密码
-            </a>
+            <a onClick={() => void openEdit(r)}>修改</a>
           ) : null}
           {can('user:delete') ? (
             <Popconfirm
-              title="删除用户"
-              description={`确定删除用户 ${r.username} 吗？`}
-              onConfirm={() => void handleDelete(r.id)}
+              title={`是否确认删除用户编号为${r.id}的这条数据`}
+              onConfirm={() => void handleDelete(r)}
             >
               <a style={{ color: '#ff4d4f' }}>删除</a>
             </Popconfirm>
+          ) : null}
+          {can('user:edit') ? (
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'avatar',
+                    icon: <UploadOutlined />,
+                    label: '上传头像',
+                    onClick: () => setAvatarUser(r),
+                  },
+                  {
+                    key: 'password',
+                    icon: <LockOutlined />,
+                    label: '重置密码',
+                    onClick: () => setPwdUser(r),
+                  },
+                  {
+                    key: 'role',
+                    icon: <TeamOutlined />,
+                    label: '分配角色',
+                    onClick: () => void openAssignRoles(r),
+                  },
+                ],
+              }}
+            >
+              <Button type="link" size="small" icon={<MoreOutlined />} />
+            </Dropdown>
           ) : null}
         </Space>
       ),
     },
   ];
 
-  /** 删除单个用户 */
-  async function handleDelete(id: string): Promise<void> {
-    try {
-      await deleteUser(id);
-      message.success('删除成功');
-      actionRef.current?.reload();
-    } catch (e) {
-      message.error(errText(e));
-    }
-  }
-
-  /** 批量删除选中用户 */
-  async function handleBatchDelete(): Promise<void> {
-    try {
-      const count = await batchDeleteUsers(selectedRowKeys.map(String));
-      message.success(`已删除 ${count} 个用户`);
-      setSelectedRowKeys([]);
-      actionRef.current?.reload();
-    } catch (e) {
-      message.error(errText(e));
-    }
-  }
-
   return (
     <>
       <ProTable<UserRow>
-        headerTitle="用户列表"
+        headerTitle="用户管理"
         rowKey="id"
         actionRef={actionRef}
         columns={columns}
@@ -346,6 +517,15 @@ export default function UserPage(): React.ReactNode {
           selectedRowKeys,
           onChange: (keys) => setSelectedRowKeys(keys),
         }}
+        tableAlertOptionRender={
+          can('user:delete')
+            ? () => (
+                <Button danger type="text" onClick={handleBatchDelete}>
+                  批量删除
+                </Button>
+              )
+            : undefined
+        }
         request={async (params) => {
           // 后端 POST 分页契约：pageNum/pageSize
           const { current, pageSize, ...rest } = params;
@@ -363,25 +543,12 @@ export default function UserPage(): React.ReactNode {
               新增用户
             </Button>
           ) : null,
-          can('user:delete') ? (
-            <Popconfirm
-              key="batch"
-              title="批量删除"
-              description={`确定删除选中的 ${selectedRowKeys.length} 个用户吗？`}
-              disabled={selectedRowKeys.length === 0}
-              onConfirm={() => void handleBatchDelete()}
-            >
-              <Button danger disabled={selectedRowKeys.length === 0}>
-                批量删除
-              </Button>
-            </Popconfirm>
-          ) : null,
         ]}
       />
 
-      {/* 新增 / 编辑用户（编辑时不显示 password） */}
+      {/* 新增 / 编辑用户（编辑时不显示 password 与 isActive；username 仅展示） */}
       <Modal
-        title={editing ? `编辑用户：${editing.username}` : '新增用户'}
+        title={editing ? `修改用户` : '新增用户'}
         open={formOpen}
         confirmLoading={submitting}
         onOk={() => void handleFormSubmit()}
@@ -389,64 +556,105 @@ export default function UserPage(): React.ReactNode {
         destroyOnHidden
         forceRender
       >
-        <Form form={form} layout="vertical" initialValues={{ postIds: [] }}>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            postIds: [],
+            isActive: true,
+            gender: undefined,
+          }}
+        >
+          <Form.Item
+            name="nickname"
+            label="用户昵称"
+            rules={[{ required: true, message: '用户昵称为必填项' }]}
+          >
+            <Input placeholder="请输入用户昵称" maxLength={64} />
+          </Form.Item>
           <Form.Item
             name="username"
-            label="用户名"
+            label="用户名称"
             rules={[
-              { required: true, message: '请输入用户名' },
+              { required: true, message: '用户名称为必填项' },
               { min: 3, max: 50, message: '长度 3-50 个字符' },
             ]}
           >
-            <Input placeholder="请输入用户名" disabled={!!editing} />
+            <Input placeholder="请输入用户名称" disabled={!!editing} />
           </Form.Item>
           {!editing ? (
             <Form.Item
               name="password"
-              label="密码"
+              label="用户密码"
               rules={[
-                { required: true, message: '请输入密码' },
+                { required: true, message: '用户密码为必填项' },
                 { min: 8, max: 128, message: '长度 8-128 个字符' },
               ]}
             >
-              <Input.Password placeholder="请输入密码（至少 8 位）" />
+              <Input.Password placeholder="请输入用户密码" />
             </Form.Item>
           ) : null}
-          <Form.Item name="nickname" label="昵称">
-            <Input placeholder="请输入昵称" maxLength={64} />
+          <Form.Item
+            name="phone"
+            label="手机号"
+            rules={[
+              {
+                validator: (_rule, value: string) =>
+                  !value || PHONE_PATTERN.test(value)
+                    ? Promise.resolve()
+                    : Promise.reject(new Error('请输入正确的手机号码格式')),
+              },
+            ]}
+          >
+            <Input placeholder="请输入手机号" />
           </Form.Item>
           <Form.Item
             name="email"
             label="邮箱"
-            rules={[{ type: 'email', message: '邮箱格式不正确' }]}
+            rules={[{ type: 'email', message: '请输入正确的邮箱格式' }]}
           >
             <Input placeholder="请输入邮箱" />
           </Form.Item>
-          <Form.Item name="deptId" label="所属部门">
+          <Form.Item name="gender" label="用户性别">
+            <Select
+              allowClear
+              placeholder="请选择用户性别"
+              options={GENDER_OPTIONS}
+            />
+          </Form.Item>
+          <Form.Item name="deptId" label="归属部门">
             <TreeSelect
               allowClear
-              placeholder="请选择部门"
+              placeholder="请选择归属部门"
               treeData={toTreeSelectData(deptTree)}
               treeDefaultExpandAll
             />
           </Form.Item>
-          <Form.Item name="postIds" label="岗位">
+          <Form.Item name="postIds" label="归属岗位">
             <Select
               mode="multiple"
               allowClear
-              placeholder="请选择岗位"
+              placeholder="请选择归属岗位"
               options={postOptions.map((p) => ({
                 label: p.postName,
                 value: p.id,
               }))}
             />
           </Form.Item>
+          {!editing ? (
+            <Form.Item name="isActive" label="用户状态" valuePropName="checked">
+              <Switch checkedChildren="启用" unCheckedChildren="停用" />
+            </Form.Item>
+          ) : null}
+          <Form.Item name="description" label="描述">
+            <Input.TextArea placeholder="请输入描述信息" rows={3} />
+          </Form.Item>
         </Form>
       </Modal>
 
-      {/* 分配角色 */}
+      {/* 分配角色（对齐 Vue role.vue：用户昵称只读 + 角色多选） */}
       <Modal
-        title={roleUser ? `分配角色：${roleUser.username}` : '分配角色'}
+        title={roleUser ? `分配 ${roleUser.username} 用户的角色` : '分配角色'}
         open={!!roleUser}
         confirmLoading={roleSaving}
         onOk={() => void handleAssignRoles()}
@@ -454,35 +662,73 @@ export default function UserPage(): React.ReactNode {
         destroyOnHidden
         forceRender
       >
-        <Select
-          mode="multiple"
-          allowClear
-          placeholder="请选择角色"
-          style={{ width: '100%' }}
-          value={roleIds}
-          onChange={(v) => setRoleIds(v)}
-          options={roleOptions.map((r) => ({ label: r.name, value: r.id }))}
-        />
+        <Form layout="vertical">
+          <Form.Item label="用户昵称">
+            <Input value={roleUser?.nickname ?? ''} disabled />
+          </Form.Item>
+          <Form.Item label="角色列表" required>
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="请选择"
+              style={{ width: '100%' }}
+              value={roleIds}
+              onChange={(v) => setRoleIds(v)}
+              options={roleOptions.map((r) => ({ label: r.name, value: r.id }))}
+            />
+          </Form.Item>
+        </Form>
       </Modal>
 
       {/* 重置密码 */}
       <Modal
-        title={pwdUser ? `重置密码：${pwdUser.username}` : '重置密码'}
+        title={pwdUser ? `重置 ${pwdUser.username} 用户的密码` : '重置密码'}
         open={!!pwdUser}
         confirmLoading={pwdSaving}
         onOk={() => void handleResetPassword()}
         onCancel={() => {
           setPwdUser(null);
-          setNewPassword('');
+          pwdForm.resetFields();
         }}
         destroyOnHidden
         forceRender
       >
-        <Input.Password
-          placeholder="请输入新密码（至少 8 位）"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-        />
+        <Form form={pwdForm} layout="vertical">
+          <Form.Item
+            name="newPassword"
+            label="新密码"
+            rules={[
+              { required: true, message: '请输入新密码' },
+              // 后端 ResetPasswordDTO 要求 8-128 位
+              { min: 8, max: 128, message: '长度 8-128 个字符' },
+            ]}
+          >
+            <Input.Password placeholder="请输入新密码" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 上传头像（对齐 Vue handleUpload：裁剪预览占位，确认后刷新列表） */}
+      <Modal
+        title="裁剪、上传头像"
+        open={!!avatarUser}
+        okText="确定"
+        cancelText="取消"
+        onOk={() => {
+          setAvatarUser(null);
+          actionRef.current?.reload();
+        }}
+        onCancel={() => setAvatarUser(null)}
+        destroyOnHidden
+        forceRender
+      >
+        <div style={{ textAlign: 'center' }}>
+          <Avatar
+            src={avatarUser?.avatar || DEFAULT_AVATAR}
+            size={120}
+            style={{ marginBottom: 12 }}
+          />
+        </div>
       </Modal>
     </>
   );

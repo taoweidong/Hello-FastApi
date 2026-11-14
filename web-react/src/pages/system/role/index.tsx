@@ -1,10 +1,11 @@
-/** 角色管理页：ProTable 分页列表 + 新增/编辑 Modal + 菜单授权 Drawer + 数据权限 Drawer */
+/** 角色管理页：ProTable 分页列表 + 新增/编辑 Modal + 菜单授权 Drawer + 数据权限 Drawer（对齐 Vue useRole） */
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
 import {
   App,
   Button,
+  Checkbox,
   Drawer,
   Form,
   Input,
@@ -18,13 +19,15 @@ import {
   Tree,
 } from 'antd';
 import type { DataNode } from 'antd/es/tree';
-import { useRef, useState } from 'react';
+import dayjs from 'dayjs';
+import { useMemo, useRef, useState } from 'react';
 import {
   createRole,
   type DeptTreeNode,
   deleteRole,
   getDeptTree,
   getMenuTree,
+  getRoleDetail,
   getRoleMenuIds,
   getRoles,
   type MenuTreeItem,
@@ -57,11 +60,9 @@ interface RoleFormValues {
   name?: string;
   code?: string;
   isActive?: boolean;
+  dataScope?: number;
   description?: string;
 }
-
-/** 列表行附加 deptIds（后端 RoleResponseDTO 返回，仅用于数据权限回显） */
-type ScopeRow = RoleRow & { deptIds?: string[] };
 
 /** 扁平菜单列表 → antd Tree treeData */
 function buildMenuTreeData(items: MenuTreeItem[]): DataNode[] {
@@ -93,6 +94,47 @@ function menuLeafIds(items: MenuTreeItem[]): Set<string> {
   );
 }
 
+/** 按标题过滤树（对齐 Vue el-tree-v2 filter-method） */
+function filterTreeData(nodes: DataNode[], query: string): DataNode[] {
+  if (!query) return nodes;
+  const result: DataNode[] = [];
+  for (const node of nodes) {
+    const children = filterTreeData(
+      (node.children as DataNode[] | undefined) ?? [],
+      query,
+    );
+    const title = String(node.title ?? '');
+    if (title.includes(query) || children.length > 0) {
+      result.push({
+        ...node,
+        children: children.length > 0 ? children : node.children,
+      });
+    }
+  }
+  return result;
+}
+
+/** 收集树中全部节点 key */
+function collectTreeKeys(nodes: DataNode[], acc: string[] = []): string[] {
+  nodes.forEach((n) => {
+    acc.push(String(n.key));
+    collectTreeKeys((n.children as DataNode[] | undefined) ?? [], acc);
+  });
+  return acc;
+}
+
+/** 收集树中所有作为父节点的 key（用于展开/折叠） */
+function collectParentKeys(nodes: DataNode[], acc: string[] = []): string[] {
+  nodes.forEach((n) => {
+    const children = n.children as DataNode[] | undefined;
+    if (children && children.length > 0) {
+      acc.push(String(n.key));
+      collectParentKeys(children, acc);
+    }
+  });
+  return acc;
+}
+
 /** 部门树 → antd Tree treeData */
 function buildDeptTreeData(nodes: DeptTreeNode[]): DataNode[] {
   return nodes.map((n) => ({
@@ -105,12 +147,16 @@ function buildDeptTreeData(nodes: DeptTreeNode[]): DataNode[] {
   }));
 }
 
+function fmtTime(v: string | null | undefined): string {
+  return v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-';
+}
+
 function errText(e: unknown): string {
   return e instanceof Error ? e.message : '操作失败';
 }
 
 export default function RolePage(): React.ReactNode {
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const { initialState } = useModel('@@initialState');
   const actionRef = useRef<ActionType>(null);
   const [form] = Form.useForm<RoleFormValues>();
@@ -130,12 +176,17 @@ export default function RolePage(): React.ReactNode {
   const [menuHalfCheckedKeys, setMenuHalfCheckedKeys] = useState<React.Key[]>(
     [],
   );
+  const [menuExpandedKeys, setMenuExpandedKeys] = useState<React.Key[]>([]);
+  const [menuExpandAll, setMenuExpandAll] = useState(false);
+  const [menuSelectAll, setMenuSelectAll] = useState(false);
+  const [menuLinkage, setMenuLinkage] = useState(false);
+  const [menuSearch, setMenuSearch] = useState('');
   const [menuLoading, setMenuLoading] = useState(false);
   const [menuSaving, setMenuSaving] = useState(false);
   const menuTreeCache = useRef<MenuTreeItem[] | null>(null);
 
   // 数据权限 Drawer
-  const [scopeRole, setScopeRole] = useState<ScopeRow | null>(null);
+  const [scopeRole, setScopeRole] = useState<RoleRow | null>(null);
   const [scopeValue, setScopeValue] = useState<number>(1);
   const [scopeDeptIds, setScopeDeptIds] = useState<string[]>([]);
   const [scopeDeptTree, setScopeDeptTree] = useState<DataNode[]>([]);
@@ -151,6 +202,7 @@ export default function RolePage(): React.ReactNode {
         name: row.name,
         code: row.code,
         isActive: row.isActive === 1,
+        dataScope: row.dataScope ?? 1,
         description: row.description ?? '',
       });
     } else {
@@ -164,13 +216,19 @@ export default function RolePage(): React.ReactNode {
     try {
       const values = await form.validateFields();
       setSubmitting(true);
-      const payload = { ...values, isActive: values.isActive ? 1 : 0 };
+      const payload = {
+        name: values.name,
+        code: values.code,
+        isActive: values.isActive ? 1 : 0,
+        dataScope: values.dataScope ?? 1,
+        description: values.description || null,
+      };
       if (editing) {
         await updateRole(editing.id, payload);
-        message.success('修改角色成功');
+        message.success(`成功更新角色 ${values.name}`);
       } else {
         await createRole(payload);
-        message.success('创建角色成功');
+        message.success(`成功创建角色 ${values.name}`);
       }
       setFormOpen(false);
       actionRef.current?.reload();
@@ -182,11 +240,31 @@ export default function RolePage(): React.ReactNode {
     }
   }
 
+  /** 状态切换（对齐 Vue useSwitchStatus：先确认再提交） */
+  function handleToggleStatus(row: RoleRow, checked: boolean): void {
+    const next = checked ? 1 : 0;
+    modal.confirm({
+      title: '系统提示',
+      content: `确认要${checked ? '启用' : '停用'} ${row.name}吗?`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await updateRoleStatus(row.id, next);
+          message.success(`已${checked ? '启用' : '停用'}角色 ${row.name}`);
+          actionRef.current?.reload();
+        } catch {
+          message.error('修改角色状态失败');
+        }
+      },
+    });
+  }
+
   /** 删除角色 */
-  async function handleDelete(id: string): Promise<void> {
+  async function handleDelete(row: RoleRow): Promise<void> {
     try {
-      await deleteRole(id);
-      message.success('删除成功');
+      await deleteRole(row.id);
+      message.success(`已成功删除角色 ${row.name}`);
       actionRef.current?.reload();
     } catch (e) {
       message.error(errText(e));
@@ -197,10 +275,14 @@ export default function RolePage(): React.ReactNode {
   async function openMenuDrawer(row: RoleRow): Promise<void> {
     setMenuRole(row);
     setMenuLoading(true);
+    setMenuSearch('');
+    setMenuSelectAll(false);
     try {
       const tree = menuTreeCache.current ?? (await getMenuTree());
       menuTreeCache.current = tree;
-      setMenuTreeData(buildMenuTreeData(tree));
+      const data = buildMenuTreeData(tree);
+      setMenuTreeData(data);
+      setMenuExpandedAllKeys(data);
       const granted = await getRoleMenuIds(row.id);
       const leaves = menuLeafIds(tree);
       // 仅回显叶子：父节点勾选/半选状态由 Tree 父子联动自动推导，
@@ -214,6 +296,11 @@ export default function RolePage(): React.ReactNode {
     }
   }
 
+  /** 默认展开全部父节点 */
+  function setMenuExpandedAllKeys(data: DataNode[]): void {
+    setMenuExpandedKeys(collectParentKeys(data));
+  }
+
   /** 保存菜单授权（勾选 + 半选父级一并提交，避免父目录未授权导致动态路由孤儿） */
   async function handleSaveMenu(): Promise<void> {
     if (!menuRole) return;
@@ -221,21 +308,37 @@ export default function RolePage(): React.ReactNode {
       setMenuSaving(true);
       const menuIds = [...menuCheckedKeys, ...menuHalfCheckedKeys].map(String);
       await saveRoleMenu(menuRole.id, menuIds);
-      message.success(`角色 ${menuRole.name} 的菜单权限保存成功`);
+      message.success(`角色 ${menuRole.name} 的菜单权限修改成功`);
       setMenuRole(null);
-    } catch (e) {
-      message.error(errText(e));
+    } catch {
+      message.error('保存菜单权限失败');
     } finally {
       setMenuSaving(false);
     }
   }
 
-  /** 打开数据权限 Drawer：用行内 dataScope / deptIds 回显 */
+  /** 全选/全不选（对齐 Vue isSelectAll） */
+  function handleMenuSelectAll(checked: boolean): void {
+    setMenuSelectAll(checked);
+    setMenuCheckedKeys(checked ? collectTreeKeys(filteredMenuTreeData) : []);
+    setMenuHalfCheckedKeys([]);
+  }
+
+  /** 展开折叠（对齐 Vue isExpandAll） */
+  function handleMenuExpandAll(checked: boolean): void {
+    setMenuExpandAll(checked);
+    if (checked) {
+      setMenuExpandedAllKeys(menuTreeData);
+    } else {
+      setMenuExpandedKeys([]);
+    }
+  }
+
+  /** 打开数据权限 Drawer：列表接口不返回 deptIds，需调用详情接口回填（对齐 Vue handleDataScope） */
   async function openScopeDrawer(row: RoleRow): Promise<void> {
-    const scopeRow = row as ScopeRow;
-    setScopeRole(scopeRow);
-    setScopeValue(scopeRow.dataScope ?? 1);
-    setScopeDeptIds(scopeRow.deptIds ?? []);
+    setScopeRole(row);
+    setScopeValue(1);
+    setScopeDeptIds([]);
     if (!deptTreeCache.current) {
       setScopeLoading(true);
       try {
@@ -248,6 +351,13 @@ export default function RolePage(): React.ReactNode {
         setScopeLoading(false);
       }
     }
+    try {
+      const detail = await getRoleDetail(row.id);
+      setScopeValue(detail.dataScope ?? 1);
+      setScopeDeptIds(detail.deptIds ?? []);
+    } catch (e) {
+      message.error(errText(e));
+    }
   }
 
   /** 保存数据权限 */
@@ -259,19 +369,25 @@ export default function RolePage(): React.ReactNode {
         dataScope: scopeValue,
         deptIds: scopeValue === 2 ? scopeDeptIds : [],
       });
-      message.success(`角色 ${scopeRole.name} 的数据权限保存成功`);
+      message.success(`角色 ${scopeRole.name} 的数据权限修改成功`);
       setScopeRole(null);
       actionRef.current?.reload();
-    } catch (e) {
-      message.error(errText(e));
+    } catch {
+      message.error('保存数据权限失败');
     } finally {
       setScopeSaving(false);
     }
   }
 
+  const filteredMenuTreeData = useMemo(
+    () => filterTreeData(menuTreeData, menuSearch.trim()),
+    [menuTreeData, menuSearch],
+  );
+
   const columns: ProColumns<RoleRow>[] = [
+    { title: '角色编号', dataIndex: 'id', width: 100, search: false },
     { title: '角色名称', dataIndex: 'name', ellipsis: true },
-    { title: '角色编码', dataIndex: 'code', ellipsis: true, copyable: true },
+    { title: '角色标识', dataIndex: 'code', ellipsis: true, copyable: true },
     {
       title: '数据权限',
       dataIndex: 'dataScope',
@@ -293,18 +409,10 @@ export default function RolePage(): React.ReactNode {
       render: (_, r) => (
         <Switch
           checked={r.isActive === 1}
-          checkedChildren="启用"
-          unCheckedChildren="禁用"
+          checkedChildren="已启用"
+          unCheckedChildren="已停用"
           disabled={!can('role:manage')}
-          onChange={async (checked) => {
-            try {
-              await updateRoleStatus(r.id, checked ? 1 : 0);
-              message.success('状态更新成功');
-              actionRef.current?.reload();
-            } catch (e) {
-              message.error(errText(e));
-            }
-          }}
+          onChange={(checked) => handleToggleStatus(r, checked)}
         />
       ),
     },
@@ -320,7 +428,14 @@ export default function RolePage(): React.ReactNode {
       dataIndex: 'createdTime',
       width: 170,
       search: false,
-      render: (_, r) => r.createdTime ?? '-',
+      render: (_, r) => fmtTime(r.createdTime),
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedTime',
+      width: 170,
+      search: false,
+      render: (_, r) => fmtTime(r.updatedTime),
     },
     {
       title: '操作',
@@ -329,18 +444,17 @@ export default function RolePage(): React.ReactNode {
       fixed: 'right',
       render: (_, r) => (
         <Space size={4} wrap>
-          {can('role:manage') ? <a onClick={() => openForm(r)}>编辑</a> : null}
+          {can('role:manage') ? <a onClick={() => openForm(r)}>修改</a> : null}
           {can('role:manage') ? (
-            <a onClick={() => void openMenuDrawer(r)}>菜单授权</a>
+            <a onClick={() => void openMenuDrawer(r)}>权限</a>
           ) : null}
           {can('role:manage') ? (
             <a onClick={() => void openScopeDrawer(r)}>数据权限</a>
           ) : null}
           {can('role:manage') ? (
             <Popconfirm
-              title="删除角色"
-              description={`确定删除角色 ${r.name} 吗？`}
-              onConfirm={() => void handleDelete(r.id)}
+              title={`是否确认删除角色名称为${r.name}的这条数据`}
+              onConfirm={() => void handleDelete(r)}
             >
               <a style={{ color: '#ff4d4f' }}>删除</a>
             </Popconfirm>
@@ -353,7 +467,7 @@ export default function RolePage(): React.ReactNode {
   return (
     <>
       <ProTable<RoleRow>
-        headerTitle="角色列表"
+        headerTitle="角色管理"
         rowKey="id"
         actionRef={actionRef}
         columns={columns}
@@ -376,7 +490,7 @@ export default function RolePage(): React.ReactNode {
 
       {/* 新增 / 编辑角色 */}
       <Modal
-        title={editing ? `编辑角色：${editing.name}` : '新增角色'}
+        title={editing ? `修改角色` : '新增角色'}
         open={formOpen}
         confirmLoading={submitting}
         onOk={() => void handleFormSubmit()}
@@ -384,39 +498,50 @@ export default function RolePage(): React.ReactNode {
         destroyOnHidden
         forceRender
       >
-        <Form form={form} layout="vertical" initialValues={{ isActive: true }}>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ isActive: true, dataScope: 1 }}
+        >
           <Form.Item
             name="name"
             label="角色名称"
-            rules={[
-              { required: true, message: '请输入角色名称' },
-              { min: 2, max: 64, message: '长度 2-64 个字符' },
-            ]}
+            rules={[{ required: true, message: '角色名称为必填项' }]}
           >
             <Input placeholder="请输入角色名称" maxLength={64} />
           </Form.Item>
           <Form.Item
             name="code"
-            label="角色编码"
-            rules={[
-              { required: true, message: '请输入角色编码' },
-              { min: 2, max: 64, message: '长度 2-64 个字符' },
-            ]}
+            label="角色标识"
+            rules={[{ required: true, message: '角色标识为必填项' }]}
           >
-            <Input placeholder="请输入角色编码" maxLength={64} />
+            <Input placeholder="请输入角色标识" maxLength={64} />
           </Form.Item>
           <Form.Item name="isActive" label="状态" valuePropName="checked">
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+            <Switch checkedChildren="启用" unCheckedChildren="停用" />
+          </Form.Item>
+          <Form.Item name="dataScope" label="数据权限">
+            <Radio.Group style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {DATA_SCOPE_OPTIONS.map((opt) => (
+                <Radio key={opt.value} value={opt.value}>
+                  {opt.label}
+                </Radio>
+              ))}
+            </Radio.Group>
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea placeholder="请输入描述" rows={3} maxLength={500} />
+            <Input.TextArea
+              placeholder="请输入描述信息"
+              rows={3}
+              maxLength={500}
+            />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* 菜单授权 Drawer */}
+      {/* 菜单授权 Drawer（对齐 Vue 菜单权限面板：搜索/展开折叠/全选/父子联动） */}
       <Drawer
-        title={menuRole ? `菜单授权：${menuRole.name}` : '菜单授权'}
+        title={menuRole ? `菜单权限（${menuRole.name}）` : '菜单权限'}
         width={480}
         open={!!menuRole}
         onClose={() => setMenuRole(null)}
@@ -427,25 +552,69 @@ export default function RolePage(): React.ReactNode {
             loading={menuSaving}
             onClick={() => void handleSaveMenu()}
           >
-            保存
+            保存菜单权限
           </Button>
         }
       >
         {menuLoading ? (
           <Spin style={{ display: 'block', margin: '48px auto' }} />
         ) : (
-          <Tree
-            checkable
-            defaultExpandAll
-            treeData={menuTreeData}
-            checkedKeys={menuCheckedKeys}
-            onCheck={(checked, info) => {
-              // checkStrictly=false：checked 为 Key[]（含联动勾选的父级）
-              const keys = Array.isArray(checked) ? checked : checked.checked;
-              setMenuCheckedKeys(keys);
-              setMenuHalfCheckedKeys(info.halfCheckedKeys ?? []);
-            }}
-          />
+          <>
+            <Input
+              placeholder="请输入菜单进行搜索"
+              allowClear
+              value={menuSearch}
+              onChange={(e) => setMenuSearch(e.target.value)}
+              style={{ marginBottom: 8 }}
+            />
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: 12,
+                marginBottom: 8,
+              }}
+            >
+              <Checkbox
+                checked={menuExpandAll}
+                onChange={(e) => handleMenuExpandAll(e.target.checked)}
+              >
+                展开/折叠
+              </Checkbox>
+              <Checkbox
+                checked={menuSelectAll}
+                onChange={(e) => handleMenuSelectAll(e.target.checked)}
+              >
+                全选/全不选
+              </Checkbox>
+              <Checkbox
+                checked={menuLinkage}
+                onChange={(e) => setMenuLinkage(e.target.checked)}
+              >
+                父子联动
+              </Checkbox>
+            </div>
+            <Tree
+              checkable
+              checkStrictly={!menuLinkage}
+              treeData={filteredMenuTreeData}
+              expandedKeys={menuExpandedKeys}
+              checkedKeys={menuCheckedKeys}
+              onExpand={(keys) => {
+                setMenuExpandedKeys(keys);
+                setMenuExpandAll(false);
+              }}
+              onCheck={(checked, info) => {
+                // checkStrictly 时 checked 为 { checked, halfChecked }；联动时为 Key[]
+                const keys = Array.isArray(checked) ? checked : checked.checked;
+                const half = Array.isArray(checked)
+                  ? (info.halfCheckedKeys ?? [])
+                  : checked.halfChecked;
+                setMenuCheckedKeys(keys);
+                setMenuHalfCheckedKeys(half);
+              }}
+            />
+          </>
         )}
       </Drawer>
 
@@ -472,7 +641,12 @@ export default function RolePage(): React.ReactNode {
           <>
             <Radio.Group
               value={scopeValue}
-              onChange={(e) => setScopeValue(e.target.value as number)}
+              onChange={(e) => {
+                const val = e.target.value as number;
+                setScopeValue(val);
+                // 非自定义范围时清空部门勾选（对齐 Vue watch dataScope）
+                if (val !== 2) setScopeDeptIds([]);
+              }}
               style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
             >
               {DATA_SCOPE_OPTIONS.map((opt) => (

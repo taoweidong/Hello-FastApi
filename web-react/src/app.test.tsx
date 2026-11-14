@@ -19,15 +19,30 @@ const mockGetAsyncRoutes = vi.fn();
 vi.mock('@umijs/max', () => ({
   history: mockHistory,
   Link: ({ children }: { children?: React.ReactNode }) => children,
+  getAllLocales: vi.fn(() => ['zh-CN', 'en-US']),
+  getLocale: vi.fn(() => 'zh-CN'),
+  setLocale: vi.fn(),
 }));
 
 vi.mock('@/services/api', () => ({
   getMine: mockGetMine,
   getAsyncRoutes: mockGetAsyncRoutes,
+  logout: vi.fn(),
+  getLatestNotices: vi.fn(async () => []),
 }));
 
 vi.mock('../config/defaultSettings', () => ({
   default: { title: 'PureAdmin React' },
+}));
+
+// WebSocket 实时通道与 getInitialState 无关，测试中隔离掉真实连接
+vi.mock('./utils/websocket', () => ({
+  realtime: {
+    start: vi.fn(),
+    stop: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
+  },
 }));
 
 describe('app getInitialState', () => {
@@ -80,7 +95,9 @@ describe('app getInitialState', () => {
     vi.stubGlobal('localStorage', {
       getItem: (key: string) =>
         key === 'react-admin-auth'
-          ? JSON.stringify({ state: { permissions: ['user:add', 'user:edit'] } })
+          ? JSON.stringify({
+              state: { permissions: ['user:add', 'user:edit'] },
+            })
           : null,
     });
 

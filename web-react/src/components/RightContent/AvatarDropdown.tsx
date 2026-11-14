@@ -8,6 +8,7 @@ import type { MenuProps } from 'antd';
 import { Spin } from 'antd';
 import React, { startTransition } from 'react';
 import { logout } from '@/services/api';
+import { realtime } from '@/utils/websocket';
 import HeaderDropdown from '../HeaderDropdown';
 
 type GlobalHeaderRightProps = {
@@ -48,6 +49,10 @@ const loginOut = async () => {
     }
   } catch {
     // Local logout has already cleared user state; redirect should still proceed.
+  } finally {
+    // 断开实时通道 + 清除本地登录态（对齐 Vue 版 logOut）
+    realtime.stop();
+    localStorage.removeItem('react-admin-auth');
   }
   const { search, pathname } = window.location;
   const urlParams = new URL(window.location.href).searchParams;

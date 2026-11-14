@@ -6,7 +6,17 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
-import { App, Button, Form, Input, Modal, Popconfirm, Switch, Tag } from 'antd';
+import {
+  App,
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Switch,
+  Tag,
+} from 'antd';
 import { useRef, useState } from 'react';
 import {
   type ConfigPayload,
@@ -17,11 +27,13 @@ import {
   updateConfig,
 } from '@/services/api';
 
-/** 配置表单值（isActive 由 Switch 提供，为 boolean） */
+/** 配置表单值（isActive/inherit 由 Switch 提供，为 boolean） */
 interface ConfigFormValues {
   key: string;
   value: string;
+  access?: number;
   isActive: boolean;
+  inherit: boolean;
   description?: string;
 }
 
@@ -50,7 +62,9 @@ export default function ConfigPage(): React.ReactNode {
     form.setFieldsValue({
       key: row.key,
       value: row.value,
+      access: row.access ?? 0,
       isActive: row.isActive === 1,
+      inherit: row.inherit === 1,
       description: row.description ?? '',
     });
     setModalOpen(true);
@@ -64,7 +78,9 @@ export default function ConfigPage(): React.ReactNode {
       const payload: ConfigPayload = {
         key: values.key,
         value: values.value,
+        access: values.access ?? 0,
         isActive: values.isActive ? 1 : 0,
+        inherit: values.inherit ? 1 : 0,
         description: values.description,
       };
       if (editing) {
@@ -97,6 +113,14 @@ export default function ConfigPage(): React.ReactNode {
     { title: '配置键', dataIndex: 'key', ellipsis: true },
     { title: '配置值', dataIndex: 'value', ellipsis: true, search: false },
     {
+      title: '访问级别',
+      dataIndex: 'access',
+      width: 100,
+      align: 'center',
+      search: false,
+      render: (_, record) => record.access ?? 0,
+    },
+    {
       title: '状态',
       dataIndex: 'isActive',
       width: 90,
@@ -107,6 +131,18 @@ export default function ConfigPage(): React.ReactNode {
         </Tag>
       ),
     },
+    {
+      title: '是否继承',
+      dataIndex: 'inherit',
+      width: 100,
+      align: 'center',
+      search: false,
+      render: (_, record) => (
+        <Tag color={record.inherit === 1 ? 'success' : 'default'}>
+          {record.inherit === 1 ? '是' : '否'}
+        </Tag>
+      ),
+    },
     { title: '描述', dataIndex: 'description', ellipsis: true, search: false },
     {
       title: '创建时间',
@@ -114,6 +150,14 @@ export default function ConfigPage(): React.ReactNode {
       width: 170,
       valueType: 'dateTime',
       search: false,
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedTime',
+      width: 170,
+      valueType: 'dateTime',
+      search: false,
+      render: (_, record) => record.updatedTime ?? '-',
     },
     {
       title: '操作',
@@ -180,7 +224,11 @@ export default function ConfigPage(): React.ReactNode {
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
       >
-        <Form form={form} layout="vertical" initialValues={{ isActive: true }}>
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ isActive: true, inherit: false, access: 0 }}
+        >
           <Form.Item
             name="key"
             label="配置键"
@@ -189,14 +237,24 @@ export default function ConfigPage(): React.ReactNode {
             <Input placeholder="请输入配置键" disabled={!!editing} />
           </Form.Item>
           <Form.Item
+            name="access"
+            label="访问级别"
+            rules={[{ required: true, message: '请输入访问级别' }]}
+          >
+            <InputNumber min={0} max={999} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
             name="value"
             label="配置值"
             rules={[{ required: true, message: '请输入配置值' }]}
           >
-            <Input.TextArea rows={3} placeholder="请输入配置值" />
+            <Input.TextArea rows={3} placeholder="请输入配置值(JSON格式)" />
           </Form.Item>
           <Form.Item name="isActive" label="是否启用" valuePropName="checked">
             <Switch checkedChildren="启用" unCheckedChildren="停用" />
+          </Form.Item>
+          <Form.Item name="inherit" label="是否继承" valuePropName="checked">
+            <Switch checkedChildren="是" unCheckedChildren="否" />
           </Form.Item>
           <Form.Item name="description" label="描述">
             <Input.TextArea rows={2} placeholder="请输入描述" />

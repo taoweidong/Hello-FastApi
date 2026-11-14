@@ -6,12 +6,23 @@ import {
   ProTable,
 } from '@ant-design/pro-components';
 import { useModel } from '@umijs/max';
-import { App, Button, Form, Input, Modal, Popconfirm, Radio, Tag } from 'antd';
+import {
+  App,
+  Button,
+  Descriptions,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Radio,
+  Tag,
+} from 'antd';
 import { useRef, useState } from 'react';
 import {
   batchDeleteNotices,
   createNotice,
   deleteNotice,
+  getNotice,
   getNotices,
   type NoticePayload,
   type NoticeRow,
@@ -40,6 +51,17 @@ export default function NoticePage(): React.ReactNode {
   const [editing, setEditing] = useState<NoticeRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<React.Key[]>([]);
+  // 只读详情弹窗（对齐 Vue handleView：点标题拉取详情后展示）
+  const [detail, setDetail] = useState<NoticeRow | null>(null);
+
+  async function handleView(row: NoticeRow): Promise<void> {
+    try {
+      const data = await getNotice(row.id);
+      setDetail(data);
+    } catch (error) {
+      message.error((error as Error).message || '获取公告详情失败');
+    }
+  }
 
   function openCreateModal(): void {
     setEditing(null);
@@ -109,12 +131,25 @@ export default function NoticePage(): React.ReactNode {
   }
 
   const columns: ProColumns<NoticeRow>[] = [
-    { title: '标题', dataIndex: 'title', ellipsis: true },
+    {
+      title: '标题',
+      dataIndex: 'title',
+      ellipsis: true,
+      render: (_, record) => (
+        <a onClick={() => void handleView(record)}>{record.title}</a>
+      ),
+    },
     {
       title: '类型',
       dataIndex: 'noticeType',
       width: 90,
-      search: false,
+      valueType: 'select',
+      fieldProps: {
+        options: [
+          { label: '通知', value: 1 },
+          { label: '公告', value: 2 },
+        ],
+      },
       render: (_, record) => (
         <Tag color={record.noticeType === 1 ? 'cyan' : 'blue'}>
           {record.noticeType === 1 ? '通知' : '公告'}
@@ -125,7 +160,13 @@ export default function NoticePage(): React.ReactNode {
       title: '状态',
       dataIndex: 'isActive',
       width: 90,
-      search: false,
+      valueType: 'select',
+      fieldProps: {
+        options: [
+          { label: '启用', value: 1 },
+          { label: '停用', value: 0 },
+        ],
+      },
       render: (_, record) => (
         <Tag color={record.isActive === 1 ? 'success' : 'default'}>
           {record.isActive === 1 ? '启用' : '停用'}
@@ -263,6 +304,55 @@ export default function NoticePage(): React.ReactNode {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={detail?.title ?? '公告详情'}
+        open={detail !== null}
+        footer={null}
+        width={640}
+        onCancel={() => setDetail(null)}
+        destroyOnHidden
+      >
+        {detail && (
+          <>
+            <Descriptions
+              size="small"
+              column={3}
+              items={[
+                {
+                  key: 'type',
+                  label: '类型',
+                  children: (
+                    <Tag color={detail.noticeType === 1 ? 'cyan' : 'blue'}>
+                      {detail.noticeType === 1 ? '通知' : '公告'}
+                    </Tag>
+                  ),
+                },
+                {
+                  key: 'publisher',
+                  label: '发布人',
+                  children: detail.publisherName || '-',
+                },
+                {
+                  key: 'time',
+                  label: '发布时间',
+                  children: detail.createdTime ?? '-',
+                },
+              ]}
+            />
+            <div
+              style={{
+                marginTop: 16,
+                lineHeight: 1.8,
+                whiteSpace: 'pre-wrap',
+                color: detail.content ? undefined : 'rgba(0,0,0,0.45)',
+              }}
+            >
+              {detail.content || '（无内容）'}
+            </div>
+          </>
+        )}
       </Modal>
     </div>
   );

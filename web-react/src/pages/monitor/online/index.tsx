@@ -1,12 +1,17 @@
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
+import { useModel } from '@umijs/max';
 import { App, Popconfirm } from 'antd';
 import { useRef } from 'react';
 import { forceOffline, getOnlineUsers, type OnlineRow } from '@/services/api';
 
-/** 在线用户：分页列表 + 强制下线 */
+/** 在线用户：分页列表 + 强制下线（按 monitor:manage 权限码显隐） */
 export default function OnlinePage(): React.ReactNode {
   const { message } = App.useApp();
+  const { initialState } = useModel('@@initialState');
+  const canOffline =
+    initialState?.currentUser?.username === 'admin' ||
+    (initialState?.permissions?.includes('monitor:manage') ?? false);
   const actionRef = useRef<ActionType | undefined>(undefined);
 
   async function handleForceOffline(record: OnlineRow): Promise<void> {
@@ -21,6 +26,13 @@ export default function OnlinePage(): React.ReactNode {
 
   const columns: ProColumns<OnlineRow>[] = [
     { title: '用户名', dataIndex: 'username', key: 'username' },
+    {
+      title: '登录 IP',
+      dataIndex: 'ip',
+      key: 'ip',
+      search: false,
+      render: (_, record) => record.ip ?? '-',
+    },
     { title: '浏览器', dataIndex: 'browser', key: 'browser', search: false },
     { title: '操作系统', dataIndex: 'system', key: 'system', search: false },
     {
@@ -42,14 +54,17 @@ export default function OnlinePage(): React.ReactNode {
       fixed: 'right',
       width: 120,
       search: false,
-      render: (_, record) => (
-        <Popconfirm
-          title="确定将该用户强制下线吗？"
-          onConfirm={() => void handleForceOffline(record)}
-        >
-          <a>强制下线</a>
-        </Popconfirm>
-      ),
+      render: (_, record) =>
+        canOffline ? (
+          <Popconfirm
+            title={`是否强制下线${record.username}？`}
+            onConfirm={() => void handleForceOffline(record)}
+          >
+            <a style={{ color: '#ff4d4f' }}>强退</a>
+          </Popconfirm>
+        ) : (
+          <span>-</span>
+        ),
     },
   ];
 

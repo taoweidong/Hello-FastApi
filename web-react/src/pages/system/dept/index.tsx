@@ -1,4 +1,4 @@
-/** 部门管理页：树形表格（pagination=false）+ 新增/编辑/新增子部门 Modal */
+/** 部门管理页：树形表格（pagination=false）+ 名称/状态搜索 + 新增/编辑/新增子部门 Modal（对齐 Vue useDept） */
 import { PlusOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
@@ -11,10 +11,13 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
+  Select,
   Space,
   Switch,
+  Tag,
   TreeSelect,
 } from 'antd';
+import dayjs from 'dayjs';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   createDept,
@@ -38,6 +41,17 @@ interface DeptFormValues {
   rank?: number;
   isActive?: boolean;
   description?: string;
+}
+
+/** 搜索表单值（对齐 Vue form: { name, isActive }） */
+interface DeptSearchValues {
+  name?: string;
+  isActive?: number;
+}
+
+/** 时间格式化（对齐 Vue dayjs YYYY-MM-DD HH:mm:ss） */
+function fmtTime(v: string | null | undefined): string {
+  return v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '-';
 }
 
 /** 扁平部门列表（含 parentId）→ 树形 dataSource */
@@ -100,6 +114,7 @@ export default function DeptPage(): React.ReactNode {
   const { message } = App.useApp();
   const { initialState } = useModel('@@initialState');
   const [form] = Form.useForm<DeptFormValues>();
+  const [searchForm] = Form.useForm<DeptSearchValues>();
 
   /** 按钮级权限码校验 */
   const can = (code: string): boolean =>
@@ -108,12 +123,27 @@ export default function DeptPage(): React.ReactNode {
   const [flatRows, setFlatRows] = useState<DeptRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
+  /** 已应用的搜索条件（点击搜索后才生效，对齐 Vue onSearch 行为） */
+  const [filters, setFilters] = useState<DeptSearchValues>({});
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<DeptRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const dataSource = useMemo(() => buildDeptTree(flatRows), [flatRows]);
+  /** 搜索过滤（名称包含 + 状态相等，客户端过滤对齐 Vue onSearch） */
+  const filteredRows = useMemo(
+    () =>
+      flatRows.filter(
+        (r) =>
+          (!filters.name || r.name.includes(filters.name)) &&
+          (filters.isActive === undefined ||
+            filters.isActive === null ||
+            r.isActive === filters.isActive),
+      ),
+    [flatRows, filters],
+  );
+
+  const dataSource = useMemo(() => buildDeptTree(filteredRows), [filteredRows]);
   const parentOptions = useMemo(
     () => toTreeSelectData(filterNode(dataSource, editing?.id ?? null)),
     [dataSource, editing],
@@ -136,6 +166,17 @@ export default function DeptPage(): React.ReactNode {
   useEffect(() => {
     void load();
   }, [load]);
+
+  /** 搜索（对齐 Vue onSearch：本地过滤后重建树） */
+  function handleSearch(v: DeptSearchValues): void {
+    setFilters({ name: v.name, isActive: v.isActive });
+  }
+
+  /** 重置搜索（对齐 Vue resetForm：清空后重新加载） */
+  function handleSearchReset(): void {
+    searchForm.resetFields();
+    setFilters({});
+  }
 
   /** 打开新增/编辑弹窗；row 为 null 表示新增顶级部门 */
   function openForm(row: DeptRow | null): void {
@@ -177,14 +218,19 @@ export default function DeptPage(): React.ReactNode {
         parentId: values.parentId ?? null,
         rank: values.rank,
         isActive: values.isActive === false ? 0 : 1,
-        description: values.description,
+        description: values.description || null,
       };
       if (editing) {
         await updateDept(editing.id, payload);
-        message.success('修改部门成功');
+        message.success(`成功更新部门 ${name}`);
       } else {
-        await createDept(payload);
-        message.success('创建部门成功');
+        // sys_departments.code 唯一非空，后端不自动生成；
+        // 不生成唯一编码会与历史空编码行冲突触发 500（对齐 Vue 的处理）
+        await createDept({
+          ...payload,
+          code: `DEPT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        });
+        message.success(`成功创建部门 ${name}`);
       }
       setFormOpen(false);
       await load();
@@ -198,10 +244,10 @@ export default function DeptPage(): React.ReactNode {
   }
 
   /** 删除部门 */
-  async function handleDelete(id: string): Promise<void> {
+  async function handleDelete(row: DeptRow): Promise<void> {
     try {
-      await deleteDept(id);
-      message.success('删除成功');
+      await deleteDept(row.id);
+      message.success(`已成功删除部门 ${row.name}`);
       await load();
     } catch (e) {
       message.error(errText(e));
@@ -222,26 +268,22 @@ export default function DeptPage(): React.ReactNode {
       dataIndex: 'isActive',
       width: 90,
       render: (_, r) => (
-        <Switch
-          checked={r.isActive === 1}
-          checkedChildren="启用"
-          unCheckedChildren="禁用"
-          onChange={async (checked) => {
-            try {
-              // DeptPayload 的 name 必填，状态切换时原样带回
-              await updateDept(r.id, {
-                name: r.name,
-                isActive: checked ? 1 : 0,
-              });
-              message.success('状态更新成功');
-              await load();
-            } catch (e) {
-              message.error(errText(e));
-            }
-          }}
-          disabled={!can('dept:edit')}
-        />
+        <Tag color={r.isActive === 1 ? 'success' : 'default'}>
+          {r.isActive === 1 ? '启用' : '停用'}
+        </Tag>
       ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'createdTime',
+      width: 170,
+      render: (_, r) => fmtTime(r.createdTime),
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedTime',
+      width: 170,
+      render: (_, r) => fmtTime(r.updatedTime),
     },
     {
       title: '描述',
@@ -258,12 +300,11 @@ export default function DeptPage(): React.ReactNode {
           {can('dept:add') ? (
             <a onClick={() => openCreateChild(r)}>新增子部门</a>
           ) : null}
-          {can('dept:edit') ? <a onClick={() => openForm(r)}>编辑</a> : null}
+          {can('dept:edit') ? <a onClick={() => openForm(r)}>修改</a> : null}
           {can('dept:delete') ? (
             <Popconfirm
-              title="删除部门"
-              description={`确定删除部门 ${r.name} 吗？`}
-              onConfirm={() => void handleDelete(r.id)}
+              title={`是否确认删除部门名称为${r.name}的这条数据`}
+              onConfirm={() => void handleDelete(r)}
             >
               <a style={{ color: '#ff4d4f' }}>删除</a>
             </Popconfirm>
@@ -275,19 +316,56 @@ export default function DeptPage(): React.ReactNode {
 
   return (
     <>
-      {can('dept:add') ? (
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          style={{ marginBottom: 16 }}
-          onClick={() => openForm(null)}
-        >
-          新增部门
-        </Button>
-      ) : null}
+      {/* 搜索表单（对齐 Vue：部门名称 / 状态，客户端过滤） */}
+      <Form
+        form={searchForm}
+        layout="inline"
+        onFinish={handleSearch}
+        style={{ marginBottom: 16, rowGap: 8 }}
+      >
+        <Form.Item name="name" label="部门名称">
+          <Input
+            placeholder="请输入部门名称"
+            allowClear
+            style={{ width: 180 }}
+          />
+        </Form.Item>
+        <Form.Item name="isActive" label="状态">
+          <Select
+            placeholder="请选择状态"
+            allowClear
+            style={{ width: 140 }}
+            options={[
+              { label: '启用', value: 1 },
+              { label: '停用', value: 0 },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item>
+          <Space>
+            <Button type="primary" htmlType="submit" loading={loading}>
+              搜索
+            </Button>
+            <Button onClick={handleSearchReset}>重置</Button>
+          </Space>
+        </Form.Item>
+      </Form>
+
+      <div>
+        {can('dept:add') ? (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={{ marginBottom: 16 }}
+            onClick={() => openForm(null)}
+          >
+            新增部门
+          </Button>
+        ) : null}
+      </div>
       {/* 树形表格：不分页，dataSource 按 parentId 组装 */}
       <ProTable<DeptRow>
-        headerTitle="部门列表"
+        headerTitle="部门管理"
         rowKey="id"
         columns={columns}
         dataSource={dataSource}
@@ -304,7 +382,7 @@ export default function DeptPage(): React.ReactNode {
 
       {/* 新增 / 编辑部门 */}
       <Modal
-        title={editing ? `编辑部门：${editing.name}` : '新增部门'}
+        title={editing ? `修改部门` : '新增部门'}
         open={formOpen}
         confirmLoading={submitting}
         onOk={() => void handleFormSubmit()}
@@ -317,13 +395,6 @@ export default function DeptPage(): React.ReactNode {
           layout="vertical"
           initialValues={{ isActive: true, rank: 0 }}
         >
-          <Form.Item
-            name="name"
-            label="部门名称"
-            rules={[{ required: true, message: '请输入部门名称' }]}
-          >
-            <Input placeholder="请输入部门名称" maxLength={64} />
-          </Form.Item>
           <Form.Item name="parentId" label="上级部门">
             <TreeSelect
               allowClear
@@ -332,19 +403,31 @@ export default function DeptPage(): React.ReactNode {
               treeDefaultExpandAll
             />
           </Form.Item>
+          <Form.Item
+            name="name"
+            label="部门名称"
+            rules={[{ required: true, message: '部门名称为必填项' }]}
+          >
+            <Input placeholder="请输入部门名称" maxLength={64} />
+          </Form.Item>
           <Form.Item name="rank" label="排序">
             <InputNumber
               min={0}
+              max={9999}
               precision={0}
               style={{ width: '100%' }}
               placeholder="数值越小越靠前"
             />
           </Form.Item>
-          <Form.Item name="isActive" label="状态" valuePropName="checked">
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+          <Form.Item name="isActive" label="部门状态" valuePropName="checked">
+            <Switch checkedChildren="启用" unCheckedChildren="停用" />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea placeholder="请输入描述" rows={3} maxLength={500} />
+            <Input.TextArea
+              placeholder="请输入描述信息"
+              rows={3}
+              maxLength={500}
+            />
           </Form.Item>
         </Form>
       </Modal>

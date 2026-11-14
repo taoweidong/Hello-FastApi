@@ -129,7 +129,13 @@ export default function PostPage(): React.ReactNode {
       title: '状态',
       dataIndex: 'isActive',
       width: 90,
-      search: false,
+      valueType: 'select',
+      fieldProps: {
+        options: [
+          { label: '启用', value: 1 },
+          { label: '停用', value: 0 },
+        ],
+      },
       render: (_, record) => (
         <Tag color={record.isActive === 1 ? 'success' : 'default'}>
           {record.isActive === 1 ? '启用' : '停用'}

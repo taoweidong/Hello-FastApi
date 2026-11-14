@@ -11,7 +11,11 @@ import {
   type MineInfo,
 } from '@/services/api';
 import defaultSettings from '../config/defaultSettings';
+import { AvatarDropdown } from './components/RightContent/AvatarDropdown';
+import { LangDropdown } from './components/RightContent/LangDropdown';
+import { NoticeDropdown } from './components/RightContent/NoticeDropdown';
 import { errorConfig } from './requestErrorConfig';
+import { realtime } from './utils/websocket';
 
 const loginPath = '/user/login';
 
@@ -52,6 +56,8 @@ export async function getInitialState(): Promise<InitialState> {
       } catch {
         /* 忽略 */
       }
+      // 已登录：建立 WebSocket 实时通道（页面刷新场景；SPA 登录后在登录页触发）
+      if (currentUser) realtime.start();
       return {
         fetchUserInfo,
         currentUser,
@@ -94,19 +100,18 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
     menu: { locale: false },
     menuDataRender: () => toMenuData(menus),
     menuItemRender: (item, dom) => <Link to={item.path ?? '/'}>{dom}</Link>,
+    // 顶栏动作区：语言切换 + 通知铃铛（对齐 Vue 版 navbar）
+    actionsRender: () => [
+      <LangDropdown key="lang" />,
+      <NoticeDropdown key="notice" />,
+    ],
     avatarProps: {
       title:
         initialState?.currentUser?.nickname ||
         initialState?.currentUser?.username ||
         'Admin',
-      render: (_props, dom) => (
-        <div
-          onClick={() => history.push('/account-settings')}
-          style={{ cursor: 'pointer' }}
-        >
-          {dom}
-        </div>
-      ),
+      src: initialState?.currentUser?.avatar || undefined,
+      render: (_props, dom) => <AvatarDropdown>{dom}</AvatarDropdown>,
     },
     menuFooterRender: () => (
       <div

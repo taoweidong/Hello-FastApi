@@ -69,6 +69,12 @@ export default [
     component: './system/post',
   },
   {
+    path: '/system/example-data',
+    name: '示例数据',
+    icon: 'table',
+    component: './system/example-data',
+  },
+  {
     path: '/account-settings',
     name: '个人中心',
     icon: 'userOutlined',
@@ -106,5 +112,10 @@ export default [
     component: './monitor/log/operation',
   },
   { path: '/', redirect: '/welcome' },
+  // 错误页与 /redirect 兼容（对齐 Vue 静态路由 /access-denied、/server-error、/redirect/:path(.*)）
+  { path: '/access-denied', layout: false, component: './403' },
+  { path: '/server-error', layout: false, component: './500' },
+  // RR6 通配符：/redirect/xxx 多段路径由 redirect 页从 window.location.pathname 解析
+  { path: '/redirect/*', layout: false, component: './redirect' },
   { path: '*', layout: false, component: './404' },
 ];

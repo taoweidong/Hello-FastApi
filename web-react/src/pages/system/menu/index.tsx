@@ -1,4 +1,4 @@
-/** 菜单管理页：扁平列表客户端建树 → 树形表格（pagination=false）+ 新增/编辑/新增子菜单 Modal */
+/** 菜单管理页：扁平列表客户端建树 → 树形表格（pagination=false）+ 名称搜索 + 新增/编辑/新增子菜单 Modal */
 import { PlusOutlined } from '@ant-design/icons';
 import type { ProColumns } from '@ant-design/pro-components';
 import { ProTable } from '@ant-design/pro-components';
@@ -109,6 +109,27 @@ function filterNode(nodes: MenuRow[], excludeId: string | null): MenuRow[] {
     }));
 }
 
+/** 按名称/标题关键字过滤菜单树（命中节点自身或后代时保留，对齐 Vue 的 title 搜索） */
+function filterMenuTree(nodes: MenuRow[], keyword: string): MenuRow[] {
+  if (!keyword) return nodes;
+  const lower = keyword.toLowerCase();
+  const walk = (list: MenuRow[]): MenuRow[] =>
+    list.reduce<MenuRow[]>((acc, node) => {
+      const children = walk((node.children as MenuRow[] | undefined) ?? []);
+      const selfHit = `${node.meta?.title ?? ''}${node.name}`
+        .toLowerCase()
+        .includes(lower);
+      if (selfHit || children.length > 0) {
+        acc.push({
+          ...node,
+          children: children.length > 0 ? children : undefined,
+        });
+      }
+      return acc;
+    }, []);
+  return walk(nodes);
+}
+
 /** 菜单树 → TreeSelect treeData（目录/页面可作上级，按钮不行） */
 function toTreeSelectData(nodes: MenuRow[]): TreeSelectNode[] {
   return nodes
@@ -141,8 +162,12 @@ export default function MenuPage(): React.ReactNode {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MenuRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [keyword, setKeyword] = useState('');
 
-  const dataSource = useMemo(() => buildMenuTree(flatRows), [flatRows]);
+  const dataSource = useMemo(
+    () => filterMenuTree(buildMenuTree(flatRows), keyword.trim()),
+    [flatRows, keyword],
+  );
   const parentOptions = useMemo(
     () => toTreeSelectData(filterNode(dataSource, editing?.id ?? null)),
     [dataSource, editing],
@@ -260,7 +285,12 @@ export default function MenuPage(): React.ReactNode {
   }
 
   const columns: ProColumns<MenuRow>[] = [
-    { title: '菜单名称', dataIndex: 'name', ellipsis: true },
+    {
+      title: '菜单名称',
+      dataIndex: 'name',
+      ellipsis: true,
+      render: (_, r) => r.meta?.title || r.name,
+    },
     {
       title: '类型',
       dataIndex: 'menuType',
@@ -295,6 +325,20 @@ export default function MenuPage(): React.ReactNode {
         ),
     },
     { title: '排序', dataIndex: 'rank', width: 70, align: 'center' },
+    {
+      title: '创建时间',
+      dataIndex: 'createdTime',
+      width: 170,
+      valueType: 'dateTime',
+      render: (_, r) => r.createdTime ?? '-',
+    },
+    {
+      title: '更新时间',
+      dataIndex: 'updatedTime',
+      width: 170,
+      valueType: 'dateTime',
+      render: (_, r) => r.updatedTime ?? '-',
+    },
     {
       title: '状态',
       dataIndex: 'isActive',
@@ -364,6 +408,14 @@ export default function MenuPage(): React.ReactNode {
         }}
         options={false}
         toolBarRender={() => [
+          <Input.Search
+            key="search"
+            allowClear
+            placeholder="请输入菜单名称"
+            style={{ width: 220 }}
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+          />,
           can('menu:add') ? (
             <Button
               key="add"

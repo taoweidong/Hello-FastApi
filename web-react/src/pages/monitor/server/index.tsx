@@ -1,4 +1,4 @@
-import { ReloadOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useModel } from '@umijs/max';
 import type { TableProps } from 'antd';
 import {
@@ -10,11 +10,13 @@ import {
   Modal,
   Progress,
   Row,
+  Space,
   Spin,
   Table,
 } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  downloadLogFile,
   getLogFiles,
   getServerInfo,
   type LogFile,
@@ -24,9 +26,17 @@ import {
 
 type LogFileColumns = TableProps<LogFile>['columns'];
 
-/** 字节大小转 KB 显示 */
-function formatSizeKb(sizeBytes: number): string {
-  return `${(sizeBytes / 1024).toFixed(1)} KB`;
+/** 字节大小转可读显示（B/KB/MB/GB，对齐 Vue formatSize） */
+function formatSize(sizeBytes: number): string {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  const units = ['KB', 'MB', 'GB'];
+  let value = sizeBytes / 1024;
+  let unitIdx = 0;
+  while (value >= 1024 && unitIdx < units.length - 1) {
+    value /= 1024;
+    unitIdx += 1;
+  }
+  return `${value.toFixed(1)} ${units[unitIdx]}`;
 }
 
 interface StatItem {
@@ -82,21 +92,40 @@ export default function ServerPage(): React.ReactNode {
   const [tailLoading, setTailLoading] = useState(false);
   const [tailFile, setTailFile] = useState('');
   const [tailContent, setTailContent] = useState('');
+  // 日志清单独立刷新态（对齐 Vue 刷新日志按钮）
+  const [logsLoading, setLogsLoading] = useState(false);
+  // 正在下载的日志文件名（防重复点击）
+  const [downloading, setDownloading] = useState('');
+
+  const fetchServerInfo = useCallback(async () => {
+    try {
+      setInfo(await getServerInfo());
+    } catch (error) {
+      message.error((error as Error).message || '获取服务器信息失败');
+    }
+  }, [message]);
+
+  const fetchLogFiles = useCallback(async () => {
+    if (!isAdmin) return;
+    setLogsLoading(true);
+    try {
+      setLogFiles(await getLogFiles());
+    } catch {
+      // 非管理员/网络异常：清单留空，不阻塞监控主体
+      setLogFiles([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [isAdmin]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const server = await getServerInfo();
-      setInfo(server);
-      if (isAdmin) {
-        setLogFiles(await getLogFiles());
-      }
-    } catch (error) {
-      message.error((error as Error).message || '获取服务器信息失败');
+      await Promise.all([fetchServerInfo(), fetchLogFiles()]);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, message]);
+  }, [fetchLogFiles, fetchServerInfo]);
 
   useEffect(() => {
     void fetchData();
@@ -114,11 +143,46 @@ export default function ServerPage(): React.ReactNode {
     setTailOpen(true);
     setTailLoading(true);
     try {
-      setTailContent(await tailLogFile(record.name, 200));
+      const tail = await tailLogFile(record.name, 200);
+      setTailContent(tail.content);
     } catch (error) {
       setTailContent(`读取日志失败：${(error as Error).message}`);
     } finally {
       setTailLoading(false);
+    }
+  }
+
+  /** 重新读取当前弹窗中的日志尾部（不关闭弹窗） */
+  async function refreshTail(): Promise<void> {
+    if (!tailFile) return;
+    setTailLoading(true);
+    try {
+      const tail = await tailLogFile(tailFile, 200);
+      setTailContent(tail.content);
+    } catch (error) {
+      setTailContent(`读取日志失败：${(error as Error).message}`);
+    } finally {
+      setTailLoading(false);
+    }
+  }
+
+  /** 下载日志文件：blob → objectURL → a.download 触发保存 → revoke */
+  async function handleDownload(record: LogFile): Promise<void> {
+    setDownloading(record.name);
+    try {
+      const blob = await downloadLogFile(record.name);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = record.name;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      message.error(
+        `${(error as Error).message || '下载失败'}（下载失败：需要管理员权限）`,
+      );
+    } finally {
+      setDownloading('');
     }
   }
 
@@ -129,7 +193,7 @@ export default function ServerPage(): React.ReactNode {
       dataIndex: 'sizeBytes',
       key: 'sizeBytes',
       width: 120,
-      render: (value: number) => formatSizeKb(value),
+      render: (value: number) => formatSize(value),
     },
     {
       title: '修改时间',
@@ -140,11 +204,26 @@ export default function ServerPage(): React.ReactNode {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 180,
       render: (_, record) => (
-        <Button type="link" size="small" onClick={() => void openTail(record)}>
-          查看尾部
-        </Button>
+        <Space size={4}>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => void openTail(record)}
+          >
+            查看尾部
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            icon={<DownloadOutlined />}
+            loading={downloading === record.name}
+            onClick={() => void handleDownload(record)}
+          >
+            下载
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -267,14 +346,27 @@ export default function ServerPage(): React.ReactNode {
       </Row>
 
       {isAdmin && (
-        <Card title="日志文件" style={{ marginTop: 16 }}>
+        <Card
+          title="日志文件"
+          style={{ marginTop: 16 }}
+          extra={
+            <Button
+              icon={<ReloadOutlined />}
+              size="small"
+              loading={logsLoading}
+              onClick={() => void fetchLogFiles()}
+            >
+              刷新日志
+            </Button>
+          }
+        >
           <Table<LogFile>
             rowKey="name"
             size="small"
             columns={logColumns}
             dataSource={logFiles}
             pagination={false}
-            loading={loading}
+            loading={logsLoading && logFiles.length === 0 && loading}
           />
         </Card>
       )}
@@ -284,7 +376,18 @@ export default function ServerPage(): React.ReactNode {
         open={tailOpen}
         width={860}
         onCancel={() => setTailOpen(false)}
-        footer={<Button onClick={() => setTailOpen(false)}>关闭</Button>}
+        footer={
+          <Space>
+            <Button
+              icon={<ReloadOutlined />}
+              loading={tailLoading}
+              onClick={() => void refreshTail()}
+            >
+              重新读取
+            </Button>
+            <Button onClick={() => setTailOpen(false)}>关闭</Button>
+          </Space>
+        }
       >
         <pre
           style={{
@@ -301,7 +404,7 @@ export default function ServerPage(): React.ReactNode {
             wordBreak: 'break-all',
           }}
         >
-          {tailLoading ? '加载中...' : tailContent}
+          {tailLoading ? '加载中...' : tailContent || '（空文件）'}
         </pre>
       </Modal>
     </div>
