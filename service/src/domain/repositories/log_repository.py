@@ -60,8 +60,19 @@ class LogRepositoryInterface(ABC):
         status_code: int | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
+        before_time: datetime | None = None,
+        before_id: str | None = None,
+        total: int | None = None,
     ) -> tuple[list[OperationLogEntity], int]:
-        """获取操作日志列表。"""
+        """获取操作日志列表。
+
+        分页语义：
+        - before_time/before_id 同时提供时走 keyset 游标分页：
+          ``(created_time, id) < (before_time, before_id)`` 行比较 + limit，
+          深分页不再 offset 全扫（调用方经 total 参数传入缓存的总数，跳过 COUNT）；
+        - 否则走传统 offset 分页（page_num/page_size），完全向后兼容；
+        - total 为 None 时仓储内部执行精确 COUNT，否则跳过 COUNT 复用传入值。
+        """
         ...
 
     @abstractmethod
@@ -94,8 +105,11 @@ class LogRepositoryInterface(ABC):
         status_code: int | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
+        before_time: datetime | None = None,
+        before_id: str | None = None,
+        total: int | None = None,
     ) -> tuple[list[OperationLogEntity], int]:
-        """获取系统日志列表。"""
+        """获取系统日志列表（分页/游标语义与 get_operation_logs 一致）。"""
         ...
 
     @abstractmethod

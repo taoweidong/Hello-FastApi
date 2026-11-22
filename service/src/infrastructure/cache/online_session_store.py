@@ -22,6 +22,8 @@ class RedisOnlineSessionStore(OnlineSessionStore):
 
     # Key 前缀
     _ONLINE_USER_PREFIX = "online:user:"
+    # MGET 分块大小：每块 ≤500 key，避免单命令过大（海量 key 时一次往返取回全部值）
+    _MGET_CHUNK_SIZE = 500
 
     def __init__(self, redis_client: redis.Redis | None = None) -> None:
         self._redis = redis_client
@@ -92,8 +94,14 @@ class RedisOnlineSessionStore(OnlineSessionStore):
             try:
                 sessions: list[dict] = []
                 prefix = self._ONLINE_USER_PREFIX
-                async for key in self._redis.scan_iter(match=f"{prefix}*", count=100):
-                    data = await self._redis.get(key)
+                # SCAN 增量收集全部会话 key（不阻塞 Redis）
+                keys = [key async for key in self._redis.scan_iter(match=f"{prefix}*", count=100)]
+                # MGET 分块批量取值：把逐 key GET 的 N 次往返压成 ⌈N/500⌉ 次，
+                # MGET 保持与 keys 相同的顺序，未命中槽位为 None
+                values = []
+                for i in range(0, len(keys), self._MGET_CHUNK_SIZE):
+                    values.extend(await self._redis.mget(keys[i : i + self._MGET_CHUNK_SIZE]))
+                for key, data in zip(keys, values, strict=True):
                     if data is None:
                         continue
                     item = json.loads(data)

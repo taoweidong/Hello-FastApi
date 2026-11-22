@@ -31,11 +31,13 @@ class CacheService(CachePort, CacheAdminPort):
     _PERMS_PREFIX = "user:perms:"
     _USER_INFO_PREFIX = "user:info:"
     _USER_INFO_FULL_PREFIX = "user:info:full:"
+    _USER_SCOPE_PREFIX = "user:scope:"
     _ROUTES_PREFIX = "routes:user:"
     _DICT_PREFIX = "dict:"
     _MENU_ALL_KEY = "menu:all"
     _IP_RULES_KEY = "ip:rules"
     _ROLE_OPTIONS_KEY = "role:options"
+    _LOG_COUNT_PREFIX = "logs:count:"
 
     # 缓存 TTL（秒）- 从配置读取
     PERMS_CACHE_TTL = settings.CACHE_PERMISSIONS_TTL
@@ -48,6 +50,11 @@ class CacheService(CachePort, CacheAdminPort):
     ROUTES_CACHE_TTL = settings.CACHE_PERMISSIONS_TTL
     USER_INFO_FULL_CACHE_TTL = settings.CACHE_USER_INFO_TTL
     ROLE_OPTIONS_CACHE_TTL = settings.CACHE_ROLE_OPTIONS_TTL
+    # 数据权限范围 TTL 与 user:info:full 一致（300s）：同源于用户角色+部门归属
+    USER_SCOPE_CACHE_TTL = settings.CACHE_USER_INFO_TTL
+    # 日志列表 count 缓存 TTL：短缓存，深分页 COUNT 旁路；新日志写入后由
+    # 审计批量落库 worker 统一失效（logs:count:* 前缀删除），60s 为兜底
+    LOG_COUNT_CACHE_TTL = settings.CACHE_LOG_COUNT_TTL
 
     def __init__(self, redis_client: redis.Redis | None = None) -> None:
         self._redis = redis_client
@@ -217,10 +224,11 @@ class CacheService(CachePort, CacheAdminPort):
         return await self._set_json(self._user_info_key(user_id), info, self.USER_INFO_CACHE_TTL)
 
     async def invalidate_user_info(self, user_id: str) -> bool:
-        """使用户信息缓存失效（含基础信息与完整信息两个 Key）。
+        """使用户信息缓存失效（含基础信息、完整信息与数据权限范围三个 Key）。
 
         完整信息（user:info:full）是基础信息的超集（含角色列表），
-        基础信息变化时必然连带失效，单点删除避免调用方遗漏。
+        基础信息变化时必然连带失效；数据权限范围（user:scope）同源于
+        用户的角色与部门归属，随信息变更一并失效，单点删除避免调用方遗漏。
 
         Args:
             user_id: 用户 ID
@@ -228,7 +236,9 @@ class CacheService(CachePort, CacheAdminPort):
         Returns:
             是否成功失效
         """
-        return await self._delete_keys(self._user_info_key(user_id), self._user_info_full_key(user_id))
+        return await self._delete_keys(
+            self._user_info_key(user_id), self._user_info_full_key(user_id), self._user_scope_key(user_id)
+        )
 
     # ---- 用户完整信息缓存（/user/info 响应）----
 
@@ -255,6 +265,34 @@ class CacheService(CachePort, CacheAdminPort):
             是否成功写入缓存
         """
         return await self._set_json(self._user_info_full_key(user_id), info, self.USER_INFO_FULL_CACHE_TTL)
+
+    # ---- 用户数据权限范围缓存（user:scope:{id}）----
+
+    async def get_user_scope(self, user_id: str) -> dict | None:
+        """从缓存获取用户数据权限范围的解析结果。
+
+        Args:
+            user_id: 操作人用户 ID
+
+        Returns:
+            解析结果字典（命中时），形如
+            ``{"deptIds": [...] | None, "userId": str | None}``；
+            None 表示缓存未命中或 Redis 不可用
+        """
+        _, value = await self._get_json(self._user_scope_key(user_id))
+        return value
+
+    async def set_user_scope(self, user_id: str, scope: dict) -> bool:
+        """将用户数据权限范围的解析结果写入缓存。
+
+        Args:
+            user_id: 操作人用户 ID
+            scope: 解析结果 ``{"deptIds": [...] | None, "userId": str | None}``
+
+        Returns:
+            是否成功写入缓存
+        """
+        return await self._set_json(self._user_scope_key(user_id), scope, self.USER_SCOPE_CACHE_TTL)
 
     # ---- 用户路由树缓存 ----
 
@@ -294,10 +332,10 @@ class CacheService(CachePort, CacheAdminPort):
         return await self._delete_keys(self._routes_key(user_id))
 
     async def invalidate_users_batch(self, user_ids: list[str]) -> bool:
-        """批量失效多个用户的权限、信息（含完整信息）与路由树缓存（单次 Redis 往返）。
+        """批量失效多个用户的权限、信息（含完整信息）、数据权限范围与路由树缓存。
 
         将全部 key 的删除合并为一次网络往返，避免批量操作时
-        出现 N×4 次 Redis 调用的隐式 N+1 问题。
+        出现 N×5 次 Redis 调用的隐式 N+1 问题。
 
         Args:
             user_ids: 需要失效的用户 ID 列表
@@ -311,6 +349,7 @@ class CacheService(CachePort, CacheAdminPort):
             [self._perms_key(uid) for uid in user_ids]
             + [self._user_info_key(uid) for uid in user_ids]
             + [self._user_info_full_key(uid) for uid in user_ids]
+            + [self._user_scope_key(uid) for uid in user_ids]
             + [self._routes_key(uid) for uid in user_ids]
         )
         return await self._delete_keys(*keys)
@@ -412,6 +451,34 @@ class CacheService(CachePort, CacheAdminPort):
         """
         return await self._delete_keys(f"{self._DICT_PREFIX}{dict_name}")
 
+    # ---- 日志列表 count 缓存 ----
+
+    async def get_log_count(self, filters_hash: str) -> int | None:
+        """从缓存获取日志列表的总数（keyset 深分页的 COUNT 旁路）。
+
+        Args:
+            filters_hash: 筛选条件哈希（见 LogService._hash_log_filters）
+
+        Returns:
+            缓存的总数（命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        hit, value = await self._get_json(f"{self._LOG_COUNT_PREFIX}{filters_hash}")
+        if not hit or not isinstance(value, int):
+            return None
+        return value
+
+    async def set_log_count(self, filters_hash: str, total: int) -> bool:
+        """将日志列表的总数写入缓存。
+
+        Args:
+            filters_hash: 筛选条件哈希
+            total: 列表总数
+
+        Returns:
+            是否成功写入缓存
+        """
+        return await self._set_json(f"{self._LOG_COUNT_PREFIX}{filters_hash}", total, self.LOG_COUNT_CACHE_TTL)
+
     # ---- IP 规则缓存 ----
 
     async def set_ip_rules(self, blacklist: set[str], whitelist: set[str]) -> bool:
@@ -497,6 +564,10 @@ class CacheService(CachePort, CacheAdminPort):
     def _routes_key(self, user_id: str) -> str:
         """生成用户路由树缓存的 Redis Key。"""
         return f"{self._ROUTES_PREFIX}{user_id}"
+
+    def _user_scope_key(self, user_id: str) -> str:
+        """生成用户数据权限范围缓存的 Redis Key。"""
+        return f"{self._USER_SCOPE_PREFIX}{user_id}"
 
     # ---- CacheAdminPort：缓存清单与清理（管理员监控页） ----
 

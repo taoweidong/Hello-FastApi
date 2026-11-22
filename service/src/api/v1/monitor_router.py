@@ -16,6 +16,7 @@ from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import require_permission, require_superuser
 from src.api.dependencies.monitor_service import get_log_file_service, get_monitor_service, get_redis_or_none
+from src.api.dependencies.repositories import RepoBundle, get_repositories
 from src.application.dto.monitor_dto import (
     CacheClearDTO,
     CacheGroupDTO,
@@ -39,9 +40,14 @@ class MonitorRouter(Routable):
         self,
         _: dict = Depends(require_permission("monitor:view")),
         service: MonitorService = Depends(get_monitor_service),
+        repos: RepoBundle = Depends(get_repositories),
     ) -> dict:
-        """获取服务器资源监控数据（CPU/内存/磁盘/系统/进程）。"""
-        data = await service.get_server_info()
+        """获取服务器资源监控数据（CPU/内存/磁盘/系统/进程）。
+
+        请求级会话经组合根 RepoBundle 注入，用于 PostgreSQL 环境采集
+        pg_stat_io 统计（可选附加字段 pgIo，非 PG 环境为 null）。
+        """
+        data = await service.get_server_info(db_session=repos.session)
         return success_response(data=data.model_dump())
 
     @get("/cache-info", response_model=ApiResponse[CacheInfoDTO])

@@ -13,7 +13,7 @@ from src.infrastructure.logging.logger import log_shutdown, log_startup, logger
 
 @asynccontextmanager
 async def application_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """生产/开发环境：日志、建表、Redis初始化、关闭连接。"""
+    """生产/开发环境：日志、建表、Redis初始化、审计worker、关闭连接。"""
     log_startup(
         app_name=settings.APP_NAME, version=settings.API_VERSION, docs_url=app.docs_url, redoc_url=app.redoc_url
     )
@@ -38,7 +38,18 @@ async def application_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception:
         logger.warning("IP 黑白名单规则加载失败，IP 过滤将以空规则运行", exc_info=True)
 
+    # 启动审计日志批量落库 worker（攒批 ≤50 条或 ≤1s 一次落库，消除每请求独立会话）
+    from src.infrastructure.http.audit_log_queue import get_audit_log_queue
+
+    audit_queue = get_audit_log_queue()
+    audit_queue.start()
+    logger.info("审计日志批量落库 worker 已启动")
+
     yield
+
+    # 先停审计 worker（flush 余量 + 失效 count 缓存都依赖 DB/Redis 存活）
+    await audit_queue.stop()
+    logger.info("审计日志批量落库 worker 已停止")
 
     # 关闭 Redis 连接
     logger.info("正在关闭 Redis 连接...")

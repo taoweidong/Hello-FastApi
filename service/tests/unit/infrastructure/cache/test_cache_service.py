@@ -817,3 +817,106 @@ class TestBlacklistTokenHash:
         result = await svc.blacklist_token_hash("ABC123", expired)
         assert result is True
         mock_redis.set.assert_not_called()
+
+
+@pytest.mark.unit
+class TestUserScopeCache:
+    """用户数据权限范围缓存（user:scope:{id}）测试。"""
+
+    @pytest.mark.asyncio
+    async def test_set_user_scope_success(self):
+        """成功写入数据权限范围缓存。"""
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+
+        scope = {"deptIds": ["d1", "d2"], "userId": None}
+        result = await svc.set_user_scope("user-1", scope)
+        assert result is True
+        args, kwargs = mock_redis.set.call_args
+        assert args[0] == f"{CacheService._USER_SCOPE_PREFIX}user-1"
+        assert json.loads(args[1]) == scope
+        # TTL 与 user:info:full 一致（300s）
+        assert kwargs["ex"] == CacheService.USER_SCOPE_CACHE_TTL
+
+    @pytest.mark.asyncio
+    async def test_get_user_scope_hit(self):
+        """缓存命中时返回范围字典。"""
+        mock_redis = MagicMock()
+        mock_redis.get = AsyncMock(return_value=json.dumps({"deptIds": ["d1"], "userId": None}))
+        svc = CacheService(redis_client=mock_redis)
+
+        result = await svc.get_user_scope("user-1")
+        assert result == {"deptIds": ["d1"], "userId": None}
+
+    @pytest.mark.asyncio
+    async def test_get_user_scope_miss_and_no_redis(self):
+        """未命中 / Redis 不可用时返回 None（视为未命中，消费方退化查库）。"""
+        mock_redis = MagicMock()
+        mock_redis.get = AsyncMock(return_value=None)
+        assert await CacheService(redis_client=mock_redis).get_user_scope("user-1") is None
+        assert await CacheService().get_user_scope("user-1") is None
+
+    @pytest.mark.asyncio
+    async def test_invalidate_user_info_includes_scope_key(self):
+        """invalidate_user_info 连带删除 user:scope（范围缓存挂在信息失效链路）。"""
+        mock_redis = MagicMock()
+        mock_redis.delete = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+
+        await svc.invalidate_user_info("user-1")
+        deleted_keys = mock_redis.delete.await_args.args
+        assert f"{CacheService._USER_SCOPE_PREFIX}user-1" in deleted_keys
+        assert f"{CacheService._USER_INFO_PREFIX}user-1" in deleted_keys
+        assert f"{CacheService._USER_INFO_FULL_PREFIX}user-1" in deleted_keys
+
+    @pytest.mark.asyncio
+    async def test_invalidate_users_batch_includes_scope_key(self):
+        """批量失效同样覆盖 user:scope（单次往返删除全部 key）。"""
+        mock_redis = MagicMock()
+        mock_redis.delete = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+
+        await svc.invalidate_users_batch(["u1", "u2"])
+        deleted_keys = set(mock_redis.delete.await_args.args)
+        assert f"{CacheService._USER_SCOPE_PREFIX}u1" in deleted_keys
+        assert f"{CacheService._USER_SCOPE_PREFIX}u2" in deleted_keys
+
+
+@pytest.mark.unit
+class TestLogCountCache:
+    """日志列表 count 缓存（logs:count:{filters_hash}）测试。"""
+
+    @pytest.mark.asyncio
+    async def test_set_log_count_success(self):
+        """成功写入 count 缓存（key = logs:count:{hash}，TTL 短缓存）。"""
+        mock_redis = MagicMock()
+        mock_redis.set = AsyncMock()
+        svc = CacheService(redis_client=mock_redis)
+
+        result = await svc.set_log_count("abc123", 42)
+        assert result is True
+        args, kwargs = mock_redis.set.call_args
+        assert args[0] == f"{CacheService._LOG_COUNT_PREFIX}abc123"
+        assert json.loads(args[1]) == 42
+        assert kwargs["ex"] == CacheService.LOG_COUNT_CACHE_TTL
+
+    @pytest.mark.asyncio
+    async def test_get_log_count_hit_and_miss(self):
+        """命中返回整数，未命中 / Redis 不可用返回 None。"""
+        mock_redis = MagicMock()
+        mock_redis.get = AsyncMock(return_value=json.dumps(42))
+        svc = CacheService(redis_client=mock_redis)
+        assert await svc.get_log_count("abc123") == 42
+
+        mock_redis.get = AsyncMock(return_value=None)
+        assert await svc.get_log_count("abc123") is None
+        assert await CacheService().get_log_count("abc123") is None
+
+    @pytest.mark.asyncio
+    async def test_get_log_count_corrupt_value_returns_none(self):
+        """缓存值损坏（非整数）时视为未命中。"""
+        mock_redis = MagicMock()
+        mock_redis.get = AsyncMock(return_value=json.dumps("not-a-number"))
+        svc = CacheService(redis_client=mock_redis)
+        assert await svc.get_log_count("abc123") is None

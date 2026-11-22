@@ -8,10 +8,7 @@ def build_parent_map(all_menus: list[MenuEntity]) -> dict[str, str | None]:
     return {m.id: m.parent_id for m in all_menus}
 
 
-def complete_ancestor_ids(
-    menu_ids: list[str],
-    parent_map: dict[str, str | None],
-) -> list[str]:
+def complete_ancestor_ids(menu_ids: list[str], parent_map: dict[str, str | None]) -> list[str]:
     """补全菜单 ID 集合的全部祖先节点，返回去重后的列表。
 
     角色授权的防御层：前端父子联动模式回传的是"全选 + 半选"，若客户端

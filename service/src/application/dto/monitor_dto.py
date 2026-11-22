@@ -74,6 +74,20 @@ class ProcessInfoDTO(BaseModel):
     runningTime: str = Field(description="进程运行时长")
 
 
+class PgIoInfoDTO(BaseModel):
+    """PostgreSQL pg_stat_io 聚合统计（PG 16+ 提供；非 PG 环境或采集失败时为 null）"""
+
+    reads: int = Field(description="缓冲区读次数")
+    readBytes: int = Field(description="读字节数")
+    writes: int = Field(description="写次数")
+    writeBytes: int = Field(description="写字节数")
+    hits: int = Field(description="缓冲命中次数")
+    evictions: int = Field(description="缓冲淘汰次数")
+    reuses: int = Field(description="缓冲复用次数")
+    fsyncs: int = Field(description="fsync 次数")
+    databaseSizeBytes: int = Field(description="当前数据库大小（字节）")
+
+
 class ServerInfoDTO(BaseModel):
     """服务器监控汇总响应（对标 RuoYi server monitor）"""
 
@@ -82,6 +96,8 @@ class ServerInfoDTO(BaseModel):
     disk: DiskInfoDTO = Field(description="磁盘信息")
     system: SystemInfoDTO = Field(description="系统信息")
     process: ProcessInfoDTO = Field(description="进程信息")
+    # 可选附加字段：仅 PostgreSQL 环境返回（前端契约向后兼容，SQLite 时为 null）
+    pgIo: PgIoInfoDTO | None = Field(default=None, description="PostgreSQL pg_stat_io 统计（仅 PG 环境返回）")
 
 
 class CacheCommandStatDTO(BaseModel):

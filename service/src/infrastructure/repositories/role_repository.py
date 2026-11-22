@@ -200,6 +200,20 @@ class RoleRepository(GenericRepository[Role, RoleEntity], RoleRepositoryInterfac
             menu_ids_map[str(link.userrole_id)].append(str(link.menu_id))
         return dict(menu_ids_map)
 
+    async def get_roles_dept_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
+        """批量获取多个角色的部门ID列表。"""
+        if not role_ids:
+            return {}
+        from collections import defaultdict
+
+        stmt = select(RoleDeptLink).where(RoleDeptLink.role_id.in_(role_ids))
+        result = await self.session.exec(stmt)
+        links = result.all()
+        dept_ids_map: dict[str, list[str]] = defaultdict(list)
+        for link in links:
+            dept_ids_map[str(link.role_id)].append(str(link.dept_id))
+        return dict(dept_ids_map)
+
     # ========== 数据权限（data_scope）相关操作 ==========
 
     async def get_user_data_scope(self, user_id: str) -> int:

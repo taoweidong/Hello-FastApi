@@ -72,6 +72,9 @@ class ConcreteRoleRepository(RoleRepositoryInterface):
     async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
         return {}
 
+    async def get_roles_dept_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
+        return {}
+
     async def get_user_data_scope(self, user_id: str) -> int:
         return 1
 

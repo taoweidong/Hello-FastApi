@@ -195,6 +195,38 @@ class UserCachePort(ABC):
             results.append(ok_info and ok_perms and ok_routes)
         return all(results)
 
+    # ---- 用户数据权限范围缓存（user:scope:{id}）----
+
+    async def get_user_scope(self, user_id: str) -> dict[str, Any] | None:
+        """从缓存获取用户数据权限范围的解析结果。
+
+        该方法是**性能优化接口**而非抽象契约：默认实现返回 None（视为未命中，
+        消费方退化为查库），具体实现（如 Redis）可重写以提供真实缓存。
+
+        Args:
+            user_id: 操作人用户 ID
+
+        Returns:
+            解析结果字典（命中时），形如
+            ``{"deptIds": [...] | None, "userId": str | None}``；
+            None 表示缓存未命中或存储不可用
+        """
+        return None
+
+    async def set_user_scope(self, user_id: str, scope: dict[str, Any]) -> bool:
+        """将用户数据权限范围的解析结果写入缓存。
+
+        默认实现为不存储（返回 False），具体实现可重写。
+
+        Args:
+            user_id: 操作人用户 ID
+            scope: 解析结果 ``{"deptIds": [...] | None, "userId": str | None}``
+
+        Returns:
+            是否成功写入缓存
+        """
+        return False
+
 
 class MenuCachePort(ABC):
     """菜单全表缓存端口。
@@ -292,7 +324,42 @@ class RoleCachePort(ABC):
         ...
 
 
-class CachePort(TokenRevocationPort, UserCachePort, MenuCachePort, DictCachePort, RoleCachePort):
+class LogCountCachePort(ABC):
+    """日志列表总数缓存端口（keyset 深分页的 COUNT 旁路）。
+
+    消费方：日志服务（操作/系统日志列表的 total 缓存）。
+    Key 形如 ``logs:count:{filters_hash}``（哈希覆盖筛选条件、不含分页/游标）；
+    写入发生在首页精确 count 与深页兜底 count 之后；审计日志批量落库的
+    worker 在 flush 后按前缀统一失效（见 audit_log_queue），TTL 60s 兜底。
+    """
+
+    @abstractmethod
+    async def get_log_count(self, filters_hash: str) -> int | None:
+        """从缓存获取日志列表总数。
+
+        Args:
+            filters_hash: 筛选条件哈希（稳定序列化后哈希，不含分页/游标）
+
+        Returns:
+            缓存的总数（命中时），None 表示未命中或存储不可用
+        """
+        ...
+
+    @abstractmethod
+    async def set_log_count(self, filters_hash: str, total: int) -> bool:
+        """将日志列表总数写入缓存。
+
+        Args:
+            filters_hash: 筛选条件哈希
+            total: 列表总数
+
+        Returns:
+            是否成功写入缓存
+        """
+        ...
+
+
+class CachePort(TokenRevocationPort, UserCachePort, MenuCachePort, DictCachePort, RoleCachePort, LogCountCachePort):
     """读穿透类缓存的聚合端口。
 
     只作为组合根工厂的返回类型与完整实现（``CacheService``）的基类存在；

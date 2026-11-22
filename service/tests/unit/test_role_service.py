@@ -27,6 +27,9 @@ class TestRoleService:
         repo.delete = AsyncMock(return_value=False)
         repo.assign_menus_to_role = AsyncMock()
         repo.get_role_menu_ids = AsyncMock(return_value=[])
+        # 批量关联查询（get_user_roles 消除 N+1 后使用）
+        repo.get_roles_menu_ids_batch = AsyncMock(return_value={})
+        repo.get_roles_dept_ids_batch = AsyncMock(return_value={})
         repo.get_user_roles = AsyncMock(return_value=[])
         repo.assign_role_to_user = AsyncMock(return_value=True)
         repo.remove_role_from_user = AsyncMock(return_value=True)

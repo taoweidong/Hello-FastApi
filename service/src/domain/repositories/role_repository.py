@@ -141,6 +141,18 @@ class RoleRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def get_roles_dept_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:
+        """批量获取多个角色的部门ID列表。
+
+        Args:
+            role_ids: 角色 ID 列表
+
+        Returns:
+            字典: role_id -> list[dept_id]
+        """
+        ...
+
+    @abstractmethod
     async def get_user_data_scope(self, user_id: str) -> int:
         """获取用户的数据权限范围（取所有角色中范围最大的值，即数值最小者）。"""
         ...

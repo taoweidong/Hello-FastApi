@@ -25,7 +25,7 @@ from src.application.services.user_service import UserService
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
-from src.domain.enums import MenuType, UserRole
+from src.domain.enums import DataScope, MenuType, UserRole
 from src.domain.services.cache_port import RoleCachePort, UserCachePort
 from src.domain.services.token_service import TokenService
 from tests.unit.fakes import RecordingCacheService
@@ -84,6 +84,13 @@ class DictBackedUserCache(UserCachePort):
 
     async def invalidate_user_routes(self, user_id: str) -> bool:
         self.store.pop(f"routes:{user_id}", None)
+        return True
+
+    async def get_user_scope(self, user_id: str):
+        return self.store.get(f"scope:{user_id}")
+
+    async def set_user_scope(self, user_id: str, scope: dict) -> bool:
+        self.store[f"scope:{user_id}"] = scope
         return True
 
 
@@ -365,3 +372,91 @@ class TestRoleOptionsCache:
         await service.delete_role("r1")
 
         assert await cache.get_role_options() is None
+
+
+@pytest.mark.unit
+class TestUserScopeCache:
+    """数据权限范围缓存（user:scope:{id}）的行为。
+
+    _resolve_data_scope 每次列表查询原需 2-4 条额外 SQL（操作人、角色 scope、
+    子部门/自定义部门集合）；缓存命中时全部省略，失效挂 invalidate_user_info 链路。
+    """
+
+    def _make_service(self, mock_user_repo, mock_role_repo, cache, mock_dept_repo=None):
+        return UserService(
+            repo=mock_user_repo,
+            password_service=MagicMock(),
+            role_repo=mock_role_repo,
+            cache_service=cache,
+            dept_repo=mock_dept_repo,
+        )
+
+    @pytest.mark.asyncio
+    async def test_cache_hit_skips_all_scope_sql(self):
+        """缓存命中时直接返回解析结果，不再查用户/角色/部门仓储。"""
+        user_repo = AsyncMock()
+        role_repo = AsyncMock()
+        cache = DictBackedUserCache()
+        await cache.set_user_scope("op-1", {"deptIds": ["d1", "d2"], "userId": None})
+        service = self._make_service(user_repo, role_repo, cache)
+
+        result = await service._resolve_data_scope("op-1")
+
+        assert result == (["d1", "d2"], None)
+        user_repo.get_by_id.assert_not_called()
+        role_repo.get_user_data_scope.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_cache_miss_computes_and_stores(self):
+        """缓存未命中时解析并写回（含超管的 (None, None)）。"""
+        user_repo = AsyncMock()
+        user_repo.get_by_id = AsyncMock(
+            return_value=UserEntity(id="op-1", username="op", password="", is_superuser=UserRole.SUPERUSER)
+        )
+        role_repo = AsyncMock()
+        role_repo.get_user_data_scope = AsyncMock()
+        cache = DictBackedUserCache()
+        service = self._make_service(user_repo, role_repo, cache)
+
+        result = await service._resolve_data_scope("op-1")
+
+        assert result == (None, None)
+        role_repo.get_user_data_scope.assert_not_called()  # 超管短路
+        assert await cache.get_user_scope("op-1") == {"deptIds": None, "userId": None}
+
+    @pytest.mark.asyncio
+    async def test_dept_and_child_result_cached(self):
+        """DEPT_AND_CHILD 的部门集合（含子部门）序列化缓存。"""
+        user_repo = AsyncMock()
+        user_repo.get_by_id = AsyncMock(
+            return_value=UserEntity(id="op-1", username="op", password="", is_superuser=UserRole.USER, dept_id="d1")
+        )
+        role_repo = AsyncMock()
+        role_repo.get_user_data_scope = AsyncMock(return_value=int(DataScope.DEPT_AND_CHILD))
+        dept_repo = AsyncMock()
+        dept_repo.get_child_dept_ids = AsyncMock(return_value=["d1-1"])
+        cache = DictBackedUserCache()
+        service = self._make_service(user_repo, role_repo, cache, mock_dept_repo=dept_repo)
+
+        result = await service._resolve_data_scope("op-1")
+
+        assert result == (["d1", "d1-1"], None)
+        assert await cache.get_user_scope("op-1") == {"deptIds": ["d1", "d1-1"], "userId": None}
+
+    @pytest.mark.asyncio
+    async def test_second_call_uses_cache(self):
+        """第二次解析命中缓存，不再触发任何仓储调用。"""
+        user_repo = AsyncMock()
+        user_repo.get_by_id = AsyncMock(
+            return_value=UserEntity(id="op-1", username="op", password="", is_superuser=UserRole.USER, dept_id="d1")
+        )
+        role_repo = AsyncMock()
+        role_repo.get_user_data_scope = AsyncMock(return_value=int(DataScope.DEPT))
+        cache = DictBackedUserCache()
+        service = self._make_service(user_repo, role_repo, cache)
+
+        first = await service._resolve_data_scope("op-1")
+        assert first == (["d1"], None)
+        second = await service._resolve_data_scope("op-1")
+        assert second == (["d1"], None)
+        user_repo.get_by_id.assert_awaited_once()  # 第二次未查库

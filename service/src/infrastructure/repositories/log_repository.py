@@ -7,6 +7,7 @@ from datetime import datetime
 
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func as sa_func
+from sqlalchemy import tuple_ as sa_tuple
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -107,6 +108,21 @@ class LogRepository(LogRepositoryInterface):
 
     # ============ 统一操作日志 (sys_logs) ============
 
+    @staticmethod
+    def _apply_sys_log_filters(
+        stmt, module: str | None, status_code: int | None, start_time: datetime | None, end_time: datetime | None
+    ):
+        """操作/系统日志列表的共享筛选条件（列表与 COUNT 语句同源，避免两侧漂移）。"""
+        if module:
+            stmt = stmt.where(SystemLog.module.contains(module))
+        if status_code is not None:
+            stmt = stmt.where(SystemLog.status_code == status_code)
+        if start_time:
+            stmt = stmt.where(SystemLog.created_time >= start_time)
+        if end_time:
+            stmt = stmt.where(SystemLog.created_time <= end_time)
+        return stmt
+
     async def get_operation_logs(
         self,
         page_num: int = 1,
@@ -115,33 +131,38 @@ class LogRepository(LogRepositoryInterface):
         status_code: int | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
+        before_time: datetime | None = None,
+        before_id: str | None = None,
+        total: int | None = None,
     ) -> tuple[list[OperationLogEntity], int]:
-        """获取操作日志列表（支持筛选和分页）。"""
+        """获取操作日志列表（支持筛选、offset 分页与 keyset 游标分页）。
+
+        游标模式：before_time/before_id 同时提供时按 ``(created_time, id) <
+        (before_time, before_id)`` 行比较取下一页（PG / SQLite≥3.15 均支持行值比较），
+        排序 created_time DESC, id DESC 与游标方向一致；仅 limit，不再 offset。
+        非 None 的 total 直接复用（调用方缓存命中时跳过 COUNT）。
+        """
         # created_time 相同时按 id 倒序兜底，保证分页稳定（否则翻页会出现重复/跳行）
         stmt = select(SystemLog).order_by(SystemLog.created_time.desc(), SystemLog.id.desc())
-        count_stmt = select(sa_func.count()).select_from(SystemLog)
+        stmt = self._apply_sys_log_filters(stmt, module, status_code, start_time, end_time)
 
-        if module:
-            stmt = stmt.where(SystemLog.module.contains(module))
-            count_stmt = count_stmt.where(SystemLog.module.contains(module))
-        if status_code is not None:
-            stmt = stmt.where(SystemLog.status_code == status_code)
-            count_stmt = count_stmt.where(SystemLog.status_code == status_code)
-        if start_time:
-            stmt = stmt.where(SystemLog.created_time >= start_time)
-            count_stmt = count_stmt.where(SystemLog.created_time >= start_time)
-        if end_time:
-            stmt = stmt.where(SystemLog.created_time <= end_time)
-            count_stmt = count_stmt.where(SystemLog.created_time <= end_time)
-
-        offset = (page_num - 1) * page_size
-        stmt = stmt.offset(offset).limit(page_size)
+        cursor_mode = before_time is not None and bool(before_id)
+        if cursor_mode:
+            # 行值比较：(created_time, id) < (before_time, before_id)，字典序语义
+            stmt = stmt.where(sa_tuple(SystemLog.created_time, SystemLog.id) < (before_time, before_id))
+            stmt = stmt.limit(page_size)
+        else:
+            offset = (page_num - 1) * page_size
+            stmt = stmt.offset(offset).limit(page_size)
 
         result = await self.session.exec(stmt)
         logs = list(result.all())
 
-        total_result = await self.session.exec(count_stmt)
-        total = total_result.one()
+        if total is None:
+            count_stmt = select(sa_func.count()).select_from(SystemLog)
+            count_stmt = self._apply_sys_log_filters(count_stmt, module, status_code, start_time, end_time)
+            total_result = await self.session.exec(count_stmt)
+            total = total_result.one()
 
         return [log.to_domain() for log in logs], total
 
@@ -189,9 +210,22 @@ class LogRepository(LogRepositoryInterface):
         status_code: int | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
+        before_time: datetime | None = None,
+        before_id: str | None = None,
+        total: int | None = None,
     ) -> tuple[list[OperationLogEntity], int]:
-        """获取系统日志列表。与操作日志共享同一张表。"""
-        return await self.get_operation_logs(page_num, page_size, module, status_code, start_time, end_time)
+        """获取系统日志列表。与操作日志共享同一张表（分页/游标语义一致）。"""
+        return await self.get_operation_logs(
+            page_num=page_num,
+            page_size=page_size,
+            module=module,
+            status_code=status_code,
+            start_time=start_time,
+            end_time=end_time,
+            before_time=before_time,
+            before_id=before_id,
+            total=total,
+        )
 
     async def get_system_log_detail(self, log_id: str) -> OperationLogEntity | None:
         """获取系统日志详情。"""

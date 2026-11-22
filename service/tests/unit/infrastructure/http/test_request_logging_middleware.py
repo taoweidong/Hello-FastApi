@@ -5,7 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from src.application.utils.user_agent import extract_user_agent_info
-from src.infrastructure.http.request_logging_middleware import RequestLoggingMiddleware, _try_decode_user_id
+from src.infrastructure.http.request_logging_middleware import (
+    RequestLoggingMiddleware,
+    _decode_token_payload,
+    _try_decode_user_id,
+)
 
 
 @pytest.mark.unit
@@ -88,9 +92,23 @@ class TestTryDecodeUserId:
     @patch("src.infrastructure.http.request_logging_middleware.jwt")
     def test_valid_access_token(self, mock_jwt):
         """测试有效 access token 返回用户 ID。"""
+        _decode_token_payload.cache_clear()
         mock_jwt.decode.return_value = {"type": "access", "sub": "user-123"}
         result = _try_decode_user_id("Bearer valid-token")
         assert result == "user-123"
+        _decode_token_payload.cache_clear()
+
+    @patch("src.infrastructure.http.request_logging_middleware.jwt")
+    def test_decode_result_cached_by_lru(self, mock_jwt):
+        """同一 token 二次解码命中 LRU，不再调用 jwt.decode。"""
+        _decode_token_payload.cache_clear()
+        mock_jwt.decode.return_value = {"type": "access", "sub": "user-lru"}
+        first = _try_decode_user_id("Bearer lru-token")
+        second = _try_decode_user_id("Bearer lru-token")
+        assert first == "user-lru"
+        assert second == "user-lru"
+        assert mock_jwt.decode.call_count == 1  # 第二次命中缓存
+        _decode_token_payload.cache_clear()
 
     @patch("src.infrastructure.http.request_logging_middleware.jwt")
     def test_invalid_token_silent(self, mock_jwt):
@@ -356,7 +374,7 @@ class TestWriteSystemLogAsync:
 
     @pytest.mark.asyncio
     async def test_write_system_log_called_with_data(self, middleware):
-        """测试 _write_system_log_async 被调用时传递正确数据。"""
+        """测试 worker 未启动时走历史兜底路径（create_task 独立会话直写）。"""
         request = MagicMock()
         request.method = "POST"
         request.url.path = "/api/system/user"
@@ -370,6 +388,32 @@ class TestWriteSystemLogAsync:
                 request=request, response=response, client_ip="127.0.0.1", body='{"name": "test"}', duration_ms=50.0
             )
         mock_task.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_worker_running_enqueues_instead_of_create_task(self, middleware):
+        """测试 worker 已启动时入队攒批（不再创建后台直写任务）。"""
+        request = MagicMock()
+        request.method = "POST"
+        request.url.path = "/api/system/user"
+        request.headers = {"user-agent": "test", "authorization": None}
+
+        response = MagicMock()
+        response.status_code = 200
+
+        mock_queue = MagicMock()
+        mock_queue.running = True
+        with (
+            patch("src.infrastructure.http.request_logging_middleware.get_audit_log_queue", return_value=mock_queue),
+            patch("asyncio.create_task") as mock_task,
+        ):
+            middleware._write_system_log_async(
+                request=request, response=response, client_ip="127.0.0.1", body='{"name": "test"}', duration_ms=50.0
+            )
+        mock_queue.enqueue.assert_called_once()
+        enqueued = mock_queue.enqueue.call_args.args[0]
+        # 时间戳在捕获时生成（批量落库会晚于请求完成，时间必须是请求时刻）
+        assert "created_time" in enqueued and "updated_time" in enqueued
+        mock_task.assert_not_called()
 
 
 @pytest.mark.unit

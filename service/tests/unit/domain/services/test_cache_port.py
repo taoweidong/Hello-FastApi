@@ -1,8 +1,9 @@
 """缓存端口接口的单元测试。
 
 测试按消费方拆分后的窄端口（TokenRevocationPort / UserCachePort / MenuCachePort /
-DictCachePort / RoleCachePort）、聚合端口 CachePort、在线会话端口 OnlineSessionStore
-与 IPFilterPort 的抽象契约，以及 UserCachePort 批量失效默认实现的退化语义。
+DictCachePort / RoleCachePort / LogCountCachePort）、聚合端口 CachePort、
+在线会话端口 OnlineSessionStore 与 IPFilterPort 的抽象契约，
+以及 UserCachePort 批量失效/数据权限范围默认实现的退化语义。
 """
 
 from datetime import datetime
@@ -14,6 +15,7 @@ from src.domain.services.cache_port import (
     CachePort,
     DictCachePort,
     IPFilterPort,
+    LogCountCachePort,
     MenuCachePort,
     RoleCachePort,
     TokenRevocationPort,
@@ -96,6 +98,20 @@ class ConcreteRoleCache(RoleCachePort):
         return True
 
 
+class ConcreteLogCountCache(LogCountCachePort):
+    """LogCountCachePort 的最小实现。"""
+
+    def __init__(self) -> None:
+        self.store: dict[str, int] = {}
+
+    async def get_log_count(self, filters_hash: str) -> int | None:
+        return self.store.get(filters_hash)
+
+    async def set_log_count(self, filters_hash: str, total: int) -> bool:
+        self.store[filters_hash] = total
+        return True
+
+
 class ConcreteMenuCache(MenuCachePort):
     """MenuCachePort 的最小实现。"""
 
@@ -123,7 +139,13 @@ class ConcreteDictCache(DictCachePort):
 
 
 class ConcreteCachePort(
-    ConcreteTokenRevocation, ConcreteUserCache, ConcreteMenuCache, ConcreteDictCache, ConcreteRoleCache, CachePort
+    ConcreteTokenRevocation,
+    ConcreteUserCache,
+    ConcreteMenuCache,
+    ConcreteDictCache,
+    ConcreteRoleCache,
+    ConcreteLogCountCache,
+    CachePort,
 ):
     """聚合端口 CachePort 的具体实现（组合各窄端口实现）。"""
 
@@ -237,6 +259,41 @@ class TestUserCacheBatchInvalidate:
 
 
 @pytest.mark.unit
+class TestUserCacheScopeDefaults:
+    """UserCachePort 数据权限范围缓存默认实现的退化语义（未重写即视为未命中）。"""
+
+    @pytest.mark.asyncio
+    async def test_default_get_user_scope_is_miss(self):
+        """默认实现返回 None（未命中），消费方退化查库。"""
+        port = ConcreteUserCache()
+        assert await port.get_user_scope("u1") is None
+
+    @pytest.mark.asyncio
+    async def test_default_set_user_scope_is_noop(self):
+        """默认实现不存储（返回 False）。"""
+        port = ConcreteUserCache()
+        assert await port.set_user_scope("u1", {"deptIds": None, "userId": None}) is False
+
+
+@pytest.mark.unit
+class TestLogCountCachePort:
+    """日志 count 缓存端口的抽象契约。"""
+
+    def test_cannot_instantiate_abc_directly(self):
+        """测试窄端口不能直接实例化。"""
+        with pytest.raises(TypeError):
+            LogCountCachePort()  # type: ignore[abstract]
+
+    @pytest.mark.asyncio
+    async def test_set_then_get_roundtrip(self):
+        """写入后可读回同一 total。"""
+        port = ConcreteLogCountCache()
+        assert await port.get_log_count("h1") is None
+        assert await port.set_log_count("h1", 42) is True
+        assert await port.get_log_count("h1") == 42
+
+
+@pytest.mark.unit
 class TestCachePortAggregate:
     """聚合端口与窄端口的关系。"""
 
@@ -254,6 +311,7 @@ class TestCachePortAggregate:
         assert isinstance(port, MenuCachePort)
         assert isinstance(port, DictCachePort)
         assert isinstance(port, RoleCachePort)
+        assert isinstance(port, LogCountCachePort)
 
     def test_online_session_store_is_not_in_aggregate(self):
         """测试在线会话独立于聚合端口：CachePort 不承载会话语义。"""

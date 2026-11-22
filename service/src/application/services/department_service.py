@@ -16,7 +16,13 @@ from src.domain.repositories.department_repository import DepartmentRepositoryIn
 
 
 class DepartmentService:
-    """部门领域操作的应用服务。"""
+    """部门领域操作的应用服务。
+
+    数据权限范围缓存（user:scope:{id}）的失效说明：部门的增删改会影响
+    DEPT_AND_CHILD 解析出的部门集合（user_service._resolve_data_scope 缓存），
+    但"受影响用户"需要按部门树反查，无低成本链路可挂；该缓存 TTL 为 300s
+    （与 user:info:full 一致），部门变更后由 TTL 兜底收敛，属可接受取舍。
+    """
 
     def __init__(self, dept_repo: DepartmentRepositoryInterface):
         self.dept_repo = dept_repo

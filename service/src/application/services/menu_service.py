@@ -256,14 +256,24 @@ class MenuService:
         return menu_dict_to_entity(data)
 
     def _build_tree(self, menus: list[MenuEntity], parent_id: str | None) -> list[dict]:
-        """构建菜单树。"""
-        tree = []
+        """构建菜单树（按 parent_id 一次分桶建树，O(n)）。
+
+        原实现每个节点都全量扫描菜单列表找子节点，整体 O(n²)，
+        菜单量增大时建树耗时显著膨胀；改为一次遍历按 parent_id 分桶后整体 O(n)。
+        """
+        children_map: dict[str | None, list[MenuEntity]] = {}
         for menu in menus:
-            if menu.parent_id == parent_id:
-                node = self._to_response(menu)
-                node["children"] = self._build_tree(menus, menu.id)
-                tree.append(node)
-        # 按rank排序
+            children_map.setdefault(menu.parent_id, []).append(menu)
+        return self._assemble_tree(children_map, parent_id)
+
+    def _assemble_tree(self, children_map: dict[str | None, list[MenuEntity]], parent_id: str | None) -> list[dict]:
+        """从分桶索引递归组装子树（每节点只查自己的桶）。"""
+        tree = []
+        for menu in children_map.get(parent_id, []):
+            node = self._to_response(menu)
+            node["children"] = self._assemble_tree(children_map, menu.id)
+            tree.append(node)
+        # 按rank排序（稳定排序：同级同 rank 保持原始列表顺序，与原实现一致）
         return sorted(tree, key=lambda x: x.get("rank", 0))
 
     def _to_response(self, menu: MenuEntity) -> dict:

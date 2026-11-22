@@ -39,19 +39,25 @@ def _format_login_log(log: LoginLogEntity) -> dict[str, Any]:
     }
 
 
-def _format_operation_log(log: OperationLogEntity) -> dict[str, Any]:
-    """将操作/系统日志实体转为响应字典。"""
+def _format_operation_log(log: OperationLogEntity, *, include_payload: bool = False) -> dict[str, Any]:
+    """将操作/系统日志实体转为响应字典。
+
+    响应瘦身（契约变更）：body / responseResult 属大文本字段，列表行不再随行返回
+    （统一置 None），前端需要完整内容时经详情接口 /system-logs-detail 懒加载；
+    详情调用方传 include_payload=True 返回全量。
+    """
     return {
         "id": log.id,
         "module": log.module or "",
         "path": log.path or "",
-        "body": log.body or "",
+        # 大字段：列表行置 None，详情接口返回全量
+        "body": (log.body or None) if include_payload else None,
         "method": log.method or "",
         "ipaddress": log.ipaddress or "",
         "browser": log.browser or "",
         "system": log.system or "",
         "responseCode": log.response_code,
-        "responseResult": log.response_result or "",
+        "responseResult": (log.response_result or None) if include_payload else None,
         "statusCode": log.status_code,
         # 操作概要由审计中间件写入（"POST /path - 123ms"），操作日志页「操作概要」列数据源
         "description": log.description or "",
@@ -154,4 +160,5 @@ class LogRouter(Routable):
         log = await service.get_system_log_detail(query.id)
         if log is None:
             return success_response(data=None, message="日志不存在")
-        return success_response(data=_format_operation_log(log))
+        # 详情返回全量（含 body / responseResult 大字段）
+        return success_response(data=_format_operation_log(log, include_payload=True))

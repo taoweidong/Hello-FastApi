@@ -177,9 +177,20 @@ class RoleService:
         return True
 
     async def get_user_roles(self, user_id: str) -> list[RoleResponseDTO]:
-        """获取用户的所有角色。"""
+        """获取用户的所有角色（批量取关联，消除逐角色 N+1 查询）。"""
         roles = await self.role_repo.get_user_roles(user_id)
-        return [await self._role_to_response(r) for r in roles]
+        if not roles:
+            return []
+        # 两条 IN 查询一次性取全量关联，内存按角色分组组装（原先逐角色 1-2 条 SQL）
+        role_ids = [r.id for r in roles]
+        menu_ids_map = await self.role_repo.get_roles_menu_ids_batch(role_ids)
+        # 仅自定义数据权限角色存在部门关联，按需缩小 IN 范围减少无效扫描
+        custom_role_ids = [r.id for r in roles if r.data_scope == DataScope.CUSTOM]
+        dept_ids_map = await self.role_repo.get_roles_dept_ids_batch(custom_role_ids) if custom_role_ids else {}
+        return [
+            self._role_to_response_with_preloaded(r, menu_ids_map.get(r.id, []), dept_ids_map.get(r.id, []))
+            for r in roles
+        ]
 
     async def get_all_simple_roles(self) -> list[dict]:
         """获取所有角色简单列表，供 auth_router 使用（带短 TTL 缓存）。
@@ -240,13 +251,19 @@ class RoleService:
             await self.cache_service.invalidate_users_batch(user_ids)
 
     async def _role_to_response(self, role: RoleEntity) -> RoleResponseDTO:
-        """将角色实体转换为响应DTO。"""
+        """将角色实体转换为响应DTO（单角色详情，按需查询关联）。"""
         # 获取角色的菜单ID列表
         menu_ids = await self.role_repo.get_role_menu_ids(role.id)
-        menu_list = [{"id": mid} for mid in menu_ids] if menu_ids else []
 
         # 自定义数据权限时返回关联部门ID列表
         dept_ids = await self.role_repo.get_role_dept_ids(role.id) if role.data_scope == DataScope.CUSTOM else []
+
+        return self._role_to_response_with_preloaded(role, menu_ids, dept_ids)
+
+    @staticmethod
+    def _role_to_response_with_preloaded(role: RoleEntity, menu_ids: list[str], dept_ids: list[str]) -> RoleResponseDTO:
+        """用已取出的菜单/部门关联ID组装响应DTO（单查与批量路径共用）。"""
+        menu_list = [{"id": mid} for mid in menu_ids] if menu_ids else []
 
         return RoleResponseDTO(
             id=role.id,

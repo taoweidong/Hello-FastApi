@@ -376,3 +376,56 @@ class TestLogRepository:
 
         assert logs == []
         assert total == 0
+
+    # ============ keyset 游标分页（任务：日志列表深分页优化） ============
+
+    @pytest.mark.asyncio
+    async def test_get_operation_logs_cursor_with_total_skips_count(self, repo, mock_session):
+        """游标模式 + 传入 total：只执行列表查询（跳过 COUNT）。"""
+        mock_result = MagicMock()
+        mock_model = MagicMock()
+        mock_model.to_domain.return_value = OperationLogEntity(id="1", module="user")
+        mock_result.all.return_value = [mock_model]
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
+        logs, total = await repo.get_operation_logs(before_time=datetime(2026, 1, 1), before_id="abc", total=42)
+        assert len(logs) == 1
+        assert total == 42
+        mock_session.exec.assert_awaited_once()  # 仅列表查询一次往返
+
+    @pytest.mark.asyncio
+    async def test_get_operation_logs_cursor_without_total_counts(self, repo, mock_session):
+        """游标模式 + 未传 total：兜底执行精确 COUNT。"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_count = MagicMock()
+        mock_count.one.return_value = 7
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count])
+
+        logs, total = await repo.get_operation_logs(before_time=datetime(2026, 1, 1), before_id="abc")
+        assert logs == []
+        assert total == 7
+        assert mock_session.exec.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_get_operation_logs_partial_cursor_uses_offset(self, repo, mock_session):
+        """游标不完整（只有 before_id）时走 offset 模式（向后兼容）。"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_count = MagicMock()
+        mock_count.one.return_value = 0
+        mock_session.exec = AsyncMock(side_effect=[mock_result, mock_count])
+
+        logs, total = await repo.get_operation_logs(page_num=2, before_id="abc")
+        assert total == 0
+
+    @pytest.mark.asyncio
+    async def test_get_system_logs_cursor_passthrough(self, repo, mock_session):
+        """系统日志游标参数透传到底层共享实现。"""
+        mock_result = MagicMock()
+        mock_result.all.return_value = []
+        mock_session.exec = AsyncMock(return_value=mock_result)
+
+        logs, total = await repo.get_system_logs(before_time=datetime(2026, 1, 1), before_id="xyz", total=9)
+        assert total == 9
+        mock_session.exec.assert_awaited_once()

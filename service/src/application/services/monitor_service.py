@@ -12,6 +12,8 @@ from datetime import datetime, timedelta, timezone
 
 import psutil
 from loguru import logger
+from sqlalchemy import text
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.application.dto.monitor_dto import (
     CacheClearDTO,
@@ -22,6 +24,7 @@ from src.application.dto.monitor_dto import (
     DiskInfoDTO,
     MemoryInfoDTO,
     OnlineLogsQueryDTO,
+    PgIoInfoDTO,
     ProcessInfoDTO,
     ServerInfoDTO,
     SystemInfoDTO,
@@ -33,6 +36,10 @@ from src.domain.services.cache_port import TokenRevocationPort
 from src.domain.services.online_session_port import OnlineSessionStore
 
 _GB = 1024**3
+
+# pg_stat_io 关注的计数字段：SELECT * 后按实际存在的列自适应聚合，
+# 规避 PG 版本差异（16/17+ 列集合不同）导致的"字段不存在"错误
+_PG_IO_COLUMNS = ("reads", "read_bytes", "writes", "write_bytes", "hits", "evictions", "reuses", "fsyncs")
 
 
 def _process_cpu_percent() -> float:
@@ -133,11 +140,13 @@ class MonitorService:
         await self.token_revocation.blacklist_token_hash(session_key, expires_at)
         return True
 
-    async def get_server_info(self) -> ServerInfoDTO:
+    async def get_server_info(self, db_session: AsyncSession | None = None) -> ServerInfoDTO:
         """采集服务器资源信息（CPU/内存/磁盘/系统/进程）。
 
         psutil 的 CPU 采样（interval=0.1）是同步阻塞调用，直接放在事件循环里
         会让整个服务停顿约 0.2s，必须放入线程池执行。
+        PostgreSQL 环境下附带 pg_stat_io 聚合统计（可选附加字段 pgIo，
+        采集失败降级为 None，不破坏监控接口）。
         """
         # CPU：采样间隔取较小值，兼顾准确性与接口响应速度
         cpu_percent, process_cpu_percent = await asyncio.gather(
@@ -170,6 +179,9 @@ class MonitorService:
             runningTime=_format_duration(time.time() - process.create_time()),
         )
 
+        # PostgreSQL I/O 观测（可选附加字段；非 PG 环境为 None）
+        pg_io = await self._collect_pg_io(db_session)
+
         return ServerInfoDTO(
             cpu=CpuInfoDTO(coreCount=core_count, usedPercent=cpu_percent),
             memory=MemoryInfoDTO(
@@ -186,6 +198,49 @@ class MonitorService:
             ),
             system=system_info,
             process=process_info,
+            pgIo=pg_io,
+        )
+
+    async def _collect_pg_io(self, db_session: AsyncSession | None) -> PgIoInfoDTO | None:
+        """采集 PostgreSQL pg_stat_io 聚合统计与当前库大小（仅 PG 方言执行）。
+
+        - 非 PG 方言（开发/测试默认 SQLite）或未注入会话时返回 None；
+        - 查询失败（PG < 16 无 pg_stat_io、权限不足、字段不存在）降级为 None
+          并告警，不破坏监控接口。
+        """
+        if db_session is None:
+            return None
+        # 方言探测：AsyncSession.bind 为（Async）Engine，经 dialect.name 判定
+        bind = getattr(db_session, "bind", None)
+        if getattr(getattr(bind, "dialect", None), "name", "") != "postgresql":
+            return None
+        try:
+            # SELECT * 自适应聚合：版本差异导致的缺失列直接跳过（见 _PG_IO_COLUMNS）
+            rows = (await db_session.execute(text("SELECT * FROM pg_stat_io"))).mappings()
+            sums: dict[str, int] = {}
+            for row in rows:
+                for key, value in row.items():
+                    if key in _PG_IO_COLUMNS and isinstance(value, int):
+                        sums[key] = sums.get(key, 0) + value
+            size_result = await db_session.execute(text("SELECT pg_database_size(current_database())"))
+            db_size = int(size_result.scalar_one())
+        except Exception as exc:  # noqa: BLE001 —— 监控接口不允许因 pg_stat_io 故障而报错
+            logger.warning(f"pg_stat_io 采集失败（PG 版本过低或权限不足），监控响应降级：{exc}")
+            return None
+
+        def _sum(column: str) -> int:
+            return sums.get(column, 0)
+
+        return PgIoInfoDTO(
+            reads=_sum("reads"),
+            readBytes=_sum("read_bytes"),
+            writes=_sum("writes"),
+            writeBytes=_sum("write_bytes"),
+            hits=_sum("hits"),
+            evictions=_sum("evictions"),
+            reuses=_sum("reuses"),
+            fsyncs=_sum("fsyncs"),
+            databaseSizeBytes=db_size,
         )
 
     async def get_cache_info(self, redis_client: object | None) -> CacheInfoDTO:

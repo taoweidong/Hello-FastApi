@@ -141,7 +141,14 @@ class UserService:
         return user_responses, total
 
     async def _resolve_data_scope(self, operator_id: str | None) -> tuple[list[str] | None, str | None]:
-        """解析操作人的数据权限范围。
+        """解析操作人的数据权限范围（解析结果按操作人缓存 user:scope:{id}，TTL 300s）。
+
+        每次列表查询原需 2-4 条额外 SQL（操作人查询、角色 scope、子部门/自定义部门集），
+        缓存命中时全部省略。失效链路：
+        - 用户信息/角色分配/部门归属变更 → invalidate_user_info / invalidate_users_batch
+          （CacheService 实现已连带删除 user:scope:{id}）；
+        - 角色的数据范围配置与角色-部门关联变更（role_service 侧）无反查链路，
+          依赖 300s TTL 兜底；部门树增删改影响 DEPT_AND_CHILD 集合同理（见 department_service 注释）。
 
         Returns:
             (scope_dept_ids, scope_user_id) 元组：
@@ -152,27 +159,39 @@ class UserService:
         if operator_id is None:
             return None, None
 
+        # 读缓存（命中时省去操作人查询与 scope 解析的全部 SQL）
+        if self.cache_service is not None:
+            cached = await self.cache_service.get_user_scope(operator_id)
+            if cached is not None:
+                return cached.get("deptIds"), cached.get("userId")
+
         operator = await self.repo.get_by_id(operator_id)
         if operator is None or operator.is_superuser_user:
-            return None, None
+            scope_dept_ids: list[str] | None = None
+            scope_user_id: str | None = None
+        else:
+            scope = await self.role_repo.get_user_data_scope(operator_id)
+            if scope == DataScope.ALL:
+                scope_dept_ids, scope_user_id = None, None
+            elif scope == DataScope.SELF:
+                scope_dept_ids, scope_user_id = None, operator_id
+            elif scope == DataScope.DEPT:
+                scope_dept_ids, scope_user_id = ([operator.dept_id], None) if operator.dept_id else ([], None)
+            elif scope == DataScope.DEPT_AND_CHILD:
+                if not operator.dept_id:
+                    scope_dept_ids, scope_user_id = [], None
+                else:
+                    child_ids = await self.dept_repo.get_child_dept_ids(operator.dept_id) if self.dept_repo else []
+                    scope_dept_ids, scope_user_id = [operator.dept_id, *child_ids], None
+            elif scope == DataScope.CUSTOM:
+                scope_dept_ids, scope_user_id = await self.role_repo.get_user_custom_dept_ids(operator_id), None
+            else:
+                scope_dept_ids, scope_user_id = None, None
 
-        scope = await self.role_repo.get_user_data_scope(operator_id)
-        if scope == DataScope.ALL:
-            return None, None
-        if scope == DataScope.SELF:
-            return None, operator_id
-        if scope == DataScope.DEPT:
-            if not operator.dept_id:
-                return [], None
-            return [operator.dept_id], None
-        if scope == DataScope.DEPT_AND_CHILD:
-            if not operator.dept_id:
-                return [], None
-            child_ids = await self.dept_repo.get_child_dept_ids(operator.dept_id) if self.dept_repo else []
-            return [operator.dept_id, *child_ids], None
-        if scope == DataScope.CUSTOM:
-            return await self.role_repo.get_user_custom_dept_ids(operator_id), None
-        return None, None
+        # 写缓存（含超管的 (None, None)：超管判定也随信息缓存失效链路刷新）
+        if self.cache_service is not None:
+            await self.cache_service.set_user_scope(operator_id, {"deptIds": scope_dept_ids, "userId": scope_user_id})
+        return scope_dept_ids, scope_user_id
 
     async def update_user(self, user_id: str, dto: UserUpdateDTO) -> UserResponseDTO:
         """更新用户信息。"""

@@ -589,10 +589,7 @@ class TestMenuServiceUserCacheInvalidation:
     @pytest.fixture
     def service(self, mock_menu_repo, mock_role_repo, mock_user_cache):
         return MenuService(
-            menu_repo=mock_menu_repo,
-            cache_service=AsyncMock(),
-            role_repo=mock_role_repo,
-            user_cache=mock_user_cache,
+            menu_repo=mock_menu_repo, cache_service=AsyncMock(), role_repo=mock_role_repo, user_cache=mock_user_cache
         )
 
     async def test_delete_menu_invalidates_affected_users(

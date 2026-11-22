@@ -108,6 +108,9 @@ class TestLogRouter:
         data = resp.json()
         assert data["data"]["total"] == 1
         assert data["data"]["list"][0]["module"] == "dept"
+        # 响应瘦身契约：列表行不返回大字段（body/responseResult 置 None）
+        assert data["data"]["list"][0]["body"] is None
+        assert data["data"]["list"][0]["responseResult"] is None
 
     def test_batch_delete_operation_logs(self, client):
         resp = client.post("/api/system/operation-logs/batch-delete", json={"ids": ["l2"]}, headers=self.auth)
@@ -129,6 +132,9 @@ class TestLogRouter:
         resp = client.post("/api/system/system-logs-detail", json={"id": "l3"}, headers=self.auth)
         assert resp.status_code == 200
         assert resp.json()["data"]["module"] == "system"
+        # 详情契约：返回全量大字段（与列表行的置 None 形成对照）
+        assert resp.json()["data"]["body"] == "{}"
+        assert resp.json()["data"]["responseResult"] == "ok"
 
     def test_get_system_log_detail_missing_id_returns_422(self, client):
         resp = client.post("/api/system/system-logs-detail", json={}, headers=self.auth)

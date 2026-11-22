@@ -133,22 +133,44 @@ class TestOnlineUsers:
 
     @pytest.mark.asyncio
     async def test_get_online_users_returns_sessions_with_id(self):
-        """遍历 Redis 前缀返回会话列表，并追加 id=session_key。"""
+        """SCAN 收集 key 后 MGET 批量取值，返回会话列表并追加 id=session_key。"""
         mock_redis = MagicMock()
         info = {"username": "admin", "system": "Windows"}
-        mock_redis.scan_iter = lambda match, count: _async_iter(
-            [
-                f"{RedisOnlineSessionStore._ONLINE_USER_PREFIX}hash1",
-                f"{RedisOnlineSessionStore._ONLINE_USER_PREFIX}hash2",
-            ]
-        )
-        mock_redis.get = AsyncMock(side_effect=[json.dumps(info), None])
+        prefix = RedisOnlineSessionStore._ONLINE_USER_PREFIX
+        mock_redis.scan_iter = lambda match, count: _async_iter([f"{prefix}hash1", f"{prefix}hash2"])
+        # MGET 与 keys 顺序一致；未命中槽位为 None
+        mock_redis.mget = AsyncMock(return_value=[json.dumps(info), None])
         store = RedisOnlineSessionStore(redis_client=mock_redis)
 
         result = await store.get_online_users()
         assert len(result) == 1
         assert result[0]["id"] == "hash1"
         assert result[0]["username"] == "admin"
+        # 单块 MGET 一次往返（key 数 ≤ 500）
+        mock_redis.mget.assert_awaited_once_with([f"{prefix}hash1", f"{prefix}hash2"])
+
+    @pytest.mark.asyncio
+    async def test_get_online_users_mget_chunking_over_500(self):
+        """key 数超过 500 时 MGET 分块（每块 ≤500），返回结构与单块一致。"""
+        mock_redis = MagicMock()
+        prefix = RedisOnlineSessionStore._ONLINE_USER_PREFIX
+        total = 1200
+        keys = [f"{prefix}hash{i}" for i in range(total)]
+        mock_redis.scan_iter = lambda match, count: _async_iter(keys)
+
+        async def fake_mget(chunk):
+            return [json.dumps({"username": "u"}) for _ in chunk]
+
+        mget_mock = AsyncMock(side_effect=fake_mget)
+        mock_redis.mget = mget_mock
+        store = RedisOnlineSessionStore(redis_client=mock_redis)
+
+        result = await store.get_online_users()
+        assert len(result) == total
+        assert {item["id"] for item in result} == {f"hash{i}" for i in range(total)}
+        assert mget_mock.await_count == 3  # 500 + 500 + 200 三块
+        for call in mget_mock.await_args_list:
+            assert len(call.args[0]) <= RedisOnlineSessionStore._MGET_CHUNK_SIZE
 
     @pytest.mark.asyncio
     async def test_get_online_users_no_redis(self):

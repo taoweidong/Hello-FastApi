@@ -220,6 +220,9 @@ class InMemoryRoleRepository(RoleRepositoryInterface):
     async def get_roles_menu_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:  # noqa: D102
         return {rid: list(self._role_menus.get(rid, [])) for rid in role_ids}
 
+    async def get_roles_dept_ids_batch(self, role_ids: list[str]) -> dict[str, list[str]]:  # noqa: D102
+        return {rid: list(self._role_depts.get(rid, [])) for rid in role_ids}
+
     # ========== 数据权限（data_scope）相关操作 ==========
 
     async def get_user_data_scope(self, user_id: str) -> int:  # noqa: D102
