@@ -15,6 +15,7 @@ from src.api.dependencies.auth import (
 )
 from src.api.dependencies.auth_service import get_auth_service
 from src.api.dependencies.cache_service import get_cache_service, get_online_session_store
+from src.api.dependencies.dashboard_service import get_dashboard_service
 from src.api.dependencies.department_service import get_department_service
 from src.api.dependencies.dictionary_service import get_dictionary_service
 from src.api.dependencies.domain_services import get_password_service, get_token_service
@@ -43,6 +44,7 @@ __all__ = [
     "get_token_service",
     # 应用服务工厂
     "get_auth_service",
+    "get_dashboard_service",
     "get_department_service",
     "get_example_data_service",
     "get_dictionary_service",

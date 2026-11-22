@@ -106,6 +106,7 @@ class Settings(BaseSettings):
     CACHE_DICT_TTL: int = Field(default=3600, ge=1)  # 1 小时（字典数据缓存）
     CACHE_ROLE_OPTIONS_TTL: int = Field(default=60, ge=1)  # 1 分钟（角色选项短缓存）
     CACHE_LOG_COUNT_TTL: int = Field(default=60, ge=1)  # 1 分钟（日志列表 count 深分页旁路）
+    CACHE_DASHBOARD_TTL: int = Field(default=60, ge=1)  # 1 分钟（仪表盘统计聚合短缓存）
 
     @field_validator("LOG_LEVEL")
     @classmethod

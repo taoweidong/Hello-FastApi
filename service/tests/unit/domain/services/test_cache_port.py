@@ -13,6 +13,7 @@ import pytest
 
 from src.domain.services.cache_port import (
     CachePort,
+    DashboardCachePort,
     DictCachePort,
     IPFilterPort,
     LogCountCachePort,
@@ -138,6 +139,20 @@ class ConcreteDictCache(DictCachePort):
         return True
 
 
+class ConcreteDashboardCache(DashboardCachePort):
+    """DashboardCachePort 的最小实现。"""
+
+    def __init__(self) -> None:
+        self.store: dict[str, dict[str, Any]] = {}
+
+    async def get_dashboard_stats(self) -> dict[str, Any] | None:
+        return self.store.get("dashboard:stats")
+
+    async def set_dashboard_stats(self, data: dict[str, Any]) -> bool:
+        self.store["dashboard:stats"] = data
+        return True
+
+
 class ConcreteCachePort(
     ConcreteTokenRevocation,
     ConcreteUserCache,
@@ -145,6 +160,7 @@ class ConcreteCachePort(
     ConcreteDictCache,
     ConcreteRoleCache,
     ConcreteLogCountCache,
+    ConcreteDashboardCache,
     CachePort,
 ):
     """聚合端口 CachePort 的具体实现（组合各窄端口实现）。"""

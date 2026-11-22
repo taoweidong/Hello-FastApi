@@ -31,6 +31,9 @@ class ConcreteLogRepository(LogRepositoryInterface):
     async def create_login_log(self, log: LoginLogEntity) -> LoginLogEntity:
         return log
 
+    async def list_login_log_times(self, start_time: datetime, status: int | None = None) -> list[datetime]:
+        return []
+
     async def delete_login_logs(self, log_ids: list[str]) -> int:
         return len(log_ids)
 
@@ -53,6 +56,9 @@ class ConcreteLogRepository(LogRepositoryInterface):
 
     async def get_operation_log_detail(self, log_id: str) -> OperationLogEntity | None:
         return None
+
+    async def list_operation_log_stamps(self, start_time: datetime) -> list[tuple[datetime, str | None]]:
+        return []
 
     async def delete_operation_logs(self, log_ids: list[str]) -> int:
         return len(log_ids)

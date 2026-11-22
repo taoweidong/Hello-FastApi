@@ -9,10 +9,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
+from src.domain.entities.log import LoginLogEntity, OperationLogEntity
 from src.domain.entities.menu import MenuEntity
 from src.domain.entities.role import RoleEntity
 from src.domain.entities.user import UserEntity
 from src.domain.enums import DataScope
+from src.domain.repositories.log_repository import LogRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.cache_port import UserCachePort
@@ -113,6 +117,15 @@ class InMemoryUserRepository(UserRepositoryInterface):
             if self._users.pop(uid, None) is not None:
                 removed += 1
         return removed
+
+    async def get_usernames_by_ids(self, user_ids: list[str]) -> dict[str, str]:
+        """按 ID 批量取用户名（与真实仓储一致：查不到的 ID 不出现在结果中）。"""
+        result: dict[str, str] = {}
+        for uid in set(user_ids):
+            user = self._users.get(uid)
+            if user is not None and user.username:
+                result[uid] = user.username
+        return result
 
 
 class InMemoryRoleRepository(RoleRepositoryInterface):
@@ -329,3 +342,157 @@ class RecordingCacheService(UserCachePort):
 
     async def set_user_routes(self, user_id: str, routes: list) -> bool:
         return True
+
+
+class InMemoryLogRepository(LogRepositoryInterface):
+    """日志仓储的内存实现（登录日志 sys_userloginlog + 统一操作日志 sys_logs）。
+
+    列表筛选/分页/游标语义与真实 LogRepository 对齐（见契约测试）：
+    - module 为子串匹配（contains）；status/status_code 为等值；
+    - 排序 created_time DESC, id DESC（None created_time 视为最小）；
+    - keyset 游标 ``(created_time, id) < (before_time, before_id)`` 行比较。
+    """
+
+    def __init__(self, session=None) -> None:
+        self._login_logs: list[LoginLogEntity] = []
+        self._operation_logs: list[OperationLogEntity] = []
+        self._session = session
+
+    @staticmethod
+    def _sort_key(entity: LoginLogEntity | OperationLogEntity) -> tuple[datetime, str]:
+        """与真实仓储一致的稳定排序键（created_time DESC, id DESC）。"""
+        return (entity.created_time or datetime.min, entity.id)
+
+    # ============ 登录日志 ============
+
+    async def get_login_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        status: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        username: str | None = None,
+    ) -> tuple[list[LoginLogEntity], int]:
+        rows = list(self._login_logs)
+        if username:
+            rows = [r for r in rows if r.username == username]
+        if status is not None:
+            rows = [r for r in rows if r.status == status]
+        if start_time:
+            rows = [r for r in rows if r.created_time is not None and r.created_time >= start_time]
+        if end_time:
+            rows = [r for r in rows if r.created_time is not None and r.created_time <= end_time]
+        rows.sort(key=self._sort_key, reverse=True)
+        offset = (page_num - 1) * page_size
+        return rows[offset : offset + page_size], len(rows)
+
+    async def create_login_log(self, log: LoginLogEntity) -> LoginLogEntity:
+        self._login_logs.append(log)
+        return log
+
+    async def list_login_log_times(self, start_time: datetime, status: int | None = None) -> list[datetime]:
+        return [
+            r.created_time
+            for r in self._login_logs
+            if r.created_time is not None and r.created_time >= start_time and (status is None or r.status == status)
+        ]
+
+    async def delete_login_logs(self, log_ids: list[str]) -> int:
+        removed_ids = set(log_ids)
+        kept = [r for r in self._login_logs if r.id not in removed_ids]
+        removed = len(self._login_logs) - len(kept)
+        self._login_logs = kept
+        return removed
+
+    async def clear_login_logs(self) -> int:
+        total = len(self._login_logs)
+        self._login_logs.clear()
+        return total
+
+    # ============ 统一操作日志 (sys_logs) ============
+
+    async def get_operation_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        status_code: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        before_time: datetime | None = None,
+        before_id: str | None = None,
+        total: int | None = None,
+    ) -> tuple[list[OperationLogEntity], int]:
+        rows = list(self._operation_logs)
+        if module:
+            rows = [r for r in rows if module in (r.module or "")]
+        if status_code is not None:
+            rows = [r for r in rows if r.status_code == status_code]
+        if start_time:
+            rows = [r for r in rows if r.created_time is not None and r.created_time >= start_time]
+        if end_time:
+            rows = [r for r in rows if r.created_time is not None and r.created_time <= end_time]
+        rows.sort(key=self._sort_key, reverse=True)
+        cursor_mode = before_time is not None and bool(before_id)
+        if cursor_mode:
+            rows = [r for r in rows if (r.created_time or datetime.min, r.id) < (before_time, before_id)]  # type: ignore[operator]
+            return rows[:page_size], total if total is not None else len(rows)
+        offset = (page_num - 1) * page_size
+        return rows[offset : offset + page_size], total if total is not None else len(rows)
+
+    async def create_operation_log(self, log: OperationLogEntity) -> OperationLogEntity:
+        self._operation_logs.append(log)
+        return log
+
+    async def get_operation_log_detail(self, log_id: str) -> OperationLogEntity | None:
+        return next((r for r in self._operation_logs if r.id == log_id), None)
+
+    async def list_operation_log_stamps(self, start_time: datetime) -> list[tuple[datetime, str | None]]:
+        return [
+            (r.created_time, r.module)
+            for r in self._operation_logs
+            if r.created_time is not None and r.created_time >= start_time
+        ]
+
+    async def delete_operation_logs(self, log_ids: list[str]) -> int:
+        removed_ids = set(log_ids)
+        kept = [r for r in self._operation_logs if r.id not in removed_ids]
+        removed = len(self._operation_logs) - len(kept)
+        self._operation_logs = kept
+        return removed
+
+    async def clear_operation_logs(self) -> int:
+        total = len(self._operation_logs)
+        self._operation_logs.clear()
+        return total
+
+    # ============ 系统日志（与操作日志共享 sys_logs 表，仅查询） ============
+
+    async def get_system_logs(
+        self,
+        page_num: int = 1,
+        page_size: int = 10,
+        module: str | None = None,
+        status_code: int | None = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
+        before_time: datetime | None = None,
+        before_id: str | None = None,
+        total: int | None = None,
+    ) -> tuple[list[OperationLogEntity], int]:
+        """与操作日志共享同一存储（分页/游标语义一致）。"""
+        return await self.get_operation_logs(
+            page_num=page_num,
+            page_size=page_size,
+            module=module,
+            status_code=status_code,
+            start_time=start_time,
+            end_time=end_time,
+            before_time=before_time,
+            before_id=before_id,
+            total=total,
+        )
+
+    async def get_system_log_detail(self, log_id: str) -> OperationLogEntity | None:
+        return await self.get_operation_log_detail(log_id)

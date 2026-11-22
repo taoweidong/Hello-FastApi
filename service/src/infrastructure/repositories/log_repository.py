@@ -88,6 +88,18 @@ class LogRepository(LogRepositoryInterface):
             await session.commit()
         return model.to_domain()
 
+    async def list_login_log_times(self, start_time: datetime, status: int | None = None) -> list[datetime]:
+        """列出 start_time 之后的登录日志 created_time（仅时间列，仪表盘按日分桶用）。
+
+        SQLModel 单列 select 走 ScalarResult，返回值即列值本身；
+        分桶聚合在 Python 侧完成，规避 SQLite/PG 日期函数方言差异。
+        """
+        stmt = select(LoginLog.created_time).where(LoginLog.created_time >= start_time)
+        if status is not None:
+            stmt = stmt.where(LoginLog.status == status)
+        result = await self.session.exec(stmt)  # type: ignore[call-overload]
+        return [row for row in result.all() if row is not None]
+
     async def delete_login_logs(self, log_ids: list[str]) -> int:
         """批量删除登录日志。"""
         if not log_ids:
@@ -181,6 +193,15 @@ class LogRepository(LogRepositoryInterface):
         result = await self.session.exec(stmt)
         model = result.first()
         return model.to_domain() if model else None
+
+    async def list_operation_log_stamps(self, start_time: datetime) -> list[tuple[datetime, str | None]]:
+        """列出 start_time 之后的操作日志 (created_time, module) 轻量行。
+
+        仅取两列、Python 侧分桶聚合，保持 SQLite/PG 双方言一致（仪表盘操作分布）。
+        """
+        stmt = select(SystemLog.created_time, SystemLog.module).where(SystemLog.created_time >= start_time)
+        result = await self.session.exec(stmt)  # type: ignore[call-overload]
+        return [(row[0], row[1]) for row in result.all() if row[0] is not None]
 
     async def delete_operation_logs(self, log_ids: list[str]) -> int:
         """批量删除操作日志。"""

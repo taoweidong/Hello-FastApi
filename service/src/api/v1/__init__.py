@@ -6,6 +6,7 @@
 from fastapi import APIRouter
 
 from src.api.v1.auth_router import AuthRouter
+from src.api.v1.dashboard_router import DashboardRouter
 from src.api.v1.dept_router import DeptRouter
 from src.api.v1.dictionary_router import DictionaryRouter
 from src.api.v1.example_data_router import ExampleDataRouter
@@ -25,6 +26,9 @@ system_router = APIRouter()
 
 # 认证路由直接挂在 system 路由下（无额外前缀）
 system_router.include_router(AuthRouter().router, tags=["认证管理"])
+
+# 仪表盘统计路由（路径 /dashboard/stats，登录即可访问）
+system_router.include_router(DashboardRouter().router, tags=["仪表盘"])
 
 # 用户管理路由
 system_router.include_router(UserRouter().router, prefix="/user", tags=["用户管理"])

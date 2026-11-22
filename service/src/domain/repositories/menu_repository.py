@@ -27,6 +27,11 @@ class MenuRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def count(self) -> int:
+        """统计菜单总数（仪表盘 totals 聚合；infrastructure 经 GenericRepository.count 提供）。"""
+        ...
+
+    @abstractmethod
     async def get_by_id(self, menu_id: str) -> MenuEntity | None:
         """根据 ID 获取菜单。"""
         ...

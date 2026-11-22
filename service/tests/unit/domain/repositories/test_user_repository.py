@@ -59,6 +59,9 @@ class ConcreteUserRepository(UserRepositoryInterface):
     ) -> int:
         return 0
 
+    async def get_usernames_by_ids(self, user_ids: list[str]) -> dict[str, str]:
+        return {}
+
     async def batch_delete(self, user_ids: list[str]) -> int:
         return len(user_ids)
 

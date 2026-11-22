@@ -95,6 +95,15 @@ class UserRepository(GenericRepository[User, UserEntity], UserRepositoryInterfac
         result = await self.session.exec(stmt)
         return result.one()
 
+    async def get_usernames_by_ids(self, user_ids: list[str]) -> dict[str, str]:
+        """按 ID 批量取用户名（单次 IN 查询，避免逐条 get_by_id 的 N+1）。"""
+        unique_ids = {uid for uid in user_ids if uid}
+        if not unique_ids:
+            return {}
+        stmt = select(User.id, User.username).where(User.id.in_(unique_ids))
+        result = await self.session.exec(stmt)
+        return {row[0]: row[1] for row in result.all() if row[1] is not None}
+
     # ========== 批量操作 ==========
 
     async def batch_delete(self, user_ids: list[str]) -> int:

@@ -19,6 +19,9 @@ class ConcreteMenuRepository(MenuRepositoryInterface):
     async def get_all(self) -> list[MenuEntity]:
         return []
 
+    async def count(self) -> int:
+        return 0
+
     async def get_by_id(self, menu_id: str) -> MenuEntity | None:
         return None
 

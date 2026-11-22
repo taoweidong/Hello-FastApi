@@ -41,6 +41,19 @@ class LogRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def list_login_log_times(self, start_time: datetime, status: int | None = None) -> list[datetime]:
+        """列出起始时间之后的登录日志 created_time（仅时间列，供仪表盘按日分桶）。
+
+        Args:
+            start_time: 起始时间（含边界，created_time >= start_time）
+            status: 登录状态过滤（None 表示不过滤；1 为成功，语义见 LoginLogEntity）
+
+        Returns:
+            登录发生时间列表（created_time 为空的行跳过）
+        """
+        ...
+
+    @abstractmethod
     async def delete_login_logs(self, log_ids: list[str]) -> int:
         """删除登录日志。"""
         ...
@@ -83,6 +96,21 @@ class LogRepositoryInterface(ABC):
     @abstractmethod
     async def get_operation_log_detail(self, log_id: str) -> OperationLogEntity | None:
         """获取操作日志详情。"""
+        ...
+
+    @abstractmethod
+    async def list_operation_log_stamps(self, start_time: datetime) -> list[tuple[datetime, str | None]]:
+        """列出起始时间之后的操作日志 (created_time, module) 轻量行。
+
+        仅取时间与模块两列，供仪表盘"近 7 天操作分布"在 Python 侧做
+        跨方言分桶聚合（避免 GROUP BY 日期函数的 SQLite/PG 方言差异）。
+
+        Args:
+            start_time: 起始时间（含边界，created_time >= start_time）
+
+        Returns:
+            (created_time, module) 元组列表（created_time 为空的行跳过）
+        """
         ...
 
     @abstractmethod

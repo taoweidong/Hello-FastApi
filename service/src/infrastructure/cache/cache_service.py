@@ -38,6 +38,7 @@ class CacheService(CachePort, CacheAdminPort):
     _IP_RULES_KEY = "ip:rules"
     _ROLE_OPTIONS_KEY = "role:options"
     _LOG_COUNT_PREFIX = "logs:count:"
+    _DASHBOARD_KEY = "dashboard:stats"
 
     # 缓存 TTL（秒）- 从配置读取
     PERMS_CACHE_TTL = settings.CACHE_PERMISSIONS_TTL
@@ -55,6 +56,9 @@ class CacheService(CachePort, CacheAdminPort):
     # 日志列表 count 缓存 TTL：短缓存，深分页 COUNT 旁路；新日志写入后由
     # 审计批量落库 worker 统一失效（logs:count:* 前缀删除），60s 为兜底
     LOG_COUNT_CACHE_TTL = settings.CACHE_LOG_COUNT_TTL
+    # 仪表盘统计缓存 TTL：聚合跨用户/角色/菜单/部门/岗位计数与近 7 天日志明细，
+    # 仪表盘允许 1 分钟数据延迟，因此只做 TTL 兜底、不做主动失效
+    DASHBOARD_CACHE_TTL = settings.CACHE_DASHBOARD_TTL
 
     def __init__(self, redis_client: redis.Redis | None = None) -> None:
         self._redis = redis_client
@@ -478,6 +482,28 @@ class CacheService(CachePort, CacheAdminPort):
             是否成功写入缓存
         """
         return await self._set_json(f"{self._LOG_COUNT_PREFIX}{filters_hash}", total, self.LOG_COUNT_CACHE_TTL)
+
+    # ---- 仪表盘统计缓存 ----
+
+    async def get_dashboard_stats(self) -> dict | None:
+        """从缓存获取仪表盘统计聚合结果（整体 data dict）。
+
+        Returns:
+            统计数据字典（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        _, value = await self._get_json(self._DASHBOARD_KEY)
+        return value
+
+    async def set_dashboard_stats(self, data: dict) -> bool:
+        """将仪表盘统计聚合结果写入缓存（TTL 60s 兜底，无主动失效）。
+
+        Args:
+            data: 统计数据字典（DTO model_dump(mode="json") 后的整体 data dict）
+
+        Returns:
+            是否成功写入缓存
+        """
+        return await self._set_json(self._DASHBOARD_KEY, data, self.DASHBOARD_CACHE_TTL)
 
     # ---- IP 规则缓存 ----
 

@@ -86,6 +86,20 @@ class UserRepositoryInterface(ABC):
         ...
 
     @abstractmethod
+    async def get_usernames_by_ids(self, user_ids: list[str]) -> dict[str, str]:
+        """按 ID 批量取用户名（仪表盘 recentLogs 的 creator 映射）。
+
+        单次 IN 查询返回 ``{user_id: username}``，替代逐条 get_by_id 的 N+1。
+
+        Args:
+            user_ids: 用户 ID 列表（去重由实现方负责）
+
+        Returns:
+            ID → 用户名映射；查不到的 ID 不出现在结果中
+        """
+        ...
+
+    @abstractmethod
     async def batch_delete(self, user_ids: list[str]) -> int:
         """批量删除用户。"""
         ...

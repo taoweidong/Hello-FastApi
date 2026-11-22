@@ -359,7 +359,46 @@ class LogCountCachePort(ABC):
         ...
 
 
-class CachePort(TokenRevocationPort, UserCachePort, MenuCachePort, DictCachePort, RoleCachePort, LogCountCachePort):
+class DashboardCachePort(ABC):
+    """仪表盘统计聚合缓存端口（key ``dashboard:stats``，整体 data dict 读写）。
+
+    消费方：仪表盘服务（统计聚合读穿透）。聚合跨 6 张表与日志明细，
+    结果 60s 短缓存即可显著降低重复请求的聚合开销；
+    失效策略仅依赖 TTL 兜底（统计允许 1 分钟延迟，无需主动失效）。
+    """
+
+    @abstractmethod
+    async def get_dashboard_stats(self) -> dict[str, Any] | None:
+        """从缓存获取仪表盘统计聚合结果。
+
+        Returns:
+            统计数据字典（DTO model_dump(mode="json") 形态，缓存命中时），
+            None 表示缓存未命中或存储不可用
+        """
+        ...
+
+    @abstractmethod
+    async def set_dashboard_stats(self, data: dict[str, Any]) -> bool:
+        """将仪表盘统计聚合结果写入缓存（TTL 取 settings.CACHE_DASHBOARD_TTL）。
+
+        Args:
+            data: 统计数据字典（DTO model_dump(mode="json") 后的整体 data dict）
+
+        Returns:
+            是否成功写入缓存
+        """
+        ...
+
+
+class CachePort(
+    TokenRevocationPort,
+    UserCachePort,
+    MenuCachePort,
+    DictCachePort,
+    RoleCachePort,
+    LogCountCachePort,
+    DashboardCachePort,
+):
     """读穿透类缓存的聚合端口。
 
     只作为组合根工厂的返回类型与完整实现（``CacheService``）的基类存在；
