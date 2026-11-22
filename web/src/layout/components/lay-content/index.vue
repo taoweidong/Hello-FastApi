@@ -7,6 +7,7 @@ import { useGlobal, isNumber } from "@pureadmin/utils";
 import BackTopIcon from "@/assets/svg/back_top.svg?component";
 import { h, computed, Transition, defineComponent } from "vue";
 import { usePermissionStoreHook } from "@/store/modules/permission";
+import { loadAnimateCss } from "@/utils/animate";
 
 const props = defineProps({
   fixedHeader: Boolean
@@ -86,6 +87,14 @@ const transitionMain = defineComponent({
       transitions.value(this.route)?.name || "fade-transform";
     const enterTransition = transitions.value(this.route)?.enterTransition;
     const leaveTransition = transitions.value(this.route)?.leaveTransition;
+    /*
+     * animate.css 按需加载：仅当路由 meta 声明了 enter/leaveTransition
+     * （animate__ 前缀类名）时才动态 import；未声明时永不加载。
+     * loadAnimateCss 内部有模块级 once 标志，render 多次执行也只加载一次。
+     */
+    if (enterTransition || leaveTransition) {
+      loadAnimateCss();
+    }
     return h(
       Transition,
       {

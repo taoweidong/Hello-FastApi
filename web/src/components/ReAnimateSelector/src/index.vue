@@ -2,6 +2,8 @@
 import { ref, computed } from "vue";
 import { animates } from "./animate";
 import { cloneDeep } from "@pureadmin/utils";
+// animate.css 已从 layout 全局引入改为按需加载，悬停预览前先动态加载
+import { loadAnimateCss } from "@/utils/animate";
 
 defineOptions({
   name: "ReAnimateSelector"
@@ -62,6 +64,9 @@ function filterMethod(value: any) {
 
 const animateMap = ref({});
 function onMouseEnter(index: string | number) {
+  // 悬停即播放 animate__ 动画预览，需确保 animate.css 已按需加载
+  // （模块级 once 标志，只会真正加载一次）
+  loadAnimateCss();
   animateMap.value[index] = animateMap.value[index]?.loading
     ? Object.assign({}, animateMap.value[index], {
         loading: false

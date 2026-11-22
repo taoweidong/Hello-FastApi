@@ -221,13 +221,14 @@ export interface OperationLog extends AuditFields {
   method?: string | null;
   /** 请求路径 */
   path?: string | null;
-  /** 请求体（敏感字段已由后端脱敏） */
+  /** 请求体（敏感字段已由后端脱敏；列表行后端返回 null，详情接口返回全量） */
   body?: string | null;
   ipaddress?: string | null;
   system?: string | null;
   browser?: string | null;
   /** HTTP 响应码 */
   responseCode?: number | null;
+  /** 响应结果（列表行后端返回 null，详情接口返回全量） */
   responseResult?: string | null;
   /** 业务状态码 */
   statusCode?: number | null;
@@ -240,12 +241,14 @@ export interface SystemLog extends AuditFields {
   id: string;
   module?: string | null;
   path?: string | null;
+  /** 请求体（敏感字段已由后端脱敏；列表行后端返回 null，详情接口返回全量） */
   body?: string | null;
   method?: string | null;
   ipaddress?: string | null;
   system?: string | null;
   browser?: string | null;
   responseCode?: number | null;
+  /** 响应结果（列表行后端返回 null，详情接口返回全量） */
   responseResult?: string | null;
   statusCode?: number | null;
   description?: string | null;

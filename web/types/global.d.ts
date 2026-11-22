@@ -70,6 +70,12 @@ declare global {
     VITE_CDN: boolean;
     VITE_HIDE_HOME: string;
     VITE_COMPRESSION: ViteCompression;
+    /**
+     * 图标在线回退开关（可选，未设置时 undefined）：
+     * 生产构建默认不请求 api.iconify.design，设为 true 强制开启在线回退
+     * （见 src/components/ReIcon/src/hooks.ts）
+     */
+    VITE_ICON_ONLINE_FALLBACK?: boolean | string;
   }
 
   /**

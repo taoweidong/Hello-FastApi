@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import "animate.css";
+// animate.css 不再全局引入（常驻首屏），改为在
+// lay-content/transitionMain 与 ReAnimateSelector 预览处按需动态加载，
+// 见 src/utils/animate.ts
 // 引入 src/components/ReIcon/src/offlineIcon.ts 文件中所有使用addIcon添加过的本地图标
 import "@/components/ReIcon/src/offlineIcon";
 import { setType } from "./types";

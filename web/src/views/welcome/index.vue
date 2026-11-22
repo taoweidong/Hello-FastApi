@@ -1,16 +1,36 @@
 <script setup lang="ts">
-import { ref, markRaw } from "vue";
+import { ref, markRaw, defineAsyncComponent } from "vue";
 import ReCol from "@/components/ReCol";
 import { useDark, randomGradient } from "./utils";
 import WelcomeTable from "./components/table/index.vue";
 import { ReNormalCountTo } from "@/components/ReCountTo";
 import { useRenderFlicker } from "@/components/ReFlicker";
-import { ChartBar, ChartLine, ChartRound } from "./components/charts";
+import { loadEcharts } from "@/plugins/echarts";
 import Segmented, { type OptionsType } from "@/components/ReSegmented";
 import { chartData, barChartData, progressData, latestNewsData } from "./data";
 
 defineOptions({
   name: "Welcome"
+});
+
+/*
+ * echarts 懒加载：全站只有本页用图表，不再在 main.ts 启动即注册。
+ * 图表组件改为异步组件——渲染前先 await loadEcharts() 动态加载 echarts
+ * 并注册到 globalProperties.$echarts（@pureadmin/utils 的 useECharts
+ * 在组件 setup 时同步读取该属性，必须先于子组件 setup 完成注册），
+ * 同时图表代码本身也被拆进按需加载的 chunk。
+ */
+const ChartBar = defineAsyncComponent(async () => {
+  await loadEcharts();
+  return import("./components/charts/ChartBar.vue");
+});
+const ChartLine = defineAsyncComponent(async () => {
+  await loadEcharts();
+  return import("./components/charts/ChartLine.vue");
+});
+const ChartRound = defineAsyncComponent(async () => {
+  await loadEcharts();
+  return import("./components/charts/ChartRound.vue");
 });
 
 const { isDark } = useDark();

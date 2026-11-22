@@ -87,8 +87,7 @@
     "vue-json-pretty": "^2.6.0",
     "vue-router": "^5.4.0",
     "vue-tippy": "^6.8.0",
-    "vue-types": "^7.0.0",
-    "vxe-table": "4.6.25"
+    "vue-types": "^7.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.3",
