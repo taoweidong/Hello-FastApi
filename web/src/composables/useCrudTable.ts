@@ -4,12 +4,25 @@
  * 封装分页、搜索、删除等通用操作，减少 hook.tsx 中的重复代码。
  * 支持分页模式（paginated）和树形模式（tree）。
  */
+import Axios from "axios";
 import { message } from "@/utils/message";
 import { handleTree } from "@/utils/tree";
 import type { AnyRow, BaseApi, ResultTable } from "@/api/base";
-import { ElMessageBox } from "element-plus";
 import type { PaginationProps } from "@pureadmin/table";
 import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
+
+/**
+ * 判断错误是否属于"全局响应拦截器已统一提示"的网络层错误
+ * （取消请求、断网/超时等无响应错误、5xx 服务端错误）。
+ * 页面层 catch 命中时应静默（仅复位 loading），避免同一失败弹两层 toast；
+ * 返回 false 时为 4xx 等业务错误，由页面本地提示。
+ */
+export function isNetworkLevelError(error: unknown): boolean {
+  if (Axios.isCancel(error)) return true;
+  const status = (error as { response?: { status?: number } })?.response
+    ?.status;
+  return status === undefined || status >= 500;
+}
 
 /** useCrudTable 配置项 */
 export interface UseCrudTableOptions<TList> {
@@ -39,9 +52,9 @@ export interface UseCrudTableReturn<TList> {
   onSearch: () => Promise<void>;
   /** 重置搜索表单并重新搜索 */
   resetForm: (formEl?: any) => void;
-  /** 删除单条数据（含确认弹窗） */
+  /** 删除单条数据（确认由页面 popconfirm 负责，这里直接执行删除） */
   handleDelete: (row: TList) => Promise<void>;
-  /** 批量删除（含确认弹窗） */
+  /** 批量删除（确认由页面 popconfirm 负责，这里直接执行删除） */
   handleBatchDelete: (ids: string[]) => Promise<void>;
   /** 每页条数变化 */
   handleSizeChange: (val: number) => void;
@@ -101,10 +114,15 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
           dataList.value = handleTree(data as unknown as any[]);
         }
       }
-    } catch {
-      // 查询失败（4xx/5xx/断网）：保留原数据并提示，避免表格静默空白让用户
-      // 误以为是"真的没有数据"。失败时不清空 dataList。
-      message(`${entityName}列表加载失败，请稍后重试`, { type: "error" });
+    } catch (error) {
+      /*
+       * 查询失败时保留原数据，避免表格静默空白让用户误以为是"真的没有数据"。
+       * 取消请求、断网/5xx 已由全局响应拦截器统一提示，这里静默复位 loading
+       * 即可，仅 4xx 等业务错误做本地提示，避免同一失败弹两层 toast。
+       */
+      if (!isNetworkLevelError(error)) {
+        message(`${entityName}列表加载失败，请稍后重试`, { type: "error" });
+      }
     } finally {
       loading.value = false;
     }
@@ -117,30 +135,18 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
     onSearch();
   }
 
-  /** 删除单条数据 */
+  /** 删除单条数据（确认已由页面 popconfirm 完成，这里直接执行删除） */
   async function handleDelete(row: any) {
-    try {
-      await ElMessageBox.confirm(
-        `确认要删除${entityName} <strong style='color:var(--el-color-primary)'>${row[displayField]}</strong> 吗?`,
-        "系统提示",
-        {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning",
-          dangerouslyUseHTMLString: true,
-          draggable: true
-        }
-      );
-    } catch {
-      // 用户取消确认弹窗
-      return;
-    }
     try {
       const { code } = await api.destroy(row.id);
       if (code === 0) {
         message(`已成功删除${entityName} ${row[displayField]}`, {
           type: "success"
         });
+        // 当前页仅剩这一条且不在首页时页码回退，避免刷新后落在空页
+        if (dataList.value.length === 1 && pagination.currentPage > 1) {
+          pagination.currentPage -= 1;
+        }
         onSearch();
       }
     } catch {
@@ -149,30 +155,18 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
     }
   }
 
-  /** 批量删除 */
+  /** 批量删除（确认已由页面 popconfirm 完成，这里直接执行删除） */
   async function handleBatchDelete(ids: string[]) {
-    try {
-      await ElMessageBox.confirm(
-        `确认要删除选中的 <strong style='color:var(--el-color-primary)'>${ids.length}</strong> 条${entityName}数据吗?`,
-        "系统提示",
-        {
-          confirmButtonText: "确定",
-          cancelButtonText: "取消",
-          type: "warning",
-          dangerouslyUseHTMLString: true,
-          draggable: true
-        }
-      );
-    } catch {
-      // 用户取消确认弹窗
-      return;
-    }
     try {
       const { code } = await api.batchDelete(ids);
       if (code === 0) {
         message(`已成功删除 ${ids.length} 条${entityName}数据`, {
           type: "success"
         });
+        // 当前页数据全部删完且不在首页时页码回退，避免刷新后落在空页
+        if (dataList.value.length <= ids.length && pagination.currentPage > 1) {
+          pagination.currentPage -= 1;
+        }
         onSearch();
       }
     } catch {
@@ -181,9 +175,10 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
     }
   }
 
-  /** 每页条数变化 */
+  /** 每页条数变化：改 pageSize 后旧页码可能超出新的总页数，先回到第 1 页再刷新 */
   function handleSizeChange(val: number) {
     pagination.pageSize = val;
+    pagination.currentPage = 1;
     onSearch();
   }
 

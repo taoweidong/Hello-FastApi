@@ -96,8 +96,9 @@ const transitionMain = defineComponent({
         leaveActiveClass: leaveTransition
           ? `animate__animated ${leaveTransition}`
           : undefined,
-        mode: "out-in",
-        appear: true
+        mode: "out-in"
+
+        // 不再启用 appear：首屏无需播放路由切换动画，避免无意义的入场动效
       },
       {
         default: () => [this.$slots.default()]

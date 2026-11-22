@@ -16,12 +16,16 @@
   opacity: 0;
 }
 
-/* fade-transform */
+/*
+ * fade-transform
+ * 路由切换是高频动效，0.25s 的 panel 档在连续切页时显得拖沓，
+ * 降档到 0.15s 的 fast 档，保留位移方向感的同时加快切换节奏。
+ */
 .fade-transform-leave-active,
 .fade-transform-enter-active {
   transition:
-    opacity var(--pure-duration-panel) var(--pure-ease-standard),
-    transform var(--pure-duration-panel) var(--pure-ease-standard);
+    opacity var(--pure-duration-fast) var(--pure-ease-standard),
+    transform var(--pure-duration-fast) var(--pure-ease-standard);
 }
 
 .fade-transform-enter-from {

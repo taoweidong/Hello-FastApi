@@ -104,14 +104,17 @@ function onFullscreen() {
         >
           新增规则
         </el-button>
-        <el-button
-          v-auth="'ip-rule:delete'"
-          type="danger"
-          :icon="useRenderIcon(Delete)"
-          @click="handleBatchDelete"
-        >
-          批量删除
-        </el-button>
+        <el-popconfirm title="是否确认删除?" @confirm="handleBatchDelete">
+          <template #reference>
+            <el-button
+              v-auth="'ip-rule:delete'"
+              type="danger"
+              :icon="useRenderIcon(Delete)"
+            >
+              批量删除
+            </el-button>
+          </template>
+        </el-popconfirm>
         <el-button
           v-auth="'ip-rule:delete'"
           type="warning"

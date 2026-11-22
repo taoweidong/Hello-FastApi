@@ -38,14 +38,21 @@ class PureHttp {
     this.httpInterceptorsResponse();
   }
 
-  /** `token`过期后，暂存待执行的请求 */
-  private static requests = [];
+  /**
+   * `token`过期后，暂存待执行的请求。
+   * `resolve`：刷新成功后携带新 token 重放；`reject`：刷新失败后逐一拒绝，
+   * 避免挂起请求被静默丢弃而永远 pending。
+   */
+  private static requests: {
+    resolve: (token: string) => void;
+    reject: (reason?: unknown) => void;
+  }[] = [];
 
   /** 防止重复刷新`token` */
   private static isRefreshing = false;
 
-  /** 防止并发401重复登出 */
-  private static isLoggingOut = false;
+  /** 并发401单飞锁：登出流程进行中时（promise 未 settle），后续 401 跳过提示与登出 */
+  private static loggingOutPromise: Promise<void> | null = null;
 
   /** 初始化配置对象 */
   private static initConfig: PureHttpRequestConfig = {};
@@ -53,12 +60,15 @@ class PureHttp {
   /** 保存当前`Axios`实例对象 */
   private static axiosInstance: AxiosInstance = Axios.create(defaultConfig);
 
-  /** 重连原始请求 */
+  /** 重连原始请求：把挂起请求的 resolve/reject 入队，由 token 刷新结果决定重放或拒绝 */
   private static retryOriginalRequest(config: PureHttpRequestConfig) {
-    return new Promise(resolve => {
-      PureHttp.requests.push((token: string) => {
-        config.headers["Authorization"] = formatToken(token);
-        resolve(config);
+    return new Promise<PureHttpRequestConfig>((resolve, reject) => {
+      PureHttp.requests.push({
+        resolve: token => {
+          config.headers["Authorization"] = formatToken(token);
+          resolve(config);
+        },
+        reject
       });
     });
   }
@@ -94,10 +104,19 @@ class PureHttp {
                       .then(res => {
                         const token = res.data.accessToken;
                         config.headers["Authorization"] = formatToken(token);
-                        PureHttp.requests.forEach(cb => cb(token));
+                        // 刷新成功：携带新 token 重放挂起请求后清空队列
+                        PureHttp.requests.forEach(({ resolve }) =>
+                          resolve(token)
+                        );
                         PureHttp.requests = [];
                       })
-                      .catch(_err => {
+                      .catch(err => {
+                        /*
+                         * 刷新失败：逐个拒绝挂起请求（带刷新失败错误）后再清空队列。
+                         * 此前直接 `requests = []` 会把挂起请求静默丢弃，
+                         * 调用方拿不到任何结果而永远 pending。
+                         */
+                        PureHttp.requests.forEach(({ reject }) => reject(err));
                         PureHttp.requests = [];
                         useUserStoreHook().logOut();
                         message(transformI18n($t("login.pureLoginExpired")), {
@@ -154,13 +173,26 @@ class PureHttp {
           // 若其 401 再次触发登出会形成请求循环
           const whiteList = ["/refresh-token", "/login", "/logout"];
           const url = error.config?.url || "";
-          if (!whiteList.some(w => url.endsWith(w)) && !PureHttp.isLoggingOut) {
-            PureHttp.isLoggingOut = true;
+          if (
+            !whiteList.some(w => url.endsWith(w)) &&
+            !PureHttp.loggingOutPromise
+          ) {
             message(transformI18n($t("login.pureLoginExpired")), {
               type: "warning"
             });
-            useUserStoreHook().logOut();
-            PureHttp.isLoggingOut = false;
+            /*
+             * Promise 单飞锁：此前 isLoggingOut 同步置位后又同步复位，
+             * 并发的 401 仍会重复弹窗、重复登出。改为持有 logOut 的 promise，
+             * 流程 settle 后才复位；期间后续 401 直接跳过提示与登出。
+             * catch 兜底保证 logOut 失败时锁也能释放，不会永久阻塞后续流程。
+             */
+            PureHttp.loggingOutPromise = Promise.resolve(
+              useUserStoreHook().logOut()
+            )
+              .catch(() => undefined)
+              .finally(() => {
+                PureHttp.loggingOutPromise = null;
+              });
           }
         } else if (!$error.isCancelRequest) {
           /*

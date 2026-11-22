@@ -10,6 +10,7 @@ import { usePublicHooks, formatHigherDeptOptions } from "../../hooks";
 import { GenderChoices } from "../../constants";
 import { addDialog } from "@/components/ReDialog";
 import { useDict, dictLabel } from "@/composables/useDict";
+import { isNetworkLevelError } from "@/composables/useCrudTable";
 import type { PaginationProps } from "@pureadmin/table";
 import ReCropperPreview from "@/components/ReCropperPreview";
 import type { FormItemProps, RoleFormItemProps } from "../utils/types";
@@ -267,30 +268,28 @@ export function useUser(tableRef: Ref) {
   /** 下拉菜单「上传头像」按钮的占位回调（实际入口为 handleUpload） */
   function handleUpdate(_row) {}
 
-  function handleDelete(row) {
-    ElMessageBox.confirm(
-      `确认要删除用户 <strong style='color:var(--el-color-primary)'>${row.username}</strong> 吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(async () => {
-        const { code } = await userApi.destroy(row.id);
-        if (code === 0) {
-          message(`已成功删除用户 ${row.username}`, { type: "success" });
-          onSearch();
+  /** 删除用户（确认已由页面 popconfirm 完成，这里直接执行删除） */
+  async function handleDelete(row) {
+    try {
+      const { code } = await userApi.destroy(row.id);
+      if (code === 0) {
+        message(`已成功删除用户 ${row.username}`, { type: "success" });
+        // 当前页仅剩这一条且不在首页时页码回退，避免刷新后落在空页
+        if (dataList.value.length === 1 && pagination.currentPage > 1) {
+          pagination.currentPage -= 1;
         }
-      })
-      .catch(() => {});
+        onSearch();
+      }
+    } catch {
+      // 删除请求失败：给出明确提示，用户可重试而不是无感知失败
+      message("删除用户失败，请稍后重试", { type: "error" });
+    }
   }
 
+  /** 每页条数变化：改 pageSize 后旧页码可能超出新的总页数，先回到第 1 页再刷新 */
   function handleSizeChange(val: number) {
     pagination.pageSize = val;
+    pagination.currentPage = 1;
     onSearch();
   }
 
@@ -309,30 +308,29 @@ export function useUser(tableRef: Ref) {
     tableRef.value.getTableRef().clearSelection();
   }
 
-  function onbatchDel() {
+  /** 批量删除用户（确认已由页面 popconfirm 完成，这里直接执行删除） */
+  async function onbatchDel() {
     const curSelected = tableRef.value.getTableRef().getSelectionRows();
     const userIds = getKeyList(curSelected, "id");
-
-    ElMessageBox.confirm(
-      `确认要删除选中的 <strong style='color:var(--el-color-primary)'>${userIds.length}</strong> 个用户吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
-      }
-    )
-      .then(async () => {
-        const { code } = await userApi.batchDelete(userIds);
-        if (code === 0) {
-          message(`已成功删除 ${userIds.length} 个用户`, { type: "success" });
-          tableRef.value.getTableRef().clearSelection();
-          onSearch();
+    if (!userIds.length) return;
+    try {
+      const { code } = await userApi.batchDelete(userIds);
+      if (code === 0) {
+        message(`已成功删除 ${userIds.length} 个用户`, { type: "success" });
+        tableRef.value.getTableRef().clearSelection();
+        // 当前页数据全部删完且不在首页时页码回退，避免刷新后落在空页
+        if (
+          dataList.value.length <= userIds.length &&
+          pagination.currentPage > 1
+        ) {
+          pagination.currentPage -= 1;
         }
-      })
-      .catch(() => {});
+        onSearch();
+      }
+    } catch {
+      // 删除请求失败：给出明确提示
+      message("批量删除用户失败，请稍后重试", { type: "error" });
+    }
   }
 
   async function onSearch() {
@@ -349,8 +347,14 @@ export function useUser(tableRef: Ref) {
         pagination.pageSize = data.pageSize;
         pagination.currentPage = data.currentPage;
       }
-    } catch {
-      message("用户列表加载失败，请稍后重试", { type: "error" });
+    } catch (error) {
+      /*
+       * 取消请求、断网/5xx 已由全局响应拦截器统一提示，这里静默复位 loading
+       * 即可，仅 4xx 等业务错误做本地提示，避免同一失败弹两层 toast。
+       */
+      if (!isNetworkLevelError(error)) {
+        message("用户列表加载失败，请稍后重试", { type: "error" });
+      }
     } finally {
       loading.value = false;
     }
@@ -603,14 +607,20 @@ export function useUser(tableRef: Ref) {
       if (code === 0) {
         higherDeptOptions.value = handleTree(data);
       }
-    } catch {
-      message("部门树加载失败", { type: "error" });
+    } catch (error) {
+      // 断网/5xx 由全局拦截器提示，仅业务错误本地提示，避免重复 toast
+      if (!isNetworkLevelError(error)) {
+        message("部门树加载失败", { type: "error" });
+      }
     }
 
     try {
       roleOptions.value = (await userApi.getAllRoleList()).data ?? [];
-    } catch {
-      message("角色列表加载失败", { type: "error" });
+    } catch (error) {
+      // 断网/5xx 由全局拦截器提示，仅业务错误本地提示，避免重复 toast
+      if (!isNetworkLevelError(error)) {
+        message("角色列表加载失败", { type: "error" });
+      }
     }
 
     postOptions.value = (await postApi.options().catch(() => null))?.data ?? [];

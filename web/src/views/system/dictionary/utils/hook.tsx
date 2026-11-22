@@ -4,6 +4,7 @@ import { message } from "@/utils/message";
 import { dictionaryApi } from "@/api/system/dictionary";
 import { ElMessageBox } from "element-plus";
 import { usePublicHooks } from "@/views/system/hooks";
+import { isNetworkLevelError } from "@/composables/useCrudTable";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h, computed } from "vue";
 import type { FormItemProps } from "../utils/types";
@@ -338,29 +339,23 @@ export function useDictionary() {
     });
   }
 
-  /** 删除字典项 */
-  function handleDelete(row) {
-    ElMessageBox.confirm(
-      `确认要删除字典 <strong style='color:var(--el-color-primary)'>${row.label || row.name}</strong> 吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
+  /** 删除字典项（确认由页面 popconfirm 负责，这里直接执行，消除双重确认） */
+  async function handleDelete(row) {
+    try {
+      const { code, message: msg } = await dictionaryApi.destroy(row.id);
+      if (code === 0) {
+        message(`已成功删除字典 ${row.label || row.name}`, {
+          type: "success"
+        });
+        onSearch();
+      } else {
+        message(msg || "删除失败", { type: "error" });
       }
-    )
-      .then(async () => {
-        const { code } = await dictionaryApi.destroy(row.id);
-        if (code === 0) {
-          message(`已成功删除字典 ${row.label || row.name}`, {
-            type: "success"
-          });
-          onSearch();
-        }
-      })
-      .catch(() => {});
+    } catch (err) {
+      if (!isNetworkLevelError(err)) {
+        message("删除失败", { type: "error" });
+      }
+    }
   }
 
   /** 删除字典类型（根节点） */

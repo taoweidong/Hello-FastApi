@@ -28,7 +28,7 @@ interface MessageParams {
   placement?: messagePlacement;
   /** 设置组件的根元素，默认 `document.body` */
   appendTo?: string | HTMLElement;
-  /** 合并内容相同的消息，不支持 `VNode` 类型的消息，默认值 `false` */
+  /** 合并内容相同的消息，不支持 `VNode` 类型的消息，默认值 `true` */
   grouping?: boolean;
   /** 重复次数，类似于 `Badge` 。当和 `grouping` 属性一起使用时作为初始数量使用，默认值 `1` */
   repeatNum?: number;
@@ -48,6 +48,8 @@ const message = (
   if (!params) {
     return ElMessage({
       message,
+      // 默认开启 grouping：连续相同的提示（如轮询失败）合并为一条，避免刷屏
+      grouping: true,
       customClass: "pure-message"
     });
   } else {
@@ -62,7 +64,8 @@ const message = (
       offset = 16,
       placement = "top",
       appendTo = document.body,
-      grouping = false,
+      // 默认开启 grouping：内容相同的消息自动合并；调用方显式传 false 时以调用方为准
+      grouping = true,
       repeatNum = 1,
       onClose
     } = params;

@@ -3,8 +3,10 @@
  *
  * 重点回归：
  * - 分页参数必须随 list 请求传递（分页功能的根基）；
- * - 搜索失败保留原数据并提示（不静默清空）；
- * - 删除区分"用户取消"与"请求失败"。
+ * - 查询失败保留原数据：网络类错误（无响应/5xx）静默（全局拦截器已提示），
+ *   业务错误（4xx）本地提示，避免同一失败弹两层 toast；
+ * - 删除确认已由页面 popconfirm 负责，hook 直接执行删除（不再弹 MessageBox）；
+ * - 删除后当前页删空时页码回退，避免落在空页；改 pageSize 回到第 1 页。
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,11 +15,6 @@ vi.mock("@/utils/message", () => ({
   message: (...args: unknown[]) => mockMessage(...args)
 }));
 
-vi.mock("element-plus", () => ({
-  ElMessageBox: { confirm: vi.fn() }
-}));
-
-import { ElMessageBox } from "element-plus";
 import { nextTick } from "vue";
 import { useCrudTable } from "../useCrudTable";
 import type { BaseApi } from "@/api/base";
@@ -93,13 +90,32 @@ describe("useCrudTable", () => {
     );
   });
 
-  it("请求失败时保留原数据并提示，不静默清空表格", async () => {
+  it("网络类错误（无响应/5xx）静默：保留原数据且不重复弹提示", async () => {
     api.list.mockResolvedValueOnce(pageResult([{ id: "1", name: "old" }]));
     const { dataList, onSearch } = setup();
     await onSearch();
     expect(dataList.value).toHaveLength(1);
 
+    // 无响应（断网/超时）：全局拦截器已提示，页面层静默
     api.list.mockRejectedValueOnce(new Error("network"));
+    await onSearch();
+    expect(dataList.value).toHaveLength(1); // 保留旧数据
+    expect(mockMessage).not.toHaveBeenCalled();
+
+    // 5xx：同上
+    api.list.mockRejectedValueOnce({ response: { status: 502 } });
+    await onSearch();
+    expect(dataList.value).toHaveLength(1);
+    expect(mockMessage).not.toHaveBeenCalled();
+  });
+
+  it("业务错误（4xx）时保留原数据并本地提示，不静默清空表格", async () => {
+    api.list.mockResolvedValueOnce(pageResult([{ id: "1", name: "old" }]));
+    const { dataList, onSearch } = setup();
+    await onSearch();
+    expect(dataList.value).toHaveLength(1);
+
+    api.list.mockRejectedValueOnce({ response: { status: 400 } });
     await onSearch();
     expect(dataList.value).toHaveLength(1); // 保留旧数据
     expect(mockMessage).toHaveBeenCalledWith(
@@ -108,33 +124,18 @@ describe("useCrudTable", () => {
     );
   });
 
-  it("确认后删除成功会刷新列表", async () => {
-    (ElMessageBox.confirm as ReturnType<typeof vi.fn>).mockResolvedValue(true);
+  it("删除成功会刷新列表（确认由页面 popconfirm 负责）", async () => {
     api.destroy.mockResolvedValue({ code: 0 });
     api.list.mockResolvedValue(pageResult([]));
-    const { handleDelete, onSearch } = setup();
-    const searchSpy = onSearch;
+    const { handleDelete } = setup();
 
     await handleDelete({ id: "9", name: "目标" });
 
     expect(api.destroy).toHaveBeenCalledWith("9");
     expect(api.list).toHaveBeenCalled();
-    void searchSpy;
-  });
-
-  it("用户取消删除时不调用删除接口", async () => {
-    (ElMessageBox.confirm as ReturnType<typeof vi.fn>).mockRejectedValue(
-      "cancel"
-    );
-    const { handleDelete } = setup();
-
-    await handleDelete({ id: "9", name: "目标" });
-
-    expect(api.destroy).not.toHaveBeenCalled();
   });
 
   it("删除请求失败时提示错误", async () => {
-    (ElMessageBox.confirm as ReturnType<typeof vi.fn>).mockResolvedValue(true);
     api.destroy.mockRejectedValue(new Error("500"));
     const { handleDelete } = setup();
 
@@ -146,14 +147,87 @@ describe("useCrudTable", () => {
     );
   });
 
+  it("删除当前页最后一条且不在首页时，页码回退避免空页", async () => {
+    api.list.mockImplementation(async (params: any) =>
+      pageResult(
+        params.pageNum === 2 ? [{ id: "9", name: "目标" }] : [],
+        11,
+        params.pageNum,
+        10
+      )
+    );
+    const { handleDelete, pagination, dataList, onSearch } = setup();
+    pagination.currentPage = 2;
+    await onSearch();
+    expect(dataList.value).toHaveLength(1); // 第 2 页仅剩一条
+
+    api.destroy.mockResolvedValue({ code: 0 });
+    await handleDelete({ id: "9", name: "目标" });
+
+    expect(api.destroy).toHaveBeenCalledWith("9");
+    expect(pagination.currentPage).toBe(1);
+    expect(api.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pageNum: 1, pageSize: 10 })
+    );
+  });
+
+  it("删除非当前页最后一条时保持页码不变", async () => {
+    api.list.mockImplementation(async (params: any) =>
+      pageResult(
+        params.pageNum === 2
+          ? [
+              { id: "1", name: "a" },
+              { id: "9", name: "b" }
+            ]
+          : [],
+        12,
+        params.pageNum,
+        10
+      )
+    );
+    const { handleDelete, pagination, onSearch } = setup();
+    pagination.currentPage = 2;
+    await onSearch();
+
+    api.destroy.mockResolvedValue({ code: 0 });
+    await handleDelete({ id: "9", name: "b" });
+
+    expect(pagination.currentPage).toBe(2);
+  });
+
+  it("批量删除清空当前页且不在首页时，页码回退避免空页", async () => {
+    api.list.mockImplementation(async (params: any) =>
+      pageResult(
+        params.pageNum === 2 ? [{ id: "1", name: "a" }] : [],
+        11,
+        params.pageNum,
+        10
+      )
+    );
+    const { handleBatchDelete, pagination, dataList, onSearch } = setup();
+    pagination.currentPage = 2;
+    await onSearch();
+    expect(dataList.value).toHaveLength(1);
+
+    api.batchDelete.mockResolvedValue({ code: 0 });
+    await handleBatchDelete(["1"]);
+
+    expect(api.batchDelete).toHaveBeenCalledWith(["1"]);
+    expect(pagination.currentPage).toBe(1);
+    expect(api.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pageNum: 1 })
+    );
+  });
+
   it("handleSizeChange/handleCurrentChange 更新分页并重新搜索", async () => {
     api.list.mockResolvedValue(pageResult([], 0, 3, 50));
     const { pagination, handleSizeChange, handleCurrentChange } = setup();
 
     handleSizeChange(50);
     await nextTick();
-    expect(api.list).toHaveBeenCalledWith(
-      expect.objectContaining({ pageSize: 50 })
+    // 改 pageSize 后旧页码可能超出新的总页数，必须回到第 1 页再查询
+    expect(api.list).toHaveBeenLastCalledWith(
+      expect.objectContaining({ pageNum: 1, pageSize: 50 })
     );
     expect(pagination.pageSize).toBe(50); // 以服务端响应回写为准
 

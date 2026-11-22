@@ -3,8 +3,8 @@ import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
 import { deptApi } from "@/api/system/dept";
-import { ElMessageBox } from "element-plus";
 import { usePublicHooks, formatHigherDeptOptions } from "../../hooks";
+import { isNetworkLevelError } from "@/composables/useCrudTable";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h } from "vue";
 import type { FormItemProps } from "../utils/types";
@@ -204,26 +204,21 @@ export function useDept() {
     });
   }
 
-  function handleDelete(row) {
-    ElMessageBox.confirm(
-      `确认要删除部门 <strong style='color:var(--el-color-primary)'>${row.name}</strong> 吗?`,
-      "系统提示",
-      {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-        dangerouslyUseHTMLString: true,
-        draggable: true
+  /* 确认由页面 popconfirm 负责，这里直接执行删除（消除双重确认） */
+  async function handleDelete(row) {
+    try {
+      const { code, message: msg } = await deptApi.destroy(row.id);
+      if (code === 0) {
+        message(`已成功删除部门 ${row.name}`, { type: "success" });
+        onSearch();
+      } else {
+        message(msg || "删除失败", { type: "error" });
       }
-    )
-      .then(async () => {
-        const { code } = await deptApi.destroy(row.id);
-        if (code === 0) {
-          message(`已成功删除部门 ${row.name}`, { type: "success" });
-          onSearch();
-        }
-      })
-      .catch(() => {});
+    } catch (err) {
+      if (!isNetworkLevelError(err)) {
+        message("删除失败", { type: "error" });
+      }
+    }
   }
 
   onMounted(() => {
