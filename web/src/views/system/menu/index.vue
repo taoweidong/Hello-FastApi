@@ -48,7 +48,7 @@ function onFullscreen() {
           v-model="form.title"
           placeholder="请输入菜单名称"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item>

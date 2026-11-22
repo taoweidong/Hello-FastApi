@@ -13,6 +13,8 @@ defineOptions({
 });
 
 const formRef = ref();
+const tableRef = ref();
+
 const {
   form,
   loading,
@@ -25,6 +27,11 @@ const {
   handleSizeChange,
   handleCurrentChange
 } = useOnline();
+
+/** 全屏切换后重算表格自适应高度（与其它列表页一致） */
+function onFullscreen() {
+  tableRef.value.setAdaptive();
+}
 </script>
 
 <template>
@@ -40,13 +47,13 @@ const {
           v-model="form.username"
           placeholder="请输入用户名"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item>
         <el-button
           type="primary"
-          :icon="useRenderIcon('ri:search-line')"
+          :icon="useRenderIcon('ri/search-line')"
           :loading="loading"
           @click="onSearch"
         >
@@ -58,9 +65,16 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar title="在线用户" :columns="columns" @refresh="onSearch">
+    <PureTableBar
+      title="在线用户"
+      :columns="columns"
+      :tableRef="tableRef?.getTableRef()"
+      @refresh="onSearch"
+      @fullscreen="onFullscreen"
+    >
       <template v-slot="{ size, dynamicColumns }">
         <pure-table
+          ref="tableRef"
           row-key="id"
           align-whole="center"
           showOverflowTooltip
@@ -68,7 +82,7 @@ const {
           :loading="loading"
           :size="size"
           adaptive
-          :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.withSelectionBar }"
+          :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.base }"
           :data="dataList"
           :columns="dynamicColumns"
           :pagination="{ ...pagination, size }"
@@ -99,9 +113,3 @@ const {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-:deep(.el-dropdown-menu__item i) {
-  margin: 0;
-}
-</style>

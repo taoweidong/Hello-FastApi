@@ -155,31 +155,35 @@ onMounted(() => {
       </template>
 
       <template v-if="serverInfo">
-        <!-- CPU / 内存 / 磁盘 使用率概览 -->
+        <!-- CPU / 内存 / 磁盘 使用率概览（间距走 tokens.scss 的 --pure-space-* 令牌） -->
         <el-row :gutter="16">
           <el-col :xs="24" :sm="8">
-            <el-card shadow="never" class="mb-4">
+            <el-card shadow="never" class="mb-(--pure-space-4)">
               <div class="text-center">
-                <div class="mb-2 font-bold">CPU</div>
+                <div class="mb-(--pure-space-2) font-bold">CPU</div>
                 <el-progress
                   type="dashboard"
                   :percentage="percent(serverInfo.cpu.usedPercent)"
                 />
-                <div class="mt-2 text-(--el-text-color-secondary)">
+                <div
+                  class="mt-(--pure-space-2) text-(--el-text-color-secondary)"
+                >
                   逻辑核心数：{{ serverInfo.cpu.coreCount }}
                 </div>
               </div>
             </el-card>
           </el-col>
           <el-col :xs="24" :sm="8">
-            <el-card shadow="never" class="mb-4">
+            <el-card shadow="never" class="mb-(--pure-space-4)">
               <div class="text-center">
-                <div class="mb-2 font-bold">内存</div>
+                <div class="mb-(--pure-space-2) font-bold">内存</div>
                 <el-progress
                   type="dashboard"
                   :percentage="percent(serverInfo.memory.usedPercent)"
                 />
-                <div class="mt-2 text-(--el-text-color-secondary)">
+                <div
+                  class="mt-(--pure-space-2) text-(--el-text-color-secondary)"
+                >
                   总大小：{{ serverInfo.memory.total }}
                 </div>
                 <div class="text-(--el-text-color-secondary)">
@@ -191,14 +195,16 @@ onMounted(() => {
             </el-card>
           </el-col>
           <el-col :xs="24" :sm="8">
-            <el-card shadow="never" class="mb-4">
+            <el-card shadow="never" class="mb-(--pure-space-4)">
               <div class="text-center">
-                <div class="mb-2 font-bold">磁盘</div>
+                <div class="mb-(--pure-space-2) font-bold">磁盘</div>
                 <el-progress
                   type="dashboard"
                   :percentage="percent(serverInfo.disk.usedPercent)"
                 />
-                <div class="mt-2 text-(--el-text-color-secondary)">
+                <div
+                  class="mt-(--pure-space-2) text-(--el-text-color-secondary)"
+                >
                   总大小：{{ serverInfo.disk.total }}
                 </div>
                 <div class="text-(--el-text-color-secondary)">
@@ -212,7 +218,12 @@ onMounted(() => {
         </el-row>
 
         <!-- 系统信息 -->
-        <el-descriptions title="系统信息" :column="2" border class="mt-2">
+        <el-descriptions
+          title="系统信息"
+          :column="2"
+          border
+          class="mt-(--pure-space-2)"
+        >
           <el-descriptions-item label="主机名称">
             {{ serverInfo.system.hostname }}
           </el-descriptions-item>
@@ -234,7 +245,12 @@ onMounted(() => {
         </el-descriptions>
 
         <!-- 进程信息 -->
-        <el-descriptions title="服务进程" :column="2" border class="mt-4">
+        <el-descriptions
+          title="服务进程"
+          :column="2"
+          border
+          class="mt-(--pure-space-4)"
+        >
           <el-descriptions-item label="进程 ID">
             {{ serverInfo.process.pid }}
           </el-descriptions-item>
@@ -258,7 +274,7 @@ onMounted(() => {
           title="数据库 I/O（PostgreSQL 18 pg_stat_io）"
           :column="3"
           border
-          class="mt-4"
+          class="mt-(--pure-space-4)"
         >
           <el-descriptions-item label="缓冲读次数">
             {{ serverInfo.pgIo.reads }}
@@ -292,7 +308,7 @@ onMounted(() => {
     </el-card>
 
     <!-- 日志文件（仅管理员：按钮按 monitor:manage 权限码显隐，后端 require_superuser 双重校验） -->
-    <el-card v-loading="logsLoading" shadow="never" class="mt-4">
+    <el-card v-loading="logsLoading" shadow="never" class="mt-(--pure-space-4)">
       <template #header>
         <div class="flex-bc">
           <span class="font-bold">日志文件</span>

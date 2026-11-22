@@ -48,7 +48,7 @@ function onFullscreen() {
           v-model="form.key"
           placeholder="请输入配置键"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item>

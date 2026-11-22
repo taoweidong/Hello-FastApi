@@ -2,7 +2,6 @@ import dayjs from "dayjs";
 import editForm from "./form.vue";
 import { message } from "@/utils/message";
 import { useDict, dictLabel } from "@/composables/useDict";
-import { usePublicHooks } from "@/views/system/hooks";
 import { useCrudTable, useDialogForm } from "@/composables";
 import { addDialog } from "@/components/ReDialog";
 import { noticeApi } from "@/api/system/notice";
@@ -24,7 +23,6 @@ export function useNotice() {
     isActive: null as number | null
   });
 
-  const { tagStyle } = usePublicHooks();
   /** 公告类型字典（后端字典取数，未命中时回退静态选项） */
   const dicts = useDict("sys_notice_type");
 
@@ -60,7 +58,8 @@ export function useNotice() {
       { key: "noticeType", defaultValue: 1 },
       { key: "isActive", defaultValue: 1 }
     ],
-    width: "46%",
+    // 弹窗宽度统一两档：560px（简单表单）/ 720px（复杂表单与内容查看），表单为简单字段
+    width: "560px",
     onSuccess: onSearch
   });
 
@@ -99,8 +98,12 @@ export function useNotice() {
       label: "状态",
       prop: "isActive",
       minWidth: 90,
+      // 状态 tag 统一 EP success/danger 色板（与全站状态列一致）
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.isActive)}>
+        <el-tag
+          size={props.size}
+          type={row.isActive === 1 ? "success" : "danger"}
+        >
           {row.isActive === 1 ? "正常" : "关闭"}
         </el-tag>
       )
@@ -143,7 +146,8 @@ export function useNotice() {
       const { data } = await noticeApi.retrieve(row.id);
       addDialog({
         title: data.title,
-        width: "46%",
+        // 详情查看归 720px 档（长文本阅读需要更宽版心）
+        width: "720px",
         draggable: true,
         fullscreen: deviceDetection(),
         fullscreenIcon: true,

@@ -425,7 +425,8 @@ export function useUser(tableRef: Ref) {
       props: {
         formInline
       },
-      width: "46%",
+      // 弹窗宽度分档：多列表单 720px（全局 max-width: 92vw 兜底窄屏）
+      width: "720px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
@@ -544,7 +545,8 @@ export function useUser(tableRef: Ref) {
   function handleReset(row) {
     addDialog({
       title: `重置 ${row.username} 用户的密码`,
-      width: "30%",
+      // 弹窗宽度分档：简单单列表单 560px
+      width: "560px",
       draggable: true,
       closeOnClickModal: false,
       fullscreen: deviceDetection(),
@@ -635,7 +637,8 @@ export function useUser(tableRef: Ref) {
       props: {
         formInline
       },
-      width: "400px",
+      // 弹窗宽度分档：简单单列表单 560px
+      width: "560px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,

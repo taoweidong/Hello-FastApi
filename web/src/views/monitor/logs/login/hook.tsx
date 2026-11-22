@@ -6,7 +6,6 @@ import {
   batchDeleteLoginLogs,
   clearLoginLogs
 } from "@/api/system/log";
-import { usePublicHooks } from "@/views/system/hooks";
 import type { PaginationProps } from "@pureadmin/table";
 import { type Ref, reactive, ref, onMounted, toRaw } from "vue";
 
@@ -19,7 +18,6 @@ export function useLoginLog(tableRef: Ref) {
   const dataList = ref([]);
   const loading = ref(true);
   const selectedNum = ref(0);
-  const { tagStyle } = usePublicHooks();
 
   const pagination = reactive<PaginationProps>({
     total: 0,
@@ -30,9 +28,10 @@ export function useLoginLog(tableRef: Ref) {
 
   const columns: TableColumnList = [
     {
-      label: "勾选列",
+      // 勾选列统一宽度 55、无标题文案；本页列较多，保留 fixed:left 防横向滚动丢失勾选
       type: "selection",
       fixed: "left",
+      width: 55,
       reserveSelection: true
     },
     {
@@ -44,8 +43,12 @@ export function useLoginLog(tableRef: Ref) {
       label: "登录状态",
       prop: "status",
       minWidth: 100,
+      // 状态 tag 统一 EP success/danger 色板（与操作日志等全站状态列一致）
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.status)}>
+        <el-tag
+          size={props.size}
+          type={row.status === 1 ? "success" : "danger"}
+        >
           {row.status === 1 ? "成功" : "失败"}
         </el-tag>
       )

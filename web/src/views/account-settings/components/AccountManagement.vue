@@ -111,7 +111,7 @@ async function onSubmitPwd(formEl: FormInstance) {
     <el-dialog
       v-model="dialogVisible"
       title="修改账户密码"
-      width="400px"
+      width="560px"
       destroy-on-close
       :closeOnClickModal="false"
     >
@@ -119,7 +119,7 @@ async function onSubmitPwd(formEl: FormInstance) {
         ref="pwdFormRef"
         :model="pwdForm"
         :rules="pwdRules"
-        label-width="82px"
+        label-width="100px"
       >
         <el-form-item label="当前密码" prop="oldPassword">
           <el-input

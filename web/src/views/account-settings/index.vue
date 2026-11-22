@@ -1,65 +1,37 @@
 <script setup lang="ts">
 import { getMine } from "@/api/user";
 import { useRouter } from "vue-router";
-import { ReText } from "@/components/ReText";
 import Profile from "./components/Profile.vue";
+import { storeToRefs } from "pinia";
 import { ref, onMounted, onBeforeMount } from "vue";
 import Preferences from "./components/Preferences.vue";
 import SecurityLog from "./components/SecurityLog.vue";
-import { useGlobal, deviceDetection } from "@pureadmin/utils";
 import AccountManagement from "./components/AccountManagement.vue";
+import { useUserStoreHook } from "@/store/modules/user";
+import { useGlobal } from "@pureadmin/utils";
 import { useDataThemeChange } from "@/layout/hooks/useDataThemeChange";
-import LaySidebarTopCollapse from "@/layout/components/lay-sidebar/components/SidebarTopCollapse.vue";
+import ReCol from "@/components/ReCol";
 
 import leftLine from "~icons/ri/arrow-left-s-line";
-import ProfileIcon from "~icons/ri/user-3-line";
-import PreferencesIcon from "~icons/ri/settings-3-line";
-import SecurityLogIcon from "~icons/ri/window-line";
-import AccountManagementIcon from "~icons/ri/profile-line";
 
 defineOptions({
   name: "AccountSettings"
 });
 
 const router = useRouter();
-const isOpen = ref(deviceDetection() ? false : true);
 const { $storage } = useGlobal<GlobalPropertiesApi>();
 onBeforeMount(() => {
   useDataThemeChange().dataThemeChange($storage.layout?.themeMode);
 });
 
+/** 头部用户信息（/mine 接口回填） */
 const userInfo = ref({
   avatar: "",
   username: "",
   nickname: ""
 });
-const panes = [
-  {
-    key: "profile",
-    label: "个人信息",
-    icon: ProfileIcon,
-    component: Profile
-  },
-  {
-    key: "preferences",
-    label: "偏好设置",
-    icon: PreferencesIcon,
-    component: Preferences
-  },
-  {
-    key: "securityLog",
-    label: "安全日志",
-    icon: SecurityLogIcon,
-    component: SecurityLog
-  },
-  {
-    key: "accountManagement",
-    label: "账户管理",
-    icon: AccountManagementIcon,
-    component: AccountManagement
-  }
-];
-const witchPane = ref("profile");
+/** 角色标签：登录后已缓存于 user store，直接读取，不新增接口调用 */
+const { roles } = storeToRefs(useUserStoreHook());
 
 onMounted(async () => {
   const { code, data } = await getMine();
@@ -70,119 +42,62 @@ onMounted(async () => {
 </script>
 
 <template>
-  <el-container class="h-full">
-    <el-aside
-      v-if="isOpen"
-      class="pure-account-settings overflow-hidden px-2 dark:bg-(--el-bg-color)! border-r border-(--pure-border-color)"
-      :width="deviceDetection() ? '180px' : '240px'"
-    >
-      <el-menu :default-active="witchPane" class="pure-account-settings-menu">
-        <div
-          class="h-12.5! text-(--pure-theme-menu-text) cursor-pointer text-sm transition-all duration-300 ease-in-out hover:scale-105 will-change-transform transform-gpu origin-center hover:text-base! hover:text-(--pure-theme-menu-title-hover)!"
-          @click="router.go(-1)"
-        >
-          <div
-            class="h-full flex items-center px-(--el-menu-base-level-padding)"
+  <div class="h-full overflow-auto bg-(--el-bg-color-page) p-(--pure-space-4)">
+    <!-- 头部用户信息区：头像 + 名称 + 角色标签 + 返回（颜色全部走 EP 变量，dark 自动适配） -->
+    <el-card shadow="never" class="mb-(--pure-space-4)">
+      <div
+        class="flex flex-wrap items-center gap-x-(--pure-space-6) gap-y-(--pure-space-3)"
+      >
+        <el-avatar :size="64" :src="userInfo.avatar" />
+        <div class="flex flex-col min-w-0">
+          <span class="text-lg font-bold truncate">
+            {{ userInfo.nickname || userInfo.username }}
+          </span>
+          <span
+            class="text-sm mt-(--pure-space-1)"
+            style="color: var(--el-text-color-secondary)"
           >
-            <IconifyIconOffline :icon="leftLine" />
-            <span class="ml-2">返回</span>
-          </div>
+            {{ userInfo.username }}
+          </span>
         </div>
-        <div class="flex items-center ml-8 my-4">
-          <el-avatar :size="48" :src="userInfo.avatar" />
-          <div class="ml-4 flex flex-col max-w-32.5">
-            <ReText class="font-bold self-baseline!">
-              {{ userInfo.nickname }}
-            </ReText>
-            <ReText class="self-baseline!" type="info">
-              {{ userInfo.username }}
-            </ReText>
-          </div>
-        </div>
-        <el-menu-item
-          v-for="item in panes"
-          :key="item.key"
-          :index="item.key"
-          @click="
-            () => {
-              witchPane = item.key;
-              if (deviceDetection()) {
-                isOpen = !isOpen;
-              }
-            }
-          "
+        <div
+          v-if="roles.length"
+          class="flex flex-wrap items-center gap-(--pure-space-2)"
         >
-          <div class="flex items-center z-10">
-            <el-icon><IconifyIconOffline :icon="item.icon" /></el-icon>
-            <span>{{ item.label }}</span>
-          </div>
-        </el-menu-item>
-      </el-menu>
-    </el-aside>
-    <el-main>
-      <LaySidebarTopCollapse
-        v-if="deviceDetection()"
-        class="px-0"
-        :is-active="isOpen"
-        @toggleClick="isOpen = !isOpen"
-      />
-      <component
-        :is="panes.find(item => item.key === witchPane).component"
-        :class="[!deviceDetection() && 'ml-30']"
-      />
-    </el-main>
-  </el-container>
+          <el-tag v-for="role in roles" :key="role" effect="plain">
+            {{ role }}
+          </el-tag>
+        </div>
+        <div class="ml-auto">
+          <el-button :icon="leftLine" @click="router.go(-1)">返回</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 分区卡片栅格：资料 / 账户安全 / 偏好 / 安全日志。
+         四个功能组件保持原实现不变，仅改为卡片分区呈现；
+         ≥992px 双列、以下单列堆叠（re-col 断点覆盖）。 -->
+    <el-row :gutter="16">
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-card shadow="never" class="mb-(--pure-space-4)">
+          <Profile />
+        </el-card>
+      </re-col>
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-card shadow="never" class="mb-(--pure-space-4)">
+          <AccountManagement />
+        </el-card>
+      </re-col>
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-card shadow="never" class="mb-(--pure-space-4)">
+          <Preferences />
+        </el-card>
+      </re-col>
+      <re-col :value="12" :xs="24" :sm="24">
+        <el-card shadow="never" class="mb-(--pure-space-4)">
+          <SecurityLog />
+        </el-card>
+      </re-col>
+    </el-row>
+  </div>
 </template>
-
-<style lang="scss">
-.pure-account-settings {
-  background: var(--pure-theme-menu-bg) !important;
-}
-
-.pure-account-settings-menu {
-  background-color: transparent;
-  border: none;
-
-  .el-menu-item {
-    height: 48px !important;
-    color: var(--pure-theme-menu-text);
-    background-color: transparent !important;
-    transition: color 0.2s;
-
-    &:hover {
-      color: var(--pure-theme-menu-title-hover) !important;
-    }
-
-    &.is-active {
-      color: #fff !important;
-
-      &:hover {
-        color: #fff !important;
-      }
-
-      &::before {
-        position: absolute;
-        inset: 0 8px;
-        clear: both;
-        margin: 4px 0;
-        content: "";
-        background: var(--el-color-primary);
-        border-radius: 3px;
-      }
-    }
-  }
-}
-</style>
-
-<style lang="scss" scoped>
-body[layout] {
-  .el-menu--vertical .is-active {
-    color: #fff !important;
-    transition: color 0.2s;
-
-    &:hover {
-      color: #fff !important;
-    }
-  }
-}
-</style>

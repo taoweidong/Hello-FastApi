@@ -32,6 +32,11 @@ const {
   handleCurrentChange,
   handleSelectionChange
 } = useLoginLog(tableRef);
+
+/** 全屏切换后重算表格自适应高度（与其它列表页一致） */
+function onFullscreen() {
+  tableRef.value.setAdaptive();
+}
 </script>
 
 <template>
@@ -45,9 +50,9 @@ const {
       <el-form-item label="登录类型" prop="loginType">
         <el-select
           v-model="form.loginType"
-          placeholder="请选择"
+          placeholder="请选择登录类型"
           clearable
-          class="w-37.5!"
+          class="w-full"
         >
           <el-option label="密码" value="0" />
           <el-option label="短信" value="1" />
@@ -57,9 +62,9 @@ const {
       <el-form-item label="登录状态" prop="status">
         <el-select
           v-model="form.status"
-          placeholder="请选择"
+          placeholder="请选择登录状态"
           clearable
-          class="w-37.5!"
+          class="w-full"
         >
           <el-option label="成功" value="1" />
           <el-option label="失败" value="0" />
@@ -78,7 +83,7 @@ const {
       <el-form-item>
         <el-button
           type="primary"
-          :icon="useRenderIcon('ri:search-line')"
+          :icon="useRenderIcon('ri/search-line')"
           :loading="loading"
           @click="onSearch"
         >
@@ -90,7 +95,13 @@ const {
       </el-form-item>
     </el-form>
 
-    <PureTableBar title="登录日志" :columns="columns" @refresh="onSearch">
+    <PureTableBar
+      title="登录日志"
+      :columns="columns"
+      :tableRef="tableRef?.getTableRef()"
+      @refresh="onSearch"
+      @fullscreen="onFullscreen"
+    >
       <template #buttons>
         <el-popconfirm title="确定要删除所有日志数据吗？" @confirm="clearAll">
           <template #reference>
@@ -144,9 +155,3 @@ const {
     </PureTableBar>
   </div>
 </template>
-
-<style lang="scss" scoped>
-:deep(.el-dropdown-menu__item i) {
-  margin: 0;
-}
-</style>

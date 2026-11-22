@@ -18,8 +18,9 @@ export function useOnline() {
   });
   const columns: TableColumnList = [
     {
+      // 序号用行号展示；row.id 是会话 Token 哈希（供强退接口使用），不适合直接呈现
       label: "序号",
-      prop: "id",
+      type: "index",
       minWidth: 60
     },
     {

@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import editForm from "./form.vue";
-import { usePublicHooks } from "@/views/system/hooks";
 import { useCrudTable, useDialogForm } from "@/composables";
 import { postApi } from "@/api/system/post";
 import { ref, reactive } from "vue";
@@ -13,8 +12,6 @@ export function usePost() {
     postName: "",
     isActive: null as number | null
   });
-
-  const { tagStyle } = usePublicHooks();
 
   const {
     loading,
@@ -44,7 +41,8 @@ export function usePost() {
       { key: "isActive", defaultValue: 1 },
       { key: "remark", defaultValue: "", nullable: true }
     ],
-    width: "46%",
+    // 弹窗宽度分档：双列布局表单 720px
+    width: "720px",
     onSuccess: onSearch
   });
 
@@ -73,8 +71,13 @@ export function usePost() {
       label: "状态",
       prop: "isActive",
       minWidth: 90,
+      // 状态色板统一：正常=success、停用=info（与全局状态列规范一致）
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.isActive)}>
+        <el-tag
+          size={props.size}
+          type={row.isActive === 1 ? "success" : "info"}
+          effect="plain"
+        >
           {row.isActive === 1 ? "正常" : "停用"}
         </el-tag>
       )

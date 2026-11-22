@@ -139,10 +139,17 @@ export function useDictionary() {
     selectedDictType.value = data;
   }
 
+  /*
+   * 弹窗宽度统一两档：560px（简单表单）/ 720px（复杂表单与内容查看）。
+   * 本页三个字典表单均为简单字段，归入 560px 档。
+   */
+  const DIALOG_WIDTH = "560px";
+
   /** 新增字典（根级字典类型） */
   function openAddDictType() {
     addDialog({
       title: "新增字典类型",
+      width: DIALOG_WIDTH,
       props: {
         formInline: {
           higherDictOptions: [],
@@ -155,7 +162,6 @@ export function useDictionary() {
           description: ""
         }
       },
-      width: "46%",
       sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),
@@ -227,7 +233,6 @@ export function useDictionary() {
           description: ""
         }
       },
-      width: "46%",
       sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),
@@ -284,7 +289,6 @@ export function useDictionary() {
           description: row?.description ?? ""
         }
       },
-      width: "46%",
       sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),

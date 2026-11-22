@@ -52,7 +52,7 @@ defineExpose({ getRef });
     ref="ruleFormRef"
     :model="newFormInline"
     :rules="rules"
-    label-width="82px"
+    label-width="100px"
   >
     <el-row :gutter="30">
       <!-- 根级字典类型才显示字典名称（必填） -->

@@ -52,7 +52,7 @@ function onFullscreen() {
           v-model="form.ruleType"
           placeholder="请选择规则类型"
           clearable
-          class="w-45!"
+          class="w-full"
         >
           <el-option
             v-for="item in IPRuleTypeChoices"
@@ -67,7 +67,7 @@ function onFullscreen() {
           v-model="form.isActive"
           placeholder="请选择状态"
           clearable
-          class="w-45!"
+          class="w-full"
         >
           <el-option label="启用" :value="1" />
           <el-option label="停用" :value="0" />

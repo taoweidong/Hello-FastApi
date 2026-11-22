@@ -52,7 +52,7 @@ function onFullscreen() {
           v-model="form.title"
           placeholder="请输入公告标题"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item label="公告类型" prop="noticeType">
@@ -60,7 +60,7 @@ function onFullscreen() {
           v-model="form.noticeType"
           placeholder="请选择公告类型"
           clearable
-          class="w-45!"
+          class="w-full"
         >
           <el-option
             v-for="item in typeOptions()"
@@ -75,7 +75,7 @@ function onFullscreen() {
           v-model="form.isActive"
           placeholder="请选择状态"
           clearable
-          class="w-45!"
+          class="w-full"
         >
           <el-option label="正常" :value="1" />
           <el-option label="关闭" :value="0" />

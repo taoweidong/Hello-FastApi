@@ -165,7 +165,9 @@ onMounted(() => {
           </el-descriptions-item>
         </el-descriptions>
 
-        <div class="font-bold mt-4 mb-2">命令调用统计（Top10）</div>
+        <div class="font-bold mt-(--pure-space-4) mb-(--pure-space-2)">
+          命令调用统计（Top10）
+        </div>
         <el-table :data="cacheInfo.commandStats" border stripe>
           <el-table-column label="命令" prop="name" min-width="120" />
           <el-table-column label="调用次数" prop="calls" min-width="120" />
@@ -179,7 +181,11 @@ onMounted(() => {
     </el-card>
 
     <!-- 缓存数据清单与清理（清理操作仅管理员：按钮按 monitor:manage 权限码显隐，后端再次校验） -->
-    <el-card v-loading="groupsLoading" shadow="never" class="mt-4">
+    <el-card
+      v-loading="groupsLoading"
+      shadow="never"
+      class="mt-(--pure-space-4)"
+    >
       <template #header>
         <div class="flex-bc">
           <span class="font-bold">缓存数据</span>
@@ -212,7 +218,7 @@ onMounted(() => {
         :closable="false"
         show-icon
         title="清理缓存后相关数据将回源数据库重建；令牌黑名单为安全数据不可清理。"
-        class="mb-3"
+        class="mb-(--pure-space-3)"
       />
 
       <el-table :data="cacheGroups" border stripe>

@@ -74,7 +74,8 @@ export function useRole(treeRef: Ref) {
       { key: "dataScope", defaultValue: DataScope.ALL },
       { key: "description", defaultValue: "", nullable: true }
     ],
-    width: "46%",
+    // 弹窗宽度分档：双列布局表单 720px
+    width: "720px",
     onSuccess: onSearch
   });
 

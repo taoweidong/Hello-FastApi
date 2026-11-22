@@ -115,7 +115,7 @@ onMounted(() => {
           v-model="form.name"
           placeholder="请输入角色名称"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item label="角色标识" prop="code">
@@ -123,7 +123,7 @@ onMounted(() => {
           v-model="form.code"
           placeholder="请输入角色标识"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item label="状态" prop="isActive">
@@ -131,7 +131,7 @@ onMounted(() => {
           v-model="form.isActive"
           placeholder="请选择状态"
           clearable
-          class="w-45!"
+          class="w-full"
         >
           <el-option label="已启用" :value="1" />
           <el-option label="已停用" :value="0" />
@@ -184,7 +184,7 @@ onMounted(() => {
             :size="size"
             adaptive
             :row-style="rowStyle"
-            :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.withSelectionBar }"
+            :adaptiveConfig="{ offsetBottom: ADAPTIVE_OFFSET.base }"
             :data="dataList"
             :columns="dynamicColumns"
             :pagination="{ ...pagination, size }"
@@ -318,7 +318,7 @@ onMounted(() => {
         :closeOnClickModal="false"
         @closed="handleDataScopeClose"
       >
-        <el-form label-width="82px" @submit.prevent>
+        <el-form label-width="100px" @submit.prevent>
           <el-form-item label="数据范围">
             <el-radio-group v-model="dataScopeForm.dataScope">
               <el-radio

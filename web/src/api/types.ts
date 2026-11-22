@@ -258,16 +258,19 @@ export interface SystemLog extends AuditFields {
 
 // ---------------------------------------------------------------- 在线用户
 
-/** 在线用户 */
+/**
+ * 在线用户（Redis 会话字典，字段与 auth_service 登记的在线会话一致：
+ * id=会话 Key（Token 哈希前缀，供强退接口使用）、ip=登录 IP）
+ */
 export interface OnlineUser {
   id: string;
+  userId?: string | null;
   username?: string | null;
-  nickname?: string | null;
-  ipaddress?: string | null;
+  ip?: string | null;
   /** 登录时间 */
   loginTime?: string | null;
-  /** 最后活跃时间 */
-  lastActiveTime?: string | null;
+  /** 会话过期时间 */
+  expiresAt?: string | null;
   browser?: string | null;
   system?: string | null;
 }

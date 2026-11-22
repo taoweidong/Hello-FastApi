@@ -46,15 +46,17 @@ export function useIpRule() {
       { key: "expiresAt", defaultValue: "", nullable: true },
       { key: "description", defaultValue: "", nullable: true }
     ],
-    width: "46%",
+    // 弹窗宽度统一两档：560px（简单表单）/ 720px（复杂表单与内容查看），本页为简单表单
+    width: "560px",
     onSuccess: onSearch
   });
 
   const columns: TableColumnList = [
     {
-      label: "勾选列",
+      // 勾选列统一宽度 55、无标题文案；本页列较多，保留 fixed:left 防横向滚动丢失勾选
       type: "selection",
       fixed: "left",
+      width: 55,
       reserveSelection: true
     },
     {

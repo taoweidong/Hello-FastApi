@@ -28,9 +28,10 @@ export function useOperationLog(tableRef: Ref) {
 
   const columns: TableColumnList = [
     {
-      label: "勾选列",
+      // 勾选列统一宽度 55、无标题文案；本页列较多，保留 fixed:left 防横向滚动丢失勾选
       type: "selection",
       fixed: "left",
+      width: 55,
       reserveSelection: true
     },
     {
@@ -84,11 +85,11 @@ export function useOperationLog(tableRef: Ref) {
       label: "操作状态",
       prop: "statusCode",
       minWidth: 90,
+      // 非 200 以 danger 红色呈现；effect 与登录日志状态 tag 保持一致（默认 light）
       cellRenderer: ({ row, props }) => (
         <el-tag
           size={props.size}
           type={row.statusCode === 200 ? "success" : "danger"}
-          effect="plain"
         >
           {row.statusCode === 200 ? "成功" : "失败"}
         </el-tag>

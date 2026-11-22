@@ -69,7 +69,7 @@ defineExpose({ getRef });
     ref="ruleFormRef"
     :model="newFormInline"
     :rules="rules"
-    label-width="82px"
+    label-width="100px"
   >
     <el-row :gutter="30">
       <!-- 分组：基础信息 -->

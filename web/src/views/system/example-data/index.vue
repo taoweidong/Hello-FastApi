@@ -100,7 +100,7 @@ async function handleSave() {
               v-auth="'example:add'"
               type="primary"
               :icon="useRenderIcon(AddFill)"
-              :disabled="saving"
+              :disabled="saving || loading"
               @click="handleAddRow"
             >
               新增行
@@ -110,7 +110,7 @@ async function handleSave() {
               type="danger"
               plain
               :icon="useRenderIcon(Delete)"
-              :disabled="saving"
+              :disabled="saving || loading"
               @click="handleDeleteSelection"
             >
               删除选中行
@@ -120,6 +120,7 @@ async function handleSave() {
               type="success"
               :icon="useRenderIcon(Save)"
               :loading="saving"
+              :disabled="loading"
               @click="handleSave"
             >
               保存变更
@@ -129,6 +130,7 @@ async function handleSave() {
               text
               :icon="useRenderIcon(Refresh)"
               :loading="loading"
+              :disabled="saving"
               @click="loadRows"
             >
               刷新

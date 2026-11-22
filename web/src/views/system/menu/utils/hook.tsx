@@ -76,8 +76,16 @@ export function useMenu() {
     {
       label: "显示",
       prop: "isShowMenu",
-      cellRenderer: ({ row }) =>
-        row.meta?.isShowMenu === false ? "隐藏" : "显示",
+      // 枚举展示统一走 el-tag：显示=success、隐藏=info（与状态列色板一致）
+      cellRenderer: ({ row, props }) => (
+        <el-tag
+          size={props.size}
+          type={row.meta?.isShowMenu === false ? "info" : "success"}
+          effect="plain"
+        >
+          {row.meta?.isShowMenu === false ? "隐藏" : "显示"}
+        </el-tag>
+      ),
       width: 100
     },
     {
@@ -192,7 +200,8 @@ export function useMenu() {
           }
         }
       },
-      width: "46%",
+      // 弹窗宽度分档：多列布局表单 720px（全局 max-width: 92vw 兜底窄屏）
+      width: "720px",
       sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),

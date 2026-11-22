@@ -3,7 +3,7 @@ import editForm from "../form.vue";
 import { handleTree } from "@/utils/tree";
 import { message } from "@/utils/message";
 import { deptApi } from "@/api/system/dept";
-import { usePublicHooks, formatHigherDeptOptions } from "../../hooks";
+import { formatHigherDeptOptions } from "../../hooks";
 import { isNetworkLevelError } from "@/composables/useCrudTable";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h } from "vue";
@@ -20,7 +20,6 @@ export function useDept() {
   const dataList = ref([]);
   const loading = ref(true);
   const selectedRows = ref<any[]>([]);
-  const { tagStyle } = usePublicHooks();
 
   const columns: TableColumnList = [
     {
@@ -59,8 +58,13 @@ export function useDept() {
       label: "状态",
       prop: "isActive",
       minWidth: 100,
+      // 状态色板统一：启用=success、停用=info（与全局状态列规范一致）
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.isActive)}>
+        <el-tag
+          size={props.size}
+          type={row.isActive ? "success" : "info"}
+          effect="plain"
+        >
           {row.isActive ? "启用" : "停用"}
         </el-tag>
       )
@@ -139,7 +143,8 @@ export function useDept() {
           description: row?.description ?? ""
         }
       },
-      width: "46%",
+      // 弹窗宽度分档：多列布局表单 720px（全局 max-width: 92vw 兜底窄屏）
+      width: "720px",
       sureBtnLoading: true,
       draggable: true,
       fullscreen: deviceDetection(),

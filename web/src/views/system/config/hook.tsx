@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import editForm from "./form.vue";
-import { usePublicHooks } from "@/views/system/hooks";
 import { useCrudTable, useDialogForm } from "@/composables";
 import { systemConfigApi } from "@/api/system/system_config";
 import { reactive } from "vue";
@@ -9,8 +8,6 @@ export function useConfig() {
   const form = reactive({
     key: ""
   });
-
-  const { tagStyle } = usePublicHooks();
 
   const {
     loading,
@@ -40,7 +37,8 @@ export function useConfig() {
       { key: "inherit", defaultValue: 0 },
       { key: "description", defaultValue: "", nullable: true }
     ],
-    width: "46%",
+    // 弹窗宽度统一两档：560px（简单表单）/ 720px（复杂表单与内容查看），本页为简单表单
+    width: "560px",
     onSuccess: onSearch
   });
 
@@ -70,8 +68,12 @@ export function useConfig() {
       label: "是否启用",
       prop: "isActive",
       minWidth: 100,
+      // 状态 tag 统一 EP success/danger 色板（与全站状态列一致）
       cellRenderer: ({ row, props }) => (
-        <el-tag size={props.size} style={tagStyle.value(row.isActive)}>
+        <el-tag
+          size={props.size}
+          type={row.isActive === 1 ? "success" : "danger"}
+        >
           {row.isActive === 1 ? "启用" : "停用"}
         </el-tag>
       )

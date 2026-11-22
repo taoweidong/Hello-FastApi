@@ -32,7 +32,7 @@ const router = useRouter();
       </p>
       <p
         v-motion
-        class="text-xl mb-4! text-gray-500"
+        class="text-xl mb-4! text-gray-500 dark:text-gray-400"
         :initial="{
           opacity: 0,
           y: 100

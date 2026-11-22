@@ -51,7 +51,7 @@ function onFullscreen() {
           v-model="form.postCode"
           placeholder="请输入岗位编码"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item label="岗位名称" prop="postName">
@@ -59,7 +59,7 @@ function onFullscreen() {
           v-model="form.postName"
           placeholder="请输入岗位名称"
           clearable
-          class="w-45!"
+          class="w-full"
         />
       </el-form-item>
       <el-form-item label="状态" prop="isActive">
@@ -67,7 +67,7 @@ function onFullscreen() {
           v-model="form.isActive"
           placeholder="请选择状态"
           clearable
-          class="w-45!"
+          class="w-full"
         >
           <el-option label="正常" :value="1" />
           <el-option label="停用" :value="0" />
@@ -113,6 +113,7 @@ function onFullscreen() {
               v-auth="'post:delete'"
               type="danger"
               :icon="useRenderIcon(Delete)"
+              :disabled="!selectedIds.length"
             >
               批量删除
             </el-button>
