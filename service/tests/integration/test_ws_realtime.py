@@ -56,3 +56,20 @@ class TestRealtimeWebSocket:
         with client.websocket_connect("/api/system/ws") as ws, pytest.raises(WebSocketDisconnect) as exc:
             ws.receive_json()
         assert exc.value.code == 1008
+
+    def test_first_frame_auth_success(self, app):
+        """首帧鉴权：连接后发 {"type":"auth","token":...}，token 不进入 URL/访问日志。"""
+        token = self._valid_token()
+        client = TestClient(app)
+        with client.websocket_connect("/api/system/ws") as ws:
+            ws.send_json({"type": "auth", "token": token})
+            msg = ws.receive_json()
+            assert msg["type"] == "connected"
+            assert msg["data"]["user_id"] == "ws-test-user"
+
+    def test_first_frame_auth_invalid_closed(self, app):
+        client = TestClient(app)
+        with client.websocket_connect("/api/system/ws") as ws, pytest.raises(WebSocketDisconnect) as exc:
+            ws.send_json({"type": "auth", "token": "not.a.valid.jwt"})
+            ws.receive_json()
+        assert exc.value.code == 1008
