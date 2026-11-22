@@ -72,6 +72,8 @@ class TestLogRouter:
         svc.clear_operation_logs.return_value = 10
         svc.get_system_logs.return_value = ([sys_log], 1)
         svc.get_system_log_detail.return_value = sys_log
+        # 操作人员列批量解析：默认无映射（creatorId 回填空串），用例内按需覆盖
+        svc.resolve_creator_names.return_value = {}
         return svc
 
     @pytest.fixture
@@ -111,6 +113,24 @@ class TestLogRouter:
         # 响应瘦身契约：列表行不返回大字段（body/responseResult 置 None）
         assert data["data"]["list"][0]["body"] is None
         assert data["data"]["list"][0]["responseResult"] is None
+        # 操作人员列契约：批量解析不到的 creator 回填空串（不再是原始 creator_id UUID）
+        assert data["data"]["list"][0]["creatorId"] == ""
+
+    def test_get_operation_logs_creator_resolved_to_username(self, client, mock_log_service):
+        """操作人员列返回批量解析出的用户名（creatorId 语义：ID → 用户名）。"""
+        mock_log_service.resolve_creator_names.return_value = {"1": "admin"}
+        resp = client.post("/api/system/operation-logs", json={}, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["data"]["list"][0]["creatorId"] == "admin"
+        # 整页仅一次批量解析
+        assert mock_log_service.resolve_creator_names.await_count == 1
+
+    def test_get_system_logs_creator_resolved(self, client, mock_log_service):
+        """系统日志列表与操作日志同构：creatorId 返回用户名。"""
+        mock_log_service.resolve_creator_names.return_value = {"1": "admin"}
+        resp = client.post("/api/system/system-logs", json={}, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["data"]["list"][0]["creatorId"] == "admin"
 
     def test_batch_delete_operation_logs(self, client):
         resp = client.post("/api/system/operation-logs/batch-delete", json={"ids": ["l2"]}, headers=self.auth)
@@ -128,13 +148,16 @@ class TestLogRouter:
         data = resp.json()
         assert data["data"]["total"] == 1
 
-    def test_get_system_log_detail_success(self, client):
+    def test_get_system_log_detail_success(self, client, mock_log_service):
+        mock_log_service.resolve_creator_names.return_value = {"1": "admin"}
         resp = client.post("/api/system/system-logs-detail", json={"id": "l3"}, headers=self.auth)
         assert resp.status_code == 200
         assert resp.json()["data"]["module"] == "system"
         # 详情契约：返回全量大字段（与列表行的置 None 形成对照）
         assert resp.json()["data"]["body"] == "{}"
         assert resp.json()["data"]["responseResult"] == "ok"
+        # 详情的操作人员列与列表同语义：返回解析后的用户名
+        assert resp.json()["data"]["creatorId"] == "admin"
 
     def test_get_system_log_detail_missing_id_returns_422(self, client):
         resp = client.post("/api/system/system-logs-detail", json={}, headers=self.auth)

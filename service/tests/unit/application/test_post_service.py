@@ -103,6 +103,35 @@ class TestPostService:
         with pytest.raises(NotFoundError):
             await service.update_post("missing", PostUpdateDTO(postName="x"), _make_user())
 
+    async def test_update_status_toggles_only_active(self, service, mock_repo):
+        """测试状态切换：只改 isActive 并记录修改人（与 user/role update_status 同构）。"""
+        post = _make_post(is_active=1)
+        mock_repo.get_by_id = AsyncMock(return_value=post)
+        mock_repo.update = AsyncMock(side_effect=lambda e: e)
+
+        result = await service.update_status("post-1", 0, _make_user())
+
+        assert result.isActive == 0
+        assert post.post_name == "董事长"  # 其余字段未被触碰
+        assert post.post_code == "ceo"
+        assert result.modifierId == "user-1"
+        mock_repo.update.assert_awaited_once()
+
+    async def test_update_status_activate(self, service, mock_repo):
+        """测试停用岗位重新启用。"""
+        post = _make_post(is_active=0)
+        mock_repo.get_by_id = AsyncMock(return_value=post)
+        mock_repo.update = AsyncMock(side_effect=lambda e: e)
+
+        result = await service.update_status("post-1", 1, _make_user())
+        assert result.isActive == 1
+
+    async def test_update_status_not_found(self, service, mock_repo):
+        """状态切换不存在的岗位抛出 NotFoundError。"""
+        mock_repo.get_by_id = AsyncMock(return_value=None)
+        with pytest.raises(NotFoundError):
+            await service.update_status("missing", 0, _make_user())
+
     async def test_delete_post_not_found(self, service, mock_repo):
         """删除不存在的岗位抛出 NotFoundError。"""
         mock_repo.delete = AsyncMock(return_value=False)

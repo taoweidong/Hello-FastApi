@@ -6,7 +6,7 @@
 - creator 经批量映射回填用户名；未登录 401
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import AsyncClient
@@ -20,15 +20,20 @@ class TestDashboardApi:
     async def test_dashboard_stats_shape(self, client: AsyncClient, db_session, auth_headers: dict):
         """登录态请求返回完整聚合结构；种子数据与聚合结果对拍。"""
         # ---- 种子数据：今日成功登录 2 + 失败 1；操作日志 user 模块（带 creator）+ None 模块 ----
-        now = datetime.now()
+        # SQLite 时基：func.now() 写 UTC naive，种子按同语义写 UTC naive 时间戳，
+        # 服务端按方言归一到本地后应与真实本地"今日"一致（时基归一契约）。
+        now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
+        now_local = datetime.now()
         operator = (await db_session.exec(select(User).where(User.username == "authtestuser"))).first()
         assert operator is not None
 
-        db_session.add(LoginLog(status=1, username="authtestuser", created_time=now, ipaddress="127.0.0.1"))
+        db_session.add(LoginLog(status=1, username="authtestuser", created_time=now_utc, ipaddress="127.0.0.1"))
         db_session.add(
-            LoginLog(status=1, username="authtestuser", created_time=now - timedelta(hours=2), ipaddress="127.0.0.1")
+            LoginLog(
+                status=1, username="authtestuser", created_time=now_utc - timedelta(hours=2), ipaddress="127.0.0.1"
+            )
         )
-        db_session.add(LoginLog(status=0, username="intruder", created_time=now, ipaddress="10.0.0.1"))
+        db_session.add(LoginLog(status=0, username="intruder", created_time=now_utc, ipaddress="10.0.0.1"))
         db_session.add(
             SystemLog(
                 module="user",
@@ -37,7 +42,7 @@ class TestDashboardApi:
                 ipaddress="127.0.0.1",
                 status_code=200,
                 creator_id=operator.id,
-                created_time=now,
+                created_time=now_utc,
             )
         )
         db_session.add(
@@ -47,7 +52,7 @@ class TestDashboardApi:
                 path="/api/system/unknown",
                 ipaddress="127.0.0.1",
                 status_code=200,
-                created_time=now,
+                created_time=now_utc,
             )
         )
         await db_session.commit()
@@ -71,7 +76,7 @@ class TestDashboardApi:
         trend = data["loginTrend"]
         assert len(trend) == 7
         assert all(set(point.keys()) == {"date", "count"} for point in trend)
-        assert trend[-1]["date"] == now.strftime("%m-%d")
+        assert trend[-1]["date"] == now_local.strftime("%m-%d")
         assert trend[-1]["count"] == 2
 
         # ---- opDistribution：module None 归入「未知」----

@@ -145,7 +145,7 @@ class ResetPasswordDTO(BaseModel):
 
 
 class UpdateStatusDTO(BaseModel):
-    """更改用户状态请求"""
+    """更改资源状态请求（user/dept/post 的 status 端点共用，isActive 语义一致）。"""
 
     isActive: int = Field(ge=0, le=1)
 

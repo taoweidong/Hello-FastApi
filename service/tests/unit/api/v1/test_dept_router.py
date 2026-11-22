@@ -80,6 +80,18 @@ class TestDeptRouter:
         assert resp.status_code == 200
         assert resp.json()["message"] == "更新成功"
 
+    def test_update_dept_status(self, client, mock_dept_service):
+        """状态切换端点与 user/role 的 status 端点同构（PUT /{id}/status + isActive）。"""
+        resp = client.put("/api/system/dept/d1/status", json={"isActive": 0}, headers=self.auth)
+        assert resp.status_code == 200
+        assert resp.json()["message"] == "状态更新成功"
+        mock_dept_service.update_status.assert_awaited_once_with("d1", 0)
+
+    def test_update_dept_status_invalid_value_returns_422(self, client):
+        """isActive 超出 0/1 范围时 422（与 user/role 状态 DTO 校验一致）。"""
+        resp = client.put("/api/system/dept/d1/status", json={"isActive": 2}, headers=self.auth)
+        assert resp.status_code == 422
+
     def test_delete_dept(self, client):
         resp = client.delete("/api/system/dept/d1", headers=self.auth)
         assert resp.status_code == 200

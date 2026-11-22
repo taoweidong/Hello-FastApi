@@ -39,12 +39,18 @@ def _format_login_log(log: LoginLogEntity) -> dict[str, Any]:
     }
 
 
-def _format_operation_log(log: OperationLogEntity, *, include_payload: bool = False) -> dict[str, Any]:
+def _format_operation_log(
+    log: OperationLogEntity, *, include_payload: bool = False, creator_name: str = ""
+) -> dict[str, Any]:
     """将操作/系统日志实体转为响应字典。
 
     响应瘦身（契约变更）：body / responseResult 属大文本字段，列表行不再随行返回
     （统一置 None），前端需要完整内容时经详情接口 /system-logs-detail 懒加载；
     详情调用方传 include_payload=True 返回全量。
+
+    creatorId 字段语义为"操作人员"展示名：调用方经 LogService.resolve_creator_names
+    批量解析出的用户名（字段名保持历史不变，值不再是原始 creator_id UUID）；
+    解析不到（用户已删除等）回填空串。
     """
     return {
         "id": log.id,
@@ -61,7 +67,8 @@ def _format_operation_log(log: OperationLogEntity, *, include_payload: bool = Fa
         "statusCode": log.status_code,
         # 操作概要由审计中间件写入（"POST /path - 123ms"），操作日志页「操作概要」列数据源
         "description": log.description or "",
-        "creatorId": log.creator_id or "",
+        # 操作人员：批量解析后的用户名（非原始 creator_id），查不到回填空串
+        "creatorId": creator_name,
         "createdTime": log.created_time.isoformat() if log.created_time else None,
     }
 
@@ -113,7 +120,11 @@ class LogRouter(Routable):
     ) -> dict:
         """获取操作日志列表。"""
         logs, total = await service.get_operation_logs(query)
-        log_list = [_format_operation_log(log) for log in logs]
+        # 操作人员列：本页 creator_id 收集后一次批量解析（避免逐行查询的 N+1）
+        creator_names = await service.resolve_creator_names(logs)
+        log_list = [
+            _format_operation_log(log, creator_name=creator_names.get(log.creator_id or "", "")) for log in logs
+        ]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/operation-logs/batch-delete", response_model=ApiResponse[dict])
@@ -146,7 +157,11 @@ class LogRouter(Routable):
     ) -> dict:
         """获取系统日志列表。"""
         logs, total = await service.get_system_logs(query)
-        log_list = [_format_operation_log(log) for log in logs]
+        # 与操作日志列表同构：操作人员列批量解析用户名（单次 IN 查询）
+        creator_names = await service.resolve_creator_names(logs)
+        log_list = [
+            _format_operation_log(log, creator_name=creator_names.get(log.creator_id or "", "")) for log in logs
+        ]
         return list_response(list_data=log_list, total=total, page_size=query.pageSize, current_page=query.pageNum)
 
     @post("/system-logs-detail", response_model=ApiResponse[dict])
@@ -160,5 +175,8 @@ class LogRouter(Routable):
         log = await service.get_system_log_detail(query.id)
         if log is None:
             return success_response(data=None, message="日志不存在")
+        # 操作人员列与列表同语义：解析 creator_id → 用户名（单条也走批量方法，链路一致）
+        creator_names = await service.resolve_creator_names([log])
+        creator_name = creator_names.get(log.creator_id or "", "")
         # 详情返回全量（含 body / responseResult 大字段）
-        return success_response(data=_format_operation_log(log, include_payload=True))
+        return success_response(data=_format_operation_log(log, include_payload=True, creator_name=creator_name))

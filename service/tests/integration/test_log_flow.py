@@ -180,3 +180,49 @@ class TestLogFlow:
         # 详情契约：全量大字段
         assert detail_data["body"] == '{"password": "secret"}'
         assert detail_data["responseResult"] == "created"
+
+    async def test_operation_logs_creator_shows_username(
+        self, flow_client: AsyncClient, flow_seed: FlowSeedData, db_session
+    ):
+        """操作人员列契约：creator_id 批量解析为用户名，查不到回填空串。"""
+        from datetime import datetime, timezone
+
+        from src.infrastructure.database.models import SystemLog
+
+        h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
+        known = SystemLog(
+            module="creator",
+            path="/creator/known",
+            method="POST",
+            ipaddress="127.0.0.1",
+            creator_id=flow_seed.super_user_id,
+            created_time=datetime(2026, 1, 3, tzinfo=timezone.utc),
+            updated_time=datetime(2026, 1, 3, tzinfo=timezone.utc),
+        )
+        unknown = SystemLog(
+            module="creator",
+            path="/creator/unknown",
+            method="POST",
+            ipaddress="127.0.0.1",
+            creator_id="nonexistent-user-id",
+            created_time=datetime(2026, 1, 3, tzinfo=timezone.utc),
+            updated_time=datetime(2026, 1, 3, tzinfo=timezone.utc),
+        )
+        db_session.add_all([known, unknown])
+        await db_session.commit()
+
+        r = await flow_client.post(
+            "/api/system/operation-logs", headers=h, json={"pageNum": 1, "pageSize": 10, "module": "creator"}
+        )
+        assert r.status_code == 200
+        rows = {row["path"]: row for row in r.json()["data"]["list"]}
+        assert set(rows) == {"/creator/known", "/creator/unknown"}
+        # creatorId 语义为"操作人员"用户名（不再是原始 creator_id UUID）
+        assert rows["/creator/known"]["creatorId"] == flow_seed.super_username
+        # 查不到的用户（已删除等）回填空串
+        assert rows["/creator/unknown"]["creatorId"] == ""
+
+        # 详情接口同语义
+        detail = await flow_client.post("/api/system/system-logs-detail", headers=h, json={"id": known.id})
+        assert detail.status_code == 200
+        assert detail.json()["data"]["creatorId"] == flow_seed.super_username

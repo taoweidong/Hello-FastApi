@@ -78,6 +78,15 @@ class PostService:
         updated = await self.post_repo.update(post)
         return self._to_response(updated)
 
+    async def update_status(self, post_id: str, is_active: int, current_user: UserEntity) -> PostResponseDTO:
+        """更新岗位状态（启用/停用），只动 isActive，其余字段不碰。
+
+        与 user/role 的 update_status 同构（供 PUT /post/{id}/status 调用）；
+        操作人记账（modifier_id）与 update_post 同源。岗位无关联缓存
+        （用户-岗位关联直查库），无需失效链路。
+        """
+        return await self.update_post(post_id, PostUpdateDTO(isActive=is_active), current_user)
+
     async def delete_post(self, post_id: str) -> bool:
         """删除岗位。"""
         if not await self.post_repo.delete(post_id):

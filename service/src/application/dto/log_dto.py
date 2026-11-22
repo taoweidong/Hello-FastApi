@@ -70,6 +70,8 @@ class OperationLogResponseDTO(BaseModel):
     responseCode: int | None = None
     responseResult: str | None = None
     statusCode: int | None = None
+    # 契约语义：值为"操作人员"用户名（路由层经 LogService.resolve_creator_names
+    # 批量解析 creator_id 回填），字段名保持历史不变；查不到的用户回填空串。
     creatorId: str | None = None
     createdTime: datetime | None = None
     updatedTime: datetime | None = None

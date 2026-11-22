@@ -263,3 +263,45 @@ class TestLogService:
         dto = type("DTO", (), {"ids": ["1", "2", "3", "4", "5"]})()
         result = await log_service.delete_operation_logs(dto)
         assert result == 5
+
+
+@pytest.mark.unit
+class TestResolveCreatorNames:
+    """resolve_creator_names：creator_id → 用户名批量解析（单次 IN，避免 N+1）。"""
+
+    def _make_log(self, log_id: str, creator_id: str | None) -> OperationLogEntity:
+        """构造带 creator_id 的操作日志实体。"""
+        log = OperationLogEntity(id=log_id, module="user")
+        log.creator_id = creator_id
+        return log
+
+    @pytest.mark.asyncio
+    async def test_resolves_deduped_ids_in_one_batch(self):
+        """多行 creator_id 去重后单次批量查询，返回仓储映射。"""
+        user_repo = AsyncMock()
+        user_repo.get_usernames_by_ids = AsyncMock(return_value={"u1": "alice", "u2": "bob"})
+        service = LogService(log_repo=AsyncMock(), user_repo=user_repo)
+
+        logs = [self._make_log("l1", "u1"), self._make_log("l2", "u1"), self._make_log("l3", "u2")]
+        result = await service.resolve_creator_names(logs)
+
+        assert result == {"u1": "alice", "u2": "bob"}
+        user_repo.get_usernames_by_ids.assert_awaited_once_with(["u1", "u2"])
+
+    @pytest.mark.asyncio
+    async def test_empty_or_missing_creator_returns_empty_map(self):
+        """全部行无 creator_id 时直接返回空映射，不触碰用户仓储。"""
+        user_repo = AsyncMock()
+        service = LogService(log_repo=AsyncMock(), user_repo=user_repo)
+
+        result = await service.resolve_creator_names([self._make_log("l1", None), self._make_log("l2", "")])
+
+        assert result == {}
+        user_repo.get_usernames_by_ids.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_without_user_repo_returns_empty_map(self):
+        """未注入用户仓储（组合根关闭解析）时降级为空映射。"""
+        service = LogService(log_repo=AsyncMock())
+        result = await service.resolve_creator_names([self._make_log("l1", "u1")])
+        assert result == {}

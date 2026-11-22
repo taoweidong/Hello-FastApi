@@ -11,7 +11,7 @@ from src.api.common import list_response, success_response
 from src.api.common.response_schemas import ApiResponse, PaginatedResponse
 from src.api.dependencies import get_current_active_user, get_post_service, require_permission
 from src.application.dto.post_dto import PostCreateDTO, PostListQueryDTO, PostUpdateDTO
-from src.application.dto.user_dto import BatchDeleteDTO
+from src.application.dto.user_dto import BatchDeleteDTO, UpdateStatusDTO
 from src.application.services.post_service import PostService
 from src.domain.entities.user import UserEntity
 
@@ -97,6 +97,19 @@ class PostRouter(Routable):
         """更新岗位。"""
         post = await service.update_post(post_id, dto, current_user)
         return success_response(data=post.model_dump(), message="更新成功")
+
+    @put("/{post_id}/status", response_model=ApiResponse[None])
+    async def update_post_status(
+        self,
+        post_id: str,
+        dto: UpdateStatusDTO,
+        current_user: UserEntity = Depends(get_current_active_user),
+        service: PostService = Depends(get_post_service),
+        _: dict = Depends(require_permission("post:edit")),
+    ) -> dict:
+        """更新岗位状态（启用/停用）。路径形状/请求 DTO/权限码与 user、role 的 status 端点同构。"""
+        await service.update_status(post_id, dto.isActive, current_user)
+        return success_response(message="状态更新成功")
 
     @delete("/{post_id}", response_model=ApiResponse[None])
     async def delete_post(

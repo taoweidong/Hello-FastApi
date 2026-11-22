@@ -121,6 +121,20 @@ class DepartmentService:
         updated = await self.dept_repo.update(department)
         return self._to_response(updated)
 
+    async def update_status(self, dept_id: str, is_active: int) -> DepartmentResponseDTO:
+        """更新部门状态（启用/禁用），只动 isActive，其余字段不碰。
+
+        与 user/role 的 update_status 同构（供 PUT /dept/{id}/status 调用）。
+        事务边界与 update_department 同源（同一请求级仓储会话提交）。
+
+        缓存失效说明：
+        - 字典/角色缓存没有部门键，无需失效；
+        - 部门状态影响 DEPT_AND_CHILD 数据权限范围缓存（user:scope:{id}），
+          沿用本类 docstring 的既有策略：无低成本受影响用户反查链路，
+          由该缓存 TTL（300s）兜底收敛，与部门其余变更行为保持一致。
+        """
+        return await self.update_department(dept_id, DepartmentUpdateDTO(isActive=is_active))
+
     async def delete_department(self, dept_id: str) -> bool:
         """删除部门。"""
         department = await self.dept_repo.get_by_id(dept_id)

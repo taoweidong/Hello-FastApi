@@ -1,10 +1,16 @@
 """仪表盘统计聚合服务的单元测试（fakes + 字典背板缓存替身）。
 
 覆盖：趋势按日分桶补零 / 操作分布 TOP8 截断与 None 归并 / creator 批量映射 /
-在线数降级 / 读穿透缓存命中不重算（参考 test_highfreq_cache.py 的替身模式）。
+在线数降级 / 读穿透缓存命中不重算 / SQLite UTC 时基按方言归一（参考
+test_highfreq_cache.py 的替身模式）。
+
+时区稳定性：替身仓储里的 naive 时间戳按 sqlite 语义视作 UTC；make_service
+默认注入 local_tz=timezone.utc 使换算为恒等映射，断言与运行机器的本地时区
+解耦。需要验证真实换算的用例显式注入固定偏移（如 UTC+8）并 monkeypatch
+``DashboardService._now`` 固定时钟。
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
 import pytest
@@ -14,6 +20,9 @@ from src.application.services.dashboard_service import (
     DashboardService,
     build_login_trend,
     build_op_distribution,
+    db_time_to_local,
+    dialect_of,
+    local_time_to_db,
 )
 from src.domain.entities.log import LoginLogEntity, OperationLogEntity
 from src.domain.entities.user import UserEntity
@@ -37,8 +46,14 @@ class DictBackedDashboardCache:
         return True
 
 
-def make_service(log_repo, user_repo=None, role_repo=None, session_store=None, cache=None) -> DashboardService:
-    """组装被测服务（menu/dept/post 计数用 AsyncMock 桩，计数与本测试无关）。"""
+def make_service(
+    log_repo, user_repo=None, role_repo=None, session_store=None, cache=None, dialect="sqlite", local_tz=timezone.utc
+) -> DashboardService:
+    """组装被测服务（menu/dept/post 计数用 AsyncMock 桩，计数与本测试无关）。
+
+    dialect 默认 sqlite + local_tz 默认注入 UTC：替身仓储的 naive 时间戳按
+    sqlite 语义视作 UTC，归一换算为恒等映射，使断言与运行机器的本地时区解耦。
+    """
     menu_repo = AsyncMock()
     menu_repo.count.return_value = 3
     dept_repo = AsyncMock()
@@ -54,6 +69,8 @@ def make_service(log_repo, user_repo=None, role_repo=None, session_store=None, c
         log_repo=log_repo,
         session_store=session_store,
         cache=cache,
+        dialect=dialect,
+        local_tz=local_tz,
     )
 
 
@@ -96,6 +113,76 @@ class TestBuildOpDistribution:
         counts = [item.count for item in result]
         assert counts == sorted(counts, reverse=True)
         assert result[0].module == "mod11" and result[0].count == 10
+
+
+@pytest.mark.unit
+class TestDbTimeNormalization:
+    """方言感知的时间基归一纯函数：SQLite UTC → 本地，PG 原样。"""
+
+    def test_dialect_of_parses_sqlalchemy_url(self):
+        assert dialect_of("sqlite+aiosqlite:///./sql/test.db") == "sqlite"
+        assert dialect_of("postgresql+asyncpg://u:p@h/db") == "postgresql"
+        assert dialect_of("mysql://u:p@h/db") == "mysql"
+
+    def test_sqlite_utc_naive_converts_to_local(self):
+        """sqlite 方言：UTC naive 视为 UTC，换算本地（+8）——跨日边界落对桶。"""
+        tz_plus8 = timezone(timedelta(hours=8))
+        # 11-23 16:00 UTC == 本地 11-24 00:00（跨日临界点）
+        assert db_time_to_local(datetime(2026, 11, 23, 16, 0, 0), "sqlite", tz_plus8) == datetime(2026, 11, 24, 0, 0)
+        # 11-23 15:59 UTC == 本地 11-23 23:59（尚在本日）
+        assert db_time_to_local(datetime(2026, 11, 23, 15, 59, 0), "sqlite", tz_plus8) == datetime(2026, 11, 23, 23, 59)
+
+    def test_postgres_passthrough(self):
+        """PG 方言：now() 随会话时区返回，与 Python 本地同基，原样使用。"""
+        ts = datetime(2026, 11, 23, 16, 0, 0)
+        assert db_time_to_local(ts, "postgresql", timezone(timedelta(hours=8))) is ts
+
+    def test_local_time_to_db_is_inverse(self):
+        """本地 naive 边界 → UTC naive（查询下推），与 db_time_to_local 互逆。"""
+        tz_plus8 = timezone(timedelta(hours=8))
+        utc = local_time_to_db(datetime(2026, 11, 24, 4, 0, 0), "sqlite", tz_plus8)
+        assert utc == datetime(2026, 11, 23, 20, 0, 0)
+        assert db_time_to_local(utc, "sqlite", tz_plus8) == datetime(2026, 11, 24, 4, 0, 0)
+        # 非 sqlite 方言恒等
+        ts = datetime(2026, 11, 24, 4, 0, 0)
+        assert local_time_to_db(ts, "postgresql", tz_plus8) is ts
+
+
+@pytest.mark.unit
+class TestDashboardSqliteTimeBase:
+    """服务级时基归一：SQLite UTC naive 时间戳落入正确的本地日桶。
+
+    注入固定时区（UTC+8）与固定时钟（本地 11-24 正午），跨时区/跨日稳定。
+    """
+
+    async def test_sqlite_utc_stamps_bucket_into_local_day(self, monkeypatch):
+        local_tz = timezone(timedelta(hours=8))
+        fixed_now = datetime(2026, 11, 24, 12, 0, 0)  # 本地（+8）正午，"今日" = 11-24
+
+        log_repo = InMemoryLogRepository()
+        # 11-23 20:00 UTC == 本地 11-24 04:00 → 今日桶（修正前会落入 11-23）
+        login_today = LoginLogEntity.create_new(status=1)
+        login_today.created_time = datetime(2026, 11, 23, 20, 0, 0)
+        await log_repo.create_login_log(login_today)
+        # 11-23 15:59 UTC == 本地 11-23 23:59 → 昨日桶
+        login_yesterday = LoginLogEntity.create_new(status=1)
+        login_yesterday.created_time = datetime(2026, 11, 23, 15, 59, 0)
+        await log_repo.create_login_log(login_yesterday)
+        # 操作日志：11-23 20:00 UTC → 本地 11-24 → 今日操作数
+        op_today = OperationLogEntity.create_new(module="user")
+        op_today.created_time = datetime(2026, 11, 23, 20, 0, 0)
+        await log_repo.create_operation_log(op_today)
+
+        service = make_service(log_repo, dialect="sqlite", local_tz=local_tz)
+        monkeypatch.setattr(service, "_now", lambda: fixed_now)
+        data = await service.get_dashboard_stats()
+
+        # todayStats 与 trend 复用同一份归一结果：今日登录 1、今日操作 1
+        assert data["todayStats"] == {"loginCount": 1, "opCount": 1}
+        assert data["loginTrend"][-1]["date"] == "11-24"
+        assert data["loginTrend"][-1]["count"] == 1
+        assert data["loginTrend"][-2]["date"] == "11-23"
+        assert data["loginTrend"][-2]["count"] == 1
 
 
 @pytest.mark.unit

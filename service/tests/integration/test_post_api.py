@@ -106,6 +106,33 @@ class TestPostApi:
         r = await flow_client.get(f"/api/system/post/{post_id}", headers=super_h)
         assert r.status_code == 404
 
+    async def test_status_toggle_reflected_in_list(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
+        """状态切换：PUT /post/{id}/status 停用后列表反映 isActive=0（镜像 user status 流程）。"""
+        super_h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)
+        post_id = await _create_post(flow_client, super_h, {"postCode": "tg1", "postName": "待停用岗位"})
+
+        r = await flow_client.put(f"/api/system/post/{post_id}/status", headers=super_h, json={"isActive": False})
+        assert r.status_code == 200
+        assert r.json()["message"] == "状态更新成功"
+
+        # 列表反映新状态：isActive=0 过滤能命中，isActive=1 过滤不再包含
+        r = await flow_client.post(
+            "/api/system/post", headers=super_h, json={"pageNum": 1, "pageSize": 50, "isActive": 0}
+        )
+        assert post_id in [p["id"] for p in r.json()["data"]["list"]]
+        r = await flow_client.post(
+            "/api/system/post", headers=super_h, json={"pageNum": 1, "pageSize": 50, "isActive": 1}
+        )
+        assert post_id not in [p["id"] for p in r.json()["data"]["list"]]
+
+        # 重新启用
+        r = await flow_client.put(f"/api/system/post/{post_id}/status", headers=super_h, json={"isActive": True})
+        assert r.status_code == 200
+        r = await flow_client.post(
+            "/api/system/post", headers=super_h, json={"pageNum": 1, "pageSize": 50, "isActive": 1}
+        )
+        assert post_id in [p["id"] for p in r.json()["data"]["list"]]
+
     async def test_batch_delete(self, flow_client: AsyncClient, flow_seed: FlowSeedData):
         """批量删除返回实际删除数量。"""
         super_h = await _login_headers(flow_client, flow_seed.super_username, flow_seed.super_password)

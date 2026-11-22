@@ -121,6 +121,37 @@ class TestDepartmentService:
             await dept_service.update_department("non-existent", dto)
 
     @pytest.mark.asyncio
+    async def test_update_status_toggles_only_active(self, dept_service, mock_dept_repo):
+        """测试状态切换：只改 isActive，其余字段不碰（与 user/role update_status 同构）。"""
+        existing = DepartmentEntity(id="1", name="技术部", code="tech", is_active=1)
+        mock_dept_repo.get_by_id = AsyncMock(return_value=existing)
+        mock_dept_repo.update = AsyncMock(side_effect=lambda e: e)
+
+        result = await dept_service.update_status("1", 0)
+
+        assert result.isActive == 0
+        assert existing.name == "技术部"  # 其余字段未被触碰
+        assert existing.code == "tech"
+        mock_dept_repo.update.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_update_status_activate(self, dept_service, mock_dept_repo):
+        """测试禁用部门重新启用。"""
+        existing = DepartmentEntity(id="1", name="技术部", is_active=0)
+        mock_dept_repo.get_by_id = AsyncMock(return_value=existing)
+        mock_dept_repo.update = AsyncMock(side_effect=lambda e: e)
+
+        result = await dept_service.update_status("1", 1)
+        assert result.isActive == 1
+
+    @pytest.mark.asyncio
+    async def test_update_status_not_found(self, dept_service, mock_dept_repo):
+        """测试状态切换不存在的部门。"""
+        mock_dept_repo.get_by_id = AsyncMock(return_value=None)
+        with pytest.raises(NotFoundError):
+            await dept_service.update_status("non-existent", 0)
+
+    @pytest.mark.asyncio
     async def test_update_department_circular_reference(self, dept_service, mock_dept_repo):
         """测试更新部门时循环引用。"""
         dept = DepartmentEntity(id="dept-1", name="部门")

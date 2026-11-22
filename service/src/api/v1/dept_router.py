@@ -12,6 +12,7 @@ from src.api.common import success_response
 from src.api.common.response_schemas import ApiResponse
 from src.api.dependencies import get_department_service, require_permission
 from src.application.dto.department_dto import DepartmentCreateDTO, DepartmentListQueryDTO, DepartmentUpdateDTO
+from src.application.dto.user_dto import UpdateStatusDTO
 from src.application.services.department_service import DepartmentService
 
 
@@ -52,6 +53,18 @@ class DeptRouter(Routable):
         """更新部门。"""
         department = await service.update_department(dept_id, dto)
         return success_response(data={"id": department.id, "name": department.name}, message="更新成功")
+
+    @put("/dept/{dept_id}/status", response_model=ApiResponse[None])
+    async def update_dept_status(
+        self,
+        dept_id: str,
+        dto: UpdateStatusDTO,
+        service: DepartmentService = Depends(get_department_service),
+        _: dict = Depends(require_permission("dept:edit")),
+    ) -> dict:
+        """更新部门状态（启用/禁用）。路径形状/请求 DTO/权限码与 user、role 的 status 端点同构。"""
+        await service.update_status(dept_id, dto.isActive)
+        return success_response(message="状态更新成功")
 
     @delete("/dept/{dept_id}", response_model=ApiResponse[None])
     async def delete_department(

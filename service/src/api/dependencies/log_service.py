@@ -13,7 +13,8 @@ async def get_log_service(
 ) -> LogService:
     """获取日志服务实例。
 
-    注入日志仓储依赖（仓储来自请求级仓储束，事务约定见 repositories.py），
+    注入日志仓储与用户仓储依赖（仓储来自请求级仓储束，事务约定见 repositories.py，
+    用户仓储供"操作人员"列批量解析 creator_id → 用户名），
     以及日志列表 count 缓存端口（keyset 深分页的 COUNT 旁路）。
     """
-    return LogService(log_repo=repos.log, count_cache=count_cache)
+    return LogService(log_repo=repos.log, count_cache=count_cache, user_repo=repos.user)

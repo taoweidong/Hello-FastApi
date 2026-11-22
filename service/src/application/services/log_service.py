@@ -11,6 +11,7 @@ import json
 from datetime import datetime
 
 from src.domain.repositories.log_repository import LogRepositoryInterface
+from src.domain.repositories.user_repository import UserRepositoryInterface
 from src.domain.services.cache_port import LogCountCachePort
 
 
@@ -56,9 +57,41 @@ def _hash_log_filters(
 class LogService:
     """日志领域操作的应用服务。"""
 
-    def __init__(self, log_repo: LogRepositoryInterface, count_cache: LogCountCachePort | None = None):
+    def __init__(
+        self,
+        log_repo: LogRepositoryInterface,
+        count_cache: LogCountCachePort | None = None,
+        user_repo: UserRepositoryInterface | None = None,
+    ):
+        """初始化日志服务。
+
+        Args:
+            log_repo: 日志仓储
+            count_cache: 日志列表 count 缓存端口（keyset 深分页的 COUNT 旁路），
+                None 时每页都执行精确 COUNT
+            user_repo: 用户仓储，None 时 creator 列不解析用户名（保持原始 ID）
+        """
         self.log_repo = log_repo
         self.count_cache = count_cache
+        self.user_repo = user_repo
+
+    async def resolve_creator_names(self, logs: list) -> dict[str, str]:
+        """批量解析日志实体的 creator_id → 用户名映射（单次 IN 查询，避免 N+1）。
+
+        供操作/系统日志列表与详情的"操作人员"列展示用户名：路由层先收集本页
+        全部 creator_id，经本方法一次批量查询后回填；查不到的 ID（用户已删除等）
+        不出现在映射中，由调用方回填空串。
+
+        Args:
+            logs: 日志实体列表（OperationLogEntity 形状，含 creator_id 属性）
+
+        Returns:
+            ID → 用户名映射；入参无有效 creator_id 或未注入 user_repo 时返回空映射
+        """
+        creator_ids = sorted({log.creator_id for log in logs if getattr(log, "creator_id", None)})
+        if not creator_ids or self.user_repo is None:
+            return {}
+        return await self.user_repo.get_usernames_by_ids(creator_ids)
 
     # ============ 登录日志 ============
 
