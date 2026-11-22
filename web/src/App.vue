@@ -78,18 +78,39 @@ export default defineComponent({
       realtime.stop();
     });
 
+    /*
+     * 水印只在 enable/text 变化时重建。原先把 route.name 加入 watch 依赖，
+     * 每次路由跳转都会重新创建 canvas 水印（内容不变，纯 DOM/绘制浪费）。
+     * 路由切换现在只做状态修边：进出登录页时清/建水印（登录页不展示水印、
+     * 登录成功后恢复），普通导航不再触碰水印 —— 各路由的最终展示状态与原先一致。
+     */
+    let watermarkActive = false;
+    const applyWatermark = async () => {
+      await nextTick();
+      if (watermarkEnable.value && route.name !== "Login") {
+        setWatermark(watermarkText.value, { verticalOffset: 170 });
+        watermarkActive = true;
+      } else {
+        clear();
+        watermarkActive = false;
+      }
+    };
+    watch([watermarkEnable, watermarkText], applyWatermark, {
+      immediate: true
+    });
     watch(
-      [watermarkEnable, watermarkText, () => route.name],
-      async ([enable, text, name]) => {
+      () => route.name,
+      async name => {
         await nextTick();
-        if (enable && name !== "Login") {
-          setWatermark(text, { verticalOffset: 170 });
-        } else {
-          clear();
+        if (name === "Login") {
+          if (watermarkActive) {
+            clear();
+            watermarkActive = false;
+          }
+        } else if (watermarkEnable.value && !watermarkActive) {
+          setWatermark(watermarkText.value, { verticalOffset: 170 });
+          watermarkActive = true;
         }
-      },
-      {
-        immediate: true
       }
     );
 

@@ -34,17 +34,12 @@ export const usePermissionStore = defineStore("pure-permission", {
     },
     /** 监听缓存页面是否存在于标签页，不存在则删除 */
     clearCache() {
-      let cacheLength = this.cachePageList.length;
-      const nameList = getKeyList(useMultiTagsStoreHook().multiTags, "name");
-      while (cacheLength > 0) {
-        nameList.findIndex(v => v === this.cachePageList[cacheLength - 1]) ===
-          -1 &&
-          this.cachePageList.splice(
-            this.cachePageList.indexOf(this.cachePageList[cacheLength - 1]),
-            1
-          );
-        cacheLength--;
-      }
+      // Set 化单遍历：原先 while + findIndex 是 O(n²) 双重扫描，
+      // filter 按成员过滤后同样保序，结果与原实现一致
+      const nameSet = new Set(
+        getKeyList(useMultiTagsStoreHook().multiTags, "name")
+      );
+      this.cachePageList = this.cachePageList.filter(name => nameSet.has(name));
     },
     cacheOperate({ mode, name }: cacheType) {
       const delIndex = this.cachePageList.findIndex(v => v === name);

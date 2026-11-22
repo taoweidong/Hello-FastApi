@@ -239,10 +239,6 @@ function onFullscreen() {
               :size="size"
               :data="childDataList"
               :columns="dynamicColumns"
-              :header-cell-style="{
-                background: 'var(--el-fill-color-light)',
-                color: 'var(--el-text-color-primary)'
-              }"
             >
               <template #operation="{ row }">
                 <el-button

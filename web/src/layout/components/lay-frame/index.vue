@@ -74,6 +74,14 @@ watch(
     </div>
   </template>
   <div v-show="!keep" class="size-full">
-    <slot :Comp="normalComp" :fullPath="currRoute.fullPath" frameInfo />
+    <!-- frameInfo 补全为对象（原先误传裸属性字符串），供父级按 frameSrc 区分 frame/普通实例 -->
+    <slot
+      :Comp="normalComp"
+      :fullPath="currRoute.fullPath"
+      :frameInfo="{
+        frameSrc: currRoute.meta?.frameSrc,
+        fullPath: currRoute.fullPath
+      }"
+    />
   </div>
 </template>

@@ -31,13 +31,86 @@
   /* ---------- 1b. 纵向占满型面板高度 ---------- */
 
   /*
-   * 左侧树面板（字典类型树 / 用户部门树）此前各写一份
-   * `calc(100vh - 141px)` 与 `calc(100vh - 210px)`，属于复制粘贴的魔法数。
-   * 141px = 顶部导航栏 + 页签栏 + 内容区外边距；210px 再减去面板内的
-   * 搜索框与底部操作按钮。改布局时只需改这两处。
+   * 左侧树面板（字典类型树等）的最小高度与其内部滚动区高度。
+   *
+   * 推导（自上而下逐像素核算）：
+   *   固定头布局下，页面顶部的结构高度 = 导航栏 48 + 页签栏 34 + 内容区上外边距 8
+   *   = 90px（--pure-navbar-height / --pure-tagsbar-item-height /
+   *   --pure-content-margin 三个令牌之和）；
+   *   141px 中其余的 51px 为上游沿用下来的底部预留（无一一对应的元素），
+   *   保留该取值保证与旧魔法数 `calc(100vh - 141px)` 逐像素等价。
+   * 滚动区高度在其基础上再减面板内部非滚动区（搜索行 / 分隔线 / 底部按钮）的
+   * 保守估计 69px，即旧的 `calc(100vh - 210px)`。
+   *
+   * 排版说明：下方部分较长的 calc 表达式加 prettier-ignore 保持"单行书写"——
+   * prettier 的 80 列自动换行会把运算符推到行首或行尾，与 stylelint 的
+   * scss/operator-no-newline-after / -before 双向冲突，只能单行。
    */
-  --pure-panel-height: calc(100vh - 141px);
-  --pure-panel-scroll-height: calc(100vh - 210px);
+
+  /* prettier-ignore */
+  --pure-panel-height: calc(100vh - var(--pure-navbar-height) - var(--pure-tagsbar-item-height) - var(--pure-content-margin) - 51px);
+  --pure-panel-scroll-height: calc(var(--pure-panel-height) - 69px);
+
+  /* ---------- 1c. 顶部导航区高度（单一事实来源） ---------- */
+
+  /*
+   * 导航栏（lay-navbar .navbar）实际盒高 48px；
+   * 页签项（lay-tag .scroll-item）实际盒高 34px，chrome 样式下
+   * .chrome-scroll-container 另有 4px 上内边距。
+   * 注意：导航栏与页签栏衔接处沿用上游 1px 重叠的历史处理 —— 因此
+   * "参与 padding-top 计算的有效页签栏高度"为普通 33px / chrome 37px
+   * （1px 重叠已并入 --pure-tagsbar-height 的推导，chrome 再叠加其
+   * 4px 上内边距），而 min-height 的减项不扣这 1px（多出的余量见
+   * --pure-content-min-height 注释），各旧值均逐像素等价。
+   */
+  --pure-navbar-height: 48px;
+  --pure-tagsbar-item-height: 34px;
+
+  /* 普通样式的有效页签栏高度 = 34px - 1px 重叠 = 33px（旧值 81 = 48 + 33） */
+  --pure-tagsbar-height: calc(var(--pure-tagsbar-item-height) - 1px);
+
+  /* chrome 样式 = 33px + 4px 上内边距 = 37px（旧值 85 = 48 + 37） */
+  --pure-tagsbar-height-chrome: calc(var(--pure-tagsbar-height) + 4px);
+
+  /* 派生：显示页签时头部总高（lay-content getSectionStyle 的 padding-top）
+   * 普通 81px、chrome 85px */
+
+  /* prettier-ignore */
+  --pure-header-height: calc(var(--pure-navbar-height) + var(--pure-tagsbar-height));
+
+  /* prettier-ignore */
+  --pure-header-height-chrome: calc(var(--pure-navbar-height) + var(--pure-tagsbar-height-chrome));
+
+  /* 派生：非固定头（fixedHeader=false）时内容区 min-height 基准。
+   * 减项 86px = 导航栏 48 + 页签栏盒高 34 + chrome 上内边距 4（取两种页签样式的
+   * 较大盒高，普通样式下即 4px 滚动余量）—— 旧的 calc(100vh - 86px)。 */
+
+  /* prettier-ignore */
+  --pure-content-min-height: calc(100vh - var(--pure-navbar-height) - var(--pure-tagsbar-item-height) - var(--pure-space-1));
+
+  /* ---------- 1d. 系统设置面板（lay-panel） ---------- */
+
+  /*
+   * 设置面板自身上下两段 UI 的合计高度（滚动区 = 100vh − 该值）：
+   *   头部行 48px = py-3（上下各 12px）+ 标题行 24px
+   *   底部行 56px = p-3（上下各 12px）+ el-button 32px
+   *   合计 104px —— 与旧魔法数 `calc(100vh - 104px)` 逐像素等价。
+   */
+  --pure-panel-chrome-height: calc(var(--pure-space-3) * 4 + 24px + 32px);
+
+  /* ---------- 1e. 侧边栏弹出菜单 ---------- */
+
+  /*
+   * 侧边栏菜单项高度（sidebar.scss 的 .el-menu-item / .el-sub-menu__title）。
+   * 弹出菜单（.pure-scrollbar）max-height 预留 2.5 个菜单项高度（125px），
+   * 即旧的 `calc(100vh - calc(50px * 2.5))`，避免菜单贴住视口底部。
+   */
+  --pure-menu-item-height: 50px;
+
+  /* 弹出菜单 max-height 减项 125px = 菜单项 50px × 2.5 */
+
+  /* prettier-ignore */
+  --pure-popover-menu-max-height: calc(100vh - calc(var(--pure-menu-item-height) * 2.5));
 
   /* ---------- 2. 动效：时长 ---------- */
 

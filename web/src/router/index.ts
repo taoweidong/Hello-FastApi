@@ -82,13 +82,17 @@ export const router: Router = createRouter({
   scrollBehavior(to, from, savedPosition) {
     return new Promise(resolve => {
       if (savedPosition) {
-        return savedPosition;
+        // 原先在 Promise executor 里 `return savedPosition`——返回值被丢弃，
+        // Promise 永远 pending（vue-router 不阻塞导航，但 savedPosition 恢复失效）
+        resolve(savedPosition);
+      } else if (from.meta.saveSrollTop) {
+        const top: number =
+          document.documentElement.scrollTop || document.body.scrollTop;
+        resolve({ left: 0, top });
       } else {
-        if (from.meta.saveSrollTop) {
-          const top: number =
-            document.documentElement.scrollTop || document.body.scrollTop;
-          resolve({ left: 0, top });
-        }
+        // 补默认返回：原先该分支悬空不 resolve，导航后不执行任何滚动；
+        // 补上浏览器惯例的"回到顶部"
+        resolve({ left: 0, top: 0 });
       }
     });
   }

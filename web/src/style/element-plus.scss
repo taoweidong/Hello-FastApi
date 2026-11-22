@@ -7,11 +7,14 @@
   font-weight: 700;
 }
 
+/* !important 保留：与 EP 的 .el-breadcrumb__inner.is-link/a（font-weight:700）同特异性竞争，
+   EP 样式注入顺序不受控 */
 .el-breadcrumb__inner,
 .el-breadcrumb__inner a {
   font-weight: 400 !important;
 }
 
+/* !important 保留：与 EP .el-dropdown-menu 的 padding:5px 0 同特异性竞争 */
 .el-dropdown-menu {
   padding: 0 !important;
 }
@@ -23,17 +26,20 @@
   z-index: var(--pure-z-popper) !important;
 }
 
-/* 重置 el-button 中 icon 的 margin */
+/* 重置 el-button 中 icon 的 margin（!important 保留：与 EP .el-button 内 icon 间距规则
+   同特异性竞争，EP 样式注入顺序不受控） */
 .reset-margin [class*="el-icon"] + span {
   margin-left: 2px !important;
 }
 
-/* 自定义 popover 的类名 */
+/* 自定义 popover 的类名（!important 保留：需稳定压过 EP .el-popper 的默认 padding，
+   同特异性、注入顺序不受控） */
 .pure-popper {
   padding: 0 !important;
 }
 
-/* nprogress 适配 element-plus 的主题色 */
+/* nprogress 适配 element-plus 的主题色
+   （!important 保留：nprogress 运行时把自身样式动态插入 head，必然晚于本表） */
 #nprogress {
   & .bar {
     background-color: var(--el-color-primary) !important;
@@ -72,7 +78,8 @@
   }
 }
 
-/* 全局覆盖element-plus的el-tour、el-dialog、el-drawer、el-message-box、el-notification组件右上角关闭图标和el-upload上传文件列表右侧关闭图标的样式，表现更鲜明 */
+/* 全局覆盖element-plus的el-tour、el-dialog、el-drawer、el-message-box、el-notification组件右上角关闭图标和el-upload上传文件列表右侧关闭图标的样式，表现更鲜明
+   （!important 保留：EP 悬停态与主题变量规则同特异性竞争，注入顺序不受控） */
 .el-dialog__headerbtn,
 .el-message-box__headerbtn {
   &:hover {
@@ -109,7 +116,9 @@
   }
 }
 
-/* 克隆并自定义 ElMessage 样式，不会影响 ElMessage 原本样式，在 src/utils/message.ts 中调用自定义样式 ElMessage 方法即可，整体暗色风格在 src/style/dark.scss 文件进行了适配 */
+/* 克隆并自定义 ElMessage 样式，不会影响 ElMessage 原本样式，在 src/utils/message.ts 中调用自定义样式 ElMessage 方法即可，整体暗色风格在 src/style/dark.scss 文件进行了适配
+   （!important 保留：与 EP .el-message 主题规则同特异性竞争且注入顺序不受控，
+   深色侧 dark.scss 以同强度覆盖） */
 .pure-message {
   background: #fff !important;
   border-width: 0 !important;
@@ -190,13 +199,20 @@
 /* 搜索表单容器 */
 .search-form {
   /*
-   * 改为 flex 布局：搜索/重置按钮用 margin-left:auto 推到右侧。
-   * 此前按钮紧跟最后一个字段，字段数不同的页面按钮落点各不相同（1～3 个字段时
-   * 分别漂在页面中部），视觉上杂乱。inline 模式遗留的 margin-right 保留，
-   * 字段间距观感不变；字段超出一行时换行而非撑破容器。
+   * 改为 grid 布局：字段列宽以 minmax(210px, 1fr) 随容器自适应，
+   * 窄屏（列数不足以容纳 210px 时）自动减列换行，无需各页面写断点。
+   * 横向字段间距由 column-gap 提供（32px，等价 Element inline 表单项
+   * 原 margin-right: 32px 的观感），inline 模式遗留的 margin-right 归零，
+   * 否则 1fr 列会被 margin 挤压成不等宽。
+   *
+   * 【有意的行为变化】操作按钮项（末项）改为 grid-column: 1 / -1 独占一整行
+   * 并 justify-self: end 右对齐 —— 旧 flex 版按钮"跟在最后一个字段后面"
+   * （margin-left: auto），字段数不同的页面按钮落点各不相同；现统一为
+   * 独立右对齐按钮行，视觉重心稳定。
    */
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  column-gap: var(--pure-space-8);
   align-items: center;
   padding: var(--pure-search-form-padding-y) var(--pure-search-form-padding-x) 0;
 
@@ -207,13 +223,16 @@
    * 成为无效选择器并被浏览器整条丢弃。
    */
   .el-form-item {
+    margin-right: 0;
     margin-bottom: var(--pure-form-item-gap);
   }
 
-  /* 末项是按钮容器：右对齐并去掉 inline 模式遗留的右侧外边距 */
+  /* 末项是按钮容器：占满一整行并右对齐（行为变化说明见容器注释） */
   .el-form-item:last-child {
+    grid-column: 1 / -1;
+    justify-self: end;
     margin-right: 0;
-    margin-left: auto;
+    margin-left: 0;
   }
 }
 
@@ -240,9 +259,10 @@
 }
 
 /*
- * 表头底色：13 个列表页逐页写死 :header-cell-style（内联样式），
- * 这里用一条全局规则接管，改一处即全局生效。
- * !important 用于覆盖页面上的内联 :header-cell-style。
+ * 表头底色：原由 13 个列表页逐页写死 :header-cell-style（内联样式），
+ * 现内联 prop 已全部删除，统一由本条规则接管，改一处即全局生效。
+ * !important 保留：与 EP 自身的 th.el-table__cell 主题规则同特异性竞争，
+ * EP 样式注入顺序不受控。
  */
 .el-table th.el-table__cell {
   color: var(--el-text-color-primary) !important;

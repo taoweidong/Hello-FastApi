@@ -25,27 +25,30 @@ import {
 import { realtime } from "@/utils/websocket";
 
 export const useUserStore = defineStore("pure-user", {
-  state: (): userType => ({
-    // 头像
-    avatar: storageLocal().getItem<DataInfo<number>>(userKey)?.avatar ?? "",
-    // 用户名
-    username: storageLocal().getItem<DataInfo<number>>(userKey)?.username ?? "",
-    // 昵称
-    nickname: storageLocal().getItem<DataInfo<number>>(userKey)?.nickname ?? "",
-    // 页面级别权限
-    roles: storageLocal().getItem<DataInfo<number>>(userKey)?.roles ?? [],
-    // 按钮级别权限（基于菜单name）
-    permissions:
-      storageLocal().getItem<DataInfo<number>>(userKey)?.permissions ?? [],
-    // 前端生成的验证码（按实际需求替换）
-    verifyCode: "",
-    // 判断登录页面显示哪个组件（0：登录（默认）、1：手机登录、2：二维码登录、3：注册、4：忘记密码）
-    currentPage: 0,
-    // 是否勾选了登录页的免登录
-    isRemembered: false,
-    // 登录页的免登录存储几天，默认7天
-    loginDay: 7
-  }),
+  state: (): userType => {
+    // 六个字段同源于一份 localStorage 快照：取一次复用，避免反复 JSON 解析
+    const cachedUser = storageLocal().getItem<DataInfo<number>>(userKey);
+    return {
+      // 头像
+      avatar: cachedUser?.avatar ?? "",
+      // 用户名
+      username: cachedUser?.username ?? "",
+      // 昵称
+      nickname: cachedUser?.nickname ?? "",
+      // 页面级别权限
+      roles: cachedUser?.roles ?? [],
+      // 按钮级别权限（基于菜单name）
+      permissions: cachedUser?.permissions ?? [],
+      // 前端生成的验证码（按实际需求替换）
+      verifyCode: "",
+      // 判断登录页面显示哪个组件（0：登录（默认）、1：手机登录、2：二维码登录、3：注册、4：忘记密码）
+      currentPage: 0,
+      // 是否勾选了登录页的免登录
+      isRemembered: false,
+      // 登录页的免登录存储几天，默认7天
+      loginDay: 7
+    };
+  },
   actions: {
     /** 存储头像 */
     SET_AVATAR(avatar: string) {

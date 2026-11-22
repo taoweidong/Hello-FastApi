@@ -248,6 +248,46 @@ onMounted(() => {
             {{ serverInfo.process.runningTime }}
           </el-descriptions-item>
         </el-descriptions>
+
+        <!--
+          数据库 I/O（pg_stat_io）：仅 PostgreSQL 环境返回 pgIo，
+          SQLite / 采集失败时为 null，整块不渲染（契约向后兼容）。
+        -->
+        <el-descriptions
+          v-if="serverInfo.pgIo"
+          title="数据库 I/O（PostgreSQL 18 pg_stat_io）"
+          :column="3"
+          border
+          class="mt-4"
+        >
+          <el-descriptions-item label="缓冲读次数">
+            {{ serverInfo.pgIo.reads }}
+          </el-descriptions-item>
+          <el-descriptions-item label="读取字节">
+            {{ formatSize(serverInfo.pgIo.readBytes) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="缓冲写次数">
+            {{ serverInfo.pgIo.writes }}
+          </el-descriptions-item>
+          <el-descriptions-item label="写入字节">
+            {{ formatSize(serverInfo.pgIo.writeBytes) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="缓冲命中次数">
+            {{ serverInfo.pgIo.hits }}
+          </el-descriptions-item>
+          <el-descriptions-item label="缓冲淘汰次数">
+            {{ serverInfo.pgIo.evictions }}
+          </el-descriptions-item>
+          <el-descriptions-item label="缓冲复用次数">
+            {{ serverInfo.pgIo.reuses }}
+          </el-descriptions-item>
+          <el-descriptions-item label="fsync 次数">
+            {{ serverInfo.pgIo.fsyncs }}
+          </el-descriptions-item>
+          <el-descriptions-item label="数据库大小">
+            {{ formatSize(serverInfo.pgIo.databaseSizeBytes) }}
+          </el-descriptions-item>
+        </el-descriptions>
       </template>
     </el-card>
 

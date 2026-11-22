@@ -72,10 +72,6 @@ const {
           :data="dataList"
           :columns="dynamicColumns"
           :pagination="{ ...pagination, size }"
-          :header-cell-style="{
-            background: 'var(--el-fill-color-light)',
-            color: 'var(--el-text-color-primary)'
-          }"
           @page-size-change="handleSizeChange"
           @page-current-change="handleCurrentChange"
         >

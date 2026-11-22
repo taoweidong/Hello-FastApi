@@ -14,6 +14,31 @@ import {
 } from "../utils";
 import { usePermissionStoreHook } from "./permission";
 
+/** 页签落盘防抖窗口（ms）：快速连续切换路由时合并写入 */
+const TAGS_PERSIST_DELAY = 300;
+
+/*
+ * localStorage 落盘防抖 —— 自写 timer 实现，不依赖 @vueuse 的 useDebounceFn：
+ * store 可能在 setup 作用域之外使用（useMultiTagsStoreHook 携带 store 实例），
+ * 模块级 timer 与组件生命周期解耦，任何调用时机都安全。
+ */
+let tagsPersistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function persistTagsWithDebounce(multiTags: unknown): void {
+  if (tagsPersistTimer !== null) clearTimeout(tagsPersistTimer);
+  tagsPersistTimer = setTimeout(() => {
+    tagsPersistTimer = null;
+    storageLocal().setItem(`${responsiveStorageNameSpace()}tags`, multiTags);
+  }, TAGS_PERSIST_DELAY);
+}
+
+function cancelPendingTagsPersist(): void {
+  if (tagsPersistTimer !== null) {
+    clearTimeout(tagsPersistTimer);
+    tagsPersistTimer = null;
+  }
+}
+
 export const useMultiTagsStore = defineStore("pure-multiTags", {
   state: () => ({
     // 存储标签页信息（路由信息）
@@ -42,20 +67,17 @@ export const useMultiTagsStore = defineStore("pure-multiTags", {
     multiTagsCacheChange(multiTagsCache: boolean) {
       this.multiTagsCache = multiTagsCache;
       if (multiTagsCache) {
-        storageLocal().setItem(
-          `${responsiveStorageNameSpace()}tags`,
-          this.multiTags
-        );
+        // 300ms 防抖写入：传入 live 数组引用，落盘时即最新内容
+        persistTagsWithDebounce(this.multiTags);
       } else {
+        // 关闭缓存时取消待写入，防止 removeItem 之后又被防抖写回
+        cancelPendingTagsPersist();
         storageLocal().removeItem(`${responsiveStorageNameSpace()}tags`);
       }
     },
     tagsCache(multiTags) {
-      this.getMultiTagsCache &&
-        storageLocal().setItem(
-          `${responsiveStorageNameSpace()}tags`,
-          multiTags
-        );
+      // 高频路径（每次路由切换 push/splice/equal 页签）合并为一次落盘
+      this.getMultiTagsCache && persistTagsWithDebounce(multiTags);
     },
     handleTags<T>(
       mode: string,

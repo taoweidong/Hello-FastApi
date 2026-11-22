@@ -131,15 +131,16 @@ const { t, locale, translationCh, translationEn } = useTranslationLang();
 </template>
 
 <style lang="scss" scoped>
+/* 导航栏高度统一取 tokens.scss 的 --pure-navbar-height（头部高度单一事实来源） */
 .navbar {
   width: 100%;
-  height: 48px;
+  height: var(--pure-navbar-height);
   overflow: hidden;
 
   .hamburger-container {
     float: left;
     height: 100%;
-    line-height: 48px;
+    line-height: var(--pure-navbar-height);
     cursor: pointer;
   }
 
@@ -148,14 +149,14 @@ const { t, locale, translationCh, translationEn } = useTranslationLang();
     align-items: center;
     justify-content: flex-end;
     min-width: 280px;
-    height: 48px;
+    height: var(--pure-navbar-height);
     color: #000000d9;
 
     .el-dropdown-link {
       display: flex;
       align-items: center;
       justify-content: space-around;
-      height: 48px;
+      height: var(--pure-navbar-height);
       padding: 10px;
       color: #000000d9;
       cursor: pointer;

@@ -107,10 +107,6 @@ function onFullscreen() {
           :size="size"
           :data="dataList"
           :columns="dynamicColumns"
-          :header-cell-style="{
-            background: 'var(--el-fill-color-light)',
-            color: 'var(--el-text-color-primary)'
-          }"
           @selection-change="handleSelectionChange"
         >
           <template #operation="{ row }">

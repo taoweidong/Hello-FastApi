@@ -51,6 +51,9 @@ async function fetchNotices() {
   }
 }
 
+/** 单个 tab 的通知列表上限：长时间挂机收到大量推送时丢弃最旧，防列表无界增长 */
+const MAX_NOTICE_LIST = 50;
+
 /** 实时推送回调：将新公告插入对应 tab 顶部 + 弹窗提示 + 铃铛摇晃 */
 function onRealtimeNotice(payload: any) {
   if (!payload) return;
@@ -58,6 +61,10 @@ function onRealtimeNotice(payload: any) {
   const tab = notices.value.find(item => item.key === key);
   if (tab) {
     tab.list.unshift(toItem(payload));
+    // 超出上限丢弃最旧（数组尾部）；提示依赖 message 封装的 grouping 合并，无需额外节流
+    if (tab.list.length > MAX_NOTICE_LIST) {
+      tab.list.length = MAX_NOTICE_LIST;
+    }
   }
   const label = payload.noticeType === 2 ? "公告" : "通知";
   message(`${label}：${payload.title ?? ""}`, { type: "warning" });

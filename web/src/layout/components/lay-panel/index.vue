@@ -88,7 +88,7 @@ onBeforeUnmount(() => {
         </span>
       </div>
       <el-scrollbar
-        class="border-y border-l border-r-0 border-solid border-(--pure-border-color) h-[calc(100vh-104px)]!"
+        class="border-y border-l border-r-0 border-solid border-(--pure-border-color) h-[calc(100vh-var(--pure-panel-chrome-height))]!"
       >
         <slot />
       </el-scrollbar>

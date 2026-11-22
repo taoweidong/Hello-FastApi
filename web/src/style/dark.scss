@@ -76,6 +76,8 @@ html.dark {
     $lightness: 15%
   );
 
+  /* 以下背景覆盖需 !important：浅色侧的 sidebar.scss 主题背景同样使用
+     !important（与 EP 菜单主题规则同特异性竞争），深色侧必须同强度才能覆盖 */
   .navbar,
   .tags-view,
   .contextmenu,
@@ -87,6 +89,7 @@ html.dark {
     background: var(--el-bg-color) !important;
   }
 
+  /* 深色主内容区底色：防御可能的浅色底规则与主题层注入顺序，保留 !important */
   .app-main,
   .app-main-nofixed-header {
     background: #020409 !important;
@@ -112,6 +115,7 @@ html.dark {
     .scroll-item {
       .el-icon-close {
         &:hover {
+          /* 覆盖 lay-tag 中的同强度 !important 悬停色，深色侧需保持 !important */
           color: rgb(255 255 255 / 85%) !important;
           background-color: rgb(255 255 255 / 12%);
         }
@@ -135,6 +139,7 @@ html.dark {
 
       &.is-active {
         .chrome-tab__bg {
+          /* 覆盖 lay-tag 的 .chrome-tab__bg !important 主色，深色侧需同强度 */
           color: var(--el-color-primary-light-8) !important;
         }
       }
@@ -201,7 +206,8 @@ html.dark {
     background: transparent;
   }
 
-  /* 全局覆盖element-plus的el-dialog、el-drawer、el-message-box、el-notification组件右上角关闭图标的样式，表现更鲜明 */
+  /* 全局覆盖element-plus的el-dialog、el-drawer、el-message-box、el-notification组件右上角关闭图标的样式，表现更鲜明
+     （!important 必须保留：与 element-plus.scss 浅色侧的同名 !important 悬停规则同强度竞争） */
   .el-icon {
     &.el-dialog__close,
     &.el-drawer__close,
@@ -218,7 +224,8 @@ html.dark {
     }
   }
 
-  /* 克隆并自定义 ElMessage 样式，不会影响 ElMessage 原本样式，在 src/utils/message.ts 中调用自定义样式 ElMessage 方法即可，整体浅色风格在 src/style/element-plus.scss 文件进行了适配 */
+  /* 克隆并自定义 ElMessage 样式，不会影响 ElMessage 原本样式，在 src/utils/message.ts 中调用自定义样式 ElMessage 方法即可，整体浅色风格在 src/style/element-plus.scss 文件进行了适配
+     （!important 必须保留：与浅色侧 .pure-message 的 !important 及 EP .el-message 主题规则竞争） */
   .pure-message {
     background-color: rgb(36 37 37) !important;
     background-image: initial !important;

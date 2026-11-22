@@ -1,6 +1,28 @@
 import { http } from "@/utils/http";
 import type { Result } from "../base";
 
+/** PostgreSQL pg_stat_io 聚合统计（仅 PG 环境返回，SQLite 为 null） */
+export type PgIoInfo = {
+  /** 缓冲区读次数 */
+  reads: number;
+  /** 读字节数 */
+  readBytes: number;
+  /** 写次数 */
+  writes: number;
+  /** 写字节数 */
+  writeBytes: number;
+  /** 缓冲命中次数 */
+  hits: number;
+  /** 缓冲淘汰次数 */
+  evictions: number;
+  /** 缓冲复用次数 */
+  reuses: number;
+  /** fsync 次数 */
+  fsyncs: number;
+  /** 当前数据库大小（字节） */
+  databaseSizeBytes: number;
+};
+
 /** 服务器监控数据结构 */
 export type ServerInfo = {
   cpu: {
@@ -33,6 +55,8 @@ export type ServerInfo = {
     cpuPercent: number;
     runningTime: string;
   };
+  /** 可选附加字段：仅 PostgreSQL 环境返回（向后兼容，SQLite 时为 null） */
+  pgIo?: PgIoInfo | null;
 };
 
 /** 缓存监控命令统计条目 */

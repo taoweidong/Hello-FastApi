@@ -39,39 +39,35 @@ const stretch = computed(() => {
   return $storage?.configure.stretch;
 });
 
-const layout = computed(() => {
-  return $storage?.layout.layout === "vertical";
-});
-
 const getMainWidth = computed(() => {
-  return isNumber(stretch.value)
-    ? stretch.value + "px"
-    : stretch.value
-      ? "100%"
-      : "100%";
+  // 原先 stretch 为 false/unset 时两支都返回 "100%"，冗余三元已合并
+  return isNumber(stretch.value) ? stretch.value + "px" : "100%";
 });
 
+/*
+ * 顶部导航区高度单一事实来源：tokens.scss 的 --pure-navbar-height /
+ * --pure-header-height(-chrome) / --pure-content-min-height（推导见该文件注释）。
+ * 旧值核对：隐藏页签 48px；显示页签 普通 81px（48+33）、chrome 85px（48+37）；
+ * 非固定头 min-height 减项 隐藏页签 48px（= --pure-navbar-height）、
+ * 显示页签 86px（= --pure-content-min-height），逐像素等价。
+ * 注：旧实现里 hideTabs && layout 与 hideTabs && !layout 输出完全相同，
+ * 已合并为与 layout 无关的单一分支。
+ */
 const getSectionStyle = computed(() => {
   return [
-    hideTabs.value && layout ? "padding-top: 48px;" : "",
-    !hideTabs.value && layout
-      ? tagsStyle.value == "chrome"
-        ? "padding-top: 85px;"
-        : "padding-top: 81px;"
-      : "",
-    hideTabs.value && !layout.value ? "padding-top: 48px;" : "",
-    !hideTabs.value && !layout.value
-      ? tagsStyle.value == "chrome"
-        ? "padding-top: 85px;"
-        : "padding-top: 81px;"
-      : "",
+    hideTabs.value
+      ? "padding-top: var(--pure-navbar-height);"
+      : tagsStyle.value == "chrome"
+        ? "padding-top: var(--pure-header-height-chrome);"
+        : "padding-top: var(--pure-header-height);",
     props.fixedHeader
       ? ""
-      : `padding-top: 0;${
+      : `padding-top: 0; min-height: ${
+          // 旧值核对：隐藏页签 calc(100vh - 48px)；显示页签 calc(100vh - 86px)
           hideTabs.value
-            ? "min-height: calc(100vh - 48px);"
-            : "min-height: calc(100vh - 86px);"
-        }`
+            ? "calc(100vh - var(--pure-navbar-height))"
+            : "var(--pure-content-min-height)"
+        };`
   ];
 });
 
@@ -158,6 +154,12 @@ const transitionMain = defineComponent({
                 <BackTopIcon />
               </el-backtop>
               <div class="grow">
+                <!--
+                  组件 key：普通页面用 route.path（原先的 fullPath 会让仅 query
+                  变化的导航强制重建实例；全仓已确认没有"同一路由不同 query 需要
+                  独立实例"的用法）；iframe 多页签（frameSrc）仍按 fullPath 区分，
+                  否则 compList 中其它 frame 实例会因 key 随当前路由漂移被销毁。
+                -->
                 <transitionMain :route="route">
                   <keep-alive
                     v-if="isKeepAlive"
@@ -165,7 +167,7 @@ const transitionMain = defineComponent({
                   >
                     <component
                       :is="Comp"
-                      :key="fullPath"
+                      :key="frameInfo?.frameSrc ? fullPath : route.path"
                       :frameInfo="frameInfo"
                       class="main-content"
                     />
@@ -173,7 +175,7 @@ const transitionMain = defineComponent({
                   <component
                     :is="Comp"
                     v-else
-                    :key="fullPath"
+                    :key="frameInfo?.frameSrc ? fullPath : route.path"
                     :frameInfo="frameInfo"
                     class="main-content"
                   />
@@ -189,7 +191,7 @@ const transitionMain = defineComponent({
                 >
                   <component
                     :is="Comp"
-                    :key="fullPath"
+                    :key="frameInfo?.frameSrc ? fullPath : route.path"
                     :frameInfo="frameInfo"
                     class="main-content"
                   />
@@ -197,7 +199,7 @@ const transitionMain = defineComponent({
                 <component
                   :is="Comp"
                   v-else
-                  :key="fullPath"
+                  :key="frameInfo?.frameSrc ? fullPath : route.path"
                   :frameInfo="frameInfo"
                   class="main-content"
                 />
