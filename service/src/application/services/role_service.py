@@ -17,7 +17,7 @@ from src.domain.error_messages import ErrorMessages as EM
 from src.domain.exceptions import ConflictError, NotFoundError
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
-from src.domain.services.cache_port import UserCachePort
+from src.domain.services.cache_port import RoleCachePort, UserCachePort
 
 
 class RoleService:
@@ -28,11 +28,14 @@ class RoleService:
         role_repo: RoleRepositoryInterface,
         cache_service: UserCachePort | None = None,
         menu_repo: MenuRepositoryInterface | None = None,
+        options_cache: RoleCachePort | None = None,
     ):
         self.role_repo = role_repo
         self.cache_service = cache_service
         # 菜单仓储用于授权时祖先补全（None 时跳过补全，仅测试场景）
         self.menu_repo = menu_repo
+        # 角色选项缓存（/list-all-role 短 TTL 读穿透）
+        self.options_cache = options_cache
 
     async def create_role(self, dto: RoleCreateDTO) -> RoleResponseDTO:
         """创建新角色，可选分配菜单。"""
@@ -57,6 +60,7 @@ class RoleService:
         if created_role.data_scope == DataScope.CUSTOM and dto.deptIds:
             await self.role_repo.assign_depts_to_role(created_role.id, dto.deptIds)
 
+        await self._invalidate_role_options()
         return await self._role_to_response(created_role)
 
     async def get_role(self, role_id: str) -> RoleResponseDTO:
@@ -111,6 +115,7 @@ class RoleService:
 
         # 菜单/数据权限/状态变更都会影响该角色下用户的已缓存权限
         await self._invalidate_role_users_cache(role_id)
+        await self._invalidate_role_options()
 
         updated_role = await self.role_repo.get_by_id(role_id)
         if updated_role is None:
@@ -124,6 +129,7 @@ class RoleService:
         if not await self.role_repo.delete(role_id):
             raise NotFoundError(EM.role_not_found_by_id(role_id))
         await self._invalidate_users_cache(user_ids)
+        await self._invalidate_role_options()
         return True
 
     async def assign_menus(self, role_id: str, menu_ids: list[str]) -> bool:
@@ -176,9 +182,27 @@ class RoleService:
         return [await self._role_to_response(r) for r in roles]
 
     async def get_all_simple_roles(self) -> list[dict]:
-        """获取所有角色简单列表，供 auth_router 使用。"""
+        """获取所有角色简单列表，供 auth_router 使用（带短 TTL 缓存）。
+
+        缓存 Key 为 role:options（TTL 60s）：角色量小且选项只含 id/name，
+        短 TTL 足够兜底；角色增/改/删时主动失效。
+        """
+        if self.options_cache is not None:
+            cached = await self.options_cache.get_role_options()
+            if cached is not None:
+                return cached
+
         roles = await self.role_repo.get_all(page_num=1, page_size=FULL_LIST_PAGE_SIZE)
-        return [{"id": r.id, "name": r.name} for r in roles]
+        options = [{"id": r.id, "name": r.name} for r in roles]
+
+        if self.options_cache is not None:
+            await self.options_cache.set_role_options(options)
+        return options
+
+    async def _invalidate_role_options(self) -> None:
+        """使角色选项缓存失效（角色增/改/删后调用）。"""
+        if self.options_cache is not None:
+            await self.options_cache.invalidate_role_options()
 
     async def _complete_menu_ancestors(self, menu_ids: list[str]) -> list[str]:
         """补全授权菜单的全部祖先（防御客户端半选丢失父级）。

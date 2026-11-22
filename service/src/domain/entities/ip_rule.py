@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+
+from uuid_utils.compat import uuid7
 
 
 @dataclass
@@ -113,7 +114,7 @@ class IPRuleEntity:
     ) -> IPRuleEntity:
         """创建新IP规则实体的工厂方法。"""
         return cls(
-            id=uuid.uuid4().hex,
+            id=uuid7().hex,
             ip_address=ip_address,
             rule_type=rule_type,
             reason=reason,

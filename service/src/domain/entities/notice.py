@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import datetime
+
+from uuid_utils.compat import uuid7
 
 
 @dataclass
@@ -74,7 +75,7 @@ class NoticeEntity:
     ) -> NoticeEntity:
         """创建新通知公告实体的工厂方法。"""
         return cls(
-            id=str(uuid.uuid4()),
+            id=str(uuid7()),
             title=title,
             content=content,
             notice_type=notice_type,

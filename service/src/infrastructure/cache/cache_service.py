@@ -30,9 +30,12 @@ class CacheService(CachePort, CacheAdminPort):
     _BLACKLIST_PREFIX = "token:blacklist:"
     _PERMS_PREFIX = "user:perms:"
     _USER_INFO_PREFIX = "user:info:"
+    _USER_INFO_FULL_PREFIX = "user:info:full:"
+    _ROUTES_PREFIX = "routes:user:"
     _DICT_PREFIX = "dict:"
     _MENU_ALL_KEY = "menu:all"
     _IP_RULES_KEY = "ip:rules"
+    _ROLE_OPTIONS_KEY = "role:options"
 
     # 缓存 TTL（秒）- 从配置读取
     PERMS_CACHE_TTL = settings.CACHE_PERMISSIONS_TTL
@@ -40,6 +43,11 @@ class CacheService(CachePort, CacheAdminPort):
     MENU_ALL_CACHE_TTL = settings.CACHE_MENU_ALL_TTL
     TOKEN_BLACKLIST_TTL = settings.CACHE_TOKEN_BLACKLIST_TTL
     DICT_CACHE_TTL = settings.CACHE_DICT_TTL
+    # 路由树 TTL 与 user:perms 对齐：两者同源于用户的角色+菜单，
+    # 失效链路相同（角色/菜单/角色分配变更），生命周期保持一致
+    ROUTES_CACHE_TTL = settings.CACHE_PERMISSIONS_TTL
+    USER_INFO_FULL_CACHE_TTL = settings.CACHE_USER_INFO_TTL
+    ROLE_OPTIONS_CACHE_TTL = settings.CACHE_ROLE_OPTIONS_TTL
 
     def __init__(self, redis_client: redis.Redis | None = None) -> None:
         self._redis = redis_client
@@ -209,7 +217,10 @@ class CacheService(CachePort, CacheAdminPort):
         return await self._set_json(self._user_info_key(user_id), info, self.USER_INFO_CACHE_TTL)
 
     async def invalidate_user_info(self, user_id: str) -> bool:
-        """使用户信息缓存失效。
+        """使用户信息缓存失效（含基础信息与完整信息两个 Key）。
+
+        完整信息（user:info:full）是基础信息的超集（含角色列表），
+        基础信息变化时必然连带失效，单点删除避免调用方遗漏。
 
         Args:
             user_id: 用户 ID
@@ -217,13 +228,76 @@ class CacheService(CachePort, CacheAdminPort):
         Returns:
             是否成功失效
         """
-        return await self._delete_keys(self._user_info_key(user_id))
+        return await self._delete_keys(self._user_info_key(user_id), self._user_info_full_key(user_id))
+
+    # ---- 用户完整信息缓存（/user/info 响应）----
+
+    async def get_user_info_full(self, user_id: str) -> dict | None:
+        """从缓存获取用户完整信息（/user/info 响应形态，含角色列表）。
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            用户完整信息字典（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        _, value = await self._get_json(self._user_info_full_key(user_id))
+        return value
+
+    async def set_user_info_full(self, user_id: str, info: dict) -> bool:
+        """将用户完整信息（/user/info 响应形态）写入缓存。
+
+        Args:
+            user_id: 用户 ID
+            info: 用户完整信息字典（JSON 可序列化，DTO 需先 model_dump(mode="json")）
+
+        Returns:
+            是否成功写入缓存
+        """
+        return await self._set_json(self._user_info_full_key(user_id), info, self.USER_INFO_FULL_CACHE_TTL)
+
+    # ---- 用户路由树缓存 ----
+
+    async def get_user_routes(self, user_id: str) -> list[dict] | None:
+        """从缓存获取用户动态路由树。
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            路由树列表（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        _, value = await self._get_json(self._routes_key(user_id))
+        return value
+
+    async def set_user_routes(self, user_id: str, routes: list[dict]) -> bool:
+        """将用户动态路由树写入缓存。
+
+        Args:
+            user_id: 用户 ID
+            routes: 路由树列表（build_route_tree 产物，纯 JSON 结构）
+
+        Returns:
+            是否成功写入缓存
+        """
+        return await self._set_json(self._routes_key(user_id), routes, self.ROUTES_CACHE_TTL)
+
+    async def invalidate_user_routes(self, user_id: str) -> bool:
+        """使用户路由树缓存失效。
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            是否成功失效
+        """
+        return await self._delete_keys(self._routes_key(user_id))
 
     async def invalidate_users_batch(self, user_ids: list[str]) -> bool:
-        """批量失效多个用户的权限与信息缓存（单次 Redis 往返）。
+        """批量失效多个用户的权限、信息（含完整信息）与路由树缓存（单次 Redis 往返）。
 
         将全部 key 的删除合并为一次网络往返，避免批量操作时
-        出现 N×2 次 Redis 调用的隐式 N+1 问题。
+        出现 N×4 次 Redis 调用的隐式 N+1 问题。
 
         Args:
             user_ids: 需要失效的用户 ID 列表
@@ -233,7 +307,12 @@ class CacheService(CachePort, CacheAdminPort):
         """
         if not user_ids:
             return True
-        keys = [self._perms_key(uid) for uid in user_ids] + [self._user_info_key(uid) for uid in user_ids]
+        keys = (
+            [self._perms_key(uid) for uid in user_ids]
+            + [self._user_info_key(uid) for uid in user_ids]
+            + [self._user_info_full_key(uid) for uid in user_ids]
+            + [self._routes_key(uid) for uid in user_ids]
+        )
         return await self._delete_keys(*keys)
 
     # ---- 菜单全表缓存 ----
@@ -265,6 +344,36 @@ class CacheService(CachePort, CacheAdminPort):
             是否成功失效
         """
         return await self._delete_keys(self._MENU_ALL_KEY)
+
+    # ---- 角色选项缓存 ----
+
+    async def get_role_options(self) -> list[dict] | None:
+        """从缓存获取角色选项列表（/list-all-role）。
+
+        Returns:
+            角色选项列表（缓存命中时），None 表示缓存未命中或 Redis 不可用
+        """
+        _, value = await self._get_json(self._ROLE_OPTIONS_KEY)
+        return value
+
+    async def set_role_options(self, options: list[dict]) -> bool:
+        """将角色选项列表写入缓存。
+
+        Args:
+            options: 角色选项列表（``[{"id": ..., "name": ...}]``）
+
+        Returns:
+            是否成功写入缓存
+        """
+        return await self._set_json(self._ROLE_OPTIONS_KEY, options, self.ROLE_OPTIONS_CACHE_TTL)
+
+    async def invalidate_role_options(self) -> bool:
+        """使角色选项缓存失效。
+
+        Returns:
+            是否成功失效
+        """
+        return await self._delete_keys(self._ROLE_OPTIONS_KEY)
 
     # ---- 字典数据缓存 ----
 
@@ -381,15 +490,26 @@ class CacheService(CachePort, CacheAdminPort):
         """生成用户信息缓存的 Redis Key。"""
         return f"{self._USER_INFO_PREFIX}{user_id}"
 
+    def _user_info_full_key(self, user_id: str) -> str:
+        """生成用户完整信息（/user/info）缓存的 Redis Key。"""
+        return f"{self._USER_INFO_FULL_PREFIX}{user_id}"
+
+    def _routes_key(self, user_id: str) -> str:
+        """生成用户路由树缓存的 Redis Key。"""
+        return f"{self._ROUTES_PREFIX}{user_id}"
+
     # ---- CacheAdminPort：缓存清单与清理（管理员监控页） ----
 
     # 分组注册表：(分组标识, 中文名, 键前缀, 是否可清理)。
     # token_blacklist 只读不清理——清除黑名单会使已登出/被强制下线的令牌
     # 复活至自然过期，属安全红线；全量清理也跳过该组与限流计数键。
+    # 注意：user_info 组的前缀 user:info:* 天然覆盖 user:info:full:*（完整信息）。
     _CACHE_GROUPS: tuple[tuple[str, str, str, bool], ...] = (
         ("user_info", "用户信息缓存", _USER_INFO_PREFIX, True),
         ("user_perms", "用户权限缓存", _PERMS_PREFIX, True),
+        ("routes_cache", "用户路由树缓存", _ROUTES_PREFIX, True),
         ("menu_cache", "菜单全量缓存", _MENU_ALL_KEY, True),
+        ("role_options", "角色选项缓存", _ROLE_OPTIONS_KEY, True),
         ("dict_cache", "字典缓存", _DICT_PREFIX, True),
         ("ip_rules", "IP 规则缓存", _IP_RULES_KEY, True),
         ("token_blacklist", "令牌黑名单", _BLACKLIST_PREFIX, False),

@@ -50,9 +50,10 @@ class InMemoryUserRepository(UserRepositoryInterface):
     ) -> list[UserEntity]:
         result = list(self._users.values())
         if username:
-            result = [u for u in result if u.username == username]
+            # 与真实仓储语义一致：username/phone 列表筛选为包含匹配（ILIKE %v%）
+            result = [u for u in result if username.lower() in (u.username or "").lower()]
         if phone:
-            result = [u for u in result if u.phone == phone]
+            result = [u for u in result if phone.lower() in (u.phone or "").lower()]
         if email:
             result = [u for u in result if (u.email or "") == email]
         if is_active is not None:
@@ -90,9 +91,10 @@ class InMemoryUserRepository(UserRepositoryInterface):
     ) -> int:
         rows = [u for u in self._users.values()]
         if username:
-            rows = [u for u in rows if u.username == username]
+            # 与真实仓储语义一致：username/phone 列表筛选为包含匹配（ILIKE %v%）
+            rows = [u for u in rows if username.lower() in (u.username or "").lower()]
         if phone:
-            rows = [u for u in rows if u.phone == phone]
+            rows = [u for u in rows if phone.lower() in (u.phone or "").lower()]
         if email:
             rows = [u for u in rows if (u.email or "") == email]
         if is_active is not None:
@@ -270,12 +272,15 @@ class RecordingCacheService(UserCachePort):
     只实现 ``UserCachePort``：窄接口下替身不必再为无关的缓存域补 no-op 桩。
     批量失效语义同样被记录——单次调用所失效的用户数量，
     便于断言「批量操作只触发一次批量失效」而非 N 次单点失效。
+    批量失效同时记录路由树失效（与真实 CacheService 的批量语义对齐：
+    单次批量删除会连带 perms/info/info:full/routes 四类 Key）。
     """
 
     def __init__(self) -> None:
         self.invalidated_users: list[str] = []
         self.invalidate_user_info_calls: list[str] = []
         self.invalidate_user_permissions_calls: list[str] = []
+        self.invalidate_user_routes_calls: list[str] = []
         self.batch_calls: list[list[str]] = []
 
     async def invalidate_user_info(self, user_id: str) -> bool:
@@ -287,10 +292,15 @@ class RecordingCacheService(UserCachePort):
         self.invalidate_user_permissions_calls.append(user_id)
         return True
 
+    async def invalidate_user_routes(self, user_id: str) -> bool:
+        self.invalidate_user_routes_calls.append(user_id)
+        return True
+
     async def invalidate_users_batch(self, user_ids: list[str]) -> bool:
-        """批量失效：一次调用处理全部用户。"""
+        """批量失效：一次调用处理全部用户（含路由树缓存）。"""
         self.batch_calls.append(list(user_ids))
         self.invalidated_users.extend(user_ids)
+        self.invalidate_user_routes_calls.extend(user_ids)
         return True
 
     async def get_user_info(self, user_id: str):
@@ -299,8 +309,20 @@ class RecordingCacheService(UserCachePort):
     async def set_user_info(self, user_id: str, info: dict) -> bool:
         return True
 
+    async def get_user_info_full(self, user_id: str):
+        return None
+
+    async def set_user_info_full(self, user_id: str, info: dict) -> bool:
+        return True
+
     async def get_user_permissions(self, user_id: str):
         return None
 
     async def set_user_permissions(self, user_id: str, permissions: list) -> bool:
+        return True
+
+    async def get_user_routes(self, user_id: str):
+        return None
+
+    async def set_user_routes(self, user_id: str, routes: list) -> bool:
         return True

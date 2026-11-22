@@ -3,12 +3,12 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, Index, Text, func
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 if TYPE_CHECKING:
     from src.domain.entities.log import OperationLogEntity
@@ -25,7 +25,7 @@ class SystemLog(SQLModel, table=True):
         Index("ix_sys_logs_creator_id_created_time", "creator_id", "created_time"),
     )
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     module: str | None = Field(default=None, max_length=64)  # 所属模块
     path: str | None = Field(default=None, max_length=400)  # 请求路径
     body: str | None = Field(default=None, sa_column=Column(Text, nullable=True))  # 请求体

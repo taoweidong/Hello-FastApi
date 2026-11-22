@@ -104,6 +104,7 @@ class Settings(BaseSettings):
     CACHE_MENU_ALL_TTL: int = Field(default=600, ge=1)  # 10 分钟
     CACHE_TOKEN_BLACKLIST_TTL: int = Field(default=86400, ge=1)  # 24 小时
     CACHE_DICT_TTL: int = Field(default=3600, ge=1)  # 1 小时（字典数据缓存）
+    CACHE_ROLE_OPTIONS_TTL: int = Field(default=60, ge=1)  # 1 分钟（角色选项短缓存）
 
     @field_validator("LOG_LEVEL")
     @classmethod

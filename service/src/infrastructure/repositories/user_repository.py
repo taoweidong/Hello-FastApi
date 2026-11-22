@@ -22,6 +22,11 @@ from src.infrastructure.repositories.base import GenericRepository
 class UserRepository(GenericRepository[User, UserEntity], UserRepositoryInterface):
     """UserRepositoryInterface 的 SQLModel 原生实现。"""
 
+    # 用户搜索语义：username/phone 列表筛选升级为包含匹配（ILIKE %v%），
+    # PG 下由 pg_trgm GIN 索引（b8e2f4a6d0c1）支撑；email/状态/部门等
+    # 其余字段保持等值匹配。get_by_username（登录路径）仍为精确等值。
+    _FUZZY_FILTER_FIELDS = frozenset({"username", "phone"})
+
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
 

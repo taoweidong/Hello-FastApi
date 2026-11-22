@@ -3,12 +3,12 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, func
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 if TYPE_CHECKING:
     from src.domain.entities.notice import NoticeEntity
@@ -19,7 +19,7 @@ class Notice(SQLModel, table=True):
 
     __tablename__ = "sys_notice"
 
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)  # 36 位 UUID 主键
+    id: str = Field(default_factory=lambda: str(uuid7()), primary_key=True, max_length=36)  # 36 位 UUID 主键
     title: str = Field(max_length=128)  # 公告标题
     content: str = Field(default="")  # 公告内容
     notice_type: int = Field(default=1)  # 公告类型（1通知 2公告）

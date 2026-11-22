@@ -3,12 +3,12 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, func
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 if TYPE_CHECKING:
     from src.domain.entities.department import DepartmentEntity
@@ -19,7 +19,7 @@ class Department(SQLModel, table=True):
 
     __tablename__ = "sys_departments"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     mode_type: int = Field(default=0)  # 权限模式(0-OR, 1-AND)
     name: str = Field(max_length=128)  # 部门名称
     code: str = Field(max_length=128, unique=True)  # 部门唯一编码

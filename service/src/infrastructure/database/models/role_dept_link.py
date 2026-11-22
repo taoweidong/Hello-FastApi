@@ -6,10 +6,9 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
-
 from sqlalchemy import Column, ForeignKey, String
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 
 class RoleDeptLink(SQLModel, table=True):
@@ -17,7 +16,7 @@ class RoleDeptLink(SQLModel, table=True):
 
     __tablename__ = "sys_role_dept"
 
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, max_length=36)  # 36位UUID
+    id: str = Field(default_factory=lambda: str(uuid7()), primary_key=True, max_length=36)  # 36位UUID
     role_id: str = Field(
         sa_column=Column(String(32), ForeignKey("sys_roles.id", ondelete="CASCADE"), nullable=False, index=True)
     )

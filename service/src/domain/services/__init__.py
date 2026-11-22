@@ -9,6 +9,7 @@ from src.domain.services.cache_port import (
     DictCachePort,
     IPFilterPort,
     MenuCachePort,
+    RoleCachePort,
     TokenRevocationPort,
     UserCachePort,
 )
@@ -24,6 +25,7 @@ __all__ = [
     "LoggingPort",
     "MenuCachePort",
     "OnlineSessionStore",
+    "RoleCachePort",
     "PasswordService",
     "TokenRevocationPort",
     "TokenService",

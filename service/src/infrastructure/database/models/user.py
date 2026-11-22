@@ -3,13 +3,13 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from enum import IntEnum
 from typing import TYPE_CHECKING, TypeVar
 
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, TypeDecorator, func
 from sqlmodel import Field, Relationship, SQLModel
+from uuid_utils.compat import uuid7
 
 from src.domain.enums import Gender, PermissionMode, UserRole, UserStatus
 
@@ -56,7 +56,7 @@ class User(SQLModel, table=True):
 
     __tablename__ = "sys_users"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     password: str = Field(max_length=128)  # 密码哈希
     last_login: datetime | None = Field(default=None, sa_column=Column(DateTime(6), nullable=True))  # 最后登录时间
     is_superuser: UserRole = Field(default=UserRole.USER, sa_column=Column(IntEnumColumn(UserRole)))  # 是否超级用户

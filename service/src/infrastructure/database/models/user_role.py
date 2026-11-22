@@ -3,11 +3,11 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from typing import Optional
 
 from sqlalchemy import Column, ForeignKey, String
 from sqlmodel import Field, Relationship, SQLModel
+from uuid_utils.compat import uuid7
 
 
 class UserRole(SQLModel, table=True):
@@ -15,7 +15,7 @@ class UserRole(SQLModel, table=True):
 
     __tablename__ = "sys_userinfo_roles"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     userinfo_id: str = Field(
         sa_column=Column(String(32), ForeignKey("sys_users.id", ondelete="CASCADE"), nullable=False)
     )

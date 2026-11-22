@@ -3,12 +3,12 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, func
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 if TYPE_CHECKING:
     from src.domain.entities.ip_rule import IPRuleEntity
@@ -19,7 +19,7 @@ class IPRule(SQLModel, table=True):
 
     __tablename__ = "sys_ip_rules"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     ip_address: str = Field(max_length=45, index=True)
     rule_type: str = Field(max_length=10)  # "whitelist" 或 "blacklist"
     reason: str | None = Field(default=None, max_length=255)

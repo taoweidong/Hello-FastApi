@@ -6,9 +6,10 @@ Univer 表格 CRUD 示例模块：一张单表数据，前端以电子表格形�
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
 from datetime import date, datetime
+
+from uuid_utils.compat import uuid7
 
 
 @dataclass
@@ -27,7 +28,7 @@ class ExampleDataEntity:
         creator_id / modifier_id / created_time / updated_time: 审计字段
     """
 
-    id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    id: str = field(default_factory=lambda: uuid7().hex)
     name: str = ""
     category: str | None = None
     quantity: int = 0

@@ -25,6 +25,7 @@ dependencies = [
     "alembic>=1.13.0",
     "psutil>=7.2.2",
     "email-validator>=2.0.0",
+    "uuid-utils>=1.2.0",
 ]
 
 [project.optional-dependencies]

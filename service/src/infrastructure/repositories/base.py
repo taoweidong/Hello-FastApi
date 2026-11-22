@@ -231,6 +231,12 @@ class GenericRepository(Generic[ModelT, EntityT]):
 
     # ========== 内部辅助方法 ==========
 
+    # 需要模糊匹配（ILIKE '%v%' 包含语义）的字符串筛选字段集合。
+    # 默认为空（全部等值匹配）；需要模糊搜索的仓储按需覆盖。
+    # 注意：仅影响 get_all/count 的列表筛选路径，get_one_by（如登录按用户名
+    # 取用户）与 exists（如唯一性校验）恒为等值，不受此配置影响。
+    _FUZZY_FILTER_FIELDS: frozenset[str] = frozenset()
+
     def _apply_filters(self, stmt: Any, filters: dict[str, Any]) -> Any:
         """应用筛选条件到查询语句。
 
@@ -245,7 +251,13 @@ class GenericRepository(Generic[ModelT, EntityT]):
             if value is not None:
                 try:
                     col = _get_column(self._model_class, field)
-                    stmt = stmt.where(col == value)
+                    if field in self._FUZZY_FILTER_FIELDS and isinstance(value, str):
+                        # 模糊匹配字段：包含语义（ILIKE）。PG 下配合 pg_trgm GIN
+                        # 索引（见 b8e2f4a6d0c1 迁移）；SQLite 下 ASCII 不区分
+                        # 大小写，行为可接受。
+                        stmt = stmt.where(col.ilike(f"%{value}%"))
+                    else:
+                        stmt = stmt.where(col == value)
                 except KeyError:
                     pass  # 忽略不存在的字段
         return stmt

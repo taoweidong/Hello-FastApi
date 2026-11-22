@@ -139,7 +139,8 @@ class AuthRouter(Routable):
         service: AuthService = Depends(get_auth_service),
     ) -> dict:
         """获取当前用户可访问的动态路由配置。"""
-        tree = await service.get_async_routes(current_user.id)
+        # 复用认证依赖已解析的用户实体，避免服务层按 ID 重复查库
+        tree = await service.get_async_routes(current_user.id, user=current_user)
         return success_response(data=tree)
 
     @get("/list-all-role", response_model=ApiResponse[list[dict]])

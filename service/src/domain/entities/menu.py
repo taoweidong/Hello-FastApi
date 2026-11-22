@@ -7,9 +7,10 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
+
+from uuid_utils.compat import uuid7
 
 from src.domain.entities.menu_meta import MenuMetaEntity
 
@@ -140,7 +141,7 @@ class MenuEntity:
     ) -> MenuEntity:
         """创建新菜单实体的工厂方法。"""
         return cls(
-            id=uuid.uuid4().hex,
+            id=uuid7().hex,
             name=name,
             menu_type=menu_type,
             path=path,

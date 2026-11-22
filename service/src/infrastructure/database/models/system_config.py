@@ -3,12 +3,12 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, Text, func
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 if TYPE_CHECKING:
     from src.domain.entities.system_config import SystemConfigEntity
@@ -19,7 +19,7 @@ class SystemConfig(SQLModel, table=True):
 
     __tablename__ = "sys_systemconfig"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     value: str = Field(sa_column=Column(Text, nullable=False))  # 配置值(JSON格式)
     is_active: int = Field(default=1)  # 是否启用
     access: int = Field(default=0)  # 访问级别

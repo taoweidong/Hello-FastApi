@@ -1,8 +1,8 @@
 """缓存端口接口的单元测试。
 
 测试按消费方拆分后的窄端口（TokenRevocationPort / UserCachePort / MenuCachePort /
-DictCachePort）、聚合端口 CachePort、在线会话端口 OnlineSessionStore 与 IPFilterPort
-的抽象契约，以及 UserCachePort 批量失效默认实现的退化语义。
+DictCachePort / RoleCachePort）、聚合端口 CachePort、在线会话端口 OnlineSessionStore
+与 IPFilterPort 的抽象契约，以及 UserCachePort 批量失效默认实现的退化语义。
 """
 
 from datetime import datetime
@@ -15,6 +15,7 @@ from src.domain.services.cache_port import (
     DictCachePort,
     IPFilterPort,
     MenuCachePort,
+    RoleCachePort,
     TokenRevocationPort,
     UserCachePort,
 )
@@ -65,6 +66,35 @@ class ConcreteUserCache(UserCachePort):
         self.calls.append(f"drop:info:{user_id}")
         return True
 
+    async def get_user_info_full(self, user_id: str) -> dict | None:
+        return None
+
+    async def set_user_info_full(self, user_id: str, info: dict) -> bool:
+        return True
+
+    async def get_user_routes(self, user_id: str) -> list[dict] | None:
+        return None
+
+    async def set_user_routes(self, user_id: str, routes: list[dict]) -> bool:
+        return True
+
+    async def invalidate_user_routes(self, user_id: str) -> bool:
+        self.calls.append(f"drop:routes:{user_id}")
+        return True
+
+
+class ConcreteRoleCache(RoleCachePort):
+    """RoleCachePort 的最小实现。"""
+
+    async def get_role_options(self) -> list[dict] | None:
+        return None
+
+    async def set_role_options(self, options: list[dict]) -> bool:
+        return True
+
+    async def invalidate_role_options(self) -> bool:
+        return True
+
 
 class ConcreteMenuCache(MenuCachePort):
     """MenuCachePort 的最小实现。"""
@@ -92,8 +122,10 @@ class ConcreteDictCache(DictCachePort):
         return True
 
 
-class ConcreteCachePort(ConcreteTokenRevocation, ConcreteUserCache, ConcreteMenuCache, ConcreteDictCache, CachePort):
-    """聚合端口 CachePort 的具体实现（组合四个窄端口实现）。"""
+class ConcreteCachePort(
+    ConcreteTokenRevocation, ConcreteUserCache, ConcreteMenuCache, ConcreteDictCache, ConcreteRoleCache, CachePort
+):
+    """聚合端口 CachePort 的具体实现（组合各窄端口实现）。"""
 
 
 class ConcreteOnlineSessionStore(OnlineSessionStore):
@@ -191,10 +223,17 @@ class TestUserCacheBatchInvalidate:
 
     @pytest.mark.asyncio
     async def test_degrades_to_per_user_invalidation(self):
-        """未重写批量方法时，退化为逐用户失效信息与权限。"""
+        """未重写批量方法时，退化为逐用户失效信息、权限与路由树。"""
         port = ConcreteUserCache()
         assert await port.invalidate_users_batch(["u1", "u2"]) is True
-        assert port.calls == ["drop:info:u1", "drop:perms:u1", "drop:info:u2", "drop:perms:u2"]
+        assert port.calls == [
+            "drop:info:u1",
+            "drop:perms:u1",
+            "drop:routes:u1",
+            "drop:info:u2",
+            "drop:perms:u2",
+            "drop:routes:u2",
+        ]
 
 
 @pytest.mark.unit
@@ -207,13 +246,14 @@ class TestCachePortAggregate:
             CachePort()  # type: ignore[abstract]
 
     def test_full_implementation_is_a_narrow_port(self):
-        """测试实现聚合端口的对象同时是四个窄端口的实例（组合根本身可注入窄端口）。"""
+        """测试实现聚合端口的对象同时是各窄端口的实例（组合根本身可注入窄端口）。"""
         port = ConcreteCachePort()
         assert isinstance(port, CachePort)
         assert isinstance(port, TokenRevocationPort)
         assert isinstance(port, UserCachePort)
         assert isinstance(port, MenuCachePort)
         assert isinstance(port, DictCachePort)
+        assert isinstance(port, RoleCachePort)
 
     def test_online_session_store_is_not_in_aggregate(self):
         """测试在线会话独立于聚合端口：CachePort 不承载会话语义。"""

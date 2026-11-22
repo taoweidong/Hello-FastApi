@@ -64,9 +64,10 @@ class TokenRevocationPort(ABC):
 
 
 class UserCachePort(ABC):
-    """用户维度缓存端口：基本信息与权限列表的读写、失效。
+    """用户维度缓存端口：基本信息、完整信息（/user/info）、权限列表与路由树的读写、失效。
 
-    消费方：授权服务（每请求热路径读写）、用户服务与角色服务（变更后失效）。
+    消费方：授权服务（每请求热路径读写）、认证服务（动态路由读写）、
+    用户服务与角色服务（变更后失效）。
     """
 
     # ---- 用户权限缓存 ----
@@ -122,11 +123,58 @@ class UserCachePort(ABC):
 
     @abstractmethod
     async def invalidate_user_info(self, user_id: str) -> bool:
-        """使用户信息缓存失效。"""
+        """使用户信息缓存失效。
+
+        同时失效基础信息（user:info:{id}）与完整信息（user:info:full:{id}）：
+        完整信息是基础信息的超集（含角色列表），基础信息变化时必然连带失效。
+        """
+        ...
+
+    # ---- 用户完整信息缓存（/user/info 响应）----
+
+    @abstractmethod
+    async def get_user_info_full(self, user_id: str) -> dict[str, Any] | None:
+        """从缓存获取用户完整信息（/user/info 响应形态，含角色列表）。
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            用户完整信息字典（缓存命中时），None 表示缓存未命中或存储不可用
+        """
+        ...
+
+    @abstractmethod
+    async def set_user_info_full(self, user_id: str, info: dict[str, Any]) -> bool:
+        """将用户完整信息（/user/info 响应形态）写入缓存。"""
+        ...
+
+    # ---- 用户路由树缓存 ----
+
+    @abstractmethod
+    async def get_user_routes(self, user_id: str) -> list[dict[str, Any]] | None:
+        """从缓存获取用户动态路由树。
+
+        Args:
+            user_id: 用户 ID
+
+        Returns:
+            路由树列表（缓存命中时），None 表示缓存未命中或存储不可用
+        """
+        ...
+
+    @abstractmethod
+    async def set_user_routes(self, user_id: str, routes: list[dict[str, Any]]) -> bool:
+        """将用户动态路由树写入缓存。"""
+        ...
+
+    @abstractmethod
+    async def invalidate_user_routes(self, user_id: str) -> bool:
+        """使用户路由树缓存失效。"""
         ...
 
     async def invalidate_users_batch(self, user_ids: list[str]) -> bool:
-        """批量失效多个用户的权限与信息缓存。
+        """批量失效多个用户的权限、信息与路由树缓存。
 
         该方法是**性能优化接口**而非抽象契约：默认实现退化为逐条失效，
         具体实现（如 Redis）可重写为一次批量删除，避免 N 次网络往返。
@@ -143,7 +191,8 @@ class UserCachePort(ABC):
         for uid in user_ids:
             ok_info = await self.invalidate_user_info(uid)
             ok_perms = await self.invalidate_user_permissions(uid)
-            results.append(ok_info and ok_perms)
+            ok_routes = await self.invalidate_user_routes(uid)
+            results.append(ok_info and ok_perms and ok_routes)
         return all(results)
 
 
@@ -210,11 +259,44 @@ class DictCachePort(ABC):
         ...
 
 
-class CachePort(TokenRevocationPort, UserCachePort, MenuCachePort, DictCachePort):
+class RoleCachePort(ABC):
+    """角色选项缓存端口（/list-all-role 全量角色简单列表）。
+
+    消费方：角色服务（选项读穿透 + 变更后失效）。
+    """
+
+    @abstractmethod
+    async def get_role_options(self) -> list[dict[str, Any]] | None:
+        """从缓存获取角色选项列表。
+
+        Returns:
+            角色选项列表（缓存命中时），None 表示缓存未命中或存储不可用
+        """
+        ...
+
+    @abstractmethod
+    async def set_role_options(self, options: list[dict[str, Any]]) -> bool:
+        """将角色选项列表写入缓存。
+
+        Args:
+            options: 角色选项列表（``[{"id": ..., "name": ...}]``）
+
+        Returns:
+            是否成功写入缓存
+        """
+        ...
+
+    @abstractmethod
+    async def invalidate_role_options(self) -> bool:
+        """使角色选项缓存失效。"""
+        ...
+
+
+class CachePort(TokenRevocationPort, UserCachePort, MenuCachePort, DictCachePort, RoleCachePort):
     """读穿透类缓存的聚合端口。
 
     只作为组合根工厂的返回类型与完整实现（``CacheService``）的基类存在；
-    应用服务应按消费方依赖上面四个窄端口，不要注入本聚合类型。
+    应用服务应按消费方依赖上面各窄端口，不要注入本聚合类型。
     在线会话不在本聚合内，见 ``OnlineSessionStore``。
     """
 

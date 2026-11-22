@@ -37,9 +37,9 @@ async def _collect_page_usernames(repo) -> list[str]:
 async def _run_user_scenario(make_repo) -> dict:
     repo = make_repo()
     seed = [
-        make_user(1),
+        make_user(1, phone="13800000001"),
         make_user(2),
-        make_user(3, username="user11"),
+        make_user(3, username="user11", phone="13800000011"),
         make_user(4, is_active=0),
         make_user(5, email="other@example.com"),
     ]
@@ -47,8 +47,10 @@ async def _run_user_scenario(make_repo) -> dict:
         await repo.create(u)
 
     return {
-        # 等值匹配语义（历史上 fake 曾漂移为子串匹配）
+        # username/phone 为模糊匹配语义（ILIKE %v%，与 PG pg_trgm GIN 索引配套）；
+        # email/状态保持等值。username="user1" 应同时命中 "user1" 与 "user11"
         "filter_username": sorted(u.username for u in await repo.get_all(page_num=1, page_size=10, username="user1")),
+        "filter_phone": sorted(u.username for u in await repo.get_all(page_num=1, page_size=10, phone="1380000001")),
         "filter_email": sorted(
             u.username for u in await repo.get_all(page_num=1, page_size=10, email="user1@example.com")
         ),
@@ -56,6 +58,7 @@ async def _run_user_scenario(make_repo) -> dict:
         # 分页窗口覆盖
         "pages": sorted(await _collect_page_usernames(repo)),
         "count_active": await repo.count(is_active=1),
+        "count_username": await repo.count(username="user1"),
         "count_all": await repo.count(),
     }
 

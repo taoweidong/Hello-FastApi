@@ -3,12 +3,12 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, func
 from sqlmodel import Field, Relationship, SQLModel
+from uuid_utils.compat import uuid7
 
 if TYPE_CHECKING:
     from src.domain.entities.role import RoleEntity
@@ -19,7 +19,7 @@ class Role(SQLModel, table=True):
 
     __tablename__ = "sys_roles"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     name: str = Field(max_length=128, unique=True, index=True)
     code: str = Field(max_length=128, sa_column_kwargs={"unique": True})  # 角色编码，唯一
     is_active: int = Field(default=1)  # 是否启用

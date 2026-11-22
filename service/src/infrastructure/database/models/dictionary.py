@@ -3,12 +3,12 @@
 # 注意：不要使用 from __future__ import annotations，
 # 否则会导致 SQLModel Relationship 类型解析问题
 
-import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Column, DateTime, func
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 if TYPE_CHECKING:
     from src.domain.entities.dictionary import DictionaryEntity
@@ -19,7 +19,7 @@ class Dictionary(SQLModel, table=True):
 
     __tablename__ = "sys_dictionary"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     name: str = Field(max_length=128)  # 字典名称
     label: str = Field(default="", max_length=128)  # 显示标签
     value: str = Field(default="", max_length=128)  # 字典值

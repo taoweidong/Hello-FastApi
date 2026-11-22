@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import datetime
+
+from uuid_utils.compat import uuid7
 
 from src.domain.enums import Gender, PermissionMode, UserRole, UserStatus
 
@@ -155,7 +156,7 @@ class UserEntity:
     ) -> UserEntity:
         """创建新用户实体的工厂方法。"""
         return cls(
-            id=uuid.uuid4().hex,
+            id=uuid7().hex,
             username=username,
             password=hashed_password,
             email=email,
@@ -190,7 +191,7 @@ class UserEntity:
     ) -> UserEntity:
         """创建超级用户实体的工厂方法。"""
         return cls(
-            id=uuid.uuid4().hex,
+            id=uuid7().hex,
             username=username,
             password=hashed_password,
             email=email,

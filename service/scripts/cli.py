@@ -64,7 +64,7 @@ async def init_database() -> None:
 
 async def seed_rbac() -> None:
     """初始化RBAC数据：创建菜单、角色，并分配权限。"""
-    import uuid
+    from uuid_utils.compat import uuid7
 
     from src.domain.entities.role import RoleEntity
     from src.domain.rbac_defaults import DEFAULT_MENUS, DEFAULT_ROLES, USER_MENU_NAMES
@@ -135,7 +135,7 @@ async def seed_rbac() -> None:
         for name, description in DEFAULT_ROLES.items():
             existing = await role_repo.get_by_name(name)
             if existing is None:
-                role = RoleEntity(id=uuid.uuid4().hex, name=name, code=name, description=description, is_active=1)
+                role = RoleEntity(id=uuid7().hex, name=name, code=name, description=description, is_active=1)
                 await role_repo.create(role)
                 print(f"  创建角色: {name}")
 
@@ -211,7 +211,8 @@ async def seed_rbac() -> None:
 async def seed_data() -> None:
     """初始化测试数据（日志等）。"""
     import random
-    import uuid
+
+    from uuid_utils.compat import uuid7
 
     from sqlmodel import select
 
@@ -268,7 +269,7 @@ async def seed_data() -> None:
             for _ in range(30):
                 idx = random.randint(0, len(modules) - 1)
                 log = SystemLog(
-                    id=uuid.uuid4().hex,
+                    id=uuid7().hex,
                     module=modules[idx],
                     path=paths[idx],
                     method=random.choice(methods),

@@ -34,6 +34,8 @@ class TestGetCacheGroups:
             {
                 "user:info:": ["user:info:u1", "user:info:u2"],
                 "user:perms:": ["user:perms:u1"],
+                "routes:user:": ["routes:user:u1"],
+                "role:options": ["role:options"],
                 "dict:": [],
                 "token:blacklist:": ["token:blacklist:abc"],
             }
@@ -43,9 +45,11 @@ class TestGetCacheGroups:
         groups = await svc.get_cache_groups()
 
         by_key = {g["key"]: g for g in groups}
-        assert len(groups) == 6
+        assert len(groups) == 8
         assert by_key["user_info"]["count"] == 2
         assert by_key["user_perms"]["count"] == 1
+        assert by_key["routes_cache"]["count"] == 1
+        assert by_key["role_options"]["count"] == 1
         assert by_key["user_info"]["clearable"] is True
         # 安全红线：令牌黑名单只读不清理
         assert by_key["token_blacklist"]["clearable"] is False

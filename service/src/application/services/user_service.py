@@ -69,13 +69,27 @@ class UserService:
         return UserMapper.to_response(created_user)
 
     async def get_user(self, user_id: str) -> UserResponseDTO:
-        """根据 ID 获取用户。"""
+        """根据 ID 获取用户（带完整信息缓存，供 /user/info 高频接口）。
+
+        缓存的是响应 DTO 的 JSON 形态（含角色列表），Key 为 user:info:full:{id}，
+        TTL 与 user:info 一致；用户资料/角色/状态变更经 invalidate_user_info
+        （连带删除 full）与 invalidate_users_batch 链路主动失效。
+        """
+        if self.cache_service is not None:
+            cached = await self.cache_service.get_user_info_full(user_id)
+            if cached is not None:
+                return UserResponseDTO.model_validate(cached)
+
         user = await self.repo.get_by_id(user_id)
         if user is None:
             raise NotFoundError(EM.user_not_found_by_id(user_id))
         # 获取用户角色
         user_roles = await self.role_repo.get_user_roles(user.id)
-        return UserMapper.to_response(user, user_roles)
+        dto = UserMapper.to_response(user, user_roles)
+
+        if self.cache_service is not None:
+            await self.cache_service.set_user_info_full(user_id, dto.model_dump(mode="json"))
+        return dto
 
     async def get_user_by_username(self, username: str) -> UserEntity | None:
         """根据用户名获取用户实体。"""
@@ -359,7 +373,9 @@ class UserService:
 
         self._assert_target_manageable(user, operator_is_superuser)
         await self.role_repo.assign_roles_to_user(user_id, role_ids)
-        await self._invalidate_user_cache(user_id)
+        # 角色分配会改变用户权限与动态路由树，走批量失效（单次批量调用
+        # 同时清 perms/info/info:full/routes），与角色服务的分配语义一致
+        await self._invalidate_users_cache([user_id])
         return True
 
     async def _invalidate_user_cache(self, user_id: str) -> None:

@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import datetime
+
+from uuid_utils.compat import uuid7
 
 
 @dataclass
@@ -102,7 +103,7 @@ class DepartmentEntity:
     ) -> DepartmentEntity:
         """创建新部门实体的工厂方法。"""
         return cls(
-            id=uuid.uuid4().hex,
+            id=uuid7().hex,
             name=name,
             code=code,
             parent_id=parent_id,

@@ -1,10 +1,10 @@
 """示例数据实体模型（Univer 表格 CRUD 示例）。"""
 
-import uuid
 from datetime import date, datetime
 
 from sqlalchemy import Column, DateTime, func
 from sqlmodel import Field, SQLModel
+from uuid_utils.compat import uuid7
 
 from src.domain.entities.example_data import ExampleDataEntity
 
@@ -14,7 +14,7 @@ class ExampleData(SQLModel, table=True):
 
     __tablename__ = "sys_example_data"
 
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
+    id: str = Field(default_factory=lambda: uuid7().hex, primary_key=True, max_length=32)
     name: str = Field(max_length=128, index=True)
     category: str | None = Field(default=None, max_length=64)
     quantity: int = Field(default=0)

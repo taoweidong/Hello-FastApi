@@ -6,9 +6,10 @@
 
 from __future__ import annotations
 
-import uuid
 from dataclasses import dataclass
 from datetime import datetime
+
+from uuid_utils.compat import uuid7
 
 
 @dataclass
@@ -82,6 +83,4 @@ class RoleEntity:
     @classmethod
     def create_new(cls, name: str, code: str, description: str | None = None, data_scope: int = 1) -> RoleEntity:
         """创建新角色实体的工厂方法。"""
-        return cls(
-            id=uuid.uuid4().hex, name=name, code=code, description=description, is_active=1, data_scope=data_scope
-        )
+        return cls(id=uuid7().hex, name=name, code=code, description=description, is_active=1, data_scope=data_scope)

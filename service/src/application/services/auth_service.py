@@ -21,7 +21,7 @@ from src.domain.repositories.log_repository import LogRepositoryInterface
 from src.domain.repositories.menu_repository import MenuRepositoryInterface
 from src.domain.repositories.role_repository import RoleRepositoryInterface
 from src.domain.repositories.user_repository import UserRepositoryInterface
-from src.domain.services.cache_port import MenuCachePort, TokenRevocationPort
+from src.domain.services.cache_port import MenuCachePort, TokenRevocationPort, UserCachePort
 from src.domain.services.online_session_port import OnlineSessionStore
 from src.domain.services.password_service import PasswordService
 from src.domain.services.token_service import TokenService
@@ -52,6 +52,7 @@ class AuthService:
         session_store: OnlineSessionStore | None = None,
         menu_cache: MenuCachePort | None = None,
         log_repo: LogRepositoryInterface | None = None,
+        user_cache: UserCachePort | None = None,
     ):
         self.user_repo = user_repo
         self.role_repo = role_repo
@@ -62,6 +63,7 @@ class AuthService:
         self.session_store = session_store
         self.menu_cache = menu_cache
         self.log_repo = log_repo
+        self.user_cache = user_cache
 
     async def login(self, dto: LoginDTO, request_info: LoginRequestInfo | None = None) -> dict:
         """认证用户并返回完整登录信息。
@@ -373,9 +375,26 @@ class AuthService:
         expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
         return await self.token_revocation.add_token_to_blacklist(token, expires_at)
 
-    async def get_async_routes(self, user_id: str) -> list[dict]:
-        """根据用户角色获取动态路由（从数据库Menu+MenuMeta构建）。"""
-        user = await self.user_repo.get_by_id(user_id)
+    async def get_async_routes(self, user_id: str, user: UserEntity | None = None) -> list[dict]:
+        """根据用户角色获取动态路由（从数据库Menu+MenuMeta构建）。
+
+        Args:
+            user_id: 用户 ID（缓存 Key 的一部分）
+            user: 已由认证依赖解析的用户实体（可选）。传入时跳过按 ID 重复查库，
+                供 get-async-routes 接口复用依赖链已取到的实体。
+
+        Returns:
+            路由树列表（缓存命中时直接返回缓存）
+        """
+        # 路由树按用户缓存（TTL 与 user:perms 对齐）：角色菜单授权、菜单变更、
+        # 用户角色分配变更会经 invalidate_users_batch/invalidate_user_routes 主动失效
+        if self.user_cache is not None:
+            cached = await self.user_cache.get_user_routes(user_id)
+            if cached is not None:
+                return cached
+
+        if user is None:
+            user = await self.user_repo.get_by_id(user_id)
         if user is None:
             return []
 
@@ -396,7 +415,11 @@ class AuthService:
                 auths_map.setdefault(menu.parent_id, []).append(menu.name)
 
         # 构建树形路由（纯函数，见 application/utils/route_tree.py）
-        return build_route_tree(route_menus, auths_map=auths_map)
+        tree = build_route_tree(route_menus, auths_map=auths_map)
+
+        if self.user_cache is not None:
+            await self.user_cache.set_user_routes(user_id, tree)
+        return tree
 
     async def _get_all_menus_cached(self) -> list[MenuEntity]:
         """获取所有菜单（带缓存），用于超级用户场景。"""
