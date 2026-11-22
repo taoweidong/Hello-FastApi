@@ -5,6 +5,7 @@ import { message } from "@/utils/message";
 import { deptApi } from "@/api/system/dept";
 import { formatHigherDeptOptions } from "../../hooks";
 import { isNetworkLevelError } from "@/composables/useCrudTable";
+import { useSwitchStatus } from "@/composables";
 import { addDialog } from "@/components/ReDialog";
 import { reactive, ref, onMounted, h } from "vue";
 import type { FormItemProps } from "../utils/types";
@@ -20,6 +21,16 @@ export function useDept() {
   const dataList = ref([]);
   const loading = ref(true);
   const selectedRows = ref<any[]>([]);
+
+  /*
+   * 状态列受控开关（与 user/role 页一致）：确认弹窗、API 调用与加载映射
+   * （switchLoadMap）由 useSwitchStatus 内部管理，无需页面额外处理销毁。
+   */
+  const { createSwitchRenderer } = useSwitchStatus({
+    api: deptApi,
+    displayField: "name",
+    entityName: "部门"
+  });
 
   const columns: TableColumnList = [
     {
@@ -58,16 +69,9 @@ export function useDept() {
       label: "状态",
       prop: "isActive",
       minWidth: 100,
-      // 状态色板统一：启用=success、停用=info（与全局状态列规范一致）
-      cellRenderer: ({ row, props }) => (
-        <el-tag
-          size={props.size}
-          type={row.isActive ? "success" : "info"}
-          effect="plain"
-        >
-          {row.isActive ? "启用" : "停用"}
-        </el-tag>
-      )
+      // 受控 el-switch（绿色启用/红色停用），替换原 el-tag：与 user/role 页
+      // 状态列交互一致，确认弹窗文案由 useSwitchStatus 依 entityName 生成
+      cellRenderer: createSwitchRenderer()
     },
     {
       label: "创建时间",

@@ -232,6 +232,7 @@ export interface OperationLog extends AuditFields {
   responseResult?: string | null;
   /** 业务状态码 */
   statusCode?: number | null;
+  /** 操作人员用户名（后端批量解析 creator_id 回填，查不到为空串；字段名保持历史契约） */
   creatorId?: string | null;
   createdTime?: string | null;
 }
@@ -252,6 +253,7 @@ export interface SystemLog extends AuditFields {
   responseResult?: string | null;
   statusCode?: number | null;
   description?: string | null;
+  /** 操作人员用户名（后端批量解析 creator_id 回填，查不到为空串；字段名保持历史契约） */
   creatorId?: string | null;
   createdTime?: string | null;
 }

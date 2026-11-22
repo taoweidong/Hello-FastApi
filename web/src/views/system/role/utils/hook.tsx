@@ -119,7 +119,9 @@ export function useRole(treeRef: Ref) {
     {
       label: "操作",
       fixed: "right",
-      width: 280,
+      // minWidth 而非固定 width：四个操作按钮（末位"数据权限"最长）实际内容
+      // 约 280px，固定 width 会截掉末位按钮边缘；minWidth 保底并允许随内容撑开
+      minWidth: 300,
       slot: "operation"
     }
   ];

@@ -149,6 +149,29 @@ const compositionItems = computed(() => {
   }));
 });
 
+/*
+ * 条内文字阈值：窄进度条（stroke-width 21）放不下短文字，小百分比时
+ * "N%" 会被裁切成残字（1% 只剩 "("、0% 几乎不可见）。
+ * <15% 隐藏条内文字并把百分比并入右侧说明，≥15% 维持条内文字。
+ */
+const BAR_TEXT_MIN_PERCENTAGE = 15;
+
+/** el-progress format：<15% 返回空串隐藏条内文字，≥15% 维持默认百分比文案 */
+function barTextFormat(percentage: number): string {
+  return percentage >= BAR_TEXT_MIN_PERCENTAGE ? `${percentage}%` : "";
+}
+
+/** 右侧说明：≥15% 条内已有百分比不重复；<15% 条内为空，把百分比并入右侧 */
+function compositionLabel(item: {
+  name: string;
+  count: number;
+  percentage: number;
+}): string {
+  return item.percentage >= BAR_TEXT_MIN_PERCENTAGE
+    ? `${item.name} · ${item.count}`
+    : `${item.name} · ${item.count}（${item.percentage}%）`;
+}
+
 /** 请求方法 → el-tag 语义色 */
 type MethodTagType = "primary" | "success" | "warning" | "danger" | "info";
 
@@ -419,12 +442,13 @@ onMounted(fetchStats);
               :percentage="item.percentage"
               :stroke-width="21"
               :color="item.color"
+              :format="barTextFormat"
               striped
               striped-flow
               :duration="10"
             />
             <span class="text-nowrap ml-2 text-text_color_regular text-sm">
-              {{ item.name }} · {{ item.count }}
+              {{ compositionLabel(item) }}
             </span>
           </div>
         </ChartCard>

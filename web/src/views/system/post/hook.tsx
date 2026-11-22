@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import editForm from "./form.vue";
-import { useCrudTable, useDialogForm } from "@/composables";
+import { useCrudTable, useDialogForm, useSwitchStatus } from "@/composables";
 import { postApi } from "@/api/system/post";
 import { ref, reactive } from "vue";
 
@@ -26,6 +26,16 @@ export function usePost() {
   } = useCrudTable({
     api: postApi,
     searchForm: form,
+    displayField: "postName",
+    entityName: "岗位"
+  });
+
+  /*
+   * 状态列受控开关（与 user/role 页一致）：确认弹窗、API 调用与加载映射
+   * （switchLoadMap）由 useSwitchStatus 内部管理，无需页面额外处理销毁。
+   */
+  const { createSwitchRenderer } = useSwitchStatus({
+    api: postApi,
     displayField: "postName",
     entityName: "岗位"
   });
@@ -71,16 +81,9 @@ export function usePost() {
       label: "状态",
       prop: "isActive",
       minWidth: 90,
-      // 状态色板统一：正常=success、停用=info（与全局状态列规范一致）
-      cellRenderer: ({ row, props }) => (
-        <el-tag
-          size={props.size}
-          type={row.isActive === 1 ? "success" : "info"}
-          effect="plain"
-        >
-          {row.isActive === 1 ? "正常" : "停用"}
-        </el-tag>
-      )
+      // 受控 el-switch（绿色启用/红色停用），替换原 el-tag：与 user/role 页
+      // 状态列交互一致，确认弹窗文案由 useSwitchStatus 依 entityName 生成
+      cellRenderer: createSwitchRenderer()
     },
     {
       label: "备注",
