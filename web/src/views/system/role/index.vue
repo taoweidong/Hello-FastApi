@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ADAPTIVE_OFFSET } from "@/config/adaptive";
 import { useRole } from "./utils/hook";
-import { ref, computed, nextTick, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { PureTableBar } from "@/components/RePureTableBar";
 import { useRenderIcon } from "@/components/ReIcon/src/hooks";
 import {
-  delay,
   subBefore,
   deviceDetection,
   useResizeObserver
@@ -86,13 +85,19 @@ const {
 } = useRole(treeRef);
 
 onMounted(() => {
-  useResizeObserver(contentRef, async () => {
-    await nextTick();
-    delay(60).then(() => {
-      treeHeight.value = parseFloat(
-        subBefore(tableRef.value.getTableDoms().tableWrapper.style.height, "px")
-      );
-    });
+  /**
+   * 权限树高度与表格同高：直接观测表格容器 tableWrapper 的尺寸变化。
+   * pure-table 自适应高度写在 tableWrapper 的内联样式上，观测它即可在
+   * 高度变化时同步 treeHeight，无需依赖 delay(60) 魔法延时读旧值。
+   */
+  const tableWrapper = tableRef.value?.getTableDoms()?.tableWrapper;
+  if (!tableWrapper) return;
+  useResizeObserver(tableWrapper, () => {
+    const height = parseFloat(subBefore(tableWrapper.style.height, "px"));
+    // 自适应高度尚未写入时（style.height 为空）跳过，避免 NaN 破坏树虚拟滚动
+    if (!Number.isNaN(height)) {
+      treeHeight.value = height;
+    }
   });
 });
 </script>
@@ -153,9 +158,9 @@ onMounted(() => {
     >
       <PureTableBar
         :class="[isShow && !deviceDetection() ? 'w-[60vw]!' : 'w-full']"
-        style="transition: width 220ms cubic-bezier(0.4, 0, 0.2, 1)"
         title="角色管理"
         :columns="columns"
+        :refresh-loading="loading"
         @refresh="onSearch"
       >
         <template #buttons>

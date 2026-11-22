@@ -5,6 +5,7 @@ import { message } from "@/utils/message";
 import { transformI18n } from "@/plugins/i18n";
 import { useCrudTable, useSwitchStatus, useDialogForm } from "@/composables";
 import { getKeyList } from "@pureadmin/utils";
+import { useDebounceFn } from "@vueuse/core";
 import { roleApi } from "@/api/system/role";
 import { deptApi } from "@/api/system/dept";
 import { type Ref, reactive, ref, onMounted, watch, nextTick } from "vue";
@@ -173,9 +174,10 @@ export function useRole(treeRef: Ref) {
     }
   }
 
-  const onQueryChanged = (query: string) => {
+  /** 菜单树过滤防抖 200ms：连续输入只触发最后一次过滤，减少大树重复重渲染 */
+  const onQueryChanged = useDebounceFn((query: string) => {
     treeRef.value!.filter(query);
-  };
+  }, 200);
 
   /** 数据权限-抽屉显隐 */
   const dataScopeVisible = ref(false);

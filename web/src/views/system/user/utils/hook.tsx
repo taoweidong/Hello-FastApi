@@ -10,7 +10,10 @@ import { usePublicHooks, formatHigherDeptOptions } from "../../hooks";
 import { GenderChoices } from "../../constants";
 import { addDialog } from "@/components/ReDialog";
 import { useDict, dictLabel } from "@/composables/useDict";
-import { isNetworkLevelError } from "@/composables/useCrudTable";
+import {
+  isNetworkLevelError,
+  isRequestCanceled
+} from "@/composables/useCrudTable";
 import type { PaginationProps } from "@pureadmin/table";
 import ReCropperPreview from "@/components/ReCropperPreview";
 import type { FormItemProps, RoleFormItemProps } from "../utils/types";
@@ -20,6 +23,7 @@ import {
   hideTextAtIndex,
   deviceDetection
 } from "@pureadmin/utils";
+import { useDebounceFn } from "@vueuse/core";
 import { userApi } from "@/api/system/user";
 import { deptApi } from "@/api/system/dept";
 import { postApi, type PostOption } from "@/api/system/post";
@@ -38,7 +42,8 @@ import {
   watch,
   computed,
   reactive,
-  onMounted
+  onMounted,
+  onScopeDispose
 } from "vue";
 
 export function useUser(tableRef: Ref) {
@@ -148,8 +153,8 @@ export function useUser(tableRef: Ref) {
       cellRenderer: scope => (
         <el-switch
           size={scope.props.size === "small" ? "small" : "default"}
-          loading={switchLoadMap.value[scope.index]?.loading}
-          v-model={scope.row.isActive}
+          loading={switchLoadMap.value[scope.row.id]?.loading}
+          model-value={scope.row.isActive}
           active-value={1}
           inactive-value={0}
           active-text="已启用"
@@ -216,10 +221,12 @@ export function useUser(tableRef: Ref) {
   /** 启用岗位下拉选项（用户表单岗位多选） */
   const postOptions = ref<PostOption[]>([]);
 
-  function onChange({ row, index }) {
+  /** 状态变更确认 + API 调用（受控模式：点击时行数据尚未翻转，目标状态取反） */
+  function onChange({ row }) {
+    const target = row.isActive === 1 ? 0 : 1;
     ElMessageBox.confirm(
       `确认要<strong>${
-        !row.isActive ? "停用" : "启用"
+        target === 1 ? "启用" : "停用"
       }</strong><strong style='color:var(--el-color-primary)'>${
         row.username
       }</strong>用户吗?`,
@@ -233,27 +240,30 @@ export function useUser(tableRef: Ref) {
       }
     )
       .then(async () => {
-        switchLoadMap.value[index] = Object.assign(
+        switchLoadMap.value[row.id] = Object.assign(
           {},
-          switchLoadMap.value[index],
+          switchLoadMap.value[row.id],
           {
             loading: true
           }
         );
         try {
           const { code } = await userApi.updateStatus(row.id, {
-            isActive: row.isActive
+            isActive: target
           });
           if (code === 0) {
+            // 确认且后端成功后才受控翻转开关
+            row.isActive = target;
             message("已成功修改用户状态", { type: "success" });
+          } else {
+            message("修改用户状态失败", { type: "error" });
           }
         } catch {
-          row.isActive = row.isActive === 1 ? 0 : 1;
           message("修改用户状态失败", { type: "error" });
         } finally {
-          switchLoadMap.value[index] = Object.assign(
+          switchLoadMap.value[row.id] = Object.assign(
             {},
-            switchLoadMap.value[index],
+            switchLoadMap.value[row.id],
             {
               loading: false
             }
@@ -261,7 +271,7 @@ export function useUser(tableRef: Ref) {
         }
       })
       .catch(() => {
-        row.isActive = row.isActive === 1 ? 0 : 1;
+        // 用户取消确认：开关保持原状态（受控模式下无需回滚）
       });
   }
 
@@ -299,8 +309,12 @@ export function useUser(tableRef: Ref) {
   }
 
   function handleSelectionChange(val) {
+    const prevNum = selectedNum.value;
     selectedNum.value = val.length;
-    tableRef.value.setAdaptive();
+    // 仅在选择条出现/消失（勾选数跨越 0）时重算表格自适应高度，普通勾选不强制重排
+    if ((prevNum === 0) !== (selectedNum.value === 0)) {
+      tableRef.value.setAdaptive();
+    }
   }
 
   function onSelectionCancel() {
@@ -333,14 +347,26 @@ export function useUser(tableRef: Ref) {
     }
   }
 
+  /** 当前搜索请求的取消控制器：新搜索发起前 abort 上一次，防止慢响应覆盖新结果 */
+  let searchController: AbortController | null = null;
+
   async function onSearch() {
+    // 竞态防护：取消上一次未完成的搜索请求
+    searchController?.abort();
+    const controller = new AbortController();
+    searchController = controller;
     loading.value = true;
     try {
-      const { code, data } = await userApi.list({
-        ...toRaw(form),
-        pageNum: pagination.currentPage,
-        pageSize: pagination.pageSize
-      });
+      const { code, data } = await userApi.list(
+        {
+          ...toRaw(form),
+          pageNum: pagination.currentPage,
+          pageSize: pagination.pageSize
+        },
+        { signal: controller.signal }
+      );
+      // 已被更新的搜索取代：丢弃过期结果，数据与 loading 交给最新请求
+      if (controller.signal.aborted) return;
       if (code === 0) {
         dataList.value = data.list;
         pagination.total = data.total;
@@ -349,14 +375,19 @@ export function useUser(tableRef: Ref) {
       }
     } catch (error) {
       /*
-       * 取消请求、断网/5xx 已由全局响应拦截器统一提示，这里静默复位 loading
-       * 即可，仅 4xx 等业务错误做本地提示，避免同一失败弹两层 toast。
+       * 请求被取消属于竞态防护的正常路径：静默返回，不提示、不覆盖数据，
+       * loading 由最新请求接管；断网/5xx 已由全局响应拦截器统一提示，
+       * 这里静默复位 loading 即可，仅 4xx 等业务错误做本地提示，避免重复 toast。
        */
+      if (isRequestCanceled(error)) return;
       if (!isNetworkLevelError(error)) {
         message("用户列表加载失败，请稍后重试", { type: "error" });
       }
     } finally {
-      loading.value = false;
+      // 仅当本次请求仍是最新搜索时才复位 loading，避免取消旧请求时误关新请求的加载态
+      if (searchController === controller) {
+        loading.value = false;
+      }
     }
   }
 
@@ -368,38 +399,45 @@ export function useUser(tableRef: Ref) {
   };
 
   async function openDialog(title = "新增", row?: FormItemProps) {
-    // 编辑时回填用户已分配的岗位
-    let postIds: string[] = [];
-    if (row?.id) {
-      postIds =
-        (await postApi.userPosts(String(row.id)).catch(() => null))?.data ?? [];
-    }
+    /** 表单区加载态：编辑时异步回填已分配岗位期间遮罩表单 */
+    const formLoading = ref(false);
+    /**
+     * reactive 传入 ReDialog：先同步开窗，岗位异步回填后经同一响应式
+     * 对象直接更新表单，无需等待请求完成
+     */
+    const formInline = reactive<FormItemProps>({
+      title,
+      higherDeptOptions: formatHigherDeptOptions(higherDeptOptions.value),
+      parentId: row?.dept?.id ?? 0,
+      nickname: row?.nickname ?? "",
+      username: row?.username ?? "",
+      password: row?.password ?? "",
+      phone: row?.phone ?? "",
+      email: row?.email ?? "",
+      gender: row?.gender ?? "",
+      isActive: row?.isActive ?? 1,
+      postOptions: postOptions.value ?? [],
+      postIds: [],
+      description: row?.description ?? ""
+    });
     addDialog({
       title: `${title}用户`,
       props: {
-        formInline: {
-          title,
-          higherDeptOptions: formatHigherDeptOptions(higherDeptOptions.value),
-          parentId: row?.dept?.id ?? 0,
-          nickname: row?.nickname ?? "",
-          username: row?.username ?? "",
-          password: row?.password ?? "",
-          phone: row?.phone ?? "",
-          email: row?.email ?? "",
-          gender: row?.gender ?? "",
-          isActive: row?.isActive ?? 1,
-          postOptions: postOptions.value ?? [],
-          postIds,
-          description: row?.description ?? ""
-        }
+        formInline
       },
       width: "46%",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
       closeOnClickModal: false,
-      contentRenderer: () => h(editForm, { ref: formRef, formInline: null }),
-      beforeSure: (done, { options }) => {
+      sureBtnLoading: true,
+      contentRenderer: () =>
+        h(editForm, {
+          ref: formRef,
+          formInline: null,
+          formLoading: formLoading.value
+        }),
+      beforeSure: (done, { options, closeLoading }) => {
         const FormRef = formRef.value.getRef();
         const curData = options.props.formInline as FormItemProps;
 
@@ -427,6 +465,7 @@ export function useUser(tableRef: Ref) {
                   });
                   done();
                   onSearch();
+                  return;
                 }
               } else {
                 const { code } = await userApi.partialUpdate(
@@ -439,15 +478,36 @@ export function useUser(tableRef: Ref) {
                   });
                   done();
                   onSearch();
+                  return;
                 }
               }
+              // 业务失败（code !== 0）：提示并保持对话框打开供用户修正重试
+              closeLoading();
+              message(`${title}用户失败，请稍后重试`, { type: "error" });
             } catch {
+              // 请求异常：同样保持对话框打开，并复位确定按钮 loading
+              closeLoading();
               message(`${title}用户失败`, { type: "error" });
             }
+          } else {
+            // 表单校验未通过：复位确定按钮 loading，等待用户修正
+            closeLoading();
           }
         });
       }
     });
+
+    // 编辑时先开窗，再异步回填用户已分配的岗位，避免网络慢阻塞弹窗打开
+    if (row?.id) {
+      formLoading.value = true;
+      try {
+        formInline.postIds =
+          (await postApi.userPosts(String(row.id)).catch(() => null))?.data ??
+          [];
+      } finally {
+        formLoading.value = false;
+      }
+    }
   }
 
   const cropRef = ref();
@@ -471,12 +531,14 @@ export function useUser(tableRef: Ref) {
     });
   }
 
+  // 密码强度计算（zxcvbn 较重）防抖 250ms：连续按键只计算最后一次输入
   watch(
     pwdForm,
-    ({ newPwd }) =>
-      (curScore.value = isAllEmpty(newPwd)
+    useDebounceFn(({ newPwd }) => {
+      curScore.value = isAllEmpty(newPwd)
         ? -1
-        : zxcvbnFactory.check(newPwd).score)
+        : zxcvbnFactory.check(newPwd).score;
+    }, 250)
   );
 
   function handleReset(row) {
@@ -558,24 +620,28 @@ export function useUser(tableRef: Ref) {
     });
   }
 
-  async function handleRole(row) {
-    const ids = (await userApi.getRoleIds({ userId: row.id })).data ?? [];
+  function handleRole(row) {
+    /** 表单区加载态：异步回填已分配角色期间遮罩表单 */
+    const roleLoading = ref(false);
+    /** reactive 传入 ReDialog：先同步开窗，角色异步回填后直接响应式更新表单 */
+    const formInline = reactive<RoleFormItemProps>({
+      username: row?.username ?? "",
+      nickname: row?.nickname ?? "",
+      roleOptions: roleOptions.value ?? [],
+      ids: []
+    });
     addDialog({
       title: `分配 ${row.username} 用户的角色`,
       props: {
-        formInline: {
-          username: row?.username ?? "",
-          nickname: row?.nickname ?? "",
-          roleOptions: roleOptions.value ?? [],
-          ids
-        }
+        formInline
       },
       width: "400px",
       draggable: true,
       fullscreen: deviceDetection(),
       fullscreenIcon: true,
       closeOnClickModal: false,
-      contentRenderer: () => h(roleForm),
+      contentRenderer: () =>
+        h(roleForm, { formInline: null, formLoading: roleLoading.value }),
       beforeSure: (done, { options }) => {
         const curData = options.props.formInline as RoleFormItemProps;
         (async () => {
@@ -596,34 +662,82 @@ export function useUser(tableRef: Ref) {
         })();
       }
     });
+
+    // 先开窗，再异步回填用户已分配的角色，避免网络慢阻塞弹窗打开
+    roleLoading.value = true;
+    userApi
+      .getRoleIds({ userId: row.id })
+      .catch(() => null)
+      .then(res => (formInline.ids = res?.data ?? []))
+      .finally(() => (roleLoading.value = false));
   }
 
-  onMounted(async () => {
-    onSearch();
+  /**
+   * 单源加载失败收口：业务失败（4xx 等）本地提示，
+   * 网络层错误（取消/断网/5xx）由全局拦截器统一提示，这里静默
+   */
+  function notifyLoadError(error: unknown, fallbackText: string) {
+    if (!isNetworkLevelError(error)) {
+      message(fallbackText, { type: "error" });
+    }
+  }
 
-    // 下拉数据源各自独立失败收口：任一接口异常不应阻塞其余下拉与页面渲染
+  /** 加载部门树下拉数据（业务失败本地提示，网络层错误静默） */
+  async function loadHigherDeptOptions() {
     try {
       const { code, data } = await deptApi.listTree();
-      if (code === 0) {
-        higherDeptOptions.value = handleTree(data);
-      }
-    } catch (error) {
-      // 断网/5xx 由全局拦截器提示，仅业务错误本地提示，避免重复 toast
-      if (!isNetworkLevelError(error)) {
+      if (code !== 0) {
         message("部门树加载失败", { type: "error" });
+        return;
       }
-    }
-
-    try {
-      roleOptions.value = (await userApi.getAllRoleList()).data ?? [];
+      higherDeptOptions.value = handleTree(data);
     } catch (error) {
-      // 断网/5xx 由全局拦截器提示，仅业务错误本地提示，避免重复 toast
-      if (!isNetworkLevelError(error)) {
-        message("角色列表加载失败", { type: "error" });
-      }
+      notifyLoadError(error, "部门树加载失败");
     }
+  }
 
-    postOptions.value = (await postApi.options().catch(() => null))?.data ?? [];
+  /** 加载角色下拉数据（业务失败本地提示，网络层错误静默） */
+  async function loadRoleOptions() {
+    try {
+      const res = await userApi.getAllRoleList();
+      if (res.code !== 0) {
+        message("角色列表加载失败", { type: "error" });
+        return;
+      }
+      roleOptions.value = res.data ?? [];
+    } catch (error) {
+      notifyLoadError(error, "角色列表加载失败");
+    }
+  }
+
+  /** 加载岗位下拉数据（业务失败本地提示，网络层错误静默） */
+  async function loadPostOptions() {
+    try {
+      const res = await postApi.options();
+      if (res.code !== 0) {
+        message("岗位选项加载失败", { type: "error" });
+        return;
+      }
+      postOptions.value = res.data ?? [];
+    } catch (error) {
+      notifyLoadError(error, "岗位选项加载失败");
+    }
+  }
+
+  // 组件卸载时取消进行中的搜索请求，防止卸载后仍回写状态
+  onScopeDispose(() => {
+    searchController?.abort();
+  });
+
+  onMounted(() => {
+    onSearch();
+
+    // 三个下拉数据源相互独立，Promise.allSettled 并行加载，任一失败不阻塞其余源与页面渲染
+    void Promise.allSettled([
+      loadHigherDeptOptions(),
+      loadRoleOptions(),
+      loadPostOptions()
+    ]);
   });
 
   return {

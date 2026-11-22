@@ -78,10 +78,19 @@ export class BaseApi<TList = AnyRow, TDetail = TList, TPayload = Payload> {
     this.prefix = prefix;
   }
 
-  /** 获取列表（分页） */
-  list(params?: PageParams): Promise<ResultTable<TList>> {
+  /**
+   * 获取列表（分页）
+   *
+   * `config.signal` 可传入 `AbortSignal` 取消请求（列表搜索竞态防护），
+   * 原生透传给 axios，http 封装不做任何加工。
+   */
+  list(
+    params?: PageParams,
+    config?: { signal?: AbortSignal }
+  ): Promise<ResultTable<TList>> {
     return http.request<ResultTable<TList>>("post", this.prefix, {
-      data: params
+      data: params,
+      signal: config?.signal
     });
   }
 

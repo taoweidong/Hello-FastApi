@@ -25,6 +25,8 @@ interface FormItemProps {
 }
 interface FormProps {
   formInline: FormItemProps;
+  /** 表单区加载态：编辑时异步回填已分配岗位期间遮罩表单 */
+  formLoading?: boolean;
 }
 
 import type { SystemRole } from "@/api/types";
@@ -44,6 +46,8 @@ interface RoleFormItemProps {
 }
 interface RoleFormProps {
   formInline: RoleFormItemProps;
+  /** 表单区加载态：异步回填已分配角色期间遮罩表单 */
+  formLoading?: boolean;
 }
 
 export type { FormItemProps, FormProps, RoleFormItemProps, RoleFormProps };

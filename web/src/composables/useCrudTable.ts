@@ -9,7 +9,15 @@ import { message } from "@/utils/message";
 import { handleTree } from "@/utils/tree";
 import type { AnyRow, BaseApi, ResultTable } from "@/api/base";
 import type { PaginationProps } from "@pureadmin/table";
-import { reactive, ref, onMounted, toRaw, type Ref } from "vue";
+import {
+  reactive,
+  ref,
+  onMounted,
+  onScopeDispose,
+  getCurrentScope,
+  toRaw,
+  type Ref
+} from "vue";
 
 /**
  * 判断错误是否属于"全局响应拦截器已统一提示"的网络层错误
@@ -22,6 +30,18 @@ export function isNetworkLevelError(error: unknown): boolean {
   const status = (error as { response?: { status?: number } })?.response
     ?.status;
   return status === undefined || status >= 500;
+}
+
+/**
+ * 判断错误是否为"请求被取消"（AbortController / axios cancel）。
+ * 需先于 isNetworkLevelError 判断：取消属于竞态防护的正常路径，
+ * 页面层应完全静默（不提示、不覆盖数据、不碰 loading）。
+ */
+export function isRequestCanceled(error: unknown): boolean {
+  return (
+    Axios.isCancel(error) ||
+    (error as { code?: string } | null)?.code === "ERR_CANCELED"
+  );
 }
 
 /** useCrudTable 配置项 */
@@ -93,15 +113,27 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
     background: true
   });
 
+  /** 当前搜索请求的取消控制器：新搜索发起前 abort 上一次，防止慢响应覆盖新结果 */
+  let searchController: AbortController | null = null;
+
   /** 搜索数据 */
   async function onSearch() {
+    // 竞态防护：取消上一次未完成的搜索请求
+    searchController?.abort();
+    const controller = new AbortController();
+    searchController = controller;
     loading.value = true;
     try {
-      const { code, data } = await api.list({
-        ...pruneEmpty(toRaw(searchForm)),
-        pageNum: pagination.currentPage,
-        pageSize: pagination.pageSize
-      });
+      const { code, data } = await api.list(
+        {
+          ...pruneEmpty(toRaw(searchForm)),
+          pageNum: pagination.currentPage,
+          pageSize: pagination.pageSize
+        },
+        { signal: controller.signal }
+      );
+      // 已被更新的搜索取代：丢弃过期结果，数据与 loading 交给最新请求
+      if (controller.signal.aborted) return;
       if (code === 0 && data) {
         if (listMode === "paginated") {
           const result = data as NonNullable<ResultTable<TList>["data"]>;
@@ -117,14 +149,19 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
     } catch (error) {
       /*
        * 查询失败时保留原数据，避免表格静默空白让用户误以为是"真的没有数据"。
-       * 取消请求、断网/5xx 已由全局响应拦截器统一提示，这里静默复位 loading
-       * 即可，仅 4xx 等业务错误做本地提示，避免同一失败弹两层 toast。
+       * 请求被取消属于竞态防护的正常路径：静默返回，不提示、不覆盖数据，
+       * loading 由最新请求接管；断网/5xx 已由全局响应拦截器统一提示，
+       * 这里静默复位 loading 即可，仅 4xx 等业务错误做本地提示，避免重复 toast。
        */
+      if (isRequestCanceled(error)) return;
       if (!isNetworkLevelError(error)) {
         message(`${entityName}列表加载失败，请稍后重试`, { type: "error" });
       }
     } finally {
-      loading.value = false;
+      // 仅当本次请求仍是最新搜索时才复位 loading，避免取消旧请求时误关新请求的加载态
+      if (searchController === controller) {
+        loading.value = false;
+      }
     }
   }
 
@@ -186,6 +223,14 @@ export function useCrudTable<TList extends AnyRow = AnyRow>(
   function handleCurrentChange(val: number) {
     pagination.currentPage = val;
     onSearch();
+  }
+
+  // 组件卸载时取消进行中的搜索请求，防止卸载后仍回写状态
+  // （单测等无组件场景无 effect scope，跳过注册）
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      searchController?.abort();
+    });
   }
 
   if (immediate) {

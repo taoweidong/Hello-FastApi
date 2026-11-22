@@ -97,7 +97,12 @@ const {
         </el-form-item>
       </el-form>
 
-      <PureTableBar title="用户管理" :columns="columns" @refresh="onSearch">
+      <PureTableBar
+        title="用户管理"
+        :columns="columns"
+        :refresh-loading="loading"
+        @refresh="onSearch"
+      >
         <template #buttons>
           <el-button
             v-auth="'user:add'"

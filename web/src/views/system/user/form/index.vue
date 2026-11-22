@@ -47,6 +47,7 @@ defineExpose({ getRef });
 <template>
   <el-form
     ref="ruleFormRef"
+    v-loading="formLoading"
     :model="newFormInline"
     :rules="formRules"
     label-width="82px"

@@ -46,6 +46,14 @@ const props = {
   tableKey: {
     type: [String, Number] as PropType<string | number>,
     default: "0"
+  },
+  /**
+   * 刷新按钮 loading（可选）：传入时图标转圈与表格数据 loading 同源；
+   * 未传入（undefined）保持内部 500ms 兜底动画行为，不影响其他页面
+   */
+  refreshLoading: {
+    type: Boolean,
+    default: undefined
   }
 };
 
@@ -106,9 +114,14 @@ export default defineComponent({
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
+    /** 刷新图标 loading：外部传入 refreshLoading 时与表格 loading 同源，否则用内部 500ms 兜底 */
+    const refreshLoading = computed(
+      () => props.refreshLoading ?? loading.value
+    );
+
     function onReFresh() {
       // 防抖：连续点击刷新时只触发一次数据请求，避免请求风暴
-      if (loading.value) return;
+      if (refreshLoading.value) return;
       if (refreshTimer) {
         clearTimeout(refreshTimer);
         refreshTimer = null;
@@ -340,7 +353,7 @@ export default defineComponent({
                 class={[
                   "w-4",
                   iconClass.value,
-                  loading.value ? "animate-spin" : ""
+                  refreshLoading.value ? "animate-spin" : ""
                 ]}
                 aria-label={transformI18n($t("tableBar.pureRefresh"))}
                 v-tippy={rendTippyProps(
