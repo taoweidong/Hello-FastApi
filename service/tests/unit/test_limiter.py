@@ -1,42 +1,31 @@
-"""限流模块测试。"""
+"""限流模块测试。
 
-import functools
+覆盖：真实 IP 解析、存储 URI 解析（同步/异步 scheme）、
+429 响应形状、RateLimitMiddleware 全局限流行为（异步存储）。
+"""
+
 import sys
 from unittest.mock import MagicMock
 
+import anyio
 import pytest
-from limits import RateLimitItemPerSecond
-from slowapi import Limiter
-from slowapi.errors import RateLimitExceeded
-from slowapi.wrappers import Limit
-from starlette.requests import Request
+from limits import parse
+from starlette.responses import JSONResponse
+from starlette.testclient import TestClient
 
+from src.config.settings import settings
 from src.infrastructure.http.limiter import (
-    _patched_check_limits,
-    _patched_check_request_limit,
-    _patched_get_route_name,
-    _unwrap_partial,
-    get_limiter,
+    RateLimitMiddleware,
+    build_rate_limit_response,
+    get_async_storage_uri,
     get_real_ip,
-    rate_limit_exceeded_handler,
 )
 
 _limiter_mod = sys.modules["src.infrastructure.http.limiter"]
 
 
-class TestLimiterConfig:
-    """限流器配置测试。"""
-
-    def test_limiter_instance_exists(self):
-        """测试限流器实例已创建。"""
-        limiter = get_limiter()
-        assert isinstance(limiter, Limiter)
-
-    def test_limiter_has_default_limits(self):
-        """测试限流器有默认限制配置。"""
-        limiter = get_limiter()
-        assert limiter._default_limits is not None
-        assert len(limiter._default_limits) > 0
+class TestGetRealIP:
+    """get_real_ip 测试。"""
 
     def test_get_real_ip_without_proxy(self):
         """测试无代理时获取真实 IP。"""
@@ -79,20 +68,19 @@ class TestLimiterConfig:
         request = MagicMock()
         request.headers = {"x-forwarded-for": "203.0.113.50"}
         request.client = MagicMock()
-        request.client.host = "127.0.0.1"
-        assert get_real_ip(request) == "203.0.113.50"
+        request.client.host = "10.1.2.3"
+        assert get_real_ip(request) == "10.1.2.3"
 
     def test_get_real_ip_no_client_info(self):
-        """request.client 缺失时回退到 slowapi 默认策略（不抛异常）。"""
+        """request.client 缺失时回退到固定 key（不抛异常）。"""
         request = MagicMock()
         request.headers = {}
         request.client = None
-        # get_remote_address(None client) 返回 "127.0.0.1"
-        assert get_real_ip(request) in {"127.0.0.1"}
+        assert get_real_ip(request) == "127.0.0.1"
 
 
-class TestRateLimitStorage:
-    """限流存储测试。"""
+class TestStorageURI:
+    """存储 URI 解析测试。"""
 
     def test_storage_uri_returns_memory_when_configured(self):
         """测试配置为 memory 时返回 memory://。"""
@@ -101,13 +89,12 @@ class TestRateLimitStorage:
             RATE_LIMIT_STORAGE = "memory"
             REDIS_URL = "redis://localhost:6379/0"
 
-        limiter_mod = sys.modules["src.infrastructure.http.limiter"]
-        original = limiter_mod.settings
-        limiter_mod.settings = MockSettings()
+        original = _limiter_mod.settings
+        _limiter_mod.settings = MockSettings()
         try:
-            assert limiter_mod._get_storage_uri() == "memory://"
+            assert _limiter_mod._get_storage_uri() == "memory://"
         finally:
-            limiter_mod.settings = original
+            _limiter_mod.settings = original
 
     def test_storage_uri_returns_redis_when_available(self):
         """测试 Redis 可用时返回 redis URL。"""
@@ -116,13 +103,12 @@ class TestRateLimitStorage:
             RATE_LIMIT_STORAGE = "redis"
             REDIS_URL = "redis://localhost:6379/0"
 
-        limiter_mod = sys.modules["src.infrastructure.http.limiter"]
-        original = limiter_mod.settings
-        limiter_mod.settings = MockSettings()
+        original = _limiter_mod.settings
+        _limiter_mod.settings = MockSettings()
         try:
-            assert limiter_mod._get_storage_uri() == "redis://localhost:6379/0"
+            assert _limiter_mod._get_storage_uri() == "redis://localhost:6379/0"
         finally:
-            limiter_mod.settings = original
+            _limiter_mod.settings = original
 
     def test_storage_uri_fallback_to_memory(self):
         """测试 Redis 不可用时降级为 memory。"""
@@ -131,207 +117,127 @@ class TestRateLimitStorage:
             RATE_LIMIT_STORAGE = "redis"
             REDIS_URL = ""
 
-        limiter_mod = sys.modules["src.infrastructure.http.limiter"]
-        original = limiter_mod.settings
-        limiter_mod.settings = MockSettings()
+        original = _limiter_mod.settings
+        _limiter_mod.settings = MockSettings()
         try:
-            assert limiter_mod._get_storage_uri() == "memory://"
+            assert _limiter_mod._get_storage_uri() == "memory://"
         finally:
-            limiter_mod.settings = original
+            _limiter_mod.settings = original
+
+    def test_async_storage_uri_prefixes_async_scheme(self):
+        """同步 scheme 转换为 limits.aio 的异步 scheme。"""
+        assert get_async_storage_uri("memory://") == "async+memory://"
+        assert get_async_storage_uri("redis://localhost:6379/0") == "async+redis://localhost:6379/0"
+        assert get_async_storage_uri("rediss://localhost:6379/0") == "async+rediss://localhost:6379/0"
+
+    def test_async_storage_uri_unix_socket(self):
+        """unix socket 的异步 scheme 映射为 async+redis+unix。"""
+        assert get_async_storage_uri("unix:///tmp/redis.sock") == "async+redis+unix:///tmp/redis.sock"
+
+    def test_async_storage_uri_defaults_from_settings(self):
+        """不传参时按 _get_storage_uri 的配置解析结果转换。"""
+
+        class MockSettings:
+            RATE_LIMIT_STORAGE = "memory"
+            REDIS_URL = "redis://localhost:6379/0"
+
+        original = _limiter_mod.settings
+        _limiter_mod.settings = MockSettings()
+        try:
+            assert get_async_storage_uri() == "async+memory://"
+        finally:
+            _limiter_mod.settings = original
 
 
-class TestRateLimitExceededHandler:
-    """限流异常处理器测试。"""
+class TestBuildRateLimitResponse:
+    """429 限流响应测试。"""
 
-    @pytest.mark.asyncio
-    async def test_handler_returns_429_with_retry_after(self):
-        """测试限流异常返回 429 和重试时间。"""
-        request = MagicMock(spec=Request)
-        mock_exc = MagicMock()
-        mock_exc.__str__ = MagicMock(return_value="limit exceeded: 60")
-        response = await rate_limit_exceeded_handler(request, mock_exc)
+    def test_response_shape_matches_legacy_handler(self):
+        """响应形状与原 rate_limit_exceeded_handler 保持一致。"""
+        response = build_rate_limit_response(30)
         assert response.status_code == 429
         body = response.body.decode()
+        assert '"code":429' in body.replace(" ", "")
         assert "请求过于频繁" in body
         assert "retry_after" in body
+        assert response.headers["Retry-After"] == "30"
 
-    @pytest.mark.asyncio
-    async def test_handler_returns_default_retry_when_no_detail(self):
-        """测试限流异常无详细信息时返回默认 60 秒重试。"""
-        request = MagicMock(spec=Request)
-        mock_exc = MagicMock()
-        mock_exc.__str__ = MagicMock(return_value="no-colon-here")
-        response = await rate_limit_exceeded_handler(request, mock_exc)
-        assert response.status_code == 429
-        body = response.body.decode()
-        assert "retry_after" in body
+    def test_retry_after_header_is_integer_string(self):
+        """Retry-After 头为整数字符串。"""
+        response = build_rate_limit_response(7)
+        assert int(response.headers["Retry-After"]) == 7
 
 
-class TestUnwrapPartial:
-    """_unwrap_partial 测试。"""
-
-    def test_unwrap_single_partial(self):
-        """测试单层 partial。"""
-
-        def some_func(a, b):
-            return a + b
-
-        p = functools.partial(some_func, 1)
-        result = _unwrap_partial(p)
-        assert result is some_func
-
-    def test_unwrap_double_nested_partial(self):
-        """测试双层 partial → L31-33 (while-loop, nesting >= 2)。"""
-
-        def some_func(a, b, c):
-            return a + b + c
-
-        p1 = functools.partial(some_func, 1)
-        p2 = functools.partial(p1, 2)
-        result = _unwrap_partial(p2)
-        assert result is some_func
-
-    def test_unwrap_triple_nested_partial(self):
-        """测试三层 partial → L31-33 (while-loop, nesting >= 3)。"""
-
-        def some_func(a, b, c, d):
-            return a + b + c + d
-
-        p1 = functools.partial(some_func, 1)
-        p2 = functools.partial(p1, 2)
-        p3 = functools.partial(p2, 3)
-        result = _unwrap_partial(p3)
-        assert result is some_func
-
-    def test_unwrap_non_partial(self):
-        """测试非 partial 输入直接返回。"""
-
-        def some_func():
-            pass
-
-        result = _unwrap_partial(some_func)
-        assert result is some_func
+async def _inner_app(scope, receive, send):
+    """透传型内层应用：固定返回 {"ok": True}。"""
+    await JSONResponse({"ok": True})(scope, receive, send)
 
 
-class TestPatchedGetRouteName:
-    """_patched_get_route_name 测试。"""
-
-    def test_patched_get_route_name_with_partial(self):
-        """测试传入 partial-wrapped handler → L45。"""
-
-        def my_endpoint():
-            return "ok"
-
-        p = functools.partial(my_endpoint)
-        result = _patched_get_route_name(p)
-        assert "my_endpoint" in result
-
-    def test_patched_get_route_name_with_regular_func(self):
-        """测试传入普通函数。"""
-
-        def regular_handler():
-            pass
-
-        result = _patched_get_route_name(regular_handler)
-        assert "regular_handler" in result
+def _build_client(times: int = 2) -> TestClient:
+    """构建挂载全局限流中间件的测试应用（memory 存储，限定 times 次）。"""
+    middleware = RateLimitMiddleware(_inner_app, storage_uri="memory://")
+    # 覆盖默认限额（settings.RATE_LIMIT_TIMES=1000，测试用小限额加速）
+    middleware._item = parse(f"{times} per 60 seconds")
+    return TestClient(middleware)
 
 
-class TestPatchedCheckRequestLimit:
-    """_patched_check_request_limit 测试。"""
+@pytest.mark.unit
+class TestRateLimitMiddleware:
+    """RateLimitMiddleware 行为测试。"""
 
-    def test_patched_check_request_limit_with_partial(self):
-        """测试 partial-wrapped endpoint → L58-59。"""
+    def test_under_limit_passes(self):
+        """限额内请求正常放行。"""
+        client = _build_client(times=3)
+        for _ in range(3):
+            resp = client.get("/api/system/user")
+            assert resp.status_code == 200
+            assert resp.json() == {"ok": True}
 
-        def my_endpoint():
-            return "ok"
+    def test_over_limit_returns_429(self):
+        """超过限额后返回 429 与 Retry-After。"""
+        client = _build_client(times=2)
+        assert client.get("/api/system/user").status_code == 200
+        assert client.get("/api/system/user").status_code == 200
+        resp = client.get("/api/system/user")
+        assert resp.status_code == 429
+        body = resp.json()
+        assert body["code"] == 429
+        assert "请求过于频繁" in body["msg"]
+        assert "Retry-After" in resp.headers
+        assert int(resp.headers["Retry-After"]) >= 1
 
-        p = functools.partial(my_endpoint)
-        request = MagicMock(spec=Request)
-        limiter_instance = get_limiter()
+    def test_per_path_isolation(self):
+        """不同路径各自独立计数（与原 SlowAPI key_style="url" 语义一致）。"""
+        client = _build_client(times=1)
+        assert client.get("/api/system/user").status_code == 200
+        # 同一路径第二次被限流
+        assert client.get("/api/system/user").status_code == 429
+        # 其他路径不受影响
+        assert client.get("/api/system/role").status_code == 200
 
-        mock_orig = MagicMock(return_value=None)
-        original = _limiter_mod._original_check_request_limit
-        _limiter_mod._original_check_request_limit = mock_orig
-        try:
-            _patched_check_request_limit(limiter_instance, request, p, True)
-            call_args = mock_orig.call_args
-            assert call_args[0][2] is my_endpoint
-        finally:
-            _limiter_mod._original_check_request_limit = original
+    def test_storage_error_fail_open(self, monkeypatch):
+        """存储异常时 fail-open 放行（与登录限流语义一致）。"""
+        client = _build_client(times=1)
 
+        async def _raise(*args, **kwargs):
+            raise RuntimeError("storage down")
 
-class TestPatchedCheckLimits:
-    """_patched_check_limits 测试。"""
+        monkeypatch.setattr(client.app._strategy, "hit", _raise)
+        resp = client.get("/api/system/user")
+        assert resp.status_code == 200
 
-    def test_patched_check_limits_auto_check_false(self):
-        """测试 _auto_check=False → L90 (short-circuit return)。"""
-        limiter_mock = MagicMock()
-        limiter_mock._auto_check = False
-        request = MagicMock(spec=Request)
-        app = MagicMock()
+    def test_non_http_scope_passes_through(self):
+        """非 http 作用域（websocket 等）直接透传，不限流。"""
+        called = []
 
-        result = _patched_check_limits(limiter_mock, request, None, app)
-        assert result == (None, False, None)
+        async def recorder(scope, receive, send):
+            called.append(scope["type"])
 
-    def test_patched_check_limits_rate_limiting_complete(self):
-        """测试 _rate_limiting_complete=True → skip limit check (L76, L90)。"""
-        limiter_mock = MagicMock()
-        limiter_mock._auto_check = True
-        request = MagicMock(spec=Request)
-        request.state._rate_limiting_complete = True
-        app = MagicMock()
+        middleware = RateLimitMiddleware(recorder, storage_uri="memory://")
+        anyio.run(middleware.__call__, {"type": "websocket", "path": "/api/system/ws"}, None, None)
+        assert called == ["websocket"]
 
-        result = _patched_check_limits(limiter_mock, request, None, app)
-        assert result == (None, False, None)
-
-    def test_patched_check_limits_no_exception(self):
-        """测试正常路径: _check_request_limit 未抛异常 → 无异常走 L89-L90。"""
-        limiter_mock = MagicMock()
-        limiter_mock._auto_check = True
-        limiter_mock._check_request_limit = MagicMock()
-        request = MagicMock(spec=Request)
-        request.state._rate_limiting_complete = False
-        app = MagicMock()
-
-        result = _patched_check_limits(limiter_mock, request, None, app)
-        assert result == (None, False, None)
-
-    def test_patched_check_limits_rate_limit_exceeded(self):
-        """测试 RateLimitExceeded 异常 → L79-82。"""
-        limit = Limit(
-            RateLimitItemPerSecond(10, 1),
-            lambda r: "127.0.0.1",
-            "test",
-            per_method=False,
-            methods=None,
-            error_message="limit exceeded: 60",
-            exempt_when=None,
-            cost=1,
-            override_defaults=False,
-        )
-
-        handler_func = MagicMock()
-        limiter_mock = MagicMock()
-        limiter_mock._auto_check = True
-        limiter_mock._check_request_limit = MagicMock(side_effect=RateLimitExceeded(limit))
-        request = MagicMock(spec=Request)
-        request.state._rate_limiting_complete = False
-        app = MagicMock()
-        app.exception_handlers = {RateLimitExceeded: handler_func}
-
-        result = _patched_check_limits(limiter_mock, request, None, app)
-        assert result[0] is handler_func
-        assert result[1] is False
-        assert isinstance(result[2], RateLimitExceeded)
-
-    def test_patched_check_limits_generic_exception(self):
-        """测试普通 Exception → L83-88 (logs and returns None, False, None)。"""
-        limiter_mock = MagicMock()
-        limiter_mock._auto_check = True
-        limiter_mock._check_request_limit = MagicMock(side_effect=ValueError("something went wrong"))
-        request = MagicMock(spec=Request)
-        request.state._rate_limiting_complete = False
-        app = MagicMock()
-
-        result = _patched_check_limits(limiter_mock, request, None, app)
-        assert result == (None, False, None)
+    def test_default_limit_from_settings(self):
+        """默认限额取自 settings.RATE_LIMIT_TIMES / RATE_LIMIT_SECONDS。"""
+        middleware = RateLimitMiddleware(_inner_app, storage_uri="memory://")
+        assert middleware._item.amount == settings.RATE_LIMIT_TIMES

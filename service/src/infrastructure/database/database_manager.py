@@ -28,13 +28,21 @@ class DatabaseManager:
 
         self._engine = create_async_engine(url, **kwargs)
 
-        # 为 SQLite 启用外键约束
+        # 为 SQLite 启用外键约束并优化并发写入
         if url.startswith("sqlite"):
 
             @event.listens_for(self._engine.sync_engine, "connect")
             def _set_sqlite_pragma(dbapi_connection, connection_record):
                 cursor = dbapi_connection.cursor()
+                # 强制外键约束（SQLite 默认关闭）
                 cursor.execute("PRAGMA foreign_keys=ON")
+                # WAL 模式：读写不互斥，多连接并发写入时避免整库锁死；
+                # 同时缓解 dev 环境多进程访问时高频出现的 "database is locked"
+                cursor.execute("PRAGMA journal_mode=WAL")
+                # NORMAL：WAL 下已足够安全（仅在断电时可能丢最近事务），写放大更小
+                cursor.execute("PRAGMA synchronous=NORMAL")
+                # 写锁冲突时等待 5s 再报错，吸收瞬时并发争用
+                cursor.execute("PRAGMA busy_timeout=5000")
                 cursor.close()
 
         self._async_session_factory = partial(AsyncSession, self._engine, expire_on_commit=False)

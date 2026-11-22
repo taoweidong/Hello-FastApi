@@ -48,7 +48,7 @@ class UserService:
 
         user_entity = UserEntity.create_new(
             username=dto.username,
-            hashed_password=self.password_service.hash_password(dto.password),
+            hashed_password=await self.password_service.hash_password(dto.password),
             email=dto.email or "",
             nickname=dto.nickname or "",
             first_name=dto.firstName or "",
@@ -273,7 +273,7 @@ class UserService:
             raise NotFoundError(EM.user_not_found_by_id(user_id))
 
         self._assert_target_manageable(user, operator_is_superuser)
-        user.change_password(self.password_service.hash_password(new_password))
+        user.change_password(await self.password_service.hash_password(new_password))
         await self.repo.update(user)
         await self._invalidate_user_cache(user_id)
         return True
@@ -305,10 +305,10 @@ class UserService:
         if user is None:
             raise NotFoundError(EM.user_not_found_by_id(user_id))
 
-        if not self.password_service.verify_password(dto.oldPassword, user.password):
+        if not await self.password_service.verify_password(dto.oldPassword, user.password):
             raise UnauthorizedError(EM.INCORRECT_OLD_PASSWORD)
 
-        user.change_password(self.password_service.hash_password(dto.newPassword))
+        user.change_password(await self.password_service.hash_password(dto.newPassword))
         await self.repo.update(user)
         await self._invalidate_user_cache(user_id)
         return True
@@ -322,7 +322,7 @@ class UserService:
 
         user_entity = UserEntity.create_superuser_entity(
             username=dto.username,
-            hashed_password=self.password_service.hash_password(dto.password),
+            hashed_password=await self.password_service.hash_password(dto.password),
             email=dto.email or "",
             nickname=dto.nickname or "",
             first_name=dto.firstName or "",

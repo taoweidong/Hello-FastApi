@@ -33,7 +33,8 @@ class LogRepository(LogRepositoryInterface):
         username: str | None = None,
     ) -> tuple[list[LoginLogEntity], int]:
         """获取登录日志列表（支持筛选和分页）。"""
-        stmt = select(LoginLog).order_by(LoginLog.created_time.desc())
+        # created_time 相同时按 id 倒序兜底，保证分页稳定（否则翻页会出现重复/跳行）
+        stmt = select(LoginLog).order_by(LoginLog.created_time.desc(), LoginLog.id.desc())
         count_stmt = select(sa_func.count()).select_from(LoginLog)
 
         if username:
@@ -116,7 +117,8 @@ class LogRepository(LogRepositoryInterface):
         end_time: datetime | None = None,
     ) -> tuple[list[OperationLogEntity], int]:
         """获取操作日志列表（支持筛选和分页）。"""
-        stmt = select(SystemLog).order_by(SystemLog.created_time.desc())
+        # created_time 相同时按 id 倒序兜底，保证分页稳定（否则翻页会出现重复/跳行）
+        stmt = select(SystemLog).order_by(SystemLog.created_time.desc(), SystemLog.id.desc())
         count_stmt = select(sa_func.count()).select_from(SystemLog)
 
         if module:

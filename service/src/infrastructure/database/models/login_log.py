@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import Column, DateTime, Index, func
 from sqlmodel import Field, SQLModel
 
 if TYPE_CHECKING:
@@ -18,6 +18,12 @@ class LoginLog(SQLModel, table=True):
     """登录日志实体。"""
 
     __tablename__ = "sys_userloginlog"
+    # 列表查询索引：时间倒序分页 + 按用户名筛选后按时间排序
+    # （低基数前导列 + 时间，配合 PG18 B-tree skip scan；与迁移 f3a7c9e1b5d2 保持一致）
+    __table_args__ = (
+        Index("ix_sys_userloginlog_created_time", "created_time"),
+        Index("ix_sys_userloginlog_username_created_time", "username", "created_time"),
+    )
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
     status: int = Field(default=1)  # 登录状态(0-失败, 1-成功)

@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Column, DateTime, Text, func
+from sqlalchemy import Column, DateTime, Index, Text, func
 from sqlmodel import Field, SQLModel
 
 if TYPE_CHECKING:
@@ -18,6 +18,12 @@ class SystemLog(SQLModel, table=True):
     """统一操作日志实体。"""
 
     __tablename__ = "sys_logs"
+    # 列表查询索引：低基数前导列（状态/创建人）+ 时间排序，配合 PG18 B-tree skip scan
+    # （与迁移 f3a7c9e1b5d2 保持一致，保证测试 create_all 的元数据与迁移一致）
+    __table_args__ = (
+        Index("ix_sys_logs_status_code_created_time", "status_code", "created_time"),
+        Index("ix_sys_logs_creator_id_created_time", "creator_id", "created_time"),
+    )
 
     id: str = Field(default_factory=lambda: uuid.uuid4().hex, primary_key=True, max_length=32)
     module: str | None = Field(default=None, max_length=64)  # 所属模块

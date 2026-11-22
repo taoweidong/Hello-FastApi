@@ -285,7 +285,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_change_password_success(self, user_service, mock_user_repo, mock_password_service):
         """测试修改密码成功。"""
-        hashed = PasswordService.hash_password("OldPass123")
+        hashed = await PasswordService.hash_password("OldPass123")
         test_user = UserEntity(id="test-id", username="testuser", password=hashed)
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
         mock_user_repo.update = AsyncMock(return_value=test_user)
@@ -298,7 +298,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_change_password_wrong_old(self, user_service, mock_user_repo, mock_password_service):
         """测试修改密码时旧密码错误。"""
-        hashed = PasswordService.hash_password("RealPass123")
+        hashed = await PasswordService.hash_password("RealPass123")
         test_user = UserEntity(id="test-id", username="testuser", password=hashed)
         mock_user_repo.get_by_id = AsyncMock(return_value=test_user)
 

@@ -101,7 +101,7 @@ class TestCreateUser:
         stored = await user_repo.get_by_username("bob")
         assert stored is not None
         assert stored.password != "PlainText123"
-        assert password_service.verify_password("PlainText123", stored.password)
+        assert await password_service.verify_password("PlainText123", stored.password)
 
 
 class TestUpdateUser:
@@ -163,12 +163,12 @@ class TestPasswordManagement:
         await user_service.reset_password(alice.id, "NewPass123")
 
         stored = await user_repo.get_by_id(alice.id)
-        assert password_service.verify_password("NewPass123", stored.password)
+        assert await password_service.verify_password("NewPass123", stored.password)
 
     @pytest.mark.asyncio
     async def test_change_password_wrong_old_password_rejected(self, user_service, user_repo, password_service):
         alice = make_user()
-        alice.password = password_service.hash_password("OldPass123")
+        alice.password = await password_service.hash_password("OldPass123")
         await user_repo.create(alice)
 
         with pytest.raises(UnauthorizedError):
@@ -179,7 +179,7 @@ class TestPasswordManagement:
     @pytest.mark.asyncio
     async def test_change_password_success(self, user_service, user_repo, password_service):
         alice = make_user()
-        alice.password = password_service.hash_password("OldPass123")
+        alice.password = await password_service.hash_password("OldPass123")
         await user_repo.create(alice)
 
         await user_service.change_password(
@@ -187,7 +187,7 @@ class TestPasswordManagement:
         )
 
         stored = await user_repo.get_by_id(alice.id)
-        assert password_service.verify_password("NewPass456", stored.password)
+        assert await password_service.verify_password("NewPass456", stored.password)
 
 
 class TestSuperuserProtection:
@@ -210,7 +210,7 @@ class TestSuperuserProtection:
 
         await user_service.reset_password(admin.id, "AdminPass123", operator_is_superuser=True)
 
-        assert password_service.verify_password("AdminPass123", (await user_repo.get_by_id(admin.id)).password)
+        assert await password_service.verify_password("AdminPass123", (await user_repo.get_by_id(admin.id)).password)
 
     @pytest.mark.asyncio
     async def test_non_superuser_can_reset_normal_user_password(self, user_service, user_repo, password_service):
@@ -220,7 +220,7 @@ class TestSuperuserProtection:
         # 普通管理员操作普通用户应当放行
         await user_service.reset_password(alice.id, "ResetPass123", operator_is_superuser=False)
 
-        assert password_service.verify_password("ResetPass123", (await user_repo.get_by_id(alice.id)).password)
+        assert await password_service.verify_password("ResetPass123", (await user_repo.get_by_id(alice.id)).password)
 
     @pytest.mark.asyncio
     async def test_non_superuser_cannot_disable_superuser(self, user_service, user_repo):

@@ -64,6 +64,8 @@ class UserRepository(GenericRepository[User, UserEntity], UserRepositoryInterfac
         stmt = select(User)
         stmt = self._apply_filters(stmt, filters)
         stmt = self._apply_scope_filters(stmt, scope_dept_ids, scope_user_id)
+        # 稳定排序：无 ORDER BY 时数据库返回顺序不确定，分页会出现重复/跳行
+        stmt = stmt.order_by(User.created_time.desc(), User.id)
         offset = (page_num - 1) * page_size
         stmt = stmt.offset(offset).limit(page_size)
         result = await self.session.exec(stmt)

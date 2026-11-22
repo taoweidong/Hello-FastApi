@@ -194,7 +194,7 @@ class AuthService:
         if user is None:
             raise UnauthorizedError(EM.INVALID_USERNAME_OR_PASSWORD)
 
-        if not self.password_service.verify_password(dto.password, user.password):
+        if not await self.password_service.verify_password(dto.password, user.password):
             raise UnauthorizedError(EM.INVALID_USERNAME_OR_PASSWORD)
 
         if not user.is_active_user:
@@ -283,7 +283,7 @@ class AuthService:
         if existing_user is not None:
             raise BusinessError(EM.USERNAME_EXISTS)
 
-        hashed_password = self.password_service.hash_password(dto.password)
+        hashed_password = await self.password_service.hash_password(dto.password)
 
         user_entity = UserEntity.create_new(
             username=dto.username,

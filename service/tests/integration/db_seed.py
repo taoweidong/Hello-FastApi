@@ -66,7 +66,6 @@ class FlowSeedData:
 async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     """按依赖顺序插入角色 → 关联 → 用户 → 菜单/部门/日志。"""
     out = FlowSeedData()
-    pwd = PasswordService.hash_password
 
     # 1. 角色
     role_admin = Role(name="流程测试管理员", code="admin", description="全权限", is_active=True)
@@ -81,7 +80,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     user_super = User(
         username=out.super_username,
         email="flow_super@seed.example",
-        password=pwd(out.super_password),
+        password=await PasswordService.hash_password(out.super_password),
         nickname="流程超级管理员",
         is_active=True,
         is_superuser=UserRoleEnum.SUPERUSER,
@@ -89,7 +88,7 @@ async def insert_flow_seed_data(session: AsyncSession) -> FlowSeedData:
     user_op = User(
         username=out.operator_username,
         email="flow_operator@seed.example",
-        password=pwd(out.operator_password),
+        password=await PasswordService.hash_password(out.operator_password),
         nickname="流程受限用户",
         is_active=True,
         is_superuser=UserRoleEnum.USER,

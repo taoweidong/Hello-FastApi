@@ -7,8 +7,6 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 
 from src.api.constants import API_SYSTEM_PREFIX
 from src.api.v1 import system_router
@@ -16,11 +14,11 @@ from src.config.settings import UPLOAD_DIR, settings
 from src.infrastructure.http import (
     IPFilterMiddleware,
     LoginRateLimitMiddleware,
+    RateLimitMiddleware,
     RequestLoggingMiddleware,
     get_ip_filter_cache,
     register_exception_handlers,
 )
-from src.infrastructure.http.limiter import limiter, rate_limit_exceeded_handler
 from src.infrastructure.lifecycle import application_lifespan
 
 LifespanFactory = Callable[[FastAPI], AbstractAsyncContextManager[Any]]
@@ -54,12 +52,10 @@ def create_app(*, lifespan_override: LifespanFactory | None = None) -> FastAPI:
     )
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(IPFilterMiddleware)
-    # 登录/注册专属限流（防爆破），在 SlowAPI 全局限流之外独立生效
+    # 登录/注册专属限流（防爆破），在全局限流之外独立生效
     app.add_middleware(LoginRateLimitMiddleware)
-
-    app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
-    app.add_middleware(SlowAPIMiddleware)
+    # 全局限流（limits.aio 异步实现），挂载位置与原 SlowAPIMiddleware 一致，保持中间件顺序语义
+    app.add_middleware(RateLimitMiddleware)
 
     # 设置 IPFilterCache 的 app 引用，供后续 refresh 使用
     get_ip_filter_cache().set_app(app)

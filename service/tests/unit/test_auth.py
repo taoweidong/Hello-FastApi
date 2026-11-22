@@ -26,21 +26,21 @@ def token_service() -> TokenService:
 class TestPasswordService:
     """PasswordService 测试。"""
 
-    def test_hash_password(self):
+    async def test_hash_password(self):
         password = "TestPassword123"
-        hashed = PasswordService.hash_password(password)
+        hashed = await PasswordService.hash_password(password)
         assert hashed != password
         assert len(hashed) > 0
 
-    def test_verify_password_correct(self):
+    async def test_verify_password_correct(self):
         password = "TestPassword123"
-        hashed = PasswordService.hash_password(password)
-        assert PasswordService.verify_password(password, hashed) is True
+        hashed = await PasswordService.hash_password(password)
+        assert await PasswordService.verify_password(password, hashed) is True
 
-    def test_verify_password_incorrect(self):
+    async def test_verify_password_incorrect(self):
         password = "TestPassword123"
-        hashed = PasswordService.hash_password(password)
-        assert PasswordService.verify_password("WrongPassword", hashed) is False
+        hashed = await PasswordService.hash_password(password)
+        assert await PasswordService.verify_password("WrongPassword", hashed) is False
 
 
 class TestTokenService:

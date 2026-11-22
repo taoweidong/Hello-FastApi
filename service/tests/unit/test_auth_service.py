@@ -47,8 +47,8 @@ class TestAuthService:
     @pytest.fixture
     def mock_password_service(self):
         service = MagicMock(spec=PasswordService)
-        service.verify_password = MagicMock(return_value=True)
-        service.hash_password = MagicMock(return_value="hashed_password")
+        service.verify_password = AsyncMock(return_value=True)
+        service.hash_password = AsyncMock(return_value="hashed_password")
         return service
 
     @pytest.fixture
@@ -112,7 +112,7 @@ class TestAuthService:
         """测试登录时密码错误。"""
         user = UserEntity(id="user-1", username="testuser", password="hashed", is_active=1)
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
-        mock_password_service.verify_password = MagicMock(return_value=False)
+        mock_password_service.verify_password = AsyncMock(return_value=False)
 
         dto = LoginDTO(username="testuser", password="WrongPass123")
         with pytest.raises(UnauthorizedError) as exc_info:
@@ -795,7 +795,7 @@ class TestAuthService:
         """认证失败时写入 status=0 日志且不登记在线会话。"""
         user = UserEntity(id="user-1", username="testuser", password="hashed", is_active=1)
         mock_user_repo.get_by_username = AsyncMock(return_value=user)
-        mock_password_service.verify_password = MagicMock(return_value=False)
+        mock_password_service.verify_password = AsyncMock(return_value=False)
         service = self._service_with_log_repo(
             mock_user_repo,
             mock_role_repo,

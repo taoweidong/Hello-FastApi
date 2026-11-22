@@ -32,8 +32,6 @@ async def _setup_scope_env(
     Returns:
         部门 code → dept_id 映射
     """
-    pwd = PasswordService.hash_password
-
     # 1. 部门树：总部（种子已有） → 分部；另设无隶属关系的兄弟部门
     child_dept = Department(name="流程分部", parent_id=flow_seed.dept_root_id, rank=1, is_active=True, code="SUB")
     other_dept = Department(name="流程兄弟部门", parent_id=None, rank=1, is_active=True, code="OTH")
@@ -43,20 +41,20 @@ async def _setup_scope_env(
     dept_ids = {"HQ": flow_seed.dept_root_id, "SUB": child_dept.id, "OTH": other_dept.id}
 
     # 2. 各部门用户
-    def _make_user(username: str, dept_id: str, password: str = "ScopeUserPass123") -> User:
+    async def _make_user(username: str, dept_id: str, password: str = "ScopeUserPass123") -> User:
         return User(
             username=username,
             email=f"{username}@scope.example",
-            password=pwd(password),
+            password=await PasswordService.hash_password(password),
             nickname=username,
             is_active=True,
             dept_id=dept_id,
         )
 
-    u_hq = _make_user("scope_u_hq", flow_seed.dept_root_id)
-    u_child = _make_user("scope_u_child", child_dept.id)
-    u_other = _make_user("scope_u_other", other_dept.id)
-    operator = _make_user(OP_USERNAME, flow_seed.dept_root_id, password=OP_PASSWORD)
+    u_hq = await _make_user("scope_u_hq", flow_seed.dept_root_id)
+    u_child = await _make_user("scope_u_child", child_dept.id)
+    u_other = await _make_user("scope_u_other", other_dept.id)
+    operator = await _make_user(OP_USERNAME, flow_seed.dept_root_id, password=OP_PASSWORD)
     for u in (u_hq, u_child, u_other, operator):
         session.add(u)
     await session.flush()

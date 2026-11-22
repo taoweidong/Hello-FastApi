@@ -50,3 +50,5 @@ coverage.xml
 .DS_Store
 Thumbs.db
 sql/*.bak
+sql/*.db-shm
+sql/*.db-wal

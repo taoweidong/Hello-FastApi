@@ -32,8 +32,20 @@ services:
       - hello-fastapi-net
 
   db:
-    image: postgres:15-alpine
+    image: postgres:18-alpine
     container_name: hello-fastapi-db
+    # PG18 AIO 参数说明：
+    # - io_method=worker：io_uring 在容器 seccomp 默认策略下常被禁用，
+    #   故选用 worker 进程池实现异步 I/O（PG18 新增 AIO 框架的稳妥选择）；
+    # - effective_io_concurrency / maintenance_io_concurrency：AIO 下发深度；
+    # - transaction_timeout：事务最大耗时，单位毫秒（PG17+ 新增，30000=30s）；
+    # - shared_buffers=512MB：按容器内存 25% 估算（2GB 内存容器）。
+    command: >
+      postgres -c io_method=worker
+               -c effective_io_concurrency=200
+               -c maintenance_io_concurrency=200
+               -c shared_buffers=512MB
+               -c transaction_timeout=30000
     environment:
       - POSTGRES_DB=hello_fastapi
       - POSTGRES_USER=hello_fastapi
