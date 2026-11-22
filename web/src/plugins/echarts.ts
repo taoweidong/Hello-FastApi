@@ -33,16 +33,14 @@ export function loadEcharts(): Promise<EchartsModule> {
       import("echarts/components")
     ]);
     echarts.use([
-      charts.BarChart, // ChartBar 柱状图 / ChartRound 极坐标进度条（series type: "bar"）
-      charts.LineChart, // ChartLine 折线图
-      // SVG 渲染器保留：ChartLine / ChartRound 明确传了 renderer: "svg"
+      charts.LineChart, // ChartLine 登录趋势折线图
+      charts.PieChart, // ChartPie 操作模块分布环形图
+      // SVG 渲染器保留：ChartLine / ChartPie 明确传了 renderer: "svg"
       renderers.CanvasRenderer,
       renderers.SVGRenderer,
-      components.GridComponent, // ChartBar / ChartLine 的 xAxis、yAxis、grid
-      components.TitleComponent, // ChartRound 的 title
-      components.PolarComponent, // ChartRound 的 polar、angleAxis、radiusAxis
-      components.LegendComponent, // ChartBar 的 legend
-      components.TooltipComponent // ChartBar 的 tooltip
+      components.GridComponent, // ChartLine 的 xAxis、yAxis、grid
+      components.LegendComponent, // ChartPie 的图例
+      components.TooltipComponent // ChartLine / ChartPie 的 tooltip
     ]);
     // 挂到 globalProperties.$echarts，供 @pureadmin/utils 的 useECharts 使用
     if (globalProps) {
