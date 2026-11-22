@@ -70,16 +70,11 @@ test.describe.serial("用户管理 CRUD", () => {
     const row = userRow(page, username);
     await expect(row.first()).toBeVisible({ timeout: 10000 });
     await row.getByRole("button", { name: "删除" }).click();
-    // el-popconfirm 确认（title: 是否确认删除用户编号为...）
+    // 唯一确认：el-popconfirm（title: 是否确认删除用户编号为...），确认后直接执行删除
     await page
       .locator(".el-popconfirm:visible")
       .getByRole("button", { name: "确定" })
       .click();
-    // ElMessageBox 系统提示确认
-    const box = page.locator(".el-message-box");
-    await expect(box).toBeVisible();
-    await box.getByRole("button", { name: "确定" }).click();
-    await expect(box).toBeHidden({ timeout: 10000 });
     await expect(userRow(page, username)).toHaveCount(0);
   });
 

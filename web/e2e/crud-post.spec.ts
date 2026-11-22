@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   cleanupByApi,
-  confirmMessageBox,
   fillFormItem,
   gotoPage,
   makeUniqueName
@@ -11,7 +10,7 @@ import {
  * 岗位管理 CRUD：新增岗位 → 搜索命中 → 修改 → 批量删除
  * - 弹窗标题：`${title}岗位`（新增岗位 / 修改岗位）
  * - 必填：岗位编码 + 岗位名称（状态开关有默认值，无需交互）
- * - 删除链路：选中行 → 工具栏「批量删除」popconfirm
+ * - 删除链路：选中行 → 工具栏「批量删除」popconfirm 单次确认（hook 直接执行删除）
  */
 test.describe.serial("岗位管理 CRUD", () => {
   const prefix = makeUniqueName("post");
@@ -71,12 +70,11 @@ test.describe.serial("岗位管理 CRUD", () => {
     await expect(row).toBeVisible({ timeout: 10000 });
     await row.locator(".el-checkbox").click();
     await page.getByRole("button", { name: "批量删除" }).click();
+    // 唯一确认：工具栏 popconfirm（handleBatchDelete 直接执行删除，不再弹 ElMessageBox）
     await page
       .locator(".el-popconfirm:visible")
       .getByRole("button", { name: "确定" })
       .click();
-    // useCrudTable.handleBatchDelete 还会再弹一层 ElMessageBox.confirm
-    await confirmMessageBox(page);
     await expect(postRow(page, newPostName)).toHaveCount(0, { timeout: 10000 });
   });
 

@@ -4,12 +4,18 @@
 """
 
 import json
+import os
 import time
 from pathlib import Path
 
 from playwright.sync_api import Page, expect, sync_playwright
 
-BASE_URL = "http://localhost:8848"
+# 本脚本经 `python -m tests.ui_test` 独立运行（函数参数 page 不是 pytest fixture），
+# 禁止 pytest 收集本模块，避免全量 pytest 因缺 page fixture 而报收集错误
+__test__ = False
+
+# 前端基地址支持 E2E_BASE_URL 环境变量覆盖（本机多项目并存时 8848 常被占用）
+BASE_URL = os.environ.get("E2E_BASE_URL", "http://localhost:8848")
 API_URL = "http://localhost:8000"
 SCREENSHOT_DIR = Path(__file__).parent / "screenshots"
 SCREENSHOT_DIR.mkdir(exist_ok=True)
@@ -39,6 +45,18 @@ def wait_for_api_response(page: Page, url_pattern: str, timeout: int = 10000):
             return resp
     except Exception:
         return None
+
+
+def goto_route(page: Page, path: str):
+    """hash 模式路由跳转。
+
+    前端 vue-router 使用 createWebHashHistory：直接 goto("/system/user")
+    会因路径被忽略而回落到默认 /welcome（首页仪表盘）。必须带 `/#` 前缀
+    才能命中目标路由。
+    """
+    page.goto(f"{BASE_URL}/#{path}")
+    page.wait_for_load_state("networkidle")
+    time.sleep(2)
 
 
 def test_login(page: Page):
@@ -98,7 +116,7 @@ def test_login(page: Page):
 def test_user_management(page: Page):
     """测试用户管理页面。"""
     print("\n=== 测试用户管理页面 ===")
-    page.goto(f"{BASE_URL}/system/user")
+    goto_route(page, "/system/user")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "04_user_list")
@@ -154,7 +172,7 @@ def test_user_management(page: Page):
 def test_role_management(page: Page):
     """测试角色管理页面。"""
     print("\n=== 测试角色管理页面 ===")
-    page.goto(f"{BASE_URL}/system/role")
+    goto_route(page, "/system/role")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "07_role_list")
@@ -174,7 +192,7 @@ def test_role_management(page: Page):
 def test_department_management(page: Page):
     """测试部门管理页面。"""
     print("\n=== 测试部门管理页面 ===")
-    page.goto(f"{BASE_URL}/system/dept")
+    goto_route(page, "/system/dept")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "08_dept_list")
@@ -194,7 +212,7 @@ def test_department_management(page: Page):
 def test_menu_management(page: Page):
     """测试菜单管理页面。"""
     print("\n=== 测试菜单管理页面 ===")
-    page.goto(f"{BASE_URL}/system/menu")
+    goto_route(page, "/system/menu")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "09_menu_list")
@@ -213,7 +231,8 @@ def test_menu_management(page: Page):
 def test_dictionary_management(page: Page):
     """测试字典管理页面。"""
     print("\n=== 测试字典管理页面 ===")
-    page.goto(f"{BASE_URL}/system/dict")
+    # 真实路由 /system/dictionary（rbac_defaults.py Dictionary 菜单）
+    goto_route(page, "/system/dictionary")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "10_dict_list")
@@ -237,7 +256,8 @@ def test_dictionary_management(page: Page):
 def test_ip_rules(page: Page):
     """测试IP规则管理页面。"""
     print("\n=== 测试IP规则管理页面 ===")
-    page.goto(f"{BASE_URL}/system/ip-rules")
+    # 真实路由 /system/ip-rule（rbac_defaults.py IpRule 菜单）
+    goto_route(page, "/system/ip-rule")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "11_ip_rules_list")
@@ -260,7 +280,7 @@ def test_ip_rules(page: Page):
 def test_system_config(page: Page):
     """测试系统配置页面。"""
     print("\n=== 测试系统配置页面 ===")
-    page.goto(f"{BASE_URL}/system/config")
+    goto_route(page, "/system/config")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "12_config_list")
@@ -283,7 +303,8 @@ def test_system_config(page: Page):
 def test_login_logs(page: Page):
     """测试登录日志页面。"""
     print("\n=== 测试登录日志页面 ===")
-    page.goto(f"{BASE_URL}/system/log/login")
+    # 真实路由 /monitor/log/login（rbac_defaults.py LoginLog 菜单，挂在 monitor 分组下）
+    goto_route(page, "/monitor/log/login")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "13_login_logs")
@@ -303,7 +324,8 @@ def test_login_logs(page: Page):
 def test_operation_logs(page: Page):
     """测试操作日志页面。"""
     print("\n=== 测试操作日志页面 ===")
-    page.goto(f"{BASE_URL}/system/log/operation")
+    # 真实路由 /monitor/log/operation（rbac_defaults.py OperationLog 菜单）
+    goto_route(page, "/monitor/log/operation")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "14_operation_logs")
@@ -320,30 +342,11 @@ def test_operation_logs(page: Page):
         record_issue(page, "前端", "操作日志", "操作日志表格未找到", "functional")
 
 
-def test_system_logs(page: Page):
-    """测试系统日志页面。"""
-    print("\n=== 测试系统日志页面 ===")
-    page.goto(f"{BASE_URL}/system/log/system")
-    page.wait_for_load_state("networkidle")
-    time.sleep(2)
-    screenshot(page, "15_system_logs")
-
-    table = page.locator(".el-table, table").first
-    if table.count() > 0:
-        try:
-            expect(table).to_be_visible(timeout=5000)
-            rows = page.locator(".el-table__body-wrapper .el-table__row, tbody tr")
-            print(f"  系统日志行数: {rows.count()}")
-        except Exception:
-            record_issue(page, "前端", "系统日志", "系统日志表格未显示", "functional")
-    else:
-        record_issue(page, "前端", "系统日志", "系统日志表格未找到", "functional")
-
-
 def test_online_users(page: Page):
     """测试在线用户页面。"""
     print("\n=== 测试在线用户页面 ===")
-    page.goto(f"{BASE_URL}/system/online")
+    # 真实路由 /monitor/online-user（rbac_defaults.py OnlineUser 菜单）
+    goto_route(page, "/monitor/online-user")
     page.wait_for_load_state("networkidle")
     time.sleep(2)
     screenshot(page, "16_online_users")
@@ -364,7 +367,11 @@ def test_online_users(page: Page):
 
 
 def test_api_endpoints(page: Page):
-    """通过API直接测试后端端点。"""
+    """通过API直接测试后端端点。
+
+    端点契约与 src/api/v1/*_router.py 对齐：分页列表一律 POST（body 传 pageNum/pageSize），
+    动态菜单为 GET /get-async-routes；登录响应 token 字段为 accessToken（camelCase DTO）。
+    """
     print("\n=== 测试后端API端点 ===")
 
     # 登录获取token
@@ -377,34 +384,33 @@ def test_api_endpoints(page: Page):
     if login_resp.ok:
         login_data = login_resp.json()
         print(f"  登录API: 成功 (code={login_data.get('code')})")
-        token = login_data.get("data", {}).get("access_token", "")
-        if not token:
-            # 尝试其他结构
-            token = login_data.get("access_token", "")
+        token = login_data.get("data", {}).get("accessToken", "")
     else:
         record_issue(page, "后端", "API", f"登录API失败: {login_resp.status}", "blocking")
         return
 
     headers = {"Authorization": f"Bearer {token}"}
 
+    def post_list(path: str, label: str, *, has_total: bool = True):
+        """POST 分页列表端点并断言成功（body: pageNum/pageSize）。"""
+        resp = page.request.post(
+            f"{API_URL}/api/system{path}",
+            data=json.dumps({"pageNum": 1, "pageSize": 10}),
+            headers={"Content-Type": "application/json", **headers},
+        )
+        if not resp.ok:
+            record_issue(page, "后端", "API", f"{label}API失败: {resp.status}", "functional")
+            return
+        total = "N/A"
+        if has_total:
+            data = resp.json().get("data")
+            total = data.get("total", 0) if isinstance(data, dict) else "N/A"
+        print(f"  {label}API: 成功 (total={total})")
+
     # 测试用户列表API
-    resp = page.request.get(f"{API_URL}/api/system/user?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        data = resp.json()
-        total = data.get("data", {}).get("total", 0) if isinstance(data.get("data"), dict) else "N/A"
-        print(f"  用户列表API: 成功 (total={total})")
-    else:
-        record_issue(page, "后端", "API", f"用户列表API失败: {resp.status}", "functional")
-
+    post_list("/user", "用户列表")
     # 测试角色列表API
-    resp = page.request.get(f"{API_URL}/api/system/role?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        data = resp.json()
-        total = data.get("data", {}).get("total", 0) if isinstance(data.get("data"), dict) else "N/A"
-        print(f"  角色列表API: 成功 (total={total})")
-    else:
-        record_issue(page, "后端", "API", f"角色列表API失败: {resp.status}", "functional")
-
+    post_list("/role", "角色列表")
     # 测试菜单树API
     resp = page.request.get(f"{API_URL}/api/system/menu/tree", headers=headers)
     if resp.ok:
@@ -414,61 +420,23 @@ def test_api_endpoints(page: Page):
     else:
         record_issue(page, "后端", "API", f"菜单树API失败: {resp.status}", "functional")
 
-    # 测试部门列表API
-    resp = page.request.get(f"{API_URL}/api/system/dept?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        print("  部门列表API: 成功")
-    else:
-        record_issue(page, "后端", "API", f"部门列表API失败: {resp.status}", "functional")
-
-    # 测试字典列表API
-    resp = page.request.get(f"{API_URL}/api/system/dict?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        print("  字典列表API: 成功")
-    else:
-        record_issue(page, "后端", "API", f"字典列表API失败: {resp.status}", "functional")
-
+    # 测试部门列表API（返回数组，无 total）
+    post_list("/dept", "部门列表", has_total=False)
+    # 测试字典列表API（返回数组，无 total）
+    post_list("/dictionary", "字典列表", has_total=False)
     # 测试IP规则API
-    resp = page.request.get(f"{API_URL}/api/system/ip-rules?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        print("  IP规则API: 成功")
-    else:
-        record_issue(page, "后端", "API", f"IP规则API失败: {resp.status}", "functional")
-
+    post_list("/ip-rule", "IP规则")
     # 测试系统配置API
-    resp = page.request.get(f"{API_URL}/api/system/config?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        print("  系统配置API: 成功")
-    else:
-        record_issue(page, "后端", "API", f"系统配置API失败: {resp.status}", "functional")
-
+    post_list("/config", "系统配置")
     # 测试登录日志API
-    resp = page.request.get(f"{API_URL}/api/system/log/login?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        data = resp.json()
-        total = data.get("data", {}).get("total", 0) if isinstance(data.get("data"), dict) else "N/A"
-        print(f"  登录日志API: 成功 (total={total})")
-    else:
-        record_issue(page, "后端", "API", f"登录日志API失败: {resp.status}", "functional")
-
+    post_list("/login-logs", "登录日志")
     # 测试操作日志API
-    resp = page.request.get(f"{API_URL}/api/system/log/operation?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        print("  操作日志API: 成功")
-    else:
-        record_issue(page, "后端", "API", f"操作日志API失败: {resp.status}", "functional")
-
-    # 测试系统日志API
-    resp = page.request.get(f"{API_URL}/api/system/log/system?currentPage=1&pageSize=10", headers=headers)
-    if resp.ok:
-        data = resp.json()
-        total = data.get("data", {}).get("total", 0) if isinstance(data.get("data"), dict) else "N/A"
-        print(f"  系统日志API: 成功 (total={total})")
-    else:
-        record_issue(page, "后端", "API", f"系统日志API失败: {resp.status}", "functional")
+    post_list("/operation-logs", "操作日志")
+    # 测试系统日志API（后端保留：中间件审计日志查询，无前端页面）
+    post_list("/system-logs", "系统日志")
 
     # 测试路由API（动态菜单）
-    resp = page.request.get(f"{API_URL}/api/system/router", headers=headers)
+    resp = page.request.get(f"{API_URL}/api/system/get-async-routes", headers=headers)
     if resp.ok:
         data = resp.json()
         routes = data.get("data", [])
@@ -480,7 +448,7 @@ def test_api_endpoints(page: Page):
 def test_sidebar_navigation(page: Page):
     """测试侧边栏导航。"""
     print("\n=== 测试侧边栏导航 ===")
-    page.goto(f"{BASE_URL}/welcome")
+    goto_route(page, "/welcome")
     page.wait_for_load_state("networkidle")
     time.sleep(1)
 
@@ -533,7 +501,6 @@ def main():
         test_system_config(page)
         test_login_logs(page)
         test_operation_logs(page)
-        test_system_logs(page)
         test_online_users(page)
 
         browser.close()

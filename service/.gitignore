@@ -52,3 +52,4 @@ Thumbs.db
 sql/*.bak
 sql/*.db-shm
 sql/*.db-wal
+tests/ui_test_report.json

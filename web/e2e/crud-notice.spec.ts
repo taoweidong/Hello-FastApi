@@ -1,7 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   cleanupByApi,
-  confirmMessageBox,
   fillFormItem,
   gotoPage,
   makeUniqueName
@@ -11,7 +10,7 @@ import {
  * 通知公告 CRUD：发布公告 → 搜索命中 → 修改 → 删除 → 批量删除
  * - 弹窗标题来自 useDialogForm：`${title}公告`（新增公告 / 修改公告）
  * - 公告类型下拉有默认值（noticeType=1），无需交互即可通过校验
- * - 删除链路：行内 el-popconfirm；批量删除：选中行 → 工具栏 popconfirm
+ * - 删除链路：行内 el-popconfirm；批量删除：选中行 → 工具栏 popconfirm（均为单次确认）
  */
 test.describe.serial("通知公告 CRUD", () => {
   const prefix = makeUniqueName("notice");
@@ -72,12 +71,11 @@ test.describe.serial("通知公告 CRUD", () => {
     // 勾选首行（selection 列）
     await row.locator(".el-checkbox").click();
     await page.getByRole("button", { name: "批量删除" }).click();
+    // 唯一确认：工具栏 popconfirm（handleBatchDelete 直接执行删除，不再弹 ElMessageBox）
     await page
       .locator(".el-popconfirm:visible")
       .getByRole("button", { name: "确定" })
       .click();
-    // useCrudTable.handleBatchDelete 还会再弹一层 ElMessageBox.confirm
-    await confirmMessageBox(page);
     await expect(noticeRow(page, newTitle)).toHaveCount(0, { timeout: 10000 });
   });
 
@@ -96,12 +94,11 @@ test.describe.serial("通知公告 CRUD", () => {
     const row = noticeRow(page, title).first();
     await expect(row).toBeVisible({ timeout: 10000 });
     await row.getByRole("button", { name: "删除" }).click();
+    // 唯一确认：行内 el-popconfirm（handleDelete 直接执行删除，不再弹 ElMessageBox）
     await page
       .locator(".el-popconfirm:visible")
       .getByRole("button", { name: "确定" })
       .click();
-    // useCrudTable.handleDelete 还会再弹一层 ElMessageBox.confirm
-    await confirmMessageBox(page);
     await expect(noticeRow(page, title)).toHaveCount(0, { timeout: 10000 });
   });
 

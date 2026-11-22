@@ -6,7 +6,8 @@ import { request, type Locator, type Page } from "@playwright/test";
  * 可用 E2E_API_BASE_URL 覆盖——本机同时开发多个项目时，8000 常被别的服务占用，
  * 此时后端需换端口启动，否则这里会静默打到别的项目上（表现为 API 登录 404）。
  */
-export const API_BASE_URL = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:8000";
+export const API_BASE_URL =
+  process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 /** 冒烟页面注册表：path → 页面关键锚点选择器（存在即可判渲染成功） */
 export const SMOKE_PAGES: Array<{
@@ -29,7 +30,8 @@ export const SMOKE_PAGES: Array<{
   { path: "/monitor/cache", anchor: ".el-card" },
   { path: "/monitor/log/login", anchor: ".el-table" },
   { path: "/monitor/log/operation", anchor: ".el-table" },
-  { path: "/account-settings", anchor: ".pure-account-settings" }, // 账号设置容器
+  // 账号设置页（栅格分区卡片布局）：「个人信息」分区标题为页面关键锚点
+  { path: "/account-settings", anchor: 'h3:has-text("个人信息")' },
   { path: "/empty", anchor: ".size-full" } // 空页占位
 ];
 
@@ -70,18 +72,11 @@ export async function fillFormItem(
 }
 
 /**
- * 确认 Element Plus 的 ElMessageBox（删除/强退等二次确认弹窗）。
- *
- * useCrudTable 的 handleDelete / handleBatchDelete 在模板 popconfirm 之外，
- * 还会再弹一层 ElMessageBox.confirm；只点 popconfirm 不会真正发起删除请求。
- * 该助手在 popconfirm 确认后调用，等待并点击 message-box 的「确定」。
+ * 注意：列表删除已改为「popconfirm 单次确认」（useCrudTable.handleDelete /
+ * handleBatchDelete 直接执行删除，不再弹 ElMessageBox），删除类用例只需点击
+ * popconfirm 的「确定」即可。个别仍保留 ElMessageBox 的流程（如字典类型删除、
+ * 在线用户强退）在对应 spec 内就地断言 .el-message-box。
  */
-export async function confirmMessageBox(page: Page): Promise<void> {
-  const box = page.locator(".el-message-box").last();
-  await box.waitFor({ state: "visible", timeout: 8000 });
-  await box.locator('button:has-text("确定"), button:has-text("确认")').last().click();
-  await page.locator(".el-message-box").last().waitFor({ state: "hidden", timeout: 10000 }).catch(() => {});
-}
 
 /** API 登录 admin，返回 accessToken（登录限流 100 次/分钟，全局仅少量调用） */
 async function apiLogin(username: string, password: string): Promise<string> {

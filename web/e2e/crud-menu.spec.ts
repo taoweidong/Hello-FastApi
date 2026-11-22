@@ -10,7 +10,7 @@ import {
  * 菜单管理 CRUD：新增根菜单（工具栏按钮）→ 搜索命中 → 修改 → 删除
  * - 覆盖 2026-10-25 修复的「新增根菜单」死按钮（原 handleAddChild 只置了
  *   showEditPanel，模板缺少渲染入口，点击无反应；已改走 openDialog）
- * - 删除链路为双重确认：行内 el-popconfirm → hook 内 ElMessageBox
+ * - 删除链路为 popconfirm 单次确认（hook 内不再弹 ElMessageBox）
  * - 目录类型必填：路由名称 + 路由路径（菜单名称非必填但必填以验证回显）
  */
 test.describe.serial("菜单管理 CRUD", () => {
@@ -68,22 +68,17 @@ test.describe.serial("菜单管理 CRUD", () => {
     });
   });
 
-  test("删除菜单（popconfirm + 消息框双重确认）", async ({ page }) => {
+  test("删除菜单（popconfirm 单次确认）", async ({ page }) => {
     await gotoPage(page, "/system/menu");
     await searchMenu(page, newTitle);
     const row = menuRow(page, newTitle).first();
     await expect(row).toBeVisible({ timeout: 10000 });
     await row.getByRole("button", { name: "删除" }).click();
-    // 第一重：行内 el-popconfirm
+    // 唯一确认：行内 el-popconfirm（hook 直接执行删除，不再弹 ElMessageBox）
     await page
       .locator(".el-popconfirm:visible")
       .getByRole("button", { name: "确定" })
       .click();
-    // 第二重：hook 内 ElMessageBox 系统提示
-    const box = page.locator(".el-message-box");
-    await expect(box).toBeVisible();
-    await box.getByRole("button", { name: "确定" }).click();
-    await expect(box).toBeHidden({ timeout: 10000 });
 
     await searchMenu(page, newTitle);
     await expect(menuRow(page, newTitle)).toHaveCount(0);

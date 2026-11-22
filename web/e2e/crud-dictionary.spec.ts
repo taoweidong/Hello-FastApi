@@ -134,16 +134,12 @@ test.describe.serial("字典管理 CRUD", () => {
     const row = detailRow(page, newLabel).first();
     await expect(row).toBeVisible({ timeout: 10000 });
     await row.getByRole("button", { name: "删除" }).click();
-    // el-popconfirm 确认（title: 是否确认删除字典标签为...）
+    // 唯一确认：详情区删除按钮的 el-popconfirm（title: 是否确认删除字典标签为...），
+    // hook 直接执行删除，不再弹 ElMessageBox
     await page
       .locator(".el-popconfirm:visible")
       .getByRole("button", { name: "确定" })
       .click();
-    // ElMessageBox 系统提示确认
-    const box = page.locator(".el-message-box");
-    await expect(box).toBeVisible();
-    await box.getByRole("button", { name: "确定" }).click();
-    await expect(box).toBeHidden({ timeout: 10000 });
     await expect(detailRow(page, newLabel)).toHaveCount(0);
   });
 
@@ -159,7 +155,7 @@ test.describe.serial("字典管理 CRUD", () => {
       .locator(".el-dropdown-menu:visible")
       .getByText("删除", { exact: true })
       .click();
-    // ElMessageBox 系统提示确认
+    // 树类型删除仍走 ElMessageBox 系统提示确认（与详情区 popconfirm 不同）
     const box = page.locator(".el-message-box");
     await expect(box).toBeVisible();
     await box.getByRole("button", { name: "确定" }).click();
